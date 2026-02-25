@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -18,13 +18,13 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Node.js >= 18 (for building frontend assets)
 - `@dfinity/assets` npm package (for programmatic uploads)
 
 ## Canister IDs
 
-Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `.dfx/local/canister_ids.json` (local) or `canister_ids.json` (mainnet).
+Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `canister_ids.json` (local and mainnet).
 
 Access patterns:
 | Environment | URL Pattern |
@@ -35,15 +35,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in dfx.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, dfx fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `dfx deploy` runs the `build` command from dfx.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If dfx.json has `"frontend"` but you run `dfx deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the `@dfinity/assets` library handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -51,7 +51,7 @@ Access patterns:
 
 ## Implementation
 
-### dfx.json Configuration
+### icp.json Configuration
 
 ```json
 {
@@ -71,9 +71,9 @@ Access patterns:
 ```
 
 Key fields:
-- `"type": "assets"` -- tells dfx this is an asset canister
+- `"type": "assets"` -- tells `icp` this is an asset canister
 - `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands dfx runs before uploading (your frontend build step)
+- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
 - `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
@@ -114,7 +114,7 @@ The asset canister automatically compresses assets with gzip and brotli. No conf
 
 To verify compression is working:
 ```bash
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/";
   method = "GET";
   body = vec {};
@@ -151,7 +151,7 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 
 ### Programmatic Uploads with @dfinity/assets
 
-For uploading files from code (not just via `dfx deploy`):
+For uploading files from code (not just via `icp deploy`):
 
 ```javascript
 import { AssetManager } from "@dfinity/assets";
@@ -197,16 +197,16 @@ Only canister controllers can upload to asset canisters. To grant upload permiss
 
 ```bash
 # Add a principal as a controller
-dfx canister update-settings frontend --add-controller <principal-id>
+icp canister update-settings frontend --add-controller <principal-id>
 
 # Or grant "prepare" permission (can upload but not commit) -- more restrictive
-dfx canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
+icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
 
 # Grant full commit permission
-dfx canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
+icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
 
 # List current permissions
-dfx canister call frontend list_permitted '(record { permission = variant { Commit } })'
+icp canister call frontend list_permitted '(record { permission = variant { Commit } })'
 ```
 
 ## Deploy & Test
@@ -215,20 +215,20 @@ dfx canister call frontend list_permitted '(record { permission = variant { Comm
 
 ```bash
 # Start the local replica
-dfx start --background
+icp network start -d
 
 # Build and deploy frontend + backend
-dfx deploy
+icp deploy
 
 # Or deploy only the frontend
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ### Mainnet Deployment
 
 ```bash
 # Ensure you have cycles in your wallet
-dfx deploy --network ic frontend
+icp deploy -e ic frontend
 ```
 
 ### Updating Frontend Only
@@ -238,22 +238,22 @@ When you only changed frontend code:
 ```bash
 # Rebuild and redeploy just the frontend canister
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Check the canister is running
-dfx canister status frontend
+icp canister status frontend
 # Expected: Status: Running, Memory Size: <non-zero>
 
 # 2. List uploaded assets
-dfx canister call frontend list '(record {})'
+icp canister call frontend list '(record {})'
 # Expected: A list of asset keys like "/index.html", "/assets/index-abc123.js", etc.
 
 # 3. Fetch the index page via http_request
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/";
   method = "GET";
   body = vec {};
@@ -263,7 +263,7 @@ dfx canister call frontend http_request '(record {
 # Expected: record { status_code = 200; body = blob "<!DOCTYPE html>..."; ... }
 
 # 4. Test SPA fallback (should return index.html, not 404)
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/about";
   method = "GET";
   body = vec {};
@@ -277,10 +277,10 @@ dfx canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-dfx canister id frontend
+icp canister status frontend --id-only
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
-dfx canister info frontend
+icp canister info frontend
 # Shows memory usage, module hash, controllers
 ```

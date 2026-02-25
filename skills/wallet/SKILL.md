@@ -10,15 +10,15 @@ dependencies: []
 ---
 
 # Cycles & Canister Management
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
 
-**Note:** dfx 0.30+ uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default instead of the legacy per-identity cycles wallet. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `dfx cycles balance`, `dfx cycles convert`, and `dfx canister deposit-cycles` now go through the cycles ledger. The legacy cycles wallet (`dfx identity get-wallet`) still works but is no longer created automatically for new identities. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
+**Note:** icp-cli uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `icp cycles balance`, `icp cycles mint`, and `icp canister top-up` go through the cycles ledger. There is no legacy wallet concept in icp-cli. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - An identity with ICP balance for converting to cycles (mainnet)
 - For local development: cycles are unlimited by default
 
@@ -42,7 +42,7 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 4. **Sending cycles to the wrong canister** -- Cycles sent to a canister cannot be retrieved. There is no refund mechanism for cycles transferred to the wrong principal. Double-check the canister ID before topping up.
 
-5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `dfx canister update-settings --add-controller PRINCIPAL` to add one.
+5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `icp canister update-settings --add-controller PRINCIPAL` to add one.
 
 6. **Using ExperimentalCycles in mo:core** -- In mo:core 2.0, the module is renamed to `Cycles`. `import ExperimentalCycles "mo:base/ExperimentalCycles"` will fail. Use `import Cycles "mo:core/Cycles"`.
 
@@ -247,84 +247,84 @@ async fn stop_and_delete(canister_id: Principal) {
 
 ## Deploy & Test
 
-### Check Cycle Balance (dfx commands)
+### Check Cycle Balance
 
 ```bash
 # Check your canister's cycle balance
-dfx canister status backend
+icp canister status backend
 # Look for "Balance:" line in output
 
 # Check balance on mainnet
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Check any canister by ID
-dfx canister status ryjl3-tyaaa-aaaaa-aaaba-cai --network ic
+icp canister status ryjl3-tyaaa-aaaaa-aaaba-cai -e ic
 ```
 
 ### Top Up a Canister
 
 ```bash
-# Top up with cycles from your cycles wallet (local)
-dfx canister deposit-cycles 1000000000000 backend
+# Top up with cycles from the cycles ledger (local)
+icp canister top-up backend --amount 1000000000000
 # Adds 1T cycles to the backend canister
 
 # Top up on mainnet
-dfx canister deposit-cycles 1000000000000 backend --network ic
+icp canister top-up backend --amount 1000000000000 -e ic
 
 # Convert ICP to cycles and top up in one step (mainnet)
-dfx cycles convert --amount 1.0 --network ic
-dfx canister deposit-cycles 1000000000000 backend --network ic
+icp cycles mint --amount 1.0 -e ic
+icp canister top-up backend --amount 1000000000000 -e ic
 ```
 
-### Create a Canister via dfx
+### Create a Canister via icp
 
 ```bash
 # Create an empty canister (local)
-dfx canister create my_canister
+icp canister create my_canister
 
 # Create on mainnet with specific cycles
-dfx canister create my_canister --network ic --with-cycles 2000000000000
+icp canister create my_canister -e ic --with-cycles 2000000000000
 
 # Add a backup controller
-dfx canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
+icp canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
 ```
 
 ### Set Freezing Threshold
 
 ```bash
 # Set freezing threshold to 90 days (in seconds: 90 * 24 * 60 * 60 = 7776000)
-dfx canister update-settings backend --freezing-threshold 7776000
+icp canister update-settings backend --freezing-threshold 7776000
 
 # Mainnet
-dfx canister update-settings backend --freezing-threshold 7776000 --network ic
+icp canister update-settings backend --freezing-threshold 7776000 -e ic
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Deploy a canister and check its status
-dfx start --background
-dfx deploy backend
-dfx canister status backend
+icp network start -d
+icp deploy backend
+icp canister status backend
 # Expected output includes:
 #   Status: Running
 #   Balance: 3_100_000_000_000 Cycles (local default, varies)
 #   Freezing threshold: 2_592_000
 
 # 2. Check balance programmatically (if you added getBalance)
-dfx canister call backend getBalance '()'
+icp canister call backend getBalance '()'
 # Expected: a large nat value, e.g. (3_100_000_000_000 : nat)
 
 # 3. Verify controllers
-dfx canister info backend
+icp canister info backend
 # Expected: Shows your principal as controller
 
 # 4. On mainnet: verify cycles balance is not zero
-dfx canister status backend --network ic
+icp canister status backend -e ic
 # If Balance shows 0, the canister will freeze. Top up immediately.
 
 # 5. Verify freezing threshold was set
-dfx canister status backend
+icp canister status backend
 # Look for "Freezing threshold:" -- should match what you set
 ```
 
@@ -335,7 +335,7 @@ dfx canister status backend
 CANISTER_ID="your-canister-id-here"
 
 # Check balance
-dfx canister status $CANISTER_ID --network ic
+icp canister status $CANISTER_ID -e ic
 
 # Warning thresholds:
 # < 5T cycles   -- top up soon

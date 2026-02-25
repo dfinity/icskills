@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # HTTPS Outcalls
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -18,8 +18,8 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- dfx >= 0.30.0
-- For Motoko: `moc` compiler (included with dfx), `mo:core` 2.0 in mops.toml
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- For Motoko: `moc` compiler (included with icp-cli), `mo:core` 2.0 in mops.toml
 - For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
 
 ## Canister IDs
@@ -357,42 +357,42 @@ Always over-budget. Unused cycles are refunded to the canister.
 
 ```bash
 # Start the local replica
-dfx start --background
+icp network start -d
 
 # Deploy your canister
-dfx deploy backend
+icp deploy backend
 ```
 
-Note: HTTPS outcalls work on the local replica. dfx proxies the requests through the local HTTP gateway.
+Note: HTTPS outcalls work on the local replica. icp-cli proxies the requests through the local HTTP gateway.
 
 ### Mainnet Deployment
 
 ```bash
 # Ensure your canister has enough cycles (check balance first)
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Deploy
-dfx deploy --network ic backend
+icp deploy -e ic backend
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Test the GET outcall (fetch price)
-dfx canister call backend fetchPrice
+icp canister call backend fetchPrice
 # Expected: Something like '("{\"internet-computer\":{\"usd\":12.34}}")'
 # (actual price will vary)
 
 # 2. Test the POST outcall
-dfx canister call backend postData '("{\"test\": \"hello\"}")'
+icp canister call backend postData '("{\"test\": \"hello\"}")'
 # Expected: JSON response from httpbin.org echoing back your data
 
 # 3. If using Rust with the typed parser:
-dfx canister call backend get_icp_price_usd
+icp canister call backend get_icp_price_usd
 # Expected: '("ICP price: $12.34")'
 
 # 4. Check canister cycle balance (outcalls consume cycles)
-dfx canister status backend
+icp canister status backend
 # Verify the balance decreased slightly after outcalls
 
 # 5. Test error handling: call with an unreachable URL
@@ -406,7 +406,7 @@ If an outcall fails:
 
 ```bash
 # Check the replica log for detailed error messages
-# Local: dfx output shows errors inline
+# Local: icp output shows errors inline
 # Mainnet: check the canister logs
 
 # Common errors:

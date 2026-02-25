@@ -10,7 +10,7 @@ dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `candid`, `serde`
 - Cycles in your canister (each RPC call costs cycles)
@@ -84,7 +84,7 @@ Use `requestCost` to get an exact estimate before calling.
 
 ## Implementation
 
-### dfx.json Configuration
+### icp.json Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
@@ -106,9 +106,9 @@ Use `requestCost` to get an exact estimate before calling.
 
 Then run:
 ```bash
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
+icp deps pull
+icp deps init evm_rpc --argument '(record {})'
+icp deps deploy
 ```
 
 #### Option B: Custom wasm (for local development)
@@ -725,16 +725,16 @@ ic_cdk::export_candid!();
 ### Local Development
 
 ```bash
-# Start dfx
-dfx start --background
+# Start local replica
+icp network start -d
 
 # Pull the EVM RPC canister
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
+icp deps pull
+icp deps init evm_rpc --argument '(record {})'
+icp deps deploy
 
 # Deploy your backend
-dfx deploy backend
+icp deploy backend
 ```
 
 ### Deploy to Mainnet
@@ -742,42 +742,41 @@ dfx deploy backend
 ```bash
 # On mainnet, the EVM RPC canister is already deployed.
 # Your canister calls it directly by principal.
-dfx deploy backend --network ic
+icp deploy backend -e ic
 ```
 
-### Test via dfx CLI
+### Test via icp CLI
 
 ```bash
 # Set up variables
-export WALLET=$(dfx identity get-wallet)
 export CYCLES=10000000000
 
 # Get ETH balance (raw JSON-RPC via single provider)
-dfx canister call evm_rpc request '(
+icp canister call evm_rpc request '(
   variant { EthMainnet = variant { PublicNode } },
   "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"latest\"],\"id\":1}",
   1000
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Get latest block (typed API, multi-provider)
-dfx canister call evm_rpc eth_getBlockByNumber '(
+icp canister call evm_rpc eth_getBlockByNumber '(
   variant { EthMainnet = null },
   null,
   variant { Latest }
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Get transaction receipt
-dfx canister call evm_rpc eth_getTransactionReceipt '(
+icp canister call evm_rpc eth_getTransactionReceipt '(
   variant { EthMainnet = null },
   null,
   "0xdd5d4b18923d7aae953c7996d791118102e889bea37b48a651157a4890e4746f"
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Check available providers
-dfx canister call evm_rpc getProviders
+icp canister call evm_rpc getProviders
 
 # Estimate cost before calling
-dfx canister call evm_rpc requestCost '(
+icp canister call evm_rpc requestCost '(
   variant { EthMainnet = variant { PublicNode } },
   "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"latest\"],\"id\":1}",
   1000
@@ -789,7 +788,7 @@ dfx canister call evm_rpc requestCost '(
 ### Check ETH Balance
 
 ```bash
-dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")'
+icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")'
 # Expected: JSON string like '{"jsonrpc":"2.0","id":1,"result":"0x..."}'
 # The result is the balance in wei (hex encoded)
 ```
@@ -797,7 +796,7 @@ dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37
 ### Check Latest Block
 
 ```bash
-dfx canister call backend get_latest_block
+icp canister call backend get_latest_block
 # Expected: record { number = ...; hash = "0x..."; timestamp = ...; ... }
 ```
 
@@ -805,7 +804,7 @@ dfx canister call backend get_latest_block
 
 ```bash
 # USDC contract on Ethereum: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-dfx canister call backend get_erc20_balance '(
+icp canister call backend get_erc20_balance '(
   "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 )'
@@ -818,11 +817,11 @@ Check your canister cycle balance before and after an RPC call:
 
 ```bash
 # Before
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Make a call
-dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")' --network ic
+icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")' -e ic
 
 # After — unused cycles from the 10B budget are refunded
-dfx canister status backend --network ic
+icp canister status backend -e ic
 ```

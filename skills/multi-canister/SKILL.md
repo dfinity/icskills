@@ -10,7 +10,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
@@ -62,9 +62,9 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in dfx.json so `dfx deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in dfx.json so `icp deploy` orders them correctly.
 
-6. **Forgetting `dfx generate` for each backend canister.** Bare `dfx generate` fails. Run `dfx generate canister_name` for each backend canister individually.
+6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
 7. **Shared types diverging between canisters.** If canister A expects `{ id: Nat; name: Text }` and canister B sends `{ id: Nat; title: Text }`, the call silently fails or traps. Use a shared types module imported by both canisters.
 
@@ -858,16 +858,14 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 
 ```bash
 # Upgrade canisters in dependency order
-dfx deploy user_service
+icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(dfx canister id user_service)
-dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
+icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
-dfx generate user_service
-dfx generate content_service
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ## Deploy & Test
@@ -875,42 +873,38 @@ dfx deploy frontend
 ### Local Development
 
 ```bash
-# Start dfx
-dfx start --background
+# Start the local replica
+icp network start -d
 
 # Deploy in dependency order
-dfx deploy user_service
+icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(dfx canister id user_service)
-dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
-
-# Generate declarations for frontend
-dfx generate user_service
-dfx generate content_service
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
+icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ### Test Inter-Canister Calls (Motoko)
 
 ```bash
 # Register a user
-PRINCIPAL=$(dfx identity get-principal)
-dfx canister call user_service register "(\"alice\")"
+PRINCIPAL=$(icp identity principal)
+icp canister call user_service register "(\"alice\")"
 
 # Verify user exists
-dfx canister call user_service isValidUser "(principal \"$PRINCIPAL\")"
+icp canister call user_service isValidUser "(principal \"$PRINCIPAL\")"
 # Expected: (true)
 
 # Create a post (triggers inter-canister call to user_service)
-dfx canister call content_service createPost "(\"Hello World\", \"My first post\")"
+icp canister call content_service createPost "(\"Hello World\", \"My first post\")"
 # Expected: (variant { ok = record { id = 0; author = principal "..."; ... } })
 
 # Get all posts
-dfx canister call content_service getPosts
+icp canister call content_service getPosts
 # Expected: (vec { record { id = 0; ... } })
 ```
 
@@ -919,17 +913,17 @@ dfx canister call content_service getPosts
 Rust canisters use snake_case function names:
 
 ```bash
-PRINCIPAL=$(dfx identity get-principal)
-dfx canister call user_service register "(\"alice\")"
+PRINCIPAL=$(icp identity principal)
+icp canister call user_service register "(\"alice\")"
 
-dfx canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
+icp canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
 # Expected: (true)
 
 # content_service must have been deployed with --argument "(principal \"<user_service_id>\")"
-dfx canister call content_service create_post "(\"Hello World\", \"My first post\")"
+icp canister call content_service create_post "(\"Hello World\", \"My first post\")"
 # Expected: (variant { ok = record { id = 0 : nat64; author = principal "..."; ... } })
 
-dfx canister call content_service get_posts
+icp canister call content_service get_posts
 # Expected: (vec { record { id = 0 : nat64; ... } })
 ```
 
@@ -938,7 +932,7 @@ dfx canister call content_service get_posts
 ### Verify User Registration
 
 ```bash
-dfx canister call user_service register '("testuser")'
+icp canister call user_service register '("testuser")'
 # Expected: (variant { ok = record { id = principal "..."; username = "testuser"; created = ... } })
 ```
 
@@ -947,25 +941,25 @@ dfx canister call user_service register '("testuser")'
 ```bash
 # This call should succeed (user is registered)
 # Motoko: createPost / Rust: create_post
-dfx canister call content_service createPost '("Test Title", "Test Body")'
+icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
 # Create a new identity that is NOT registered
-dfx identity new unregistered --storage-mode=plaintext
-dfx identity use unregistered
-dfx canister call content_service createPost '("Should Fail", "No user")'
+icp identity new unregistered --storage-mode=plaintext
+icp identity default unregistered
+icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-dfx identity use default
+icp identity default default
 ```
 
 ### Verify Cross-Canister Query
 
 ```bash
-PRINCIPAL=$(dfx identity get-principal)
+PRINCIPAL=$(icp identity principal)
 # Motoko: getPostsWithAuthor / Rust: get_posts_with_author
-dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
+icp canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
 # Expected: (opt record { id = ...; username = "testuser"; ... }, vec { record { ... } })
 ```
 
@@ -974,9 +968,9 @@ dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")
 ```bash
 # Read the wasm file for the child canister
 # (In practice you'd upload or reference a wasm blob)
-dfx canister call factory createChildCanister '(blob "...")'
+icp canister call factory createChildCanister '(blob "...")'
 # Expected: (principal "NEW-CANISTER-ID")
 
-dfx canister call factory getChildCanister "(principal \"$PRINCIPAL\")"
+icp canister call factory getChildCanister "(principal \"$PRINCIPAL\")"
 # Expected: (opt principal "NEW-CANISTER-ID")
 ```

@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.30.0, dfx sns extension, NNS neuron with stake]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, quill CLI, NNS neuron with stake]
 
 ## What This Is
 
@@ -18,8 +18,8 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0 with `sns` extension installed (`dfx extension install sns`)
-- `quill` CLI for advanced proposal submission (alternative to `dfx sns propose`)
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `quill` CLI for proposal submission (`quill sns make-proposal` is the recommended approach)
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined
@@ -68,7 +68,7 @@ When an SNS launch succeeds, SNS-W deploys these canisters on an SNS subnet:
 
 ### SNS Configuration File (sns_init.yaml)
 
-This is the single source of truth for all launch parameters. Copy the template from `dfinity/sns-testing` and customize:
+This is the single source of truth for all launch parameters. Copy the template from the `dfinity/sns-testing` repo and customize:
 
 ```yaml
 # Note: numeric values are in e8s (1 token = 100_000_000 e8s). Time values are in seconds.
@@ -176,7 +176,7 @@ Swap:
 ```
 Stage 1:  Developer defines parameters in sns_init.yaml
 Stage 2:  Developer adds NNS Root as co-controller of dapp canisters
-Stage 3:  Developer submits NNS proposal using `dfx sns propose` (or quill)
+Stage 3:  Developer submits NNS proposal using `quill sns make-proposal`
 Stage 4:  NNS community votes on the proposal
 Stage 5:  (If adopted) SNS-W deploys uninitialized SNS canisters
 Stage 6:  SNS Root becomes sole controller of dapp canisters
@@ -312,22 +312,20 @@ serde = { version = "1", features = ["derive"] }
 git clone https://github.com/dfinity/sns-testing.git
 cd sns-testing
 
-# WARNING: --clean wipes all local canister data. Only use for fresh setup.
-dfx start --clean --background
-
-# Import SNS canister WASMs
-dfx sns import
-dfx sns download
+# WARNING: starting a fresh network wipes all local canister data. Only use for fresh setup.
+icp network start -d
 
 # Deploy NNS canisters locally (includes governance, ledger, SNS-W)
-dfx nns install
+# Note: Use the sns-testing repo's setup scripts for NNS + SNS-W canister installation.
+# See https://github.com/dfinity/sns-testing for current instructions.
 
 # Deploy your dapp canisters
-dfx deploy my_backend
-dfx deploy my_frontend
+icp deploy my_backend
+icp deploy my_frontend
 
 # Deploy a testflight SNS locally using your config
-dfx sns deploy-testflight --init-config-file sns_init.yaml
+# Use the sns-testing repo tooling to deploy a local testflight SNS.
+# See sns-testing README for the current testflight workflow.
 ```
 
 ### Mainnet Testflight (Mock SNS)
@@ -335,7 +333,8 @@ dfx sns deploy-testflight --init-config-file sns_init.yaml
 ```bash
 # Deploy a mock SNS on mainnet to test governance flows
 # This does NOT do a real swap -- it creates a mock SNS you control
-dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
+# Use the sns-testing repo tooling for mainnet testflight deployment.
+# See https://github.com/dfinity/sns-testing for the current testflight workflow.
 
 # Test submitting proposals, voting, and upgrading via SNS governance
 ```
@@ -344,17 +343,17 @@ dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
 
 ```bash
 # Step 1: Add NNS Root as co-controller of each dapp canister
-dfx sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
-dfx sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
+# Use quill to add NNS Root as co-controller:
+quill sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
+quill sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
 
 # Step 2: Validate your config locally before submitting
-# Note: There is no --dry-run flag for `dfx sns propose`. Instead, validate offline:
 sns-cli validate --init-config-file sns_init.yaml
 # Or review the rendered proposal by inspecting the yaml output carefully.
 # You can also test the full flow on a local replica first (see Local Testing above).
 
 # Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
-dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
+quill sns make-proposal --network ic --neuron-id NEURON_ID sns_init.yaml
 ```
 
 ## Verify It Works
@@ -363,25 +362,25 @@ dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-dfx canister id sns_governance
-dfx canister id sns_ledger
-dfx canister id sns_root
-dfx canister id sns_swap
+icp canister status sns_governance --id-only
+icp canister status sns_ledger --id-only
+icp canister status sns_root --id-only
+icp canister status sns_swap --id-only
 
 # Verify SNS governance is operational
-dfx canister call sns_governance get_nervous_system_parameters '()'
+icp canister call sns_governance get_nervous_system_parameters '()'
 # Expected: returns the governance parameters you configured
 
 # Verify token distribution
-dfx canister call sns_ledger icrc1_total_supply '()'
+icp canister call sns_ledger icrc1_total_supply '()'
 # Expected: matches your total token supply
 
 # Verify dapp canister controllers changed
-dfx canister info BACKEND_CANISTER_ID
+icp canister status BACKEND_CANISTER_ID
 # Expected: controller is the SNS Root canister, NOT your principal
 
 # Test an SNS proposal (upgrade your canister via governance)
-dfx canister call sns_governance manage_neuron '(record { ... })'
+icp canister call sns_governance manage_neuron '(record { ... })'
 # Expected: proposal created, can be voted on
 ```
 
@@ -389,14 +388,14 @@ dfx canister call sns_governance manage_neuron '(record { ... })'
 
 ```bash
 # Check swap status
-dfx canister call SNS_SWAP_ID get_state '()' --network ic
+icp canister call SNS_SWAP_ID get_state '()' -e ic
 # Expected: shows swap status, participation count, ICP raised
 
 # Check SNS governance
-dfx canister call SNS_GOVERNANCE_ID get_nervous_system_parameters '()' --network ic
+icp canister call SNS_GOVERNANCE_ID get_nervous_system_parameters '()' -e ic
 # Expected: returns your configured parameters
 
 # Verify dapp controller is SNS Root
-dfx canister info BACKEND_CANISTER_ID --network ic
+icp canister status BACKEND_CANISTER_ID -e ic
 # Expected: single controller = SNS Root canister ID
 ```

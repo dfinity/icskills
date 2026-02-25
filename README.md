@@ -26,7 +26,7 @@ Every skill follows the same structure:
 | Section | Purpose |
 |---------|---------|
 | **What this is** | One paragraph. What the technology does. |
-| **Prerequisites** | Exact versions. `dfx >= 0.30.0`, `ic-cdk >= 0.18`. |
+| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.18`. |
 | **Mistakes that break your build** | Numbered pitfalls that prevent hallucinations. |
 | **Implementation** | Tested, copy-paste-correct code blocks. |
 | **Deploy & Test** | Step-by-step commands for local and mainnet. |

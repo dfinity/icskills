@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@dfinity/certificate-verification` or `@dfinity/agent` (includes verification)
@@ -31,7 +31,7 @@ No external canister IDs required. Certification uses the IC system API directly
 
 The IC root public key (needed for client-side verification):
 - Mainnet: `308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100814c0e6ec71fab583b08bd81373c255c3c371b2e84863c98a4f1e08b74235d14fb5d9c0cd546d9685f913a0c0b2cc5341583bf4b4392e467db96d65b9bb4cb717112f8472e0d5a4d14505ffd7484b01291091c5f87b98883463f98091a0baaae`
-- Local: available from `dfx` (agent handles this automatically)
+- Local: available from `icp` (agent handles this automatically)
 
 ## Mistakes That Break Your Build
 
@@ -403,21 +403,21 @@ For asset canisters, the `@dfinity/agent` service worker handles verification tr
 
 ```bash
 # Deploy the canister
-dfx deploy backend
+icp deploy backend
 
 # Set a certified value (update call -- goes through consensus)
-dfx canister call backend set '("greeting", "hello world")'
+icp canister call backend set '("greeting", "hello world")'
 
 # Query the certified value
-dfx canister call backend get '("greeting")'
+icp canister call backend get '("greeting")'
 # Returns: record { value = opt "hello world"; certificate = blob "..."; witness = blob "..." }
 
 # Set multiple values
-dfx canister call backend set '("name", "Alice")'
-dfx canister call backend set '("age", "30")'
+icp canister call backend set '("name", "Alice")'
+icp canister call backend set '("age", "30")'
 
 # Delete a value
-dfx canister call backend delete '("age")'
+icp canister call backend delete '("age")'
 
 # Verify the root hash is being set
 # (No direct command -- verified by the presence of a non-null certificate in query response)
@@ -427,24 +427,24 @@ dfx canister call backend delete '("age")'
 
 ```bash
 # 1. Verify certificate is present in query response
-dfx canister call backend get '("greeting")'
+icp canister call backend get '("greeting")'
 # Expected: certificate field is a non-empty blob (NOT null)
 # If certificate is null, you are calling from an update context (wrong)
 
 # 2. Verify data integrity after update
-dfx canister call backend set '("key1", "value1")'
-dfx canister call backend get '("key1")'
+icp canister call backend set '("key1", "value1")'
+icp canister call backend get '("key1")'
 # Expected: value = opt "value1" with valid certificate
 
 # 3. Verify certification survives canister upgrade
-dfx canister call backend set '("persistent", "data")'
-dfx deploy backend  # triggers upgrade
-dfx canister call backend get '("persistent")'
+icp canister call backend set '("persistent", "data")'
+icp deploy backend  # triggers upgrade
+icp canister call backend get '("persistent")'
 # Expected: certificate is still non-null (postupgrade re-established certification)
 # Note: data persistence depends on stable storage implementation
 
 # 4. Verify non-existent key returns null value with valid certificate
-dfx canister call backend get '("nonexistent")'
+icp canister call backend get '("nonexistent")'
 # Expected: value = null, certificate = blob "..." (certificate still valid)
 
 # 5. Frontend verification test

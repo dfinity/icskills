@@ -10,13 +10,13 @@ dependencies: []
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 
@@ -49,7 +49,7 @@ Index canisters (for transaction history):
 
 7. **Calling ledger from frontend** -- ICRC-1 transfers should originate from a backend canister, not directly from the frontend. Frontend-initiated transfers expose the user to reentrancy and can bypass business logic. Use a backend canister as the intermediary.
 
-8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(dfx identity get-principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
+8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(icp identity principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
 
 ## Implementation
 
@@ -390,9 +390,9 @@ Add to `dfx.json`:
 }
 ```
 
-Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `dfx identity get-principal`):
+Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
 
-> **Pitfall:** Shell substitutions like `$(dfx identity get-principal)` will NOT expand inside this file. You must paste the literal principal string.
+> **Pitfall:** Shell substitutions like `$(icp identity principal)` will NOT expand inside this file. You must paste the literal principal string.
 
 ```
 (variant { Init = record {
@@ -420,31 +420,31 @@ Deploy:
 
 ```bash
 # Start local replica
-dfx start --background
+icp network start -d
 
 # Deploy the ledger
-dfx deploy icrc1_ledger
+icp deploy icrc1_ledger
 
 # Verify it deployed
-dfx canister id icrc1_ledger
+icp canister status icrc1_ledger --id-only
 ```
 
 ### Interact with Mainnet Ledgers
 
 ```bash
 # Check ICP balance
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_balance_of \
-  "(record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null })" \
-  --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_balance_of \
+  "(record { owner = principal \"$(icp identity principal)\"; subaccount = null })" \
+  -e ic
 
 # Check token metadata
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_metadata '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_metadata '()' -e ic
 
 # Check fee
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_fee '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_fee '()' -e ic
 
 # Transfer ICP (amount in e8s: 100000000 = 1 ICP)
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
   "(record {
     to = record { owner = principal \"TARGET_PRINCIPAL_HERE\"; subaccount = null };
     amount = 100_000_000 : nat;
@@ -452,7 +452,7 @@ dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })" --network ic
+  })" -e ic
 ```
 
 ## Verify It Works
@@ -461,26 +461,26 @@ dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
 
 ```bash
 # 1. Check your balance (should show initial minted amount)
-dfx canister call icrc1_ledger icrc1_balance_of \
-  "(record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null })"
+icp canister call icrc1_ledger icrc1_balance_of \
+  "(record { owner = principal \"$(icp identity principal)\"; subaccount = null })"
 # Expected: (100_000_000_000 : nat)
 
 # 2. Check fee
-dfx canister call icrc1_ledger icrc1_fee '()'
+icp canister call icrc1_ledger icrc1_fee '()'
 # Expected: (10_000 : nat)
 
 # 3. Check decimals
-dfx canister call icrc1_ledger icrc1_decimals '()'
+icp canister call icrc1_ledger icrc1_decimals '()'
 # Expected: (8 : nat8)
 
 # 4. Check symbol
-dfx canister call icrc1_ledger icrc1_symbol '()'
+icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-dfx identity new test-recipient --storage-mode=plaintext 2>/dev/null
-RECIPIENT=$(dfx identity get-principal --identity test-recipient)
-dfx canister call icrc1_ledger icrc1_transfer \
+icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+RECIPIENT=$(icp identity principal --identity test-recipient)
+icp canister call icrc1_ledger icrc1_transfer \
   "(record {
     to = record { owner = principal \"$RECIPIENT\"; subaccount = null };
     amount = 1_000_000 : nat;
@@ -492,7 +492,7 @@ dfx canister call icrc1_ledger icrc1_transfer \
 # Expected: (variant { Ok = 0 : nat })
 
 # 6. Verify recipient balance
-dfx canister call icrc1_ledger icrc1_balance_of \
+icp canister call icrc1_ledger icrc1_balance_of \
   "(record { owner = principal \"$RECIPIENT\"; subaccount = null })"
 # Expected: (1_000_000 : nat)
 ```
@@ -501,14 +501,14 @@ dfx canister call icrc1_ledger icrc1_balance_of \
 
 ```bash
 # Verify ICP ledger is reachable
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_symbol '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_symbol '()' -e ic
 # Expected: ("ICP")
 
 # Verify ckBTC ledger is reachable
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_symbol '()' --network ic
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_symbol '()' -e ic
 # Expected: ("ckBTC")
 
 # Verify ckETH ledger is reachable
-dfx canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' --network ic
+icp canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' -e ic
 # Expected: ("ckETH")
 ```

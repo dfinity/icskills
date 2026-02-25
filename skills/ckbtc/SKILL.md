@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
 - A funded ICP identity (for mainnet deployment cycles)
@@ -670,31 +670,31 @@ There is no local ckBTC minter. For local testing, mock the minter interface or 
 
 ```bash
 # Deploy your backend canister
-dfx deploy backend --network ic
+icp deploy backend -e ic
 
 # Your canister calls the mainnet ckBTC canisters directly by principal
 ```
 
-### Using dfx to Interact with ckBTC Directly
+### Using icp to Interact with ckBTC Directly
 
 ```bash
 # Check ckBTC balance for an account
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Get deposit address
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai get_btc_address \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai get_btc_address \
   '(record { owner = opt principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Check for new deposits and mint ckBTC
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
   '(record { owner = opt principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Transfer ckBTC (amount in e8s — 1 ckBTC = 100_000_000)
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT-PRINCIPAL"; subaccount = null };
     amount = 100_000;
@@ -702,16 +702,16 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })' --network ic
+  })' -e ic
 
 # Withdraw ckBTC to a BTC address (amount in satoshis, minimum 50_000)
 # Note: In production, use icrc2_approve + retrieve_btc_with_approval (see withdraw function above)
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
   '(record { address = "bc1q...your-btc-address"; amount = 50_000; from_subaccount = null })' \
-  --network ic
+  -e ic
 
 # Check transfer fee
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' --network ic
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' -e ic
 ```
 
 ## Verify It Works
@@ -719,9 +719,9 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' --network ic
 ### Check Balance
 
 ```bash
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 # Expected: (AMOUNT : nat) — balance in satoshis (e8s)
 ```
 
@@ -729,7 +729,7 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
 
 ```bash
 # Transfer 1000 satoshis
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT"; subaccount = null };
     amount = 1_000;
@@ -737,13 +737,13 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })' --network ic
+  })' -e ic
 # Expected: (variant { Ok = BLOCK_INDEX : nat })
 
 # Verify recipient received it
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "RECIPIENT"; subaccount = null })' \
-  --network ic
+  -e ic
 # Expected: balance increased by 1000
 ```
 
@@ -751,24 +751,24 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
 
 ```bash
 # 1. Get deposit address
-dfx canister call YOUR-CANISTER getDepositAddress --network ic
+icp canister call YOUR-CANISTER getDepositAddress -e ic
 # Expected: "bc1q..." or "3..." — a valid Bitcoin address
 
 # 2. Send BTC to that address (external wallet)
 
 # 3. Check for new deposits
-dfx canister call YOUR-CANISTER updateBalance --network ic
+icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-dfx canister call YOUR-CANISTER getBalanceUpdate --network ic
+icp canister call YOUR-CANISTER getBalanceUpdate -e ic
 # Expected: balance reflects minted ckBTC
 ```
 
 ### Verify Withdrawal
 
 ```bash
-dfx canister call YOUR-CANISTER withdraw '("bc1q...destination", 50_000 : nat64)' --network ic
+icp canister call YOUR-CANISTER withdraw '("bc1q...destination", 50_000 : nat64)' -e ic
 # Expected: (variant { Ok = record { block_index = BLOCK_INDEX : nat64 } })
 # The BTC will arrive at the destination address after Bitcoin confirmations
 ```

@@ -19,7 +19,7 @@ dependencies: []
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -27,13 +27,13 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Node.js >= 18 (for building frontend assets)
 - `@dfinity/assets` npm package (for programmatic uploads)
 
 ## Canister IDs
 
-Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `.dfx/local/canister_ids.json` (local) or `canister_ids.json` (mainnet).
+Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `canister_ids.json` (local and mainnet).
 
 Access patterns:
 | Environment | URL Pattern |
@@ -44,15 +44,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in dfx.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, dfx fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `dfx deploy` runs the `build` command from dfx.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If dfx.json has `"frontend"` but you run `dfx deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the `@dfinity/assets` library handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -60,7 +60,7 @@ Access patterns:
 
 ## Implementation
 
-### dfx.json Configuration
+### icp.json Configuration
 
 ```json
 {
@@ -80,9 +80,9 @@ Access patterns:
 ```
 
 Key fields:
-- `"type": "assets"` -- tells dfx this is an asset canister
+- `"type": "assets"` -- tells `icp` this is an asset canister
 - `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands dfx runs before uploading (your frontend build step)
+- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
 - `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
@@ -123,7 +123,7 @@ The asset canister automatically compresses assets with gzip and brotli. No conf
 
 To verify compression is working:
 ```bash
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/";
   method = "GET";
   body = vec {};
@@ -160,7 +160,7 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 
 ### Programmatic Uploads with @dfinity/assets
 
-For uploading files from code (not just via `dfx deploy`):
+For uploading files from code (not just via `icp deploy`):
 
 ```javascript
 import { AssetManager } from "@dfinity/assets";
@@ -206,16 +206,16 @@ Only canister controllers can upload to asset canisters. To grant upload permiss
 
 ```bash
 # Add a principal as a controller
-dfx canister update-settings frontend --add-controller <principal-id>
+icp canister update-settings frontend --add-controller <principal-id>
 
 # Or grant "prepare" permission (can upload but not commit) -- more restrictive
-dfx canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
+icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
 
 # Grant full commit permission
-dfx canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
+icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
 
 # List current permissions
-dfx canister call frontend list_permitted '(record { permission = variant { Commit } })'
+icp canister call frontend list_permitted '(record { permission = variant { Commit } })'
 ```
 
 ## Deploy & Test
@@ -224,20 +224,20 @@ dfx canister call frontend list_permitted '(record { permission = variant { Comm
 
 ```bash
 # Start the local replica
-dfx start --background
+icp network start -d
 
 # Build and deploy frontend + backend
-dfx deploy
+icp deploy
 
 # Or deploy only the frontend
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ### Mainnet Deployment
 
 ```bash
 # Ensure you have cycles in your wallet
-dfx deploy --network ic frontend
+icp deploy -e ic frontend
 ```
 
 ### Updating Frontend Only
@@ -247,22 +247,22 @@ When you only changed frontend code:
 ```bash
 # Rebuild and redeploy just the frontend canister
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Check the canister is running
-dfx canister status frontend
+icp canister status frontend
 # Expected: Status: Running, Memory Size: <non-zero>
 
 # 2. List uploaded assets
-dfx canister call frontend list '(record {})'
+icp canister call frontend list '(record {})'
 # Expected: A list of asset keys like "/index.html", "/assets/index-abc123.js", etc.
 
 # 3. Fetch the index page via http_request
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/";
   method = "GET";
   body = vec {};
@@ -272,7 +272,7 @@ dfx canister call frontend http_request '(record {
 # Expected: record { status_code = 200; body = blob "<!DOCTYPE html>..."; ... }
 
 # 4. Test SPA fallback (should return index.html, not 404)
-dfx canister call frontend http_request '(record {
+icp canister call frontend http_request '(record {
   url = "/about";
   method = "GET";
   body = vec {};
@@ -286,11 +286,11 @@ dfx canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-dfx canister id frontend
+icp canister status frontend --id-only
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
-dfx canister info frontend
+icp canister info frontend
 # Shows memory usage, module hash, controllers
 ```
 
@@ -309,7 +309,7 @@ dependencies: []
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
@@ -317,7 +317,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@dfinity/certificate-verification` or `@dfinity/agent` (includes verification)
@@ -330,7 +330,7 @@ No external canister IDs required. Certification uses the IC system API directly
 
 The IC root public key (needed for client-side verification):
 - Mainnet: `308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100814c0e6ec71fab583b08bd81373c255c3c371b2e84863c98a4f1e08b74235d14fb5d9c0cd546d9685f913a0c0b2cc5341583bf4b4392e467db96d65b9bb4cb717112f8472e0d5a4d14505ffd7484b01291091c5f87b98883463f98091a0baaae`
-- Local: available from `dfx` (agent handles this automatically)
+- Local: available from `icp` (agent handles this automatically)
 
 ## Mistakes That Break Your Build
 
@@ -702,21 +702,21 @@ For asset canisters, the `@dfinity/agent` service worker handles verification tr
 
 ```bash
 # Deploy the canister
-dfx deploy backend
+icp deploy backend
 
 # Set a certified value (update call -- goes through consensus)
-dfx canister call backend set '("greeting", "hello world")'
+icp canister call backend set '("greeting", "hello world")'
 
 # Query the certified value
-dfx canister call backend get '("greeting")'
+icp canister call backend get '("greeting")'
 # Returns: record { value = opt "hello world"; certificate = blob "..."; witness = blob "..." }
 
 # Set multiple values
-dfx canister call backend set '("name", "Alice")'
-dfx canister call backend set '("age", "30")'
+icp canister call backend set '("name", "Alice")'
+icp canister call backend set '("age", "30")'
 
 # Delete a value
-dfx canister call backend delete '("age")'
+icp canister call backend delete '("age")'
 
 # Verify the root hash is being set
 # (No direct command -- verified by the presence of a non-null certificate in query response)
@@ -726,24 +726,24 @@ dfx canister call backend delete '("age")'
 
 ```bash
 # 1. Verify certificate is present in query response
-dfx canister call backend get '("greeting")'
+icp canister call backend get '("greeting")'
 # Expected: certificate field is a non-empty blob (NOT null)
 # If certificate is null, you are calling from an update context (wrong)
 
 # 2. Verify data integrity after update
-dfx canister call backend set '("key1", "value1")'
-dfx canister call backend get '("key1")'
+icp canister call backend set '("key1", "value1")'
+icp canister call backend get '("key1")'
 # Expected: value = opt "value1" with valid certificate
 
 # 3. Verify certification survives canister upgrade
-dfx canister call backend set '("persistent", "data")'
-dfx deploy backend  # triggers upgrade
-dfx canister call backend get '("persistent")'
+icp canister call backend set '("persistent", "data")'
+icp deploy backend  # triggers upgrade
+icp canister call backend get '("persistent")'
 # Expected: certificate is still non-null (postupgrade re-established certification)
 # Note: data persistence depends on stable storage implementation
 
 # 4. Verify non-existent key returns null value with valid certificate
-dfx canister call backend get '("nonexistent")'
+icp canister call backend get '("nonexistent")'
 # Expected: value = null, certificate = blob "..." (certificate still valid)
 
 # 5. Frontend verification test
@@ -773,7 +773,7 @@ dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -781,7 +781,7 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
 - A funded ICP identity (for mainnet deployment cycles)
@@ -1433,31 +1433,31 @@ There is no local ckBTC minter. For local testing, mock the minter interface or 
 
 ```bash
 # Deploy your backend canister
-dfx deploy backend --network ic
+icp deploy backend -e ic
 
 # Your canister calls the mainnet ckBTC canisters directly by principal
 ```
 
-### Using dfx to Interact with ckBTC Directly
+### Using icp to Interact with ckBTC Directly
 
 ```bash
 # Check ckBTC balance for an account
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Get deposit address
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai get_btc_address \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai get_btc_address \
   '(record { owner = opt principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Check for new deposits and mint ckBTC
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
   '(record { owner = opt principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 
 # Transfer ckBTC (amount in e8s — 1 ckBTC = 100_000_000)
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT-PRINCIPAL"; subaccount = null };
     amount = 100_000;
@@ -1465,16 +1465,16 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })' --network ic
+  })' -e ic
 
 # Withdraw ckBTC to a BTC address (amount in satoshis, minimum 50_000)
 # Note: In production, use icrc2_approve + retrieve_btc_with_approval (see withdraw function above)
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
+icp canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
   '(record { address = "bc1q...your-btc-address"; amount = 50_000; from_subaccount = null })' \
-  --network ic
+  -e ic
 
 # Check transfer fee
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' --network ic
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' -e ic
 ```
 
 ## Verify It Works
@@ -1482,9 +1482,9 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' --network ic
 ### Check Balance
 
 ```bash
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "YOUR-PRINCIPAL"; subaccount = null })' \
-  --network ic
+  -e ic
 # Expected: (AMOUNT : nat) — balance in satoshis (e8s)
 ```
 
@@ -1492,7 +1492,7 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
 
 ```bash
 # Transfer 1000 satoshis
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT"; subaccount = null };
     amount = 1_000;
@@ -1500,13 +1500,13 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })' --network ic
+  })' -e ic
 # Expected: (variant { Ok = BLOCK_INDEX : nat })
 
 # Verify recipient received it
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "RECIPIENT"; subaccount = null })' \
-  --network ic
+  -e ic
 # Expected: balance increased by 1000
 ```
 
@@ -1514,24 +1514,24 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
 
 ```bash
 # 1. Get deposit address
-dfx canister call YOUR-CANISTER getDepositAddress --network ic
+icp canister call YOUR-CANISTER getDepositAddress -e ic
 # Expected: "bc1q..." or "3..." — a valid Bitcoin address
 
 # 2. Send BTC to that address (external wallet)
 
 # 3. Check for new deposits
-dfx canister call YOUR-CANISTER updateBalance --network ic
+icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-dfx canister call YOUR-CANISTER getBalanceUpdate --network ic
+icp canister call YOUR-CANISTER getBalanceUpdate -e ic
 # Expected: balance reflects minted ckBTC
 ```
 
 ### Verify Withdrawal
 
 ```bash
-dfx canister call YOUR-CANISTER withdraw '("bc1q...destination", 50_000 : nat64)' --network ic
+icp canister call YOUR-CANISTER withdraw '("bc1q...destination", 50_000 : nat64)' -e ic
 # Expected: (variant { Ok = record { block_index = BLOCK_INDEX : nat64 } })
 # The BTC will arrive at the destination address after Bitcoin confirmations
 ```
@@ -1551,7 +1551,7 @@ dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -1559,7 +1559,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `candid`, `serde`
 - Cycles in your canister (each RPC call costs cycles)
@@ -1625,7 +1625,7 @@ Use `requestCost` to get an exact estimate before calling.
 
 ## Implementation
 
-### dfx.json Configuration
+### icp.json Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
@@ -1647,9 +1647,9 @@ Use `requestCost` to get an exact estimate before calling.
 
 Then run:
 ```bash
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
+icp deps pull
+icp deps init evm_rpc --argument '(record {})'
+icp deps deploy
 ```
 
 #### Option B: Custom wasm (for local development)
@@ -2266,16 +2266,16 @@ ic_cdk::export_candid!();
 ### Local Development
 
 ```bash
-# Start dfx
-dfx start --background
+# Start local replica
+icp network start -d
 
 # Pull the EVM RPC canister
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
+icp deps pull
+icp deps init evm_rpc --argument '(record {})'
+icp deps deploy
 
 # Deploy your backend
-dfx deploy backend
+icp deploy backend
 ```
 
 ### Deploy to Mainnet
@@ -2283,42 +2283,41 @@ dfx deploy backend
 ```bash
 # On mainnet, the EVM RPC canister is already deployed.
 # Your canister calls it directly by principal.
-dfx deploy backend --network ic
+icp deploy backend -e ic
 ```
 
-### Test via dfx CLI
+### Test via icp CLI
 
 ```bash
 # Set up variables
-export WALLET=$(dfx identity get-wallet)
 export CYCLES=10000000000
 
 # Get ETH balance (raw JSON-RPC via single provider)
-dfx canister call evm_rpc request '(
+icp canister call evm_rpc request '(
   variant { EthMainnet = variant { PublicNode } },
   "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"latest\"],\"id\":1}",
   1000
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Get latest block (typed API, multi-provider)
-dfx canister call evm_rpc eth_getBlockByNumber '(
+icp canister call evm_rpc eth_getBlockByNumber '(
   variant { EthMainnet = null },
   null,
   variant { Latest }
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Get transaction receipt
-dfx canister call evm_rpc eth_getTransactionReceipt '(
+icp canister call evm_rpc eth_getTransactionReceipt '(
   variant { EthMainnet = null },
   null,
   "0xdd5d4b18923d7aae953c7996d791118102e889bea37b48a651157a4890e4746f"
-)' --with-cycles=$CYCLES --wallet=$WALLET
+)' --with-cycles=$CYCLES
 
 # Check available providers
-dfx canister call evm_rpc getProviders
+icp canister call evm_rpc getProviders
 
 # Estimate cost before calling
-dfx canister call evm_rpc requestCost '(
+icp canister call evm_rpc requestCost '(
   variant { EthMainnet = variant { PublicNode } },
   "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"latest\"],\"id\":1}",
   1000
@@ -2330,7 +2329,7 @@ dfx canister call evm_rpc requestCost '(
 ### Check ETH Balance
 
 ```bash
-dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")'
+icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")'
 # Expected: JSON string like '{"jsonrpc":"2.0","id":1,"result":"0x..."}'
 # The result is the balance in wei (hex encoded)
 ```
@@ -2338,7 +2337,7 @@ dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37
 ### Check Latest Block
 
 ```bash
-dfx canister call backend get_latest_block
+icp canister call backend get_latest_block
 # Expected: record { number = ...; hash = "0x..."; timestamp = ...; ... }
 ```
 
@@ -2346,7 +2345,7 @@ dfx canister call backend get_latest_block
 
 ```bash
 # USDC contract on Ethereum: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-dfx canister call backend get_erc20_balance '(
+icp canister call backend get_erc20_balance '(
   "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 )'
@@ -2359,13 +2358,13 @@ Check your canister cycle balance before and after an RPC call:
 
 ```bash
 # Before
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Make a call
-dfx canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")' --network ic
+icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")' -e ic
 
 # After — unused cycles from the 10B budget are refunded
-dfx canister status backend --network ic
+icp canister status backend -e ic
 ```
 
 
@@ -2383,7 +2382,7 @@ dependencies: []
 ---
 
 # HTTPS Outcalls
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -2391,8 +2390,8 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- dfx >= 0.30.0
-- For Motoko: `moc` compiler (included with dfx), `mo:core` 2.0 in mops.toml
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- For Motoko: `moc` compiler (included with icp-cli), `mo:core` 2.0 in mops.toml
 - For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
 
 ## Canister IDs
@@ -2730,42 +2729,42 @@ Always over-budget. Unused cycles are refunded to the canister.
 
 ```bash
 # Start the local replica
-dfx start --background
+icp network start -d
 
 # Deploy your canister
-dfx deploy backend
+icp deploy backend
 ```
 
-Note: HTTPS outcalls work on the local replica. dfx proxies the requests through the local HTTP gateway.
+Note: HTTPS outcalls work on the local replica. icp-cli proxies the requests through the local HTTP gateway.
 
 ### Mainnet Deployment
 
 ```bash
 # Ensure your canister has enough cycles (check balance first)
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Deploy
-dfx deploy --network ic backend
+icp deploy -e ic backend
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Test the GET outcall (fetch price)
-dfx canister call backend fetchPrice
+icp canister call backend fetchPrice
 # Expected: Something like '("{\"internet-computer\":{\"usd\":12.34}}")'
 # (actual price will vary)
 
 # 2. Test the POST outcall
-dfx canister call backend postData '("{\"test\": \"hello\"}")'
+icp canister call backend postData '("{\"test\": \"hello\"}")'
 # Expected: JSON response from httpbin.org echoing back your data
 
 # 3. If using Rust with the typed parser:
-dfx canister call backend get_icp_price_usd
+icp canister call backend get_icp_price_usd
 # Expected: '("ICP price: $12.34")'
 
 # 4. Check canister cycle balance (outcalls consume cycles)
-dfx canister status backend
+icp canister status backend
 # Verify the balance decreased slightly after outcalls
 
 # 5. Test error handling: call with an unreachable URL
@@ -2779,7 +2778,7 @@ If an outcall fails:
 
 ```bash
 # Check the replica log for detailed error messages
-# Local: dfx output shows errors inline
+# Local: icp output shows errors inline
 # Mainnet: check the canister logs
 
 # Common errors:
@@ -2832,13 +2831,13 @@ dependencies: []
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 
@@ -2871,7 +2870,7 @@ Index canisters (for transaction history):
 
 7. **Calling ledger from frontend** -- ICRC-1 transfers should originate from a backend canister, not directly from the frontend. Frontend-initiated transfers expose the user to reentrancy and can bypass business logic. Use a backend canister as the intermediary.
 
-8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(dfx identity get-principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
+8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(icp identity principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
 
 ## Implementation
 
@@ -3212,9 +3211,9 @@ Add to `dfx.json`:
 }
 ```
 
-Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `dfx identity get-principal`):
+Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
 
-> **Pitfall:** Shell substitutions like `$(dfx identity get-principal)` will NOT expand inside this file. You must paste the literal principal string.
+> **Pitfall:** Shell substitutions like `$(icp identity principal)` will NOT expand inside this file. You must paste the literal principal string.
 
 ```
 (variant { Init = record {
@@ -3242,31 +3241,31 @@ Deploy:
 
 ```bash
 # Start local replica
-dfx start --background
+icp network start -d
 
 # Deploy the ledger
-dfx deploy icrc1_ledger
+icp deploy icrc1_ledger
 
 # Verify it deployed
-dfx canister id icrc1_ledger
+icp canister status icrc1_ledger --id-only
 ```
 
 ### Interact with Mainnet Ledgers
 
 ```bash
 # Check ICP balance
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_balance_of \
-  "(record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null })" \
-  --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_balance_of \
+  "(record { owner = principal \"$(icp identity principal)\"; subaccount = null })" \
+  -e ic
 
 # Check token metadata
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_metadata '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_metadata '()' -e ic
 
 # Check fee
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_fee '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_fee '()' -e ic
 
 # Transfer ICP (amount in e8s: 100000000 = 1 ICP)
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
   "(record {
     to = record { owner = principal \"TARGET_PRINCIPAL_HERE\"; subaccount = null };
     amount = 100_000_000 : nat;
@@ -3274,7 +3273,7 @@ dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
     memo = null;
     from_subaccount = null;
     created_at_time = null;
-  })" --network ic
+  })" -e ic
 ```
 
 ## Verify It Works
@@ -3283,26 +3282,26 @@ dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_transfer \
 
 ```bash
 # 1. Check your balance (should show initial minted amount)
-dfx canister call icrc1_ledger icrc1_balance_of \
-  "(record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null })"
+icp canister call icrc1_ledger icrc1_balance_of \
+  "(record { owner = principal \"$(icp identity principal)\"; subaccount = null })"
 # Expected: (100_000_000_000 : nat)
 
 # 2. Check fee
-dfx canister call icrc1_ledger icrc1_fee '()'
+icp canister call icrc1_ledger icrc1_fee '()'
 # Expected: (10_000 : nat)
 
 # 3. Check decimals
-dfx canister call icrc1_ledger icrc1_decimals '()'
+icp canister call icrc1_ledger icrc1_decimals '()'
 # Expected: (8 : nat8)
 
 # 4. Check symbol
-dfx canister call icrc1_ledger icrc1_symbol '()'
+icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-dfx identity new test-recipient --storage-mode=plaintext 2>/dev/null
-RECIPIENT=$(dfx identity get-principal --identity test-recipient)
-dfx canister call icrc1_ledger icrc1_transfer \
+icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+RECIPIENT=$(icp identity principal --identity test-recipient)
+icp canister call icrc1_ledger icrc1_transfer \
   "(record {
     to = record { owner = principal \"$RECIPIENT\"; subaccount = null };
     amount = 1_000_000 : nat;
@@ -3314,7 +3313,7 @@ dfx canister call icrc1_ledger icrc1_transfer \
 # Expected: (variant { Ok = 0 : nat })
 
 # 6. Verify recipient balance
-dfx canister call icrc1_ledger icrc1_balance_of \
+icp canister call icrc1_ledger icrc1_balance_of \
   "(record { owner = principal \"$RECIPIENT\"; subaccount = null })"
 # Expected: (1_000_000 : nat)
 ```
@@ -3323,15 +3322,15 @@ dfx canister call icrc1_ledger icrc1_balance_of \
 
 ```bash
 # Verify ICP ledger is reachable
-dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_symbol '()' --network ic
+icp canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_symbol '()' -e ic
 # Expected: ("ICP")
 
 # Verify ckBTC ledger is reachable
-dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_symbol '()' --network ic
+icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_symbol '()' -e ic
 # Expected: ("ckBTC")
 
 # Verify ckETH ledger is reachable
-dfx canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' --network ic
+icp canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' -e ic
 # Expected: ("ckETH")
 ```
 
@@ -3350,7 +3349,7 @@ dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 3.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, @dfinity/auth-client >= 3.0]
 
 ## What This Is
 
@@ -3358,7 +3357,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Node.js >= 18 (for frontend)
 - `@dfinity/auth-client` npm package (>= 3.0.0)
 - `@dfinity/agent` npm package
@@ -3376,7 +3375,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 1. **Not rejecting anonymous principal.** The anonymous principal `2vxsx-fae` is sent when a user is not authenticated. If your backend does not explicitly reject it, unauthenticated users can call protected endpoints. ALWAYS check `Principal.isAnonymous(caller)` and reject.
 
-2. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID is different from mainnet). Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `dfx deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` or your `.dfx/local/canister_ids.json`.
+2. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID is different from mainnet). Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `icp deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` (note: this auto-generated env var may work differently in icp-cli than it did in the legacy tooling; verify your build tooling picks it up) or your canister_ids.json (path may differ in icp-cli projects compared to the legacy `.icp/local/canister_ids.json` location).
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -3390,7 +3389,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Implementation
 
-### dfx.json Configuration
+### icp.json Configuration
 
 For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
 
@@ -3412,7 +3411,7 @@ For local development, download the II canister WASM from the [dfinity/internet-
 }
 ```
 
-The `remote.id.ic` field tells dfx to skip deploying this canister on mainnet (use the existing one). Locally, dfx deploys the provided WASM.
+The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
 
 ### Frontend: Vanilla JavaScript/TypeScript Login Flow
 
@@ -3436,7 +3435,7 @@ function getIdentityProviderUrl() {
     // For Vite: define VITE_II_CANISTER_ID in .env.local
     // For webpack: use DefinePlugin with process.env.II_CANISTER_ID
     const iiCanisterId = import.meta.env.VITE_II_CANISTER_ID
-      ?? process.env.CANISTER_ID_INTERNET_IDENTITY  // dfx auto-generates this
+      ?? process.env.CANISTER_ID_INTERNET_IDENTITY  // auto-generated by build tooling (verify this works with icp-cli)
       ?? "be2us-64aaa-aaaaa-qaabq-cai"; // fallback -- replace with your actual local II canister ID
     return `http://${iiCanisterId}.localhost:4943`;
   }
@@ -3639,7 +3638,7 @@ async fn protected_async_action() -> String {
     let caller = require_auth(); // Capture HERE, before any await
 
     // After this await, ic_cdk::caller() would return wrong principal
-    let _result = some_async_operation().await; // (pseudocode — replace with your actual async call)
+    let _result = some_async_operation().await; // (pseudocode -- replace with your actual async call)
 
     // Use the captured `caller` variable, NOT ic_cdk::caller()
     format!("Action completed by {}", caller)
@@ -3654,49 +3653,49 @@ async fn protected_async_action() -> String {
 
 ```bash
 # Start the local replica
-dfx start --background
+icp network start -d
 
 # Deploy II canister and your backend
-dfx deploy internet_identity
-dfx deploy backend
+icp deploy internet_identity
+icp deploy backend
 
 # Verify II is running
-dfx canister status internet_identity
+icp canister status internet_identity
 ```
 
 ### Mainnet Deployment
 
 ```bash
 # II is already on mainnet -- only deploy your canisters
-dfx deploy --network ic backend
+icp deploy -e ic backend
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Check II canister is running
-dfx canister status internet_identity
+icp canister status internet_identity
 # Expected: Status: Running
 
 # 2. Test anonymous rejection from CLI
-dfx canister call backend adminAction
+icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
 
 # 3. Test whoAmI as anonymous
-dfx canister call backend whoAmI
+icp canister call backend whoAmI
 # Expected: ("You are not authenticated (anonymous)")
 
 # 4. Test whoAmI as authenticated identity
-dfx canister call backend whoAmI
-# Expected: ("Your principal: <your-dfx-identity-principal>")
-# Note: dfx CLI calls use the current dfx identity, not anonymous,
+icp canister call backend whoAmI
+# Expected: ("Your principal: <your-identity-principal>")
+# Note: icp CLI calls use the current identity, not anonymous,
 # unless you explicitly use --identity anonymous
 
 # 5. Test with explicit anonymous identity
-dfx identity use anonymous
-dfx canister call backend adminAction
+icp identity default anonymous
+icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
-dfx identity use default  # Switch back
+icp identity default default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943
@@ -3718,7 +3717,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -3726,7 +3725,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
@@ -3770,9 +3769,9 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in dfx.json so `dfx deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in dfx.json so `icp deploy` orders them correctly.
 
-6. **Forgetting `dfx generate` for each backend canister.** Bare `dfx generate` fails. Run `dfx generate canister_name` for each backend canister individually.
+6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
 7. **Shared types diverging between canisters.** If canister A expects `{ id: Nat; name: Text }` and canister B sends `{ id: Nat; title: Text }`, the call silently fails or traps. Use a shared types module imported by both canisters.
 
@@ -4566,16 +4565,14 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 
 ```bash
 # Upgrade canisters in dependency order
-dfx deploy user_service
+icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(dfx canister id user_service)
-dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
+icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
-dfx generate user_service
-dfx generate content_service
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ## Deploy & Test
@@ -4583,42 +4580,38 @@ dfx deploy frontend
 ### Local Development
 
 ```bash
-# Start dfx
-dfx start --background
+# Start the local replica
+icp network start -d
 
 # Deploy in dependency order
-dfx deploy user_service
+icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(dfx canister id user_service)
-dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
-
-# Generate declarations for frontend
-dfx generate user_service
-dfx generate content_service
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
+icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
 npm run build
-dfx deploy frontend
+icp deploy frontend
 ```
 
 ### Test Inter-Canister Calls (Motoko)
 
 ```bash
 # Register a user
-PRINCIPAL=$(dfx identity get-principal)
-dfx canister call user_service register "(\"alice\")"
+PRINCIPAL=$(icp identity principal)
+icp canister call user_service register "(\"alice\")"
 
 # Verify user exists
-dfx canister call user_service isValidUser "(principal \"$PRINCIPAL\")"
+icp canister call user_service isValidUser "(principal \"$PRINCIPAL\")"
 # Expected: (true)
 
 # Create a post (triggers inter-canister call to user_service)
-dfx canister call content_service createPost "(\"Hello World\", \"My first post\")"
+icp canister call content_service createPost "(\"Hello World\", \"My first post\")"
 # Expected: (variant { ok = record { id = 0; author = principal "..."; ... } })
 
 # Get all posts
-dfx canister call content_service getPosts
+icp canister call content_service getPosts
 # Expected: (vec { record { id = 0; ... } })
 ```
 
@@ -4627,17 +4620,17 @@ dfx canister call content_service getPosts
 Rust canisters use snake_case function names:
 
 ```bash
-PRINCIPAL=$(dfx identity get-principal)
-dfx canister call user_service register "(\"alice\")"
+PRINCIPAL=$(icp identity principal)
+icp canister call user_service register "(\"alice\")"
 
-dfx canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
+icp canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
 # Expected: (true)
 
 # content_service must have been deployed with --argument "(principal \"<user_service_id>\")"
-dfx canister call content_service create_post "(\"Hello World\", \"My first post\")"
+icp canister call content_service create_post "(\"Hello World\", \"My first post\")"
 # Expected: (variant { ok = record { id = 0 : nat64; author = principal "..."; ... } })
 
-dfx canister call content_service get_posts
+icp canister call content_service get_posts
 # Expected: (vec { record { id = 0 : nat64; ... } })
 ```
 
@@ -4646,7 +4639,7 @@ dfx canister call content_service get_posts
 ### Verify User Registration
 
 ```bash
-dfx canister call user_service register '("testuser")'
+icp canister call user_service register '("testuser")'
 # Expected: (variant { ok = record { id = principal "..."; username = "testuser"; created = ... } })
 ```
 
@@ -4655,25 +4648,25 @@ dfx canister call user_service register '("testuser")'
 ```bash
 # This call should succeed (user is registered)
 # Motoko: createPost / Rust: create_post
-dfx canister call content_service createPost '("Test Title", "Test Body")'
+icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
 # Create a new identity that is NOT registered
-dfx identity new unregistered --storage-mode=plaintext
-dfx identity use unregistered
-dfx canister call content_service createPost '("Should Fail", "No user")'
+icp identity new unregistered --storage-mode=plaintext
+icp identity default unregistered
+icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-dfx identity use default
+icp identity default default
 ```
 
 ### Verify Cross-Canister Query
 
 ```bash
-PRINCIPAL=$(dfx identity get-principal)
+PRINCIPAL=$(icp identity principal)
 # Motoko: getPostsWithAuthor / Rust: get_posts_with_author
-dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
+icp canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
 # Expected: (opt record { id = ...; username = "testuser"; ... }, vec { record { ... } })
 ```
 
@@ -4682,10 +4675,10 @@ dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")
 ```bash
 # Read the wasm file for the child canister
 # (In practice you'd upload or reference a wasm blob)
-dfx canister call factory createChildCanister '(blob "...")'
+icp canister call factory createChildCanister '(blob "...")'
 # Expected: (principal "NEW-CANISTER-ID")
 
-dfx canister call factory getChildCanister "(principal \"$PRINCIPAL\")"
+icp canister call factory getChildCanister "(principal \"$PRINCIPAL\")"
 # Expected: (opt principal "NEW-CANISTER-ID")
 ```
 
@@ -4704,7 +4697,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.30.0, dfx sns extension, NNS neuron with stake]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0, quill CLI, NNS neuron with stake]
 
 ## What This Is
 
@@ -4712,8 +4705,8 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0 with `sns` extension installed (`dfx extension install sns`)
-- `quill` CLI for advanced proposal submission (alternative to `dfx sns propose`)
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `quill` CLI for proposal submission (`quill sns make-proposal` is the recommended approach)
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined
@@ -4762,7 +4755,7 @@ When an SNS launch succeeds, SNS-W deploys these canisters on an SNS subnet:
 
 ### SNS Configuration File (sns_init.yaml)
 
-This is the single source of truth for all launch parameters. Copy the template from `dfinity/sns-testing` and customize:
+This is the single source of truth for all launch parameters. Copy the template from the `dfinity/sns-testing` repo and customize:
 
 ```yaml
 # Note: numeric values are in e8s (1 token = 100_000_000 e8s). Time values are in seconds.
@@ -4870,7 +4863,7 @@ Swap:
 ```
 Stage 1:  Developer defines parameters in sns_init.yaml
 Stage 2:  Developer adds NNS Root as co-controller of dapp canisters
-Stage 3:  Developer submits NNS proposal using `dfx sns propose` (or quill)
+Stage 3:  Developer submits NNS proposal using `quill sns make-proposal`
 Stage 4:  NNS community votes on the proposal
 Stage 5:  (If adopted) SNS-W deploys uninitialized SNS canisters
 Stage 6:  SNS Root becomes sole controller of dapp canisters
@@ -5006,22 +4999,20 @@ serde = { version = "1", features = ["derive"] }
 git clone https://github.com/dfinity/sns-testing.git
 cd sns-testing
 
-# WARNING: --clean wipes all local canister data. Only use for fresh setup.
-dfx start --clean --background
-
-# Import SNS canister WASMs
-dfx sns import
-dfx sns download
+# WARNING: starting a fresh network wipes all local canister data. Only use for fresh setup.
+icp network start -d
 
 # Deploy NNS canisters locally (includes governance, ledger, SNS-W)
-dfx nns install
+# Note: Use the sns-testing repo's setup scripts for NNS + SNS-W canister installation.
+# See https://github.com/dfinity/sns-testing for current instructions.
 
 # Deploy your dapp canisters
-dfx deploy my_backend
-dfx deploy my_frontend
+icp deploy my_backend
+icp deploy my_frontend
 
 # Deploy a testflight SNS locally using your config
-dfx sns deploy-testflight --init-config-file sns_init.yaml
+# Use the sns-testing repo tooling to deploy a local testflight SNS.
+# See sns-testing README for the current testflight workflow.
 ```
 
 ### Mainnet Testflight (Mock SNS)
@@ -5029,7 +5020,8 @@ dfx sns deploy-testflight --init-config-file sns_init.yaml
 ```bash
 # Deploy a mock SNS on mainnet to test governance flows
 # This does NOT do a real swap -- it creates a mock SNS you control
-dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
+# Use the sns-testing repo tooling for mainnet testflight deployment.
+# See https://github.com/dfinity/sns-testing for the current testflight workflow.
 
 # Test submitting proposals, voting, and upgrading via SNS governance
 ```
@@ -5038,17 +5030,17 @@ dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
 
 ```bash
 # Step 1: Add NNS Root as co-controller of each dapp canister
-dfx sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
-dfx sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
+# Use quill to add NNS Root as co-controller:
+quill sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
+quill sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
 
 # Step 2: Validate your config locally before submitting
-# Note: There is no --dry-run flag for `dfx sns propose`. Instead, validate offline:
 sns-cli validate --init-config-file sns_init.yaml
 # Or review the rendered proposal by inspecting the yaml output carefully.
 # You can also test the full flow on a local replica first (see Local Testing above).
 
 # Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
-dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
+quill sns make-proposal --network ic --neuron-id NEURON_ID sns_init.yaml
 ```
 
 ## Verify It Works
@@ -5057,25 +5049,25 @@ dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-dfx canister id sns_governance
-dfx canister id sns_ledger
-dfx canister id sns_root
-dfx canister id sns_swap
+icp canister status sns_governance --id-only
+icp canister status sns_ledger --id-only
+icp canister status sns_root --id-only
+icp canister status sns_swap --id-only
 
 # Verify SNS governance is operational
-dfx canister call sns_governance get_nervous_system_parameters '()'
+icp canister call sns_governance get_nervous_system_parameters '()'
 # Expected: returns the governance parameters you configured
 
 # Verify token distribution
-dfx canister call sns_ledger icrc1_total_supply '()'
+icp canister call sns_ledger icrc1_total_supply '()'
 # Expected: matches your total token supply
 
 # Verify dapp canister controllers changed
-dfx canister info BACKEND_CANISTER_ID
+icp canister status BACKEND_CANISTER_ID
 # Expected: controller is the SNS Root canister, NOT your principal
 
 # Test an SNS proposal (upgrade your canister via governance)
-dfx canister call sns_governance manage_neuron '(record { ... })'
+icp canister call sns_governance manage_neuron '(record { ... })'
 # Expected: proposal created, can be voted on
 ```
 
@@ -5083,15 +5075,15 @@ dfx canister call sns_governance manage_neuron '(record { ... })'
 
 ```bash
 # Check swap status
-dfx canister call SNS_SWAP_ID get_state '()' --network ic
+icp canister call SNS_SWAP_ID get_state '()' -e ic
 # Expected: shows swap status, participation count, ICP raised
 
 # Check SNS governance
-dfx canister call SNS_GOVERNANCE_ID get_nervous_system_parameters '()' --network ic
+icp canister call SNS_GOVERNANCE_ID get_nervous_system_parameters '()' -e ic
 # Expected: returns your configured parameters
 
 # Verify dapp controller is SNS Root
-dfx canister info BACKEND_CANISTER_ID --network ic
+icp canister status BACKEND_CANISTER_ID -e ic
 # Expected: single controller = SNS Root canister ID
 ```
 
@@ -5110,13 +5102,13 @@ dependencies: []
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
@@ -5125,7 +5117,7 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 ## Mistakes That Break Your Build
 
-1. **Using `thread_local! { RefCell<T> }` for user data (Rust)** -- This is heap memory. It is wiped on every canister upgrade. All user data, balances, settings stored this way will vanish after `dfx deploy`. Use `StableBTreeMap` instead.
+1. **Using `thread_local! { RefCell<T> }` for user data (Rust)** -- This is heap memory. It is wiped on every canister upgrade. All user data, balances, settings stored this way will vanish after `icp deploy`. Use `StableBTreeMap` instead.
 
 2. **Forgetting `#[post_upgrade]` handler (Rust)** -- Without a `post_upgrade` function, the canister may silently reset state or behave unexpectedly after upgrade. Always define both `#[init]` and `#[post_upgrade]`.
 
@@ -5378,57 +5370,57 @@ Key rules for Rust stable structures:
 
 ```bash
 # Start local replica
-dfx start --background
+icp network start -d
 
 # Deploy
-dfx deploy backend
+icp deploy backend
 
 # Add data
-dfx canister call backend addUser '("Alice")'
+icp canister call backend addUser '("Alice")'
 # Expected: (0 : nat)
 
-dfx canister call backend addUser '("Bob")'
+icp canister call backend addUser '("Bob")'
 # Expected: (1 : nat)
 
 # Verify data exists
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Expected: (2 : nat)
 
-dfx canister call backend getUser '(0)'
+icp canister call backend getUser '(0)'
 # Expected: (opt record { id = 0 : nat; name = "Alice"; created = ... })
 
 # Now upgrade the canister (simulates code change + redeploy)
-dfx deploy backend
+icp deploy backend
 
 # Verify data survived the upgrade
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Expected: (2 : nat) -- STILL 2, not 0
 
-dfx canister call backend getUser '(1)'
+icp canister call backend getUser '(1)'
 # Expected: (opt record { id = 1 : nat; name = "Bob"; created = ... })
 ```
 
 ### Rust: Verify Persistence Across Upgrades
 
 ```bash
-dfx start --background
+icp network start -d
 
-dfx deploy backend
+icp deploy backend
 
-dfx canister call backend add_user '("Alice")'
+icp canister call backend add_user '("Alice")'
 # Expected: (0 : nat64)
 
-dfx canister call backend get_user_count '()'
+icp canister call backend get_user_count '()'
 # Expected: (1 : nat64)
 
 # Upgrade
-dfx deploy backend
+icp deploy backend
 
 # Verify persistence
-dfx canister call backend get_user_count '()'
+icp canister call backend get_user_count '()'
 # Expected: (1 : nat64) -- data survived
 
-dfx canister call backend get_user '(0)'
+icp canister call backend get_user '(0)'
 # Expected: (opt record { id = 0 : nat64; name = "Alice"; created = ... })
 ```
 
@@ -5438,22 +5430,22 @@ The definitive test for stable memory: data survives upgrade.
 
 ```bash
 # 1. Deploy and add data
-dfx deploy backend
-dfx canister call backend addUser '("TestUser")'
+icp deploy backend
+icp canister call backend addUser '("TestUser")'
 
 # 2. Record the count
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Note the number
 
 # 3. Upgrade (redeploy)
-dfx deploy backend
+icp deploy backend
 
 # 4. Check count again -- must be identical
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Must match step 2
 
 # 5. Verify transient data DID reset
-dfx canister call backend getRequestCount '()'
+icp canister call backend getRequestCount '()'
 # Expected: (0 : nat) -- transient var resets on upgrade
 ```
 
@@ -5474,10 +5466,10 @@ dependencies: [internet-identity]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 >
 > **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
-> may change between IC SDK releases. Pin your dependency versions and test after every dfx upgrade.
+> may change between IC SDK releases. Pin your dependency versions and test after every icp-cli upgrade.
 > Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.
 
 ## What This Is
@@ -5486,11 +5478,11 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0
+- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
 - Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
 - Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
-- For local testing: `dfx start` creates a local test key automatically
+- For local testing: `icp network start` creates a local test key automatically
 
 ## Canister IDs
 
@@ -5504,7 +5496,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 | Key Name | Environment | Purpose |
 |----------|-------------|---------|
-| `dfx_test_key` | Local (`dfx start`) | Local development only |
+| `dfx_test_key` | Local (`icp network start`) | Local development only |
 | `test_key_1` | Mainnet | Testing on mainnet (created by proposal 136589) |
 | `key_1` | Mainnet | Production use |
 
@@ -5518,7 +5510,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across dfx versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
 2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
@@ -5551,7 +5543,7 @@ vetkd_public_key : (record {
 - `canister_id`: Optional. Defaults to the calling canister.
 - `context`: Domain separator (arbitrary bytes).
 - `key_id.curve`: `bls12_381_g2` (only supported curve).
-- `key_id.name`: Master key name (`dfx_test_key`, `test_key_1`, or `key_1`).
+- `key_id.name`: Master key name (`dfx_test_key` for local, `test_key_1`, or `key_1`).
 
 ### vetkd_derive_key
 
@@ -5688,7 +5680,7 @@ const CONTEXT: &[u8] = b"my_app_v1";
 fn key_id() -> VetKdKeyId {
     VetKdKeyId {
         curve: VetKdCurve::Bls12381G2,
-        // Use "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
+        // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
         name: "key_1".to_string(),
     }
 }
@@ -5800,7 +5792,7 @@ persistent actor {
 
   let context : Blob = Text.encodeUtf8("my_app_v1");
 
-  // Use "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
+  // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
     { curve = #bls12_381_g2; name = "key_1" }
   };
@@ -5847,25 +5839,25 @@ The frontend generates a transport key pair, sends the public half to the canist
 
 ```bash
 # Start local replica (creates dfx_test_key automatically)
-dfx start --background
+icp network start -d
 
 # Deploy your canister
-dfx deploy backend
+icp deploy backend
 
 # Test public key retrieval
-dfx canister call backend getPublicKey '()'
+icp canister call backend getPublicKey '()'
 # Returns: (blob "...") -- the vetKD public key
 
 # For derive_key, you need a transport public key (generated by frontend)
 # Test with a dummy 48-byte blob:
-dfx canister call backend deriveKey '(blob "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f\20\21\22\23\24\25\26\27\28\29\2a\2b\2c\2d\2e\2f")'
+icp canister call backend deriveKey '(blob "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f\20\21\22\23\24\25\26\27\28\29\2a\2b\2c\2d\2e\2f")'
 ```
 
 ### Mainnet
 
 ```bash
 # Deploy to mainnet
-dfx deploy backend --network ic
+icp deploy backend -e ic
 
 # Use test_key_1 for initial testing, key_1 for production
 # Make sure your canister code references the correct key name
@@ -5875,11 +5867,11 @@ dfx deploy backend --network ic
 
 ```bash
 # 1. Verify public key is returned (non-empty blob)
-dfx canister call backend getPublicKey '()'
+icp canister call backend getPublicKey '()'
 # Expected: (blob "\ab\cd\ef...")  -- 48+ bytes of BLS public key data
 
 # 2. Verify derive_key returns encrypted key (non-empty blob)
-dfx canister call backend deriveKey '(blob "\00\01...")'
+icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: (blob "\12\34\56...")  -- encrypted key material
 
 # 3. Verify determinism: same inputs produce same output
@@ -5887,13 +5879,13 @@ dfx canister call backend deriveKey '(blob "\00\01...")'
 # Expected: identical encrypted_key blobs both times
 
 # 4. Verify isolation: different callers get different keys
-dfx identity new test-user-1 --storage-mode=plaintext
-dfx identity new test-user-2 --storage-mode=plaintext
-dfx identity use test-user-1
-dfx canister call backend deriveKey '(blob "\00\01...")'
+icp identity new test-user-1 --storage-mode=plaintext
+icp identity new test-user-2 --storage-mode=plaintext
+icp identity default test-user-1
+icp canister call backend deriveKey '(blob "\00\01...")'
 # Note the output
-dfx identity use test-user-2
-dfx canister call backend deriveKey '(blob "\00\01...")'
+icp identity default test-user-2
+icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: DIFFERENT encrypted_key (different caller = different derived key)
 
 # 5. Frontend integration test
@@ -5917,15 +5909,15 @@ dependencies: []
 ---
 
 # Cycles & Canister Management
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
 
-**Note:** dfx 0.30+ uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default instead of the legacy per-identity cycles wallet. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `dfx cycles balance`, `dfx cycles convert`, and `dfx canister deposit-cycles` now go through the cycles ledger. The legacy cycles wallet (`dfx identity get-wallet`) still works but is no longer created automatically for new identities. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
+**Note:** icp-cli uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `icp cycles balance`, `icp cycles mint`, and `icp canister top-up` go through the cycles ledger. There is no legacy wallet concept in icp-cli. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - An identity with ICP balance for converting to cycles (mainnet)
 - For local development: cycles are unlimited by default
 
@@ -5949,7 +5941,7 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 4. **Sending cycles to the wrong canister** -- Cycles sent to a canister cannot be retrieved. There is no refund mechanism for cycles transferred to the wrong principal. Double-check the canister ID before topping up.
 
-5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `dfx canister update-settings --add-controller PRINCIPAL` to add one.
+5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `icp canister update-settings --add-controller PRINCIPAL` to add one.
 
 6. **Using ExperimentalCycles in mo:core** -- In mo:core 2.0, the module is renamed to `Cycles`. `import ExperimentalCycles "mo:base/ExperimentalCycles"` will fail. Use `import Cycles "mo:core/Cycles"`.
 
@@ -6154,84 +6146,84 @@ async fn stop_and_delete(canister_id: Principal) {
 
 ## Deploy & Test
 
-### Check Cycle Balance (dfx commands)
+### Check Cycle Balance
 
 ```bash
 # Check your canister's cycle balance
-dfx canister status backend
+icp canister status backend
 # Look for "Balance:" line in output
 
 # Check balance on mainnet
-dfx canister status backend --network ic
+icp canister status backend -e ic
 
 # Check any canister by ID
-dfx canister status ryjl3-tyaaa-aaaaa-aaaba-cai --network ic
+icp canister status ryjl3-tyaaa-aaaaa-aaaba-cai -e ic
 ```
 
 ### Top Up a Canister
 
 ```bash
-# Top up with cycles from your cycles wallet (local)
-dfx canister deposit-cycles 1000000000000 backend
+# Top up with cycles from the cycles ledger (local)
+icp canister top-up backend --amount 1000000000000
 # Adds 1T cycles to the backend canister
 
 # Top up on mainnet
-dfx canister deposit-cycles 1000000000000 backend --network ic
+icp canister top-up backend --amount 1000000000000 -e ic
 
 # Convert ICP to cycles and top up in one step (mainnet)
-dfx cycles convert --amount 1.0 --network ic
-dfx canister deposit-cycles 1000000000000 backend --network ic
+icp cycles mint --amount 1.0 -e ic
+icp canister top-up backend --amount 1000000000000 -e ic
 ```
 
-### Create a Canister via dfx
+### Create a Canister via icp
 
 ```bash
 # Create an empty canister (local)
-dfx canister create my_canister
+icp canister create my_canister
 
 # Create on mainnet with specific cycles
-dfx canister create my_canister --network ic --with-cycles 2000000000000
+icp canister create my_canister -e ic --with-cycles 2000000000000
 
 # Add a backup controller
-dfx canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
+icp canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
 ```
 
 ### Set Freezing Threshold
 
 ```bash
 # Set freezing threshold to 90 days (in seconds: 90 * 24 * 60 * 60 = 7776000)
-dfx canister update-settings backend --freezing-threshold 7776000
+icp canister update-settings backend --freezing-threshold 7776000
 
 # Mainnet
-dfx canister update-settings backend --freezing-threshold 7776000 --network ic
+icp canister update-settings backend --freezing-threshold 7776000 -e ic
 ```
 
 ## Verify It Works
 
 ```bash
 # 1. Deploy a canister and check its status
-dfx start --background
-dfx deploy backend
-dfx canister status backend
+icp network start -d
+icp deploy backend
+icp canister status backend
 # Expected output includes:
 #   Status: Running
 #   Balance: 3_100_000_000_000 Cycles (local default, varies)
 #   Freezing threshold: 2_592_000
 
 # 2. Check balance programmatically (if you added getBalance)
-dfx canister call backend getBalance '()'
+icp canister call backend getBalance '()'
 # Expected: a large nat value, e.g. (3_100_000_000_000 : nat)
 
 # 3. Verify controllers
-dfx canister info backend
+icp canister info backend
 # Expected: Shows your principal as controller
 
 # 4. On mainnet: verify cycles balance is not zero
-dfx canister status backend --network ic
+icp canister status backend -e ic
 # If Balance shows 0, the canister will freeze. Top up immediately.
 
 # 5. Verify freezing threshold was set
-dfx canister status backend
+icp canister status backend
 # Look for "Freezing threshold:" -- should match what you set
 ```
 
@@ -6242,7 +6234,7 @@ dfx canister status backend
 CANISTER_ID="your-canister-id-here"
 
 # Check balance
-dfx canister status $CANISTER_ID --network ic
+icp canister status $CANISTER_ID -e ic
 
 # Warning thresholds:
 # < 5T cycles   -- top up soon

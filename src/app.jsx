@@ -35,7 +35,7 @@ const API_ENDPOINTS = [
   "version": "2.1.0",
   "what": "ckBTC is chain-key Bitcoin on the IC...",
   "prerequisites": {
-    "dfx": ">=0.30.0",
+    "icp-cli": ">=0.1.0",
     "language": ["motoko", "rust"],
     "skills": ["icrc-ledger", "wallet"]
   },
@@ -47,7 +47,7 @@ const API_ENDPOINTS = [
   "steps": [...],
   "verification": [
     {
-      "run": "dfx canister call ckbtc_ledger icrc1_balance_of ...",
+      "run": "icp canister call ckbtc_ledger icrc1_balance_of ...",
       "expect": "(nat)"
     }
   ]
@@ -64,7 +64,7 @@ const API_ENDPOINTS = [
 ckBTC is chain-key Bitcoin...
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0
 ...
 
 ## \u26A0 Agent Mistakes
@@ -691,7 +691,7 @@ export function App() {
                   {[
                     "Agent guesses canister IDs",
                     "Hallucinated Motoko syntax",
-                    "Outdated dfx commands",
+                    "Outdated CLI commands",
                     "No idea about cycles or fees",
                     "Broken deploys, wasted time",
                     "Human has to fix everything",
@@ -731,7 +731,7 @@ export function App() {
                   {[
                     "Exact canister IDs from skill",
                     "Tested, working code templates",
-                    "Current dfx commands, verified",
+                    "Current icp-cli commands, verified",
                     "Fees and cycles handled correctly",
                     "Deploys work first try",
                     "Agent ships autonomously",
@@ -766,7 +766,7 @@ export function App() {
                     preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
                     tag: "1 paragraph" },
                   { section: "Prerequisites", colorVar: "accent-blue", rgbVar: "blue-rgb",
-                    preview: "dfx >= 0.30.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
+                    preview: "icp-cli >= 0.1.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
                     tag: "exact versions" },
                   { section: "\u26A0 Common Agent Mistakes", colorVar: "yellow", rgbVar: "yellow-rgb",
                     preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",
@@ -775,7 +775,7 @@ export function App() {
                     preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer \u2192 5. Deploy",
                     tag: "tested code" },
                   { section: "Verification", colorVar: "accent", rgbVar: "accent-rgb",
-                    preview: "\u2713 dfx canister call ckbtc_ledger icrc1_balance_of \u2192 returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
+                    preview: "\u2713 icp canister call ckbtc_ledger icrc1_balance_of \u2192 returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
                     tag: "confirm it works" },
                 ].map((item, i, arr) => (
                   <div key={i} className="anatomy-row" style={{
@@ -1010,7 +1010,7 @@ export function App() {
               {[
                 { title: "No auth needed", desc: "Open API. No keys, no signup, no rate limits for normal use." },
                 { title: "JSON + Markdown", desc: "Structured JSON for programmatic use. Raw markdown for context injection." },
-                { title: "Always current", desc: "Skills update when dfx or canister IDs change. Versioned." },
+                { title: "Always current", desc: "Skills update when icp-cli or canister IDs change. Versioned." },
               ].map((note) => (
                 <div key={note.title} style={{
                   padding: "20px",

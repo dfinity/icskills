@@ -10,13 +10,13 @@ dependencies: []
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 1.0.0 | requires: [dfx >= 0.30.0]
+> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
 
 ## Prerequisites
-- dfx >= 0.30.0
+- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
@@ -25,7 +25,7 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 ## Mistakes That Break Your Build
 
-1. **Using `thread_local! { RefCell<T> }` for user data (Rust)** -- This is heap memory. It is wiped on every canister upgrade. All user data, balances, settings stored this way will vanish after `dfx deploy`. Use `StableBTreeMap` instead.
+1. **Using `thread_local! { RefCell<T> }` for user data (Rust)** -- This is heap memory. It is wiped on every canister upgrade. All user data, balances, settings stored this way will vanish after `icp deploy`. Use `StableBTreeMap` instead.
 
 2. **Forgetting `#[post_upgrade]` handler (Rust)** -- Without a `post_upgrade` function, the canister may silently reset state or behave unexpectedly after upgrade. Always define both `#[init]` and `#[post_upgrade]`.
 
@@ -278,57 +278,57 @@ Key rules for Rust stable structures:
 
 ```bash
 # Start local replica
-dfx start --background
+icp network start -d
 
 # Deploy
-dfx deploy backend
+icp deploy backend
 
 # Add data
-dfx canister call backend addUser '("Alice")'
+icp canister call backend addUser '("Alice")'
 # Expected: (0 : nat)
 
-dfx canister call backend addUser '("Bob")'
+icp canister call backend addUser '("Bob")'
 # Expected: (1 : nat)
 
 # Verify data exists
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Expected: (2 : nat)
 
-dfx canister call backend getUser '(0)'
+icp canister call backend getUser '(0)'
 # Expected: (opt record { id = 0 : nat; name = "Alice"; created = ... })
 
 # Now upgrade the canister (simulates code change + redeploy)
-dfx deploy backend
+icp deploy backend
 
 # Verify data survived the upgrade
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Expected: (2 : nat) -- STILL 2, not 0
 
-dfx canister call backend getUser '(1)'
+icp canister call backend getUser '(1)'
 # Expected: (opt record { id = 1 : nat; name = "Bob"; created = ... })
 ```
 
 ### Rust: Verify Persistence Across Upgrades
 
 ```bash
-dfx start --background
+icp network start -d
 
-dfx deploy backend
+icp deploy backend
 
-dfx canister call backend add_user '("Alice")'
+icp canister call backend add_user '("Alice")'
 # Expected: (0 : nat64)
 
-dfx canister call backend get_user_count '()'
+icp canister call backend get_user_count '()'
 # Expected: (1 : nat64)
 
 # Upgrade
-dfx deploy backend
+icp deploy backend
 
 # Verify persistence
-dfx canister call backend get_user_count '()'
+icp canister call backend get_user_count '()'
 # Expected: (1 : nat64) -- data survived
 
-dfx canister call backend get_user '(0)'
+icp canister call backend get_user '(0)'
 # Expected: (opt record { id = 0 : nat64; name = "Alice"; created = ... })
 ```
 
@@ -338,22 +338,22 @@ The definitive test for stable memory: data survives upgrade.
 
 ```bash
 # 1. Deploy and add data
-dfx deploy backend
-dfx canister call backend addUser '("TestUser")'
+icp deploy backend
+icp canister call backend addUser '("TestUser")'
 
 # 2. Record the count
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Note the number
 
 # 3. Upgrade (redeploy)
-dfx deploy backend
+icp deploy backend
 
 # 4. Check count again -- must be identical
-dfx canister call backend getUserCount '()'
+icp canister call backend getUserCount '()'
 # Must match step 2
 
 # 5. Verify transient data DID reset
-dfx canister call backend getRequestCount '()'
+icp canister call backend getRequestCount '()'
 # Expected: (0 : nat) -- transient var resets on upgrade
 ```
 
