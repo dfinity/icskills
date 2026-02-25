@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "generate": "node scripts/generate-skills.js",
+    "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-sitemap.js",
     "dev": "npm run generate && vite",
     "build": "npm run generate && vite build",
     "preview": "vite preview"

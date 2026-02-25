@@ -21,7 +21,7 @@ description: One sentence. When should an agent load this skill? What does it co
 ---
 
 # Skill Title
-> version: 1.0.0 | requires: [dfx >= 0.24.0, other deps]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, other deps]
 
 ## What This Is
 Brief explanation of the technology. 2-3 sentences max.

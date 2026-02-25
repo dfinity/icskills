@@ -10,7 +10,7 @@ dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [dfx >= 0.24, @dfinity/auth-client >= 2.1]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 2.1]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- dfx SDK >= 0.24.0
+- dfx >= 0.30.0
 - Node.js >= 18 (for frontend)
 - `@dfinity/auth-client` npm package (>= 2.1.0)
 - `@dfinity/agent` npm package

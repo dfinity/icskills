@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # HTTPS Outcalls
-> version: 1.0.0 | requires: [dfx >= 0.24]
+> version: 1.0.0 | requires: [dfx >= 0.30.0]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- dfx SDK >= 0.24.0
+- dfx >= 0.30.0
 - For Motoko: `moc` compiler (included with dfx)
 - For Rust: `ic-cdk >= 0.17`, `serde_json` for JSON parsing
 

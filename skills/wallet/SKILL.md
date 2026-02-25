@@ -10,13 +10,13 @@ dependencies: []
 ---
 
 # Cycles & Canister Management
-> version: 1.0.0 | requires: [dfx >= 0.24.0]
+> version: 1.0.0 | requires: [dfx >= 0.30.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
 
 ## Prerequisites
-- dfx >= 0.24.0
+- dfx >= 0.30.0
 - An identity with ICP balance for converting to cycles (mainnet)
 - For local development: cycles are unlimited by default
 

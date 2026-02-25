@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.24.0, sns-cli, NNS neuron with stake]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, sns-cli, NNS neuron with stake]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `dfx` >= 0.24.0 with `sns` extension installed
+- `dfx` >= 0.30.0 with `sns` extension installed
 - `sns-cli` (built from `dfinity/ic` repo or bundled with dfx)
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet

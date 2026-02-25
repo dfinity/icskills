@@ -10,7 +10,7 @@ dependencies: [internet-identity]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-vetkeys]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-vetkeys]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 
 ## Prerequisites
 
-- `dfx` >= 0.24.0
+- `dfx` >= 0.30.0
 - Rust: `ic-vetkeys` crate from crates.io
 - Motoko: `ic-vetkeys` package from mops (`mops add ic-vetkeys`)
 - Frontend: `@dfinity/vetkeys` npm package

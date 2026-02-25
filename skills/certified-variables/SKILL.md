@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 ## Prerequisites
 
-- `dfx` >= 0.24.0
+- `dfx` >= 0.30.0
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@dfinity/certificate-verification` or `@dfinity/agent` (includes verification)

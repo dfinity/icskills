@@ -10,13 +10,13 @@ dependencies: []
 ---
 
 # ICRC Ledger Standards
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
 
 ## Prerequisites
-- dfx >= 0.24.0
+- dfx >= 0.30.0
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 

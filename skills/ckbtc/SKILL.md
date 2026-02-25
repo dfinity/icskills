@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- `dfx` >= 0.24.0
+- `dfx` >= 0.30.0
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
 - A funded ICP identity (for mainnet deployment cycles)

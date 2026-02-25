@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 1.0.0 | requires: [dfx >= 0.24]
+> version: 1.0.0 | requires: [dfx >= 0.30.0]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- dfx SDK >= 0.24.0
+- dfx >= 0.30.0
 - Node.js >= 18 (for building frontend assets)
 - `@dfinity/assets` npm package (for programmatic uploads)
 

@@ -35,7 +35,7 @@ const API_ENDPOINTS = [
   "version": "2.1.0",
   "what": "ckBTC is chain-key Bitcoin on the IC...",
   "prerequisites": {
-    "dfx": ">=0.24.0",
+    "dfx": ">=0.30.0",
     "language": ["motoko", "rust"],
     "skills": ["icrc-ledger", "wallet"]
   },
@@ -64,7 +64,7 @@ const API_ENDPOINTS = [
 ckBTC is chain-key Bitcoin...
 
 ## Prerequisites
-- dfx >= 0.24.0
+- dfx >= 0.30.0
 ...
 
 ## \u26A0 Agent Mistakes
@@ -481,7 +481,7 @@ export function App() {
                       borderRadius: "8px", color: "var(--accent-text)",
                       flexShrink: 0,
                     }}><CategoryIcon category={skill.category} /></span>
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{
                         fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px",
                         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
@@ -492,6 +492,20 @@ export function App() {
                         v{skill.version} {"\u00B7"} {skill.category}
                       </div>
                     </div>
+                    <a href={`https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title="View on GitHub"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: "28px", height: "28px", borderRadius: "6px",
+                        color: "var(--text-faint)", flexShrink: 0,
+                        background: `rgba(var(--accent-rgb),0.06)`,
+                        border: `1px solid rgba(var(--accent-rgb),0.1)`,
+                        transition: "color 0.2s, border-color 0.2s",
+                      }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    </a>
                   </div>
 
                   <p style={{
@@ -532,54 +546,49 @@ export function App() {
                     </div>
                   )}
 
-                  {selectedSkill === skill.id && (() => {
-                    const ghUrl = `https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`;
+                  {(() => {
                     const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
                     const fetchCmd = `curl -sL ${rawUrl}`;
                     return (
-                      <div style={{
-                        marginTop: "16px", paddingTop: "16px",
-                        borderTop: `1px solid rgba(var(--accent-rgb),0.15)`,
-                        display: "flex", flexDirection: "column", gap: "12px",
-                      }}>
-                        <a href={ghUrl} target="_blank" rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          marginTop: "12px", paddingTop: "12px",
+                          borderTop: "1px solid var(--border-subtle)",
+                          display: "flex", alignItems: "center", gap: "8px",
+                        }}>
+                        <div style={{
+                          fontSize: "10px", color: "var(--text-ghost)", whiteSpace: "nowrap", flexShrink: 0,
+                        }}>
+                          paste in agent:
+                        </div>
+                        <code style={{
+                          flex: 1, padding: "6px 10px",
+                          background: "var(--bg-code)",
+                          border: `1px solid rgba(var(--accent-rgb),0.1)`,
+                          borderRadius: "4px", fontSize: "10px", color: "var(--accent)",
+                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                          minWidth: 0,
+                        }}>
+                          {fetchCmd}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(fetchCmd)}
+                          title="Copy fetch command"
+                          aria-label="Copy fetch command"
                           style={{
-                            display: "inline-flex", alignItems: "center", gap: "6px",
-                            fontSize: "12px", color: "var(--accent-text)", textDecoration: "none",
-                          }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                          View on GitHub
-                        </a>
-                        <div style={{ fontSize: "11px", color: "var(--text-faint)", marginBottom: "-4px" }}>
-                          Fetch into your project:
-                        </div>
-                        <div style={{ position: "relative" }}>
-                          <code style={{
-                            display: "block", padding: "12px 40px 12px 16px",
-                            background: "var(--bg-code)",
-                            border: `1px solid rgba(var(--accent-rgb),0.15)`,
-                            borderRadius: "6px", fontSize: "11px", color: "var(--accent)",
-                            wordBreak: "break-all",
-                          }}>
-                            {fetchCmd}
-                          </code>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(fetchCmd); }}
-                            title="Copy command"
-                            aria-label="Copy fetch command"
-                            style={{
-                              position: "absolute", top: "8px", right: "8px",
-                              background: "none", border: "none",
-                              cursor: "pointer", padding: "4px",
-                              color: copiedUrl === fetchCmd ? "var(--green)" : "var(--text-faint)",
-                              fontSize: "14px", lineHeight: 1,
-                              transition: "color 0.2s",
-                            }}
-                          >
-                            {copiedUrl === fetchCmd ? "\u2713" : "\u2398"}
-                          </button>
-                        </div>
+                            background: copiedUrl === fetchCmd ? `rgba(var(--green-rgb),0.1)` : `rgba(var(--accent-rgb),0.06)`,
+                            border: `1px solid ${copiedUrl === fetchCmd ? `rgba(var(--green-rgb),0.2)` : `rgba(var(--accent-rgb),0.1)`}`,
+                            borderRadius: "4px", cursor: "pointer",
+                            padding: "4px 8px", flexShrink: 0,
+                            color: copiedUrl === fetchCmd ? "var(--green)" : "var(--text-faint)",
+                            fontSize: "10px", lineHeight: 1,
+                            transition: "all 0.2s",
+                            display: "flex", alignItems: "center", gap: "4px",
+                          }}
+                        >
+                          {copiedUrl === fetchCmd ? "\u2713 copied" : "\u2398 copy"}
+                        </button>
                       </div>
                     );
                   })()}
@@ -757,7 +766,7 @@ export function App() {
                     preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
                     tag: "1 paragraph" },
                   { section: "Prerequisites", colorVar: "accent-blue", rgbVar: "blue-rgb",
-                    preview: "dfx >= 0.24.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
+                    preview: "dfx >= 0.30.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
                     tag: "exact versions" },
                   { section: "\u26A0 Common Agent Mistakes", colorVar: "yellow", rgbVar: "yellow-rgb",
                     preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",

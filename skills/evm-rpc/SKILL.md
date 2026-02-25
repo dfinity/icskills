@@ -10,7 +10,7 @@ dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -18,7 +18,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- `dfx` >= 0.24.0
+- `dfx` >= 0.30.0
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `candid`, `serde`
 - Cycles in your canister (each RPC call costs cycles)

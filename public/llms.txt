@@ -1,0 +1,33 @@
+# IC Skills
+
+> Agent-readable skill files for the Internet Computer. Structured, versioned documentation designed for AI coding assistants — not humans.
+
+IC Skills provides copy-paste-ready skill files that teach AI agents how to build on the Internet Computer (ICP) blockchain correctly. Each skill covers one capability (ckBTC, Internet Identity, HTTPS Outcalls, etc.) with exact code, canister IDs, and pitfalls that prevent hallucinations.
+
+## How to use
+
+Fetch any skill file and paste it into your AI agent's context:
+
+```
+curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/<skill-id>/SKILL.md
+```
+
+## Skills
+
+- [ckBTC](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md): Chain-key Bitcoin — trustless BTC on ICP with 1:1 backing, ICRC-1 token standard
+- [ICRC Ledger](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/icrc-ledger/SKILL.md): ICRC-1/ICRC-2 token ledger standard — deploy, mint, transfer, approve
+- [Internet Identity](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/internet-identity/SKILL.md): Passkey-based authentication for ICP dapps using delegation chains
+- [HTTPS Outcalls](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/https-outcalls/SKILL.md): Make HTTP requests from canisters to external APIs with consensus
+- [Multi-Canister Architecture](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/multi-canister/SKILL.md): Inter-canister calls, factory patterns, and multi-canister design
+- [Stable Memory](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/stable-memory/SKILL.md): Persistent storage that survives canister upgrades — up to 500GB
+- [EVM RPC](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/evm-rpc/SKILL.md): Call Ethereum and EVM chains from ICP canisters via RPC
+- [SNS Launch](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/sns-launch/SKILL.md): Service Nervous System — decentralize your dapp with tokenized governance
+- [vetKD](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/vetkd/SKILL.md): Verifiably Encrypted Threshold Key Derivation for on-chain encryption
+- [Certified Variables](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/certified-variables/SKILL.md): Certified query responses with Merkle tree proofs
+- [Cycles & Wallet](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/wallet/SKILL.md): Cycles management, wallet canisters, and canister top-up
+- [Asset Canister](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/asset-canister/SKILL.md): Serve frontend assets from ICP with certification and caching
+
+## Source
+
+- [GitHub Repository](https://github.com/JoshDFN/icskills): All skill files, contribution guide, and website source
+- [Contributing Guide](https://github.com/JoshDFN/icskills/blob/main/CONTRIBUTING.md): How to add or update skills
