@@ -669,7 +669,7 @@ export function App() {
                 background: "var(--gradient-hero)",
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
               }}>
-                Agent-readable instructions<br />for every IC capability.
+                Agent-readable instructions<br />for every IC need.
               </h1>
               <p style={{
                 fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
