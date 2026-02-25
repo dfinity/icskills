@@ -421,26 +421,10 @@ export function App() {
         }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
             <span style={{
-              fontSize: "20px", letterSpacing: "-0.5px",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700, fontSize: "18px", letterSpacing: "-0.5px",
               color: "var(--text-primary)", lineHeight: 1,
-              display: "flex", alignItems: "center", gap: "8px",
-            }}>
-              <span style={{
-                fontWeight: 900, fontSize: "20px",
-                background: "var(--gradient-accent)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-              }}>IC</span>
-              <span style={{
-                width: "1px", height: "18px",
-                background: "var(--border-default)",
-                display: "inline-block",
-              }} />
-              <span style={{
-                fontWeight: 600, fontSize: "16px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.5px",
-              }}>Skills</span>
-            </span>
+            }}>IC Skills</span>
             <span style={{
               fontSize: "9px", padding: "3px 10px",
               background: `rgba(var(--accent-rgb),0.12)`,
