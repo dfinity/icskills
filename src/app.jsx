@@ -256,6 +256,8 @@ const FRAMEWORKS = [
   { name: "Copilot", note: "Custom instructions", color: "#0078D4" },
   { name: "Windsurf", note: "Cascade context", color: "#06B6D4" },
   { name: "Claude Code", note: "SKILL.md files", color: "#D97757" },
+  { name: "OpenCode", note: "Remote instructions", color: "#00DC82" },
+  { name: "OpenClaw", note: "Skills marketplace", color: "#EF4444" },
   { name: "Your Agent", note: "REST API", color: "#fbbf24" },
 ];
 
@@ -263,6 +265,8 @@ const FW_LIGHT_COLORS = {
   Cursor: "#1a1a2e",
   Devin: "#7c3aed",
   Windsurf: "#0891b2",
+  OpenCode: "#059669",
+  OpenClaw: "#dc2626",
   "Your Agent": "#d97706",
 };
 
@@ -283,6 +287,10 @@ function FrameworkIcon({ name, size = 20, color }) {
       return (<svg {...s} fill="currentColor"><path d="M23.55 5.067c-1.204-.002-2.181.973-2.181 2.177v4.867c0 .972-.803 1.76-1.76 1.76-.568 0-1.135-.286-1.472-.766l-4.971-7.1c-.413-.59-1.084-.941-1.81-.941-1.134 0-2.154.964-2.154 2.153v4.896c0 .972-.797 1.76-1.76 1.76-.57 0-1.136-.286-1.473-.766L.408 5.16C.282 4.98 0 5.069 0 5.288v4.245c0 .215.066.423.188.6l5.475 7.818c.323.462.8.805 1.351.93 1.377.313 2.644-.747 2.644-2.098v-4.893c0-.972.788-1.76 1.76-1.76h.003c.57 0 1.136.286 1.472.766l4.972 7.1c.414.59 1.05.94 1.81.94 1.158 0 2.151-.964 2.151-2.153v-4.895c0-.972.788-1.759 1.76-1.759h.194a.22.22 0 0 0 .22-.22V5.287a.22.22 0 0 0-.22-.22z"/></svg>);
     case "Claude Code":
       return (<svg {...s} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6L3 12L8 18"/><path d="M16 6L21 12L16 18"/><path d="M14 4L10 20" opacity="0.5"/></svg>);
+    case "OpenCode":
+      return (<svg {...s} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17L10 11L4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>);
+    case "OpenClaw":
+      return (<svg {...s} fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.5v-2c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3v-2l4 3.5-4 3.5v-1zm6-4.5c0-1.66-1.34-3-3-3v2l-4-3.5L14 5v1c2.76 0 5 2.24 5 5h-2z"/></svg>);
     case "Your Agent":
       return (<svg {...s} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>);
     default:
@@ -944,7 +952,7 @@ export function App() {
 
               {/* Framework logos grid */}
               <div className="frameworks-grid" style={{
-                display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px",
+                display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px",
                 marginTop: "24px",
               }}>
                 {FRAMEWORKS.map((fw) => {
