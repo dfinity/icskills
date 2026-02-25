@@ -75,18 +75,140 @@ button:hover {
   color: #a78bfa !important;
 }
 
-/* ── Responsive ── */
+/* ── Responsive: Tablet ── */
 @media (max-width: 768px) {
+  header {
+    padding: 0 16px !important;
+  }
+
   main {
     padding: 20px 16px !important;
   }
+
+  footer {
+    padding: 24px 16px !important;
+  }
+
+  .skills-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)) !important;
+  }
+
+  .hero-stats {
+    gap: 24px !important;
+  }
+
+  .cta-stats {
+    gap: 32px !important;
+    flex-wrap: wrap;
+  }
 }
 
+/* ── Responsive: Small tablet ── */
+@media (max-width: 640px) {
+  .step-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hero-stats {
+    gap: 20px !important;
+  }
+
+  .cta-stats {
+    gap: 24px !important;
+    justify-content: center;
+  }
+
+  .api-endpoint-card {
+    padding: 16px !important;
+  }
+}
+
+/* ── Responsive: Mobile ── */
 @media (max-width: 480px) {
   header > div {
     flex-direction: column;
     height: auto !important;
     padding: 12px 0;
     gap: 8px;
+  }
+
+  h1 {
+    font-size: 28px !important;
+  }
+
+  h2 {
+    font-size: 24px !important;
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .endpoint-hint {
+    display: none !important;
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    gap: 16px !important;
+  }
+
+  .hero-stats > div > div:first-child {
+    font-size: 24px !important;
+  }
+
+  .footer-inner {
+    flex-direction: column !important;
+    gap: 8px !important;
+    text-align: center;
+  }
+
+  .cta-stats {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .step-card {
+    padding: 20px 16px !important;
+  }
+
+  .step-card > div:first-child {
+    font-size: 24px !important;
+  }
+
+  .comparison-panel {
+    padding: 20px !important;
+  }
+
+  pre {
+    font-size: 10.5px !important;
+    padding: 16px !important;
+  }
+}
+
+/* ── Responsive: Very small ── */
+@media (max-width: 360px) {
+  main {
+    padding: 16px 12px !important;
+  }
+
+  header {
+    padding: 0 12px !important;
+  }
+
+  .skill-card {
+    padding: 16px !important;
+  }
+
+  .hero-stats {
+    gap: 12px !important;
+  }
+
+  .hero-stats > div > div:first-child {
+    font-size: 20px !important;
   }
 }

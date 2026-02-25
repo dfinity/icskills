@@ -453,7 +453,7 @@ export function App() {
               </p>
 
               {/* Stats */}
-              <div style={{
+              <div className="hero-stats" style={{
                 display: "flex", gap: "32px", marginTop: "32px",
               }}>
                 {[
@@ -495,7 +495,7 @@ export function App() {
                   }}
                 />
               </div>
-              <div style={{
+              <div className="endpoint-hint" style={{
                 padding: "10px 16px",
                 background: "rgba(139,92,246,0.1)",
                 border: "1px solid rgba(139,92,246,0.2)",
@@ -531,9 +531,9 @@ export function App() {
             </div>
 
             {/* Skills Grid */}
-            <div style={{
+            <div className="skills-grid" style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))",
               gap: "16px",
             }}>
               {filtered.map((skill) => {
@@ -675,13 +675,13 @@ export function App() {
             </div>
 
             {/* 3-step flow */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "2px", marginBottom: "64px" }}>
+            <div className="step-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "2px", marginBottom: "64px" }}>
               {[
                 { step: "01", title: "Agent fetches skill", desc: "One API call. Raw markdown. Straight into context.", color: "#8b5cf6" },
                 { step: "02", title: "Reads instructions", desc: "Correct canister IDs, working code, known pitfalls.", color: "#60a5fa" },
                 { step: "03", title: "Builds correctly", desc: "Deploys, verifies, ships. No hallucinations.", color: "#34d399" },
               ].map(({ step, title, desc, color }) => (
-                <div key={step} style={{
+                <div key={step} className="step-card" style={{
                   padding: "28px 24px",
                   background: "rgba(255,255,255,0.02)",
                   borderTop: `2px solid ${color}`,
@@ -697,7 +697,7 @@ export function App() {
             <div style={{
               ...SECTION_LABEL, color: "#555", marginBottom: "20px",
             }}>Why skills beat documentation</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px", marginBottom: "64px", background: "rgba(255,255,255,0.04)", borderRadius: "12px", overflow: "hidden" }}>
+            <div className="comparison-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px", marginBottom: "64px", background: "rgba(255,255,255,0.04)", borderRadius: "12px", overflow: "hidden" }}>
               {[
                 {
                   title: "Traditional Docs", color: "#f87171", textColor: "#444", icon: "\u2715",
@@ -708,7 +708,7 @@ export function App() {
                   items: ["Written for agents to execute", "One skill = one capability", "Versioned & tested code", "Pitfalls section prevents errors", "Built-in verification checks", "Structured SKILL.md format"],
                 },
               ].map(({ title, color, textColor, icon, items }) => (
-                <div key={title} style={{ padding: "28px", background: "#0a0a0f" }}>
+                <div key={title} className="comparison-panel" style={{ padding: "28px", background: "#0a0a0f" }}>
                   <div style={{
                     fontSize: "11px", color, fontWeight: 700, marginBottom: "20px",
                     letterSpacing: "1px", textTransform: "uppercase",
@@ -850,7 +850,7 @@ export function App() {
               <div style={{ fontSize: "13px", color: "#777", marginBottom: "20px", fontFamily: SANS_FONT }}>
                 The first blockchain to become truly agent-buildable wins the next wave of development.
               </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: "48px" }}>
+              <div className="cta-stats" style={{ display: "flex", justifyContent: "center", gap: "48px" }}>
                 {[
                   { val: "12", label: "IC capabilities covered" },
                   { val: "2", label: "Languages (Motoko + Rust)" },
@@ -905,7 +905,7 @@ export function App() {
                 response: `{ "skill": "ckbtc", "requires": ["icrc-ledger", "wallet"], "resolved": [...] }`
               },
             ].map((endpoint) => (
-              <div key={endpoint.path} style={{
+              <div key={endpoint.path} className="api-endpoint-card" style={{
                 marginBottom: "24px", padding: "24px",
                 background: "rgba(255,255,255,0.02)",
                 border: "1px solid rgba(255,255,255,0.06)",
@@ -973,7 +973,7 @@ dfx canister call skills_registry resolve_deps '("sns-launch")'`}</pre>
         padding: "24px 32px",
         marginTop: "80px",
       }}>
-        <div style={{
+        <div className="footer-inner" style={{
           maxWidth: "1200px", margin: "0 auto",
           display: "flex", justifyContent: "space-between",
           fontSize: "11px", color: "#333",
