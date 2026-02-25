@@ -1,5 +1,5 @@
 # Certified Variables & Certified Assets
-> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-certified-map (Rust) or CertifiedData (Motoko)] | difficulty: advanced
+> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 

@@ -4,7 +4,7 @@ description: Use when building apps that accept, send, or manage Bitcoin on the 
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17] | difficulty: intermediate
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
 
 ## What This Is
 

@@ -1,5 +1,5 @@
 # HTTPS Outcalls
-> version: 1.0.0 | requires: [dfx >= 0.24] | difficulty: advanced
+> version: 1.0.0 | requires: [dfx >= 0.24]
 
 ## What This Is
 

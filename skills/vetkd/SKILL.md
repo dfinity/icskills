@@ -1,5 +1,5 @@
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-vetkeys] | difficulty: advanced
+> version: 1.0.0 | requires: [dfx >= 0.24.0, ic-vetkeys]
 
 ## What This Is
 

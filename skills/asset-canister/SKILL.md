@@ -1,5 +1,5 @@
 # Asset Canister & Frontend Hosting
-> version: 1.0.0 | requires: [dfx >= 0.24] | difficulty: beginner
+> version: 1.0.0 | requires: [dfx >= 0.24]
 
 ## What This Is
 

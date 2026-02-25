@@ -1,5 +1,5 @@
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [dfx >= 0.24, @dfinity/auth-client >= 2.1] | difficulty: intermediate
+> version: 1.0.0 | requires: [dfx >= 0.24, @dfinity/auth-client >= 2.1]
 
 ## What This Is
 
@@ -18,14 +18,14 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 | Environment | Canister ID | URL |
 |-------------|-------------|-----|
-| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://identity.ic0.app` |
+| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://id.ai` |
 | Local | Assigned on deploy | `http://<local-canister-id>.localhost:4943` |
 
 ## Mistakes That Break Your Build
 
 1. **Not rejecting anonymous principal.** The anonymous principal `2vxsx-fae` is sent when a user is not authenticated. If your backend does not explicitly reject it, unauthenticated users can call protected endpoints. ALWAYS check `Principal.isAnonymous(caller)` and reject.
 
-2. **Using the wrong II URL for the environment.** Local development must point to `http://<canister-id>.localhost:4943`. Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other.
+2. **Using the wrong II URL for the environment.** Local development must point to `http://<canister-id>.localhost:4943`. Mainnet must use `https://id.ai` (previously `identity.ic0.app`). Hardcoding one breaks the other.
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -83,7 +83,7 @@ function getIdentityProviderUrl() {
     const iiCanisterId = "rdmx6-jaaaa-aaaaa-aaadq-cai"; // or read from env
     return `http://${iiCanisterId}.localhost:4943`;
   }
-  return "https://identity.ic0.app";
+  return "https://id.ai";
 }
 
 // 3. Login
@@ -114,7 +114,7 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
 
   const agent = new HttpAgent({
     identity,
-    host: isLocal ? "http://localhost:4943" : "https://ic0.app",
+    host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
     ...(isLocal && { verifyQuerySignatures: false }),
   });
 

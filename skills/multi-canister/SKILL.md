@@ -4,7 +4,7 @@ description: Use when building apps that span multiple canisters on the Internet
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17] | difficulty: advanced
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
 
 ## What This Is
 

@@ -4,7 +4,7 @@ description: Use when building apps that read from or write to Ethereum and EVM-
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17] | difficulty: intermediate
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
 
 ## What This Is
 

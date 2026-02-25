@@ -1,5 +1,5 @@
 # ICRC Ledger Standards
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17] | difficulty: intermediate
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.

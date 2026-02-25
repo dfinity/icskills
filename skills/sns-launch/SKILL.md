@@ -1,5 +1,5 @@
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.24.0, sns-cli, NNS neuron with stake] | difficulty: expert
+> version: 1.0.0 | requires: [dfx >= 0.24.0, sns-cli, NNS neuron with stake]
 
 ## What This Is
 
