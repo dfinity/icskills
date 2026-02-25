@@ -884,7 +884,7 @@ export function App() {
                     tag: "confirm it works" },
                 ].map((item, i, arr) => (
                   <div key={i} className="anatomy-row" style={{
-                    display: "grid", gridTemplateColumns: "200px 1fr 100px",
+                    display: "grid", gridTemplateColumns: "200px 1fr auto",
                     borderBottom: i < arr.length - 1 ? "1px solid var(--border-subtle)" : "none",
                     alignItems: "center",
                   }}>
@@ -898,13 +898,14 @@ export function App() {
                       fontSize: "12px", color: "var(--text-muted)",
                       fontFamily: SANS_FONT, lineHeight: 1.5,
                     }}>{item.preview}</div>
-                    <div style={{ padding: "20px 16px", textAlign: "right" }}>
+                    <div style={{ padding: "20px 24px", textAlign: "right" }}>
                       <span style={{
-                        fontSize: "9px", padding: "3px 8px",
+                        fontSize: "9px", padding: "3px 10px",
                         background: `rgba(var(--${item.rgbVar}),0.08)`,
                         border: `1px solid rgba(var(--${item.rgbVar}),0.2)`,
                         borderRadius: "4px", color: `var(--${item.colorVar})`,
                         textTransform: "uppercase", letterSpacing: "1px",
+                        whiteSpace: "nowrap",
                       }}>{item.tag}</span>
                     </div>
                   </div>
