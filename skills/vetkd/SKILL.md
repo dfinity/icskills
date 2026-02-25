@@ -99,7 +99,7 @@ vetkd_derive_key : (record {
 ```toml
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.16"
+ic-cdk = "0.18"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
@@ -119,6 +119,7 @@ use ic_cdk::update;
 // The ic-vetkeys crate provides KeyManager and EncryptedMaps
 // which handle the low-level vetKD API calls for you.
 
+// Note: ic-vetkeys API is under active development. Verify signatures against latest docs.
 use ic_vetkeys::KeyManager;
 
 // Initialize KeyManager in your canister
@@ -265,7 +266,7 @@ ic-vetkeys = "0.1.0"
 ```motoko
 import Blob "mo:core/Blob";
 import Principal "mo:core/Principal";
-import Cycles "mo:core/Cycles";
+import Text "mo:core/Text";
 
 persistent actor {
 
@@ -302,7 +303,7 @@ persistent actor {
     vetkd_derive_key : VetKdDeriveKeyRequest -> async VetKdDeriveKeyResponse;
   } = actor "aaaaa-aa";
 
-  let context : Blob = "my_app_v1";
+  let context : Blob = Text.encodeUtf8("my_app_v1");
 
   // Use "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
@@ -310,7 +311,7 @@ persistent actor {
   };
 
   public shared func getPublicKey() : async Blob {
-    let response = await managementCanister.vetkd_public_key({
+    let response = await (with cycles = 100_000_000) managementCanister.vetkd_public_key({
       canister_id = null;
       context;
       key_id = keyId();
@@ -320,7 +321,7 @@ persistent actor {
 
   public shared ({ caller }) func deriveKey(transportPublicKey : Blob) : async Blob {
     // caller is captured here, before the await
-    let response = await managementCanister.vetkd_derive_key({
+    let response = await (with cycles = 100_000_000) managementCanister.vetkd_derive_key({
       input = Principal.toBlob(caller);
       context;
       transport_public_key = transportPublicKey;
@@ -335,86 +336,14 @@ persistent actor {
 
 The frontend generates a transport key pair, sends the public half to the canister, receives the encrypted derived key, decrypts it, and uses the result for AES encryption/decryption.
 
-```typescript
-import { VetKdKeyManager } from "@dfinity/vetkeys";
-
-// Initialize with your backend canister actor
-const keyManager = new VetKdKeyManager(backendActor);
-
-// Derive a symmetric key for the current user
-async function getSymmetricKey(): Promise<CryptoKey> {
-  // 1. Generate ephemeral transport key pair (done internally)
-  // 2. Send transport public key to canister
-  // 3. Receive encrypted derived key
-  // 4. Decrypt with transport secret
-  // 5. Return usable AES key
-  const rawKey = await keyManager.deriveKey();
-
-  // Import as AES-GCM key for encryption/decryption
-  return crypto.subtle.importKey(
-    "raw",
-    rawKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-
-// Encrypt data
-async function encrypt(data: string): Promise<{ iv: Uint8Array; ciphertext: ArrayBuffer }> {
-  const key = await getSymmetricKey();
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit nonce for AES-GCM
-  const encoded = new TextEncoder().encode(data);
-
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encoded
-  );
-
-  return { iv, ciphertext };
-}
-
-// Decrypt data
-async function decrypt(iv: Uint8Array, ciphertext: ArrayBuffer): Promise<string> {
-  const key = await getSymmetricKey();
-
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    key,
-    ciphertext
-  );
-
-  return new TextDecoder().decode(decrypted);
-}
-```
-
-**Manual transport key flow (without library):**
-
-```typescript
-// If not using @dfinity/vetkeys, here is the manual flow:
-
-// 1. Generate transport key pair
-const transportKeyPair = await crypto.subtle.generateKey(
-  { name: "ECDH", namedCurve: "P-256" },
-  true,
-  ["deriveBits"]
-);
-
-// 2. Export transport public key
-const transportPublicKeyRaw = await crypto.subtle.exportKey(
-  "raw",
-  transportKeyPair.publicKey
-);
-
-// 3. Send to canister, get encrypted key back
-const encryptedKey = await backendActor.deriveKey(
-  new Uint8Array(transportPublicKeyRaw)
-);
-
-// 4. Decrypt the encrypted key using transport secret
-//    (This step requires the vetkeys JS utils for BLS decryption)
-//    The raw decrypted bytes are your symmetric key material
+```javascript
+// The @dfinity/vetkeys package API is evolving rapidly.
+// Check https://github.com/ArcMichael/ic-vetkeys for the latest usage.
+// High-level flow:
+// 1. Generate a transport key pair (BLS12-381, NOT P-256)
+// 2. Call backend canister to derive encrypted key
+// 3. Decrypt with transport private key
+// 4. Use derived symmetric key for AES-GCM encryption/decryption
 ```
 
 ## Deploy & Test

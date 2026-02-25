@@ -34,7 +34,7 @@ Access patterns:
 
 5. **Deploying to the wrong canister name.** If dfx.json has `"frontend"` but you run `dfx deploy assets`, it creates a new canister instead of updating the existing one.
 
-6. **Exceeding the 2GB canister storage limit.** The asset canister stores all files in a single canister. Large media files (videos, datasets) will exhaust canister storage. Use a dedicated storage solution for large files.
+6. **Exceeding the 4GB Wasm heap memory limit.** The asset canister stores all files in a single canister. Large media files (videos, datasets) will exhaust canister storage. Use a dedicated storage solution for large files.
 
 7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
 
@@ -74,13 +74,11 @@ Recommended approach: place the file in your `public/` or `static/` folder so yo
 ```json5
 [
   {
-    // Rewrite all paths to index.html for SPA routing
+    // Set default cache headers for all paths
     "match": "**/*",
     "headers": {
       "Cache-Control": "public, max-age=0, must-revalidate"
-    },
-    // Enable SPA fallback: any path without a file extension serves index.html
-    "allow_raw_access": true
+    }
   },
   {
     // Cache static assets aggressively (they have content hashes in filenames)
@@ -269,7 +267,7 @@ dfx canister call frontend http_request '(record {
 
 # 6. Get canister ID
 dfx canister id frontend
-# Expected: prints the canister ID (e.g., "rrkah-fqaaa-aaaaa-aaaaq-cai")
+# Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
 dfx canister info frontend

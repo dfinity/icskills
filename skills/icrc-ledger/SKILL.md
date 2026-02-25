@@ -1,5 +1,5 @@
 # ICRC Ledger Standards
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -7,7 +7,7 @@ ICRC-1 is the fungible token standard on Internet Computer, defining transfer, b
 ## Prerequisites
 - dfx >= 0.24.0
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk = "0.17"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
+- For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 
 ## Canister IDs
 
@@ -47,6 +47,7 @@ Index canisters (for transaction history):
 ```motoko
 import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
+import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
 import Blob "mo:core/Blob";
 import Time "mo:core/Time";
@@ -219,8 +220,7 @@ persistent actor {
 
 ```toml
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-timers = "0.11"
+ic-cdk = "0.18"
 candid = "0.10"
 icrc-ledger-types = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -234,7 +234,7 @@ use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
 use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
 use icrc_ledger_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
-use ic_cdk::{update, query};
+use ic_cdk::update;
 
 const ICP_LEDGER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 const ICP_FEE: u64 = 10_000; // 10000 e8s
@@ -456,7 +456,7 @@ dfx canister call icrc1_ledger icrc1_decimals '()'
 
 # 4. Check symbol
 dfx canister call icrc1_ledger icrc1_symbol '()'
-# Expected: (record { symbol = "TEST" })
+# Expected: ("TEST")
 
 # 5. Transfer to another identity
 dfx identity new test-recipient --storage-mode=plaintext 2>/dev/null
@@ -483,13 +483,13 @@ dfx canister call icrc1_ledger icrc1_balance_of \
 ```bash
 # Verify ICP ledger is reachable
 dfx canister call ryjl3-tyaaa-aaaaa-aaaba-cai icrc1_symbol '()' --network ic
-# Expected: (record { symbol = "ICP" })
+# Expected: ("ICP")
 
 # Verify ckBTC ledger is reachable
 dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_symbol '()' --network ic
-# Expected: (record { symbol = "ckBTC" })
+# Expected: ("ckBTC")
 
 # Verify ckETH ledger is reachable
 dfx canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' --network ic
-# Expected: (record { symbol = "ckETH" })
+# Expected: ("ckETH")
 ```

@@ -4,7 +4,7 @@ description: Use when building apps that accept, send, or manage Bitcoin on the 
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -128,6 +128,7 @@ import Principal "mo:core/Principal";
 import Blob "mo:core/Blob";
 import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";
+import Nat64 "mo:core/Nat64";
 import Array "mo:core/Array";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
@@ -323,7 +324,7 @@ persistent actor {
         owner = Principal.fromText("mqygn-kiaaa-aaaar-qaadq-cai");
         subaccount = null;
       };
-      amount = Nat.fromNat64(amount);
+      amount = Nat64.toNat(amount);
       fee = ?10;
       memo = null;
       created_at_time = null;
@@ -357,8 +358,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-timers = "0.11"
+ic-cdk = "0.18"
+ic-cdk-timers = "0.12"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"

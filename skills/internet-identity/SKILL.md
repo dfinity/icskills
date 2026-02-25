@@ -143,16 +143,17 @@ if (isAuthenticated) {
 ### Backend: Motoko
 
 ```motoko
-import Principal "mo:base/Principal";
+import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
 
-actor {
-  // Stable variable to track owner/admin
-  stable var owner : ?Principal = null;
+persistent actor {
+  // Owner/admin principal
+  var owner : ?Principal = null;
 
   // Helper: reject anonymous callers
   func requireAuth(caller : Principal) : () {
     if (Principal.isAnonymous(caller)) {
-      Debug.trap("Anonymous principal not allowed. Please authenticate.");
+      Runtime.trap("Anonymous principal not allowed. Please authenticate.");
     };
   };
 
@@ -176,12 +177,12 @@ actor {
     switch (owner) {
       case (?o) {
         if (o != msg.caller) {
-          Debug.trap("Only the owner can call this function.");
+          Runtime.trap("Only the owner can call this function.");
         };
         "Admin action performed";
       };
       case (null) {
-        Debug.trap("Owner not set. Call initOwner first.");
+        Runtime.trap("Owner not set. Call initOwner first.");
       };
     };
   };
@@ -210,8 +211,7 @@ actor {
 ```toml
 # Cargo.toml
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-macros = "0.17"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -282,7 +282,7 @@ async fn protected_async_action() -> String {
     let caller = require_auth(); // Capture HERE, before any await
 
     // After this await, ic_cdk::caller() would return wrong principal
-    let _result = some_async_operation().await;
+    let _result = some_async_operation().await; // (pseudocode — replace with your actual async call)
 
     // Use the captured `caller` variable, NOT ic_cdk::caller()
     format!("Action completed by {}", caller)

@@ -44,6 +44,7 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 ```motoko
 import Cycles "mo:core/Cycles";
 import Nat "mo:core/Nat";
+import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 
 persistent actor {
@@ -140,7 +141,7 @@ persistent actor {
 
 ```toml
 [dependencies]
-ic-cdk = "0.17"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -174,7 +175,7 @@ use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::api::management_canister::main::{
     create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
-    CreateCanisterArgument, CanisterIdRecord, CanisterInstallMode,
+    CreateCanisterArgument, CanisterIdRecord,
     CanisterSettings, CanisterStatusResponse,
 };
 

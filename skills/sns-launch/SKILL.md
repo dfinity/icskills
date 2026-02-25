@@ -60,6 +60,8 @@ When an SNS launch succeeds, SNS-W deploys these canisters on an SNS subnet:
 This is the single source of truth for all launch parameters. Copy the template from `dfinity/sns-testing` and customize:
 
 ```yaml
+# Note: numeric values are in e8s (1 token = 100_000_000 e8s). Time values are in seconds.
+
 # === PROJECT METADATA ===
 name: MyProject
 description: >
@@ -89,65 +91,65 @@ dapp_canisters:
 Token:
   name: MyToken
   symbol: MYT
-  transaction_fee: 10_000 e8s    # 0.0001 tokens
+  transaction_fee: 10_000        # e8s (0.0001 tokens)
   logo: token_logo.png
 
 # === GOVERNANCE PARAMETERS ===
 Proposals:
-  rejection_fee: 1 token
-  initial_voting_period: 4 days
-  maximum_wait_for_quiet_deadline_extension: 1 day
+  rejection_fee: 100_000_000              # e8s (1 token)
+  initial_voting_period: 345_600           # seconds (4 days)
+  maximum_wait_for_quiet_deadline_extension: 86_400  # seconds (1 day)
 
 Neurons:
-  minimum_creation_stake: 1 token
+  minimum_creation_stake: 100_000_000      # e8s (1 token)
 
 Voting:
-  minimum_dissolve_delay: 1 month
+  minimum_dissolve_delay: 2_629_800        # seconds (1 month)
   MaximumDissolveDelayBonus:
-    duration: 8 years
+    duration: 252_288_000                  # seconds (8 years)
     bonus: 100%            # 2x voting power at max dissolve
   MaximumAgeBonusPercentage: 25%
   RewardRate:
     initial: 2.5%
     final: 2.5%
-    transition_duration: 0 years
+    transition_duration: 0                  # seconds
 
 # === TOKEN DISTRIBUTION ===
 Distribution:
   Neurons:
     # Developer allocation (with vesting)
     - principal: DEVELOPER_PRINCIPAL
-      stake: 2_000_000 tokens
+      stake: 200_000_000_000_000             # e8s (2_000_000 tokens)
       memo: 0
-      dissolve_delay: 6 months
-      vesting_period: 24 months
+      dissolve_delay: 15_778_800             # seconds (6 months)
+      vesting_period: 63_115_200             # seconds (24 months)
 
     # Seed investors
     - principal: INVESTOR_PRINCIPAL
-      stake: 500_000 tokens
+      stake: 50_000_000_000_000              # e8s (500_000 tokens)
       memo: 1
-      dissolve_delay: 3 months
-      vesting_period: 12 months
+      dissolve_delay: 7_889_400              # seconds (3 months)
+      vesting_period: 31_557_600             # seconds (12 months)
 
   InitialBalances:
-    governance: 5_200_000 tokens   # Treasury (controlled by DAO)
-    swap: 2_500_000 tokens         # Sold during decentralization swap
+    governance: 520_000_000_000_000  # e8s (5_200_000 tokens) — Treasury (controlled by DAO)
+    swap: 250_000_000_000_000       # e8s (2_500_000 tokens) — Sold during decentralization swap
 
-  total: 10_000_000 tokens         # Must equal sum of all allocations
+  total: 1_000_000_000_000_000     # e8s (10_000_000 tokens) — Must equal sum of all allocations
 
 # === DECENTRALIZATION SWAP ===
 Swap:
   minimum_participants: 100
-  minimum_direct_participation_icp: 50_000 tokens
-  maximum_direct_participation_icp: 500_000 tokens
-  minimum_participant_icp: 1 token
-  maximum_participant_icp: 25_000 tokens
-  duration: 7 days
+  minimum_direct_participation_icp: 5_000_000_000_000    # e8s (50_000 ICP)
+  maximum_direct_participation_icp: 50_000_000_000_000   # e8s (500_000 ICP)
+  minimum_participant_icp: 100_000_000                   # e8s (1 ICP)
+  maximum_participant_icp: 2_500_000_000_000             # e8s (25_000 ICP)
+  duration: 604_800                                      # seconds (7 days)
   neurons_fund_participation: true
 
   VestingSchedule:
     events: 5                      # Neurons unlock in 5 stages
-    interval: 3 months             # Every 3 months
+    interval: 7_889_400              # seconds (3 months)
 
   confirmation_text: >
     I confirm that I am not a resident of a restricted jurisdiction
@@ -230,7 +232,7 @@ struct Config {
 }
 
 thread_local! {
-    // Note: for production, use stable storage (ic-stable-structures)
+    // WARNING: Use stable storage in production — heap data is lost on canister upgrade
     static CONFIG: RefCell<Config> = RefCell::new(Config {
         sns_governance: None,
     });
@@ -271,7 +273,7 @@ fn update_config(new_fee: u64) {
 ```toml
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.16"
+ic-cdk = "0.18"
 serde = { version = "1", features = ["derive"] }
 ```
 
@@ -284,7 +286,7 @@ serde = { version = "1", features = ["derive"] }
 git clone https://github.com/dfinity/sns-testing.git
 cd sns-testing
 
-# Start local replica with NNS canisters
+# WARNING: --clean wipes all local canister data. Only use for fresh setup.
 dfx start --clean --background
 
 # Import SNS canister WASMs

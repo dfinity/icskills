@@ -31,21 +31,23 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Mistakes That Break Your Build
 
-1. **`caller()` changes after `await` (CRITICAL).** In both Motoko and Rust, `ic_cdk::caller()` / `msg.caller` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`.
+1. **`ic_cdk::caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
 
-    ```motoko
-    // WRONG — caller is wrong after await:
-    public shared ({ caller }) func doThing() : async () {
-      await otherCanister.something();
-      let who = caller; // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
-    };
+    ```rust
+    // WRONG (Rust) — caller() is wrong after await:
+    #[update]
+    async fn do_thing() {
+        let _ = some_canister_call().await;
+        let who = ic_cdk::caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
+    }
 
-    // CORRECT — capture before await:
-    public shared ({ caller }) func doThing() : async () {
-      let originalCaller = caller; // Capture BEFORE await
-      await otherCanister.something();
-      let who = originalCaller; // Safe
-    };
+    // CORRECT (Rust) — capture before await:
+    #[update]
+    async fn do_thing() {
+        let original_caller = ic_cdk::caller(); // Capture BEFORE await
+        let _ = some_canister_call().await;
+        let who = original_caller; // Safe
+    }
     ```
 
 2. **Circular inter-canister calls deadlock.** If canister A calls canister B, and B calls A in the same call chain, it deadlocks. The IC has no deadlock detection. Design call graphs as DAGs (directed acyclic graphs).
@@ -371,8 +373,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-timers = "0.11"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.6"
@@ -481,8 +482,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-timers = "0.11"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.6"
@@ -519,19 +519,13 @@ thread_local! {
 }
 
 #[init]
-fn init() {
-    // The user_service canister ID is injected via environment variable by dfx
-    // Or set it explicitly if known
-    if let Ok(id_str) = std::env::var("CANISTER_ID_USER_SERVICE") {
-        if let Ok(principal) = Principal::from_text(&id_str) {
-            USER_SERVICE_ID.with(|id| *id.borrow_mut() = Some(principal));
-        }
-    }
+fn init(user_service_id: Principal) {
+    USER_SERVICE_ID.with(|id| *id.borrow_mut() = Some(user_service_id));
 }
 
 #[post_upgrade]
-fn post_upgrade() {
-    init();
+fn post_upgrade(user_service_id: Principal) {
+    init(user_service_id);
 }
 
 fn get_user_service_id() -> Principal {
@@ -643,13 +637,12 @@ A canister that creates other canisters dynamically. Useful for per-user caniste
 #### Motoko Factory
 
 ```motoko
-import Cycles "mo:core/Cycles";
 import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Runtime "mo:core/Runtime";
 
-persistent actor {
+persistent actor Self {
 
   type CanisterSettings = {
     controllers : ?[Principal];
@@ -685,7 +678,7 @@ persistent actor {
     let createResult = await (with cycles = 1_000_000_000_000)
       ic.create_canister({
         settings = ?{
-          controllers = ?[Principal.fromActor(this), caller];
+          controllers = ?[Principal.fromActor(Self), caller];
           compute_allocation = null;
           memory_allocation = null;
           freezing_threshold = null;

@@ -105,13 +105,13 @@ core = "2.0.0"
 
 ### Rust
 
-Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions the 64GB stable memory space into virtual memories, each backing a different data structure.
+Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions up to 500GB of stable memory per canister into virtual memories, each backing a different data structure.
 
 #### Cargo.toml
 
 ```toml
 [dependencies]
-ic-cdk = "0.17"
+ic-cdk = "0.18"
 ic-stable-structures = "0.6"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
@@ -125,7 +125,7 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableBTreeMap,
 };
 use ic_cdk::{init, post_upgrade, query, update};
-use candid::{CandidType, Deserialize, Nat};
+use candid::{CandidType, Deserialize};
 use std::cell::RefCell;
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;

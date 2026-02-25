@@ -4,7 +4,7 @@ description: Use when building apps that read from or write to Ethereum and EVM-
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.17]
+> version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -146,8 +146,8 @@ core = "2.0.0"
 
 ```motoko
 import EvmRpc "canister:evm_rpc";
-import Cycles "mo:core/Cycles";
 import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
 
 persistent actor {
 
@@ -210,15 +210,6 @@ persistent actor {
 
     // Encode: balanceOf(address) = 0x70a08231 + address padded to 32 bytes
     // walletAddress should be like "0xABC..." — strip 0x and left-pad to 64 hex chars
-    let addressHex = if (walletAddress.size() > 2) {
-      // Simple: assume address is already 0x-prefixed 40-char hex
-      let stripped = switch (walletAddress.chars().next()) {
-        case (?"0") { /* skip 0x prefix handling in real code */ walletAddress };
-        case _ { walletAddress };
-      };
-      stripped
-    } else { walletAddress };
-
     let calldata = "0x70a08231000000000000000000000000" # stripHexPrefix(walletAddress);
 
     let result = await (with cycles = 10_000_000_000) EvmRpc.eth_call(
@@ -383,7 +374,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.17"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

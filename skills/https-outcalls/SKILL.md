@@ -47,6 +47,7 @@ You do not deploy anything extra. The management canister is built into every su
 import Blob "mo:base/Blob";
 import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
+import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 
 actor {
@@ -176,8 +177,7 @@ actor {
 ```toml
 # Cargo.toml
 [dependencies]
-ic-cdk = "0.17"
-ic-cdk-macros = "0.17"
+ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

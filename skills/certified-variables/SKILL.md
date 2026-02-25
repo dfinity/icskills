@@ -9,7 +9,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 - `dfx` >= 0.24.0
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
-- Motoko: `CertifiedData` module (included in mo:core/mo:base)
+- Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@dfinity/certificate-verification` or `@dfinity/agent` (includes verification)
 
 ## Canister IDs
@@ -69,7 +69,7 @@ CLIENT VERIFICATION:
 ```toml
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.16"
+ic-cdk = "0.18"
 ic-certified-map = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
@@ -81,7 +81,7 @@ serde_cbor = "0.11"
 ```rust
 use candid::{CandidType, Deserialize};
 use ic_cdk::{init, post_upgrade, query, update};
-use ic_certified_map::{HashTree, RbTree, leaf_hash};
+use ic_certified_map::{HashTree, RbTree};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 
@@ -236,7 +236,8 @@ import Text "mo:core/Text";
 import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
-import SHA256 "mo:core/SHA256";
+// Requires: mops add sha2
+import Sha256 "mo:sha2/Sha256";
 
 persistent actor {
 
@@ -247,7 +248,7 @@ persistent actor {
   public func setCertifiedValue(value : Text) : async () {
     certifiedValue := value;
     // Hash the value and set as certified data (max 32 bytes)
-    let hash = SHA256.fromBlob(#sha256, Text.toBlob(value));
+    let hash = Sha256.fromBlob(#sha256, Text.encodeUtf8(value));
     CertifiedData.set(hash);
   };
 
@@ -274,7 +275,8 @@ import Blob "mo:core/Blob";
 import Text "mo:core/Text";
 import Map "mo:core/Map";
 import Array "mo:core/Array";
-import SHA256 "mo:core/SHA256";
+// Requires: mops add sha2
+import Sha256 "mo:sha2/Sha256";
 import Nat "mo:core/Nat";
 
 persistent actor {
@@ -282,23 +284,28 @@ persistent actor {
   // Store key-value pairs
   let store = Map.empty<Text, Text>();
 
+  // Concatenate two Blobs (mo:core has no Blob.concat)
+  func blobConcat(a : Blob, b : Blob) : Blob {
+    Blob.fromArray(Array.concat(Blob.toArray(a), Blob.toArray(b)))
+  };
+
   // Compute a root hash over all entries
   // (Simple approach: hash the concatenation of all key-value hashes, sorted)
   func computeRootHash() : Blob {
     let entries = Array.fromIter<(Text, Text)>(Map.entries(store));
     if (entries.size() == 0) {
-      return SHA256.fromBlob(#sha256, "");
+      return Sha256.fromBlob(#sha256, Text.encodeUtf8(""));
     };
 
     // Hash each entry
     let hashes = Array.map<(Text, Text), Blob>(entries, func((k, v)) {
-      SHA256.fromBlob(#sha256, Text.toBlob(k # "=" # v))
+      Sha256.fromBlob(#sha256, Text.encodeUtf8(k # "=" # v))
     });
 
     // Combine all hashes into a single root hash
     var combined : Blob = "";
     for (h in Array.values(hashes)) {
-      combined := SHA256.fromBlob(#sha256, Blob.concat(combined, h));
+      combined := Sha256.fromBlob(#sha256, blobConcat(combined, h));
     };
     combined
   };
