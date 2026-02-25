@@ -1,3 +1,14 @@
+---
+id: internet-identity
+name: Internet Identity Auth
+category: Auth
+description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
+endpoints: 6
+version: 4.0.0
+status: stable
+dependencies: [asset-canister]
+---
+
 # Internet Identity Authentication
 > version: 1.0.0 | requires: [dfx >= 0.24, @dfinity/auth-client >= 2.1]
 

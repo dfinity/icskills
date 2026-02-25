@@ -1,6 +1,12 @@
 ---
-name: evm-rpc
-description: Use when building apps that read from or write to Ethereum and EVM-compatible chains from the Internet Computer. Covers EVM RPC canister setup, eth_getBalance, eth_call, eth_sendRawTransaction, multi-provider consensus, and cycle costs.
+id: evm-rpc
+name: EVM RPC Integration
+category: Integration
+description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
+endpoints: 9
+version: 1.1.0
+status: stable
+dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC

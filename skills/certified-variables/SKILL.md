@@ -1,3 +1,14 @@
+---
+id: certified-variables
+name: Certified Variables
+category: Security
+description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
+endpoints: 4
+version: 1.2.0
+status: stable
+dependencies: []
+---
+
 # Certified Variables & Certified Assets
 > version: 1.0.0 | requires: [dfx >= 0.24.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 

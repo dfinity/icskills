@@ -1,3 +1,14 @@
+---
+id: https-outcalls
+name: HTTPS Outcalls
+category: Integration
+description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
+endpoints: 4
+version: 1.5.0
+status: stable
+dependencies: []
+---
+
 # HTTPS Outcalls
 > version: 1.0.0 | requires: [dfx >= 0.24]
 

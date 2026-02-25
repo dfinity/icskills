@@ -1,3 +1,14 @@
+---
+id: wallet
+name: Cycles Wallet Management
+category: Infrastructure
+description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
+endpoints: 7
+version: 1.4.0
+status: stable
+dependencies: []
+---
+
 # Cycles & Canister Management
 > version: 1.0.0 | requires: [dfx >= 0.24.0]
 

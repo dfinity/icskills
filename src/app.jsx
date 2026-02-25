@@ -1,141 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
+import { SKILLS } from "./skills-data.js";
 
-const SKILLS = [
-  {
-    id: "ckbtc",
-    name: "ckBTC Integration",
-    category: "DeFi",
-    description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management.",
-    endpoints: 14,
-    lastUpdated: "2026-02-24",
-    version: "2.1.0",
-    status: "stable",
-    dependencies: ["icrc-ledger", "wallet"],
-  },
-  {
-    id: "multi-canister",
-    name: "Multi-Canister Architecture",
-    category: "Architecture",
-    description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies.",
-    endpoints: 8,
-    lastUpdated: "2026-02-24",
-    version: "3.0.1",
-    status: "stable",
-    dependencies: ["stable-memory"],
-  },
-  {
-    id: "internet-identity",
-    name: "Internet Identity Auth",
-    category: "Auth",
-    description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling.",
-    endpoints: 6,
-    lastUpdated: "2026-02-24",
-    version: "4.0.0",
-    status: "stable",
-    dependencies: ["asset-canister"],
-  },
-  {
-    id: "icrc-ledger",
-    name: "ICRC Ledger Standard",
-    category: "Tokens",
-    description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata.",
-    endpoints: 11,
-    lastUpdated: "2026-02-24",
-    version: "2.3.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "https-outcalls",
-    name: "HTTPS Outcalls",
-    category: "Integration",
-    description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management.",
-    endpoints: 4,
-    lastUpdated: "2026-02-24",
-    version: "1.5.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "sns-launch",
-    name: "SNS DAO Launch",
-    category: "Governance",
-    description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap.",
-    endpoints: 22,
-    lastUpdated: "2026-02-24",
-    version: "1.8.0",
-    status: "stable",
-    dependencies: ["icrc-ledger", "multi-canister"],
-  },
-  {
-    id: "asset-canister",
-    name: "Asset Canister & Frontend",
-    category: "Frontend",
-    description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding.",
-    endpoints: 5,
-    lastUpdated: "2026-02-24",
-    version: "3.2.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "stable-memory",
-    name: "Stable Memory & Upgrades",
-    category: "Architecture",
-    description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data.",
-    endpoints: 6,
-    lastUpdated: "2026-02-24",
-    version: "2.0.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "wallet",
-    name: "Cycles Wallet Management",
-    category: "Infrastructure",
-    description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management.",
-    endpoints: 7,
-    lastUpdated: "2026-02-24",
-    version: "1.4.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "vetkd",
-    name: "vetKD Encryption",
-    category: "Security",
-    description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns.",
-    endpoints: 5,
-    lastUpdated: "2026-02-24",
-    version: "0.9.0",
-    status: "beta",
-    dependencies: ["internet-identity"],
-  },
-  {
-    id: "certified-variables",
-    name: "Certified Variables",
-    category: "Security",
-    description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns.",
-    endpoints: 4,
-    lastUpdated: "2026-02-24",
-    version: "1.2.0",
-    status: "stable",
-    dependencies: [],
-  },
-  {
-    id: "evm-rpc",
-    name: "EVM RPC Integration",
-    category: "Integration",
-    description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows.",
-    endpoints: 9,
-    lastUpdated: "2026-02-24",
-    version: "1.1.0",
-    status: "stable",
-    dependencies: ["https-outcalls"],
-  },
-];
-
-const CATEGORIES = ["All", "Architecture", "Auth", "DeFi", "Frontend", "Governance", "Infrastructure", "Integration", "Security", "Tokens"];
+const CATEGORIES = ["All", ...Array.from(new Set(SKILLS.map((s) => s.category))).sort()];
 
 const SANS_FONT = "'Inter', system-ui, sans-serif";
 
@@ -667,14 +533,26 @@ export function App() {
                   )}
 
                   {selectedSkill === skill.id && (() => {
-                    const url = `https://skills.internetcomputer.org/api/v1/skills/${skill.id}`;
+                    const ghUrl = `https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`;
+                    const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
+                    const fetchCmd = `curl -sL ${rawUrl}`;
                     return (
                       <div style={{
                         marginTop: "16px", paddingTop: "16px",
                         borderTop: `1px solid rgba(var(--accent-rgb),0.15)`,
+                        display: "flex", flexDirection: "column", gap: "12px",
                       }}>
-                        <div style={{ fontSize: "11px", color: "var(--accent-text)", marginBottom: "8px" }}>
-                          Agent Endpoint:
+                        <a href={ghUrl} target="_blank" rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "6px",
+                            fontSize: "12px", color: "var(--accent-text)", textDecoration: "none",
+                          }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                          View on GitHub
+                        </a>
+                        <div style={{ fontSize: "11px", color: "var(--text-faint)", marginBottom: "-4px" }}>
+                          Fetch into your project:
                         </div>
                         <div style={{ position: "relative" }}>
                           <code style={{
@@ -684,22 +562,22 @@ export function App() {
                             borderRadius: "6px", fontSize: "11px", color: "var(--accent)",
                             wordBreak: "break-all",
                           }}>
-                            GET {url}
+                            {fetchCmd}
                           </code>
                           <button
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(url); }}
-                            title="Copy URL"
-                            aria-label="Copy endpoint URL"
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(fetchCmd); }}
+                            title="Copy command"
+                            aria-label="Copy fetch command"
                             style={{
                               position: "absolute", top: "8px", right: "8px",
                               background: "none", border: "none",
                               cursor: "pointer", padding: "4px",
-                              color: copiedUrl === url ? "var(--green)" : "var(--text-faint)",
+                              color: copiedUrl === fetchCmd ? "var(--green)" : "var(--text-faint)",
                               fontSize: "14px", lineHeight: 1,
                               transition: "color 0.2s",
                             }}
                           >
-                            {copiedUrl === url ? "\u2713" : "\u2398"}
+                            {copiedUrl === fetchCmd ? "\u2713" : "\u2398"}
                           </button>
                         </div>
                       </div>

@@ -6,8 +6,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "generate": "node scripts/generate-skills.js",
+    "dev": "npm run generate && vite",
+    "build": "npm run generate && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

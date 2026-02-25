@@ -1,3 +1,14 @@
+---
+id: sns-launch
+name: SNS DAO Launch
+category: Governance
+description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
+endpoints: 22
+version: 1.8.0
+status: stable
+dependencies: [icrc-ledger, multi-canister]
+---
+
 # SNS DAO Launch
 > version: 1.0.0 | requires: [dfx >= 0.24.0, sns-cli, NNS neuron with stake]
 

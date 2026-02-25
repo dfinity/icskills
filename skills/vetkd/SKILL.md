@@ -1,3 +1,14 @@
+---
+id: vetkd
+name: vetKD Encryption
+category: Security
+description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
+endpoints: 5
+version: 0.9.0
+status: beta
+dependencies: [internet-identity]
+---
+
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
 > version: 1.0.0 | requires: [dfx >= 0.24.0, ic-vetkeys]
 

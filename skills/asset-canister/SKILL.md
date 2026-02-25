@@ -1,3 +1,14 @@
+---
+id: asset-canister
+name: "Asset Canister & Frontend"
+category: Frontend
+description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
+endpoints: 5
+version: 3.2.0
+status: stable
+dependencies: []
+---
+
 # Asset Canister & Frontend Hosting
 > version: 1.0.0 | requires: [dfx >= 0.24]
 

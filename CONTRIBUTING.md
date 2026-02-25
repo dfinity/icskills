@@ -46,25 +46,11 @@ Step-by-step commands to deploy locally and on mainnet.
 Concrete commands to confirm the implementation is correct.
 ```
 
-### 3. Register the skill on the website
+### 3. That's it — the website auto-discovers skills
 
-Both files must be updated in the same PR. The `SKILL.md` is served via the API. The `SKILLS` array entry is what makes the skill appear on the website — stats (skill count, operations count) are computed automatically from this array.
+The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit `app.jsx` or any other source file. The build script (`scripts/generate-skills.js`) scans all `skills/*/SKILL.md` files, parses their frontmatter, and generates the data the site uses.
 
-Add an entry to the `SKILLS` array in `src/app.jsx`:
-
-```javascript
-{
-  id: "your-skill-id",        // matches the directory name
-  name: "Human-Readable Name",
-  category: "Category",       // DeFi, Auth, Architecture, Tokens, etc.
-  description: "One-line description for the card.",
-  endpoints: 6,               // number of operations/endpoints covered
-  lastUpdated: "2026-02-24",  // date of last content change
-  version: "1.0.0",           // semver, matches the SKILL.md header
-  status: "stable",           // stable | beta | experimental
-  dependencies: [],            // IDs of other skills this depends on
-}
-```
+Stats (skill count, operations, categories) all update automatically.
 
 ### 4. Submit a PR
 

@@ -1,3 +1,14 @@
+---
+id: icrc-ledger
+name: ICRC Ledger Standard
+category: Tokens
+description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
+endpoints: 11
+version: 2.3.0
+status: stable
+dependencies: []
+---
+
 # ICRC Ledger Standards
 > version: 1.0.0 | requires: [dfx >= 0.24.0, mops, ic-cdk >= 0.18]
 

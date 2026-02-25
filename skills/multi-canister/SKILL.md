@@ -1,6 +1,12 @@
 ---
-name: multi-canister
-description: Use when building apps that span multiple canisters on the Internet Computer. Covers inter-canister calls, shared types, canister factory pattern, dfx.json dependencies, upgrade strategies, and common pitfalls like caller() mutation after await.
+id: multi-canister
+name: Multi-Canister Architecture
+category: Architecture
+description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
+endpoints: 8
+version: 3.0.1
+status: stable
+dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture

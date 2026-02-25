@@ -1,6 +1,12 @@
 ---
-name: ckbtc
-description: Use when building apps that accept, send, or manage Bitcoin on the Internet Computer. Covers ckBTC deposit/withdrawal flows, ICRC-1 transfers, subaccount generation, and minter interaction. Essential for any ICP project integrating Bitcoin payments.
+id: ckbtc
+name: ckBTC Integration
+category: DeFi
+description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
+endpoints: 14
+version: 2.1.0
+status: stable
+dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
