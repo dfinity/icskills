@@ -12,8 +12,8 @@ const BASE = "/icskills";
 
 function useRoute() {
   const parsePath = useCallback(() => {
-    const path = window.location.pathname.replace(BASE, "").replace(/\/$/, "") || "/";
-    const skillMatch = path.match(/^\/skills\/([a-z0-9-]+)$/);
+    const path = window.location.pathname.replace(new RegExp("^" + BASE), "").replace(/\/$/, "") || "/";
+    const skillMatch = path.match(/^\/skills\/([a-z0-9_-]+)$/);
     if (skillMatch) return { page: "skill", id: skillMatch[1] };
     return { page: "home" };
   }, []);
@@ -245,9 +245,9 @@ function TerminalHeader({ title }) {
       borderBottom: `1px solid rgba(var(--accent-rgb),0.08)`,
       display: "flex", alignItems: "center", gap: "8px",
     }}>
-      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-red)" }} />
-      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-yellow)" }} />
-      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-green)" }} />
+      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-red)" }} />
+      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-yellow)" }} />
+      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-green)" }} />
       <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--text-faint)" }}>{title}</span>
     </div>
   );
@@ -260,7 +260,6 @@ function SkillPage({ skillId, theme, setTheme }) {
   useEffect(() => {
     window.scrollTo(0, 0);
     if (skill) document.title = `${skill.name} — IC Skills`;
-    return () => { document.title = "IC Skills — Agent-Readable Documentation for Internet Computer"; };
   }, [skillId, skill]);
 
   if (!skill) {
@@ -316,9 +315,9 @@ function SkillPage({ skillId, theme, setTheme }) {
         <div style={{
           maxWidth: "860px", margin: "0 auto",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          height: "56px",
+          minHeight: "56px", flexWrap: "wrap", padding: "8px 0",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
             <Link to="/" style={{
               display: "flex", alignItems: "center", gap: "8px",
               color: "var(--text-muted)", textDecoration: "none", fontSize: "12px",
@@ -326,20 +325,23 @@ function SkillPage({ skillId, theme, setTheme }) {
               border: "1px solid var(--border-default)",
               background: "var(--bg-card)",
               transition: "all 0.15s",
+              flexShrink: 0,
             }}>
               <span style={{ fontSize: "14px" }}>{"\u2190"}</span>
               All Skills
             </Link>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
               <span style={{
                 fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
                 fontSize: "14px", color: "var(--text-primary)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
               }}>{skill.name}</span>
               <span style={{
                 fontSize: "10px", padding: "2px 8px",
                 background: "rgba(var(--accent-rgb),0.1)",
                 border: "1px solid rgba(var(--accent-rgb),0.2)",
                 borderRadius: "4px", color: "var(--accent-text)",
+                flexShrink: 0, whiteSpace: "nowrap",
               }}>v{skill.version}</span>
             </div>
           </div>
@@ -348,7 +350,7 @@ function SkillPage({ skillId, theme, setTheme }) {
               title="View on GitHub"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                width: "32px", height: "32px", borderRadius: "6px",
+                width: "36px", height: "36px", borderRadius: "6px",
                 color: "var(--text-faint)", background: "var(--bg-card)",
                 border: "1px solid var(--border-default)", transition: "color 0.2s",
               }}>
@@ -357,9 +359,10 @@ function SkillPage({ skillId, theme, setTheme }) {
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                padding: "8px", color: "var(--text-faint)",
+                padding: "10px", color: "var(--text-faint)",
                 display: "flex", alignItems: "center",
               }}
             >
@@ -378,7 +381,7 @@ function SkillPage({ skillId, theme, setTheme }) {
       </header>
 
       {/* Skill content */}
-      <main style={{ position: "relative", zIndex: 10, maxWidth: "860px", margin: "0 auto", padding: "40px 32px 80px" }}>
+      <main style={{ position: "relative", zIndex: 10, maxWidth: "860px", margin: "0 auto", padding: "clamp(20px, 5vw, 40px) clamp(16px, 4vw, 32px) 80px" }}>
         {/* Share bar */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "flex-end",
@@ -470,6 +473,7 @@ function SkillPage({ skillId, theme, setTheme }) {
           maxWidth: "860px", margin: "0 auto",
           display: "flex", justifyContent: "space-between",
           fontSize: "11px", color: "var(--text-phantom)",
+          flexWrap: "wrap", gap: "8px",
         }}>
           <Link to="/" style={{ color: "var(--text-phantom)", textDecoration: "none" }}>
             IC Skills {"\u2014"} The API for building on the Internet Computer
@@ -528,12 +532,14 @@ export function App() {
     return <SkillPage skillId={route.id} theme={theme} setTheme={setTheme} />;
   }
 
-  const query = searchQuery.toLowerCase();
-  const filtered = SKILLS.filter((s) => {
-    const matchCat = activeCategory === "All" || s.category === activeCategory;
-    const matchSearch = s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
-    return matchCat && matchSearch;
-  });
+  const filtered = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return SKILLS.filter((s) => {
+      const matchCat = activeCategory === "All" || s.category === activeCategory;
+      const matchSearch = s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
+      return matchCat && matchSearch;
+    });
+  }, [searchQuery, activeCategory]);
 
   const getFwColor = (name) => theme === "light" && FW_LIGHT_COLORS[name] ? FW_LIGHT_COLORS[name] : FRAMEWORKS.find((f) => f.name === name)?.color;
 
@@ -582,9 +588,9 @@ export function App() {
         <div style={{
           maxWidth: "1200px", margin: "0 auto",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          height: "72px",
+          minHeight: "56px", flexWrap: "wrap", padding: "10px 0", gap: "8px",
         }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "14px", flexShrink: 0 }}>
             <span style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontWeight: 700, fontSize: "18px", letterSpacing: "-0.5px",
@@ -599,7 +605,7 @@ export function App() {
               fontWeight: 600,
             }}>Agent-First</span>
           </div>
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
             {["browse", "how-it-works", "api"].map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 padding: "6px 16px", fontSize: "12px",
@@ -619,7 +625,7 @@ export function App() {
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               style={{
                 background: "none", border: "none", cursor: "pointer",
-                padding: "8px", marginLeft: "8px",
+                padding: "10px", marginLeft: "8px",
                 color: "var(--text-faint)",
                 display: "flex", alignItems: "center",
               }}
@@ -790,7 +796,7 @@ export function App() {
                       title="View on GitHub"
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        width: "28px", height: "28px", borderRadius: "6px",
+                        width: "36px", height: "36px", borderRadius: "6px",
                         color: "var(--text-faint)", flexShrink: 0,
                         background: `rgba(var(--accent-rgb),0.06)`,
                         border: `1px solid rgba(var(--accent-rgb),0.1)`,
@@ -881,7 +887,7 @@ export function App() {
             <div style={{ textAlign: "center", marginBottom: "72px" }}>
               <h2 style={{
                 fontSize: "clamp(36px, 6vw, 56px)", fontWeight: 800, color: "var(--text-primary)",
-                letterSpacing: "-3px", margin: "0 0 20px 0", lineHeight: 1.05,
+                letterSpacing: "-0.05em", margin: "0 0 20px 0", lineHeight: 1.05,
               }}>
                 <span style={{ color: "var(--text-faint)" }}>Docs are for humans.</span><br />
                 <span style={{
@@ -899,7 +905,7 @@ export function App() {
 
             {/* 3-step flow */}
             <div className="step-grid" style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "2px",
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2px",
               marginBottom: "72px",
             }}>
               {[
@@ -1055,7 +1061,7 @@ export function App() {
                     tag: "confirm it works" },
                 ].map((item, i, arr) => (
                   <div key={i} className="anatomy-row" style={{
-                    display: "grid", gridTemplateColumns: "200px 1fr auto",
+                    display: "grid", gridTemplateColumns: "minmax(100px, 200px) 1fr auto",
                     borderBottom: i < arr.length - 1 ? "1px solid var(--border-subtle)" : "none",
                     alignItems: "center",
                   }}>
@@ -1150,7 +1156,7 @@ export function App() {
 
             {/* Bottom CTA */}
             <div style={{
-              textAlign: "center", padding: "48px 32px",
+              textAlign: "center", padding: "clamp(24px, 6vw, 48px) clamp(16px, 4vw, 32px)",
               background: "var(--gradient-cta)",
               borderRadius: "16px",
               border: `1px solid rgba(var(--accent-rgb),0.1)`,
@@ -1204,7 +1210,11 @@ export function App() {
                   overflow: "hidden",
                 }}>
                   <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expandedEndpoint === i}
                     onClick={() => setExpandedEndpoint(expandedEndpoint === i ? null : i)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedEndpoint(expandedEndpoint === i ? null : i); } }}
                     style={{
                       padding: "14px 20px",
                       background: expandedEndpoint === i ? "var(--bg-input)" : "var(--bg-card-subtle)",
@@ -1281,7 +1291,7 @@ export function App() {
 
             {/* Info cards */}
             <div className="api-info-grid" style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px",
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px",
             }}>
               {[
                 { title: "No auth needed", desc: "Open API. No keys, no signup, no rate limits for normal use." },

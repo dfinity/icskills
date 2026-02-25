@@ -30,7 +30,7 @@ Every skill follows the same structure:
 | **Mistakes that break your build** | Numbered pitfalls that prevent hallucinations. |
 | **Implementation** | Tested, copy-paste-correct code blocks. |
 | **Deploy & Test** | Step-by-step commands for local and mainnet. |
-| **Verification** | Concrete commands to confirm it works. |
+| **Verify It Works** | Concrete commands to confirm it works. |
 
 The pitfalls section is the highest-value part. Every pitfall documented is a hallucination prevented.
 
@@ -47,9 +47,9 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 | [evm-rpc](skills/evm-rpc/SKILL.md) | Integration | Read/write Ethereum from the IC |
 | [sns-launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO |
 | [asset-canister](skills/asset-canister/SKILL.md) | Frontend | Deploy frontend assets to the IC |
-| [certified-variables](skills/certified-variables/SKILL.md) | Data | Certified query responses |
-| [vetkd](skills/vetkd/SKILL.md) | Crypto | Threshold key derivation for encryption |
-| [wallet](skills/wallet/SKILL.md) | DevOps | Cycles management and canister lifecycle |
+| [certified-variables](skills/certified-variables/SKILL.md) | Security | Certified query responses |
+| [vetkd](skills/vetkd/SKILL.md) | Security | Threshold key derivation for encryption |
+| [wallet](skills/wallet/SKILL.md) | Infrastructure | Cycles management and canister lifecycle |
 
 ## Usage
 

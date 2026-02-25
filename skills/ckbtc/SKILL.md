@@ -100,7 +100,7 @@ core = "2.0.0"
 icrc2-types = "0.1.0"
 ```
 
-#### dfx.json (local development with ckBTC)
+#### icp.json (local development with ckBTC)
 
 For local testing, pull the ckBTC canisters:
 

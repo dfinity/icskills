@@ -10,7 +10,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -62,7 +62,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in dfx.json so `icp deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in icp.json so `icp deploy` orders them correctly.
 
 6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
@@ -80,7 +80,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ```
 my-project/
-  dfx.json
+  icp.json
   mops.toml
   src/
     shared/
@@ -93,7 +93,7 @@ my-project/
       ...               # Frontend assets
 ```
 
-### dfx.json
+### icp.json
 
 ```json
 {
@@ -227,7 +227,7 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Types "../shared/Types";
 
-// Import the other canister — name must match dfx.json key
+// Import the other canister — name must match icp.json key
 import UserService "canister:user_service";
 
 persistent actor {
@@ -316,7 +316,7 @@ persistent actor {
 
 ```
 my-project/
-  dfx.json
+  icp.json
   Cargo.toml          # workspace
   src/
     user_service/
@@ -337,7 +337,7 @@ members = [
 ]
 ```
 
-#### dfx.json (Rust)
+#### icp.json (Rust)
 
 ```json
 {

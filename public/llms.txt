@@ -14,18 +14,18 @@ curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/<skill-i
 
 ## Skills
 
-- [ckBTC](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md): Chain-key Bitcoin — trustless BTC on ICP with 1:1 backing, ICRC-1 token standard
-- [ICRC Ledger](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/icrc-ledger/SKILL.md): ICRC-1/ICRC-2 token ledger standard — deploy, mint, transfer, approve
-- [Internet Identity](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/internet-identity/SKILL.md): Passkey-based authentication for ICP dapps using delegation chains
-- [HTTPS Outcalls](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/https-outcalls/SKILL.md): Make HTTP requests from canisters to external APIs with consensus
-- [Multi-Canister Architecture](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/multi-canister/SKILL.md): Inter-canister calls, factory patterns, and multi-canister design
-- [Stable Memory](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/stable-memory/SKILL.md): Persistent storage that survives canister upgrades — up to 500GB
-- [EVM RPC](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/evm-rpc/SKILL.md): Call Ethereum and EVM chains from ICP canisters via RPC
-- [SNS Launch](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/sns-launch/SKILL.md): Service Nervous System — decentralize your dapp with tokenized governance
-- [vetKD](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/vetkd/SKILL.md): Verifiably Encrypted Threshold Key Derivation for on-chain encryption
-- [Certified Variables](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/certified-variables/SKILL.md): Certified query responses with Merkle tree proofs
-- [Cycles & Wallet](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/wallet/SKILL.md): Cycles management, wallet canisters, and canister top-up
-- [Asset Canister](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/asset-canister/SKILL.md): Serve frontend assets from ICP with certification and caching
+- [Asset Canister & Frontend](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/asset-canister/SKILL.md): Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding.
+- [Certified Variables](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/certified-variables/SKILL.md): Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns.
+- [ckBTC Integration](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md): Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management.
+- [EVM RPC Integration](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/evm-rpc/SKILL.md): Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows.
+- [HTTPS Outcalls](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/https-outcalls/SKILL.md): Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management.
+- [ICRC Ledger Standard](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/icrc-ledger/SKILL.md): Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata.
+- [Internet Identity Auth](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/internet-identity/SKILL.md): Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling.
+- [Multi-Canister Architecture](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/multi-canister/SKILL.md): Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies.
+- [SNS DAO Launch](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/sns-launch/SKILL.md): Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap.
+- [Stable Memory & Upgrades](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/stable-memory/SKILL.md): Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data.
+- [vetKD Encryption](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/vetkd/SKILL.md): Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns.
+- [Cycles Wallet Management](https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/wallet/SKILL.md): Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management.
 
 ## Source
 

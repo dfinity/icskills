@@ -25,13 +25,13 @@
   --text-primary: #fff;
   --text-body: #e2e2e8;
   --text-secondary: #ccc;
-  --text-tertiary: #888;
-  --text-muted: #666;
-  --text-faint: #555;
-  --text-ghost: #444;
-  --text-phantom: #333;
+  --text-tertiary: #999;
+  --text-muted: #777;
+  --text-faint: #6e6e6e;
+  --text-ghost: #5e5e5e;
+  --text-phantom: #444;
   --text-sub: #ddd;
-  --text-dim: #777;
+  --text-dim: #888;
   --text-soft: #aaa;
 
   /* Accent */
@@ -78,8 +78,8 @@
   --bg-code-deep: #f0eef4;
   --bg-response: #f6f5f8;
 
-  --bg-card: #ffffff;
-  --bg-card-subtle: #ffffff;
+  --bg-card: #fafafe;
+  --bg-card-subtle: #fbfbff;
   --bg-input: #f5f5f7;
   --bg-arrow: #f5f5f7;
 
@@ -181,6 +181,12 @@ button:hover {
   opacity: 0.9;
 }
 
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: 2px;
+}
+
 /* ── Components ── */
 .skill-card {
   transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
@@ -193,12 +199,23 @@ button:hover {
   transform: translateY(-1px);
 }
 
+.skill-card:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: 2px;
+  border-color: rgba(var(--accent-rgb), 0.4) !important;
+}
+
 .category-pill:hover {
   border-color: rgba(var(--accent-rgb), 0.3) !important;
   color: var(--accent-text) !important;
 }
 
 /* ── Skill Content (rendered markdown) ── */
+.skill-content {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
 .skill-content h1,
 .skill-content h2,
 .skill-content h3,
@@ -327,7 +344,11 @@ button:hover {
 }
 
 .skill-content table {
-  width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: max-content;
+  min-width: 100%;
   margin: 1.25em 0;
   border-collapse: collapse;
   font-size: 13px;
@@ -367,7 +388,7 @@ button:hover {
   }
 
   main {
-    padding: 20px 16px !important;
+    padding: 20px 16px 48px !important;
   }
 
   footer {
@@ -386,12 +407,21 @@ button:hover {
     gap: 32px !important;
     flex-wrap: wrap;
   }
+
+  .frameworks-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .api-info-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ── Responsive: Small tablet ── */
 @media (max-width: 640px) {
   .step-grid {
     grid-template-columns: 1fr !important;
+    gap: 12px !important;
   }
 
   .comparison-grid {
@@ -400,6 +430,14 @@ button:hover {
   }
 
   .comparison-grid > div:nth-child(2) {
+    transform: none;
+    height: 36px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .comparison-grid > div:nth-child(2) > div {
     transform: rotate(90deg);
   }
 
@@ -415,12 +453,16 @@ button:hover {
     border-right: none !important;
   }
 
+  .anatomy-row > div:last-child {
+    padding: 4px 24px 20px !important;
+  }
+
   .frameworks-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  .api-info-grid {
-    grid-template-columns: 1fr !important;
+  .endpoint-hint {
+    display: none !important;
   }
 
   .endpoint-desc {
@@ -443,27 +485,17 @@ button:hover {
 
 /* ── Responsive: Mobile ── */
 @media (max-width: 480px) {
-  header > div {
-    flex-direction: column;
-    height: auto !important;
-    padding: 12px 0;
-    gap: 8px;
-  }
-
   h1 {
     font-size: 28px !important;
   }
 
   h2 {
     font-size: 24px !important;
+    letter-spacing: -0.03em !important;
   }
 
   .skills-grid {
     grid-template-columns: 1fr !important;
-  }
-
-  .endpoint-hint {
-    display: none !important;
   }
 
   .frameworks-grid {
@@ -506,6 +538,14 @@ button:hover {
     font-size: 10.5px !important;
     padding: 16px !important;
   }
+
+  .skill-content h1 {
+    font-size: 22px !important;
+  }
+
+  .skill-content h2 {
+    font-size: 16px !important;
+  }
 }
 
 /* ── Responsive: Very small ── */
@@ -528,5 +568,14 @@ button:hover {
 
   .hero-stats > div > div:first-child {
     font-size: 20px !important;
+  }
+}
+
+/* ── Accessibility: Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

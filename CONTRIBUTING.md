@@ -27,8 +27,14 @@ Every skill file follows this structure:
 
 ```markdown
 ---
-name: <skill-id>
+id: <skill-id>
+name: Display Name
+category: CategoryName
 description: One sentence. When should an agent load this skill? What does it cover?
+version: 1.0.0
+endpoints: 5
+status: stable
+dependencies: [dep1, dep2]
 ---
 
 # Skill Title
@@ -107,13 +113,12 @@ Current categories used on the site:
 
 | Category | Examples |
 |----------|---------|
-| DeFi | ckBTC, ICRC Ledger |
+| DeFi | ckBTC |
+| Tokens | ICRC Ledger |
 | Auth | Internet Identity |
 | Architecture | Multi-Canister, Stable Memory |
-| Tokens | ICRC Ledger |
 | Integration | HTTPS Outcalls, EVM RPC |
 | Governance | SNS Launch |
 | Frontend | Asset Canister |
-| Crypto | vetKD |
-| DevOps | Cycles & Wallet |
-| Data | Certified Variables |
+| Security | vetKD, Certified Variables |
+| Infrastructure | Cycles Wallet |

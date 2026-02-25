@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0, quill CLI, NNS neuron with stake]
+> version: 1.8.0 | requires: [icp-cli >= 0.1.0, quill CLI, NNS neuron with stake]
 
 ## What This Is
 

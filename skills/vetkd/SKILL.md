@@ -10,7 +10,7 @@ dependencies: [internet-identity]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
+> version: 0.9.0 | requires: [icp-cli >= 0.1.0]
 >
 > **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
 > may change between IC SDK releases. Pin your dependency versions and test after every icp-cli upgrade.

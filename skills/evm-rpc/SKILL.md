@@ -10,7 +10,7 @@ dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 

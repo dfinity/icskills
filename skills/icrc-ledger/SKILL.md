@@ -375,7 +375,7 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 ### Deploy a Local ICRC-1 Ledger for Testing
 
-Add to `dfx.json`:
+Add to `icp.json`:
 
 ```json
 {

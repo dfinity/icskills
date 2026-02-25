@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # HTTPS Outcalls
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
+> version: 1.5.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 

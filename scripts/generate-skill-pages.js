@@ -119,6 +119,21 @@ for (const dir of dirs) {
     `<meta name="twitter:description" content="${twitterDesc}">`
   );
 
+  // Ensure og:image and twitter:image are present (use site-wide OG image)
+  const ogImage = `${SITE}/og-image.svg`;
+  if (!html.includes('og:image')) {
+    html = html.replace(
+      /<meta property="og:site_name"/,
+      `<meta property="og:image" content="${ogImage}">\n  <meta property="og:site_name"`
+    );
+  }
+  if (!html.includes('twitter:image')) {
+    html = html.replace(
+      /<meta name="twitter:description"/,
+      `<meta name="twitter:image" content="${ogImage}">\n  <meta name="twitter:description"`
+    );
+  }
+
   // Replace JSON-LD
   html = html.replace(
     /<script type="application\/ld\+json">[\s\S]*?<\/script>/,

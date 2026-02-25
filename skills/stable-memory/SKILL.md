@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0]
+> version: 2.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.

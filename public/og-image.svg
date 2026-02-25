@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="580" width="1200" height="50" fill="url(#accent)" opacity="0.3"/>
+  <rect x="60" y="0" width="4" height="630" fill="url(#accent)" opacity="0.5"/>
+  <circle cx="1100" cy="100" r="200" fill="#6366f1" opacity="0.05"/>
+  <circle cx="100" cy="530" r="150" fill="#3b82f6" opacity="0.05"/>
+  <text x="100" y="280" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="96" font-weight="800" fill="#ffffff">IC Skills</text>
+  <text x="100" y="360" font-family="'Inter', 'Helvetica Neue', sans-serif" font-size="32" fill="#8b8b9e">Agent-readable skill files for</text>
+  <text x="100" y="405" font-family="'Inter', 'Helvetica Neue', sans-serif" font-size="32" fill="#8b8b9e">Internet Computer</text>
+  <text x="100" y="540" font-family="'JetBrains Mono', monospace" font-size="18" fill="#4a4a5e">joshdfn.github.io/icskills</text>
+</svg>

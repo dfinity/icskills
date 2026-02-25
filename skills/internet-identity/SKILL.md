@@ -10,7 +10,7 @@ dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [icp-cli >= 0.1.0, @dfinity/auth-client >= 3.0]
+> version: 4.0.0 | requires: [icp-cli >= 0.1.0, @dfinity/auth-client >= 3.0]
 
 ## What This Is
 
