@@ -48,6 +48,8 @@ Concrete commands to confirm the implementation is correct.
 
 ### 3. Register the skill on the website
 
+Both files must be updated in the same PR. The `SKILL.md` is served via the API. The `SKILLS` array entry is what makes the skill appear on the website — stats (skill count, operations count) are computed automatically from this array.
+
 Add an entry to the `SKILLS` array in `src/app.jsx`:
 
 ```javascript
