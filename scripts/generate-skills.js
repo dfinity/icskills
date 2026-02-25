@@ -45,6 +45,12 @@ function parseFrontmatter(content) {
   return data;
 }
 
+// Extract the markdown body (everything after the frontmatter)
+function extractBody(content) {
+  const match = content.match(/^---\n[\s\S]*?\n---\n?([\s\S]*)$/);
+  return match ? match[1].trim() : content.trim();
+}
+
 // Use git log for accurate dates (file mtime is unreliable on CI)
 function getLastUpdated(filePath) {
   try {
@@ -92,6 +98,7 @@ for (const dir of dirs) {
     version: meta.version || "1.0.0",
     status: meta.status || "stable",
     dependencies: Array.isArray(meta.dependencies) ? meta.dependencies : [],
+    content: extractBody(content),
   });
 }
 

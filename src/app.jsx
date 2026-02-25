@@ -1,5 +1,12 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useMemo } from "preact/hooks";
+import { marked } from "marked";
 import { SKILLS } from "./skills-data.js";
+
+// Configure marked for safe, minimal rendering
+marked.setOptions({
+  gfm: true,
+  breaks: false,
+});
 
 const CATEGORIES = ["All", ...Array.from(new Set(SKILLS.map((s) => s.category))).sort()];
 
@@ -207,6 +214,30 @@ function TerminalHeader({ title }) {
       <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-green)" }} />
       <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--text-faint)" }}>{title}</span>
     </div>
+  );
+}
+
+function SkillContent({ content }) {
+  const html = useMemo(() => marked.parse(content || ""), [content]);
+  // Content is from our own SKILL.md files (build-time inlined), not user input
+  return (
+    <div
+      className="skill-content"
+      onClick={(e) => e.stopPropagation()}
+      dangerouslySetInnerHTML={{ __html: html }}
+      style={{
+        marginTop: "16px",
+        paddingTop: "16px",
+        borderTop: "1px solid var(--border-subtle)",
+        fontSize: "13px",
+        lineHeight: 1.7,
+        color: "var(--text-dim)",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        maxHeight: "600px",
+        overflowY: "auto",
+        cursor: "default",
+      }}
+    />
   );
 }
 
@@ -592,6 +623,10 @@ export function App() {
                       </div>
                     );
                   })()}
+
+                  {selectedSkill === skill.id && skill.content && (
+                    <SkillContent content={skill.content} />
+                  )}
                 </div>
               ))}
             </div>

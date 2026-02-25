@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "marked": "^17.0.3",
     "preact": "^10.25.4"
   },
   "devDependencies": {
