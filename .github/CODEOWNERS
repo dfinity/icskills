@@ -5,14 +5,14 @@
 * @JoshDFN
 
 # Skill files — domain experts
-skills/asset-canister/          @raymondk
-skills/certified-variables/     @raymondk
-skills/ckbtc/                   @gregorydemay
-skills/evm-rpc/                 @gregorydemay
-skills/icrc-ledger/             @gregorydemay
-skills/wallet/                  @gregorydemay
-skills/internet-identity/       @aterga
-skills/sns-launch/              @bjoernek
-skills/https-outcalls/          @derlerd-dfinity
-skills/multi-canister/          @derlerd-dfinity
-skills/vetkd/                   @andreacerulli
+/skills/asset-canister/          @raymondk
+/skills/certified-variables/     @raymondk
+/skills/ckbtc/                   @gregorydemay
+/skills/evm-rpc/                 @gregorydemay
+/skills/icrc-ledger/             @gregorydemay
+/skills/wallet/                  @gregorydemay
+/skills/internet-identity/       @aterga
+/skills/sns-launch/              @bjoernek
+/skills/https-outcalls/          @derlerd-dfinity
+/skills/multi-canister/          @derlerd-dfinity
+/skills/vetkd/                   @andreacerulli

@@ -13,7 +13,7 @@ const OUTPUT = join(ROOT, "public", "llms.txt");
 const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
   const data = {};
   for (const line of match[1].split("\n")) {

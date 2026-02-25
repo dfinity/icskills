@@ -53,14 +53,7 @@ for (const dir of dirs) {
     <priority>0.9</priority>
   </url>
 `;
-  // Raw SKILL.md URL (for agents)
-  xml += `  <url>
-    <loc>${RAW}/skills/${dir}/SKILL.md</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-`;
+  // Note: raw.githubusercontent.com URLs omitted — sitemaps must be same-origin
 }
 
 xml += `  <url>

@@ -527,11 +527,6 @@ export function App() {
     localStorage.setItem("ic-skills-theme", theme);
   }, [theme]);
 
-  // Route to skill page
-  if (route.page === "skill") {
-    return <SkillPage skillId={route.id} theme={theme} setTheme={setTheme} />;
-  }
-
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return SKILLS.filter((s) => {
@@ -541,7 +536,15 @@ export function App() {
     });
   }, [searchQuery, activeCategory]);
 
-  const getFwColor = (name) => theme === "light" && FW_LIGHT_COLORS[name] ? FW_LIGHT_COLORS[name] : FRAMEWORKS.find((f) => f.name === name)?.color;
+  const fwColorMap = useMemo(() =>
+    Object.fromEntries(FRAMEWORKS.map(f => [f.name, theme === "light" && FW_LIGHT_COLORS[f.name] ? FW_LIGHT_COLORS[f.name] : f.color])),
+    [theme]
+  );
+
+  // Route to skill page
+  if (route.page === "skill") {
+    return <SkillPage skillId={route.id} theme={theme} setTheme={setTheme} />;
+  }
 
   return (
     <div style={{
@@ -1125,7 +1128,7 @@ export function App() {
                 marginTop: "24px",
               }}>
                 {FRAMEWORKS.map((fw) => {
-                  const c = getFwColor(fw.name);
+                  const c = fwColorMap[fw.name] || fw.color;
                   return (
                     <div key={fw.name} className="framework-card" style={{
                       padding: "16px",

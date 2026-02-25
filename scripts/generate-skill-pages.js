@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Post-build: generates dist/skills/{id}/index.html for each skill
 // with proper OG/Twitter/JSON-LD meta tags for SEO and social sharing.
+// Also copies built index.html to dist/404.html for SPA fallback.
 // Run after vite build: node scripts/generate-skill-pages.js
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from "fs";
@@ -16,8 +17,12 @@ const SITE = "https://dfinity.github.io/icskills";
 // Read the built index.html as template
 const template = readFileSync(join(DIST, "index.html"), "utf-8");
 
+// Copy built index.html to 404.html for GitHub Pages SPA fallback
+writeFileSync(join(DIST, "404.html"), template);
+
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const normalized = content.replace(/\r\n/g, "\n");
+  const match = normalized.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
   const data = {};
   for (const line of match[1].split("\n")) {
@@ -62,6 +67,7 @@ for (const dir of dirs) {
   const ogDesc = esc(desc);
   const twitterDesc = esc(desc.length > 200 ? desc.slice(0, 197) + "..." : desc);
 
+  // Escape </script> in JSON-LD to prevent breaking out of script tag
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "TechArticle",
@@ -69,76 +75,36 @@ for (const dir of dirs) {
     "description": desc,
     "url": url,
     "version": version,
+    "author": { "@type": "Organization", "name": "DFINITY Foundation", "url": "https://dfinity.org" },
     "about": { "@type": "Thing", "name": name },
     "isPartOf": { "@id": `${SITE}/#website` },
     "proficiencyLevel": "Expert",
     "keywords": `Internet Computer, ICP, ${name}, ${category}, AI agent, icp-cli`,
-  });
+  }).replace(/<\//g, "<\\/");
 
   let html = template;
 
-  // Replace title
-  html = html.replace(
-    /<title>[^<]*<\/title>/,
-    `<title>${ogTitle}</title>`
-  );
+  // Use arrow functions in replacements to avoid $& interpretation
+  html = html.replace(/<title>[^<]*<\/title>/, () => `<title>${ogTitle}</title>`);
+  html = html.replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${ogDesc}">`);
+  html = html.replace(/<link rel="canonical" href="[^"]*">/, () => `<link rel="canonical" href="${url}">`);
+  html = html.replace(/<meta property="og:url" content="[^"]*">/, () => `<meta property="og:url" content="${url}">`);
+  html = html.replace(/<meta property="og:title" content="[^"]*">/, () => `<meta property="og:title" content="${ogTitle}">`);
+  html = html.replace(/<meta property="og:description" content="[^"]*">/, () => `<meta property="og:description" content="${ogDesc}">`);
+  html = html.replace(/<meta name="twitter:title" content="[^"]*">/, () => `<meta name="twitter:title" content="${ogTitle}">`);
+  html = html.replace(/<meta name="twitter:description" content="[^"]*">/, () => `<meta name="twitter:description" content="${twitterDesc}">`);
 
-  // Replace meta description
-  html = html.replace(
-    /<meta name="description" content="[^"]*">/,
-    `<meta name="description" content="${ogDesc}">`
-  );
-
-  // Replace canonical
-  html = html.replace(
-    /<link rel="canonical" href="[^"]*">/,
-    `<link rel="canonical" href="${url}">`
-  );
-
-  // Replace OG tags
-  html = html.replace(
-    /<meta property="og:url" content="[^"]*">/,
-    `<meta property="og:url" content="${url}">`
-  );
-  html = html.replace(
-    /<meta property="og:title" content="[^"]*">/,
-    `<meta property="og:title" content="${ogTitle}">`
-  );
-  html = html.replace(
-    /<meta property="og:description" content="[^"]*">/,
-    `<meta property="og:description" content="${ogDesc}">`
-  );
-
-  // Replace Twitter tags
-  html = html.replace(
-    /<meta name="twitter:title" content="[^"]*">/,
-    `<meta name="twitter:title" content="${ogTitle}">`
-  );
-  html = html.replace(
-    /<meta name="twitter:description" content="[^"]*">/,
-    `<meta name="twitter:description" content="${twitterDesc}">`
-  );
-
-  // Ensure og:image and twitter:image are present (use site-wide OG image)
+  // Ensure og:image and twitter:image are present
   const ogImage = `${SITE}/og-image.svg`;
   if (!html.includes('og:image')) {
-    html = html.replace(
-      /<meta property="og:site_name"/,
-      `<meta property="og:image" content="${ogImage}">\n  <meta property="og:site_name"`
-    );
+    html = html.replace(/<meta property="og:site_name"/, () => `<meta property="og:image" content="${ogImage}">\n  <meta property="og:site_name"`);
   }
   if (!html.includes('twitter:image')) {
-    html = html.replace(
-      /<meta name="twitter:description"/,
-      `<meta name="twitter:image" content="${ogImage}">\n  <meta name="twitter:description"`
-    );
+    html = html.replace(/<meta name="twitter:description"/, () => `<meta name="twitter:image" content="${ogImage}">\n  <meta name="twitter:description"`);
   }
 
   // Replace JSON-LD
-  html = html.replace(
-    /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
-    `<script type="application/ld+json">${jsonLd}</script>`
-  );
+  html = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, () => `<script type="application/ld+json">${jsonLd}</script>`);
 
   const outDir = join(DIST, "skills", id);
   mkdirSync(outDir, { recursive: true });
@@ -146,4 +112,4 @@ for (const dir of dirs) {
   count++;
 }
 
-console.log(`Generated ${count} skill pages -> dist/skills/*/index.html`);
+console.log(`Generated ${count} skill pages + 404.html -> dist/`);

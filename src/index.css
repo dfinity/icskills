@@ -213,7 +213,6 @@ a:focus-visible {
 /* ── Skill Content (rendered markdown) ── */
 .skill-content {
   overflow-wrap: break-word;
-  word-wrap: break-word;
 }
 
 .skill-content h1,
@@ -346,7 +345,6 @@ a:focus-visible {
 .skill-content table {
   display: block;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   width: max-content;
   min-width: 100%;
   margin: 1.25em 0;

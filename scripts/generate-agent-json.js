@@ -13,7 +13,7 @@ const OUTPUT_DIR = join(ROOT, "public", ".well-known");
 const OUTPUT = join(OUTPUT_DIR, "agent.json");
 
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
   const data = {};
   for (const line of match[1].split("\n")) {
