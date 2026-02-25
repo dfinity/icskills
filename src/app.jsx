@@ -343,7 +343,7 @@ function SkillPage({ skillId, theme, setTheme }) {
               }}>v{skill.version}</span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <a href={githubUrl} target="_blank" rel="noopener noreferrer"
               title="View on GitHub"
               style={{
@@ -379,6 +379,14 @@ function SkillPage({ skillId, theme, setTheme }) {
 
       {/* Skill content */}
       <main style={{ position: "relative", zIndex: 10, maxWidth: "860px", margin: "0 auto", padding: "40px 32px 80px" }}>
+        {/* Share bar */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "flex-end",
+          marginBottom: "24px", gap: "8px",
+        }}>
+          <CopyButton text={shareUrl} label="share this page" />
+        </div>
+
         {/* Metadata bar */}
         <div style={{
           display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px",
@@ -437,8 +445,6 @@ function SkillPage({ skillId, theme, setTheme }) {
             curl -sL {rawUrl}
           </code>
           <CopyButton text={`curl -sL ${rawUrl}`} />
-          <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
-          <CopyButton text={shareUrl} label="link" />
         </div>
 
         {/* Rendered markdown */}
