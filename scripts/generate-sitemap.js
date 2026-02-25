@@ -45,11 +45,20 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>
 for (const dir of dirs) {
   const filePath = join(SKILLS_DIR, dir, "SKILL.md");
   const lastmod = getLastMod(filePath);
+  // Skill page URL (rendered HTML)
+  xml += `  <url>
+    <loc>${SITE}/skills/${dir}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+`;
+  // Raw SKILL.md URL (for agents)
   xml += `  <url>
     <loc>${RAW}/skills/${dir}/SKILL.md</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.7</priority>
   </url>
 `;
 }

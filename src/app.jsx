@@ -8,27 +8,40 @@ marked.setOptions({
   breaks: false,
 });
 
-function useHashRoute() {
-  const parseHash = useCallback(() => {
-    const hash = window.location.hash.slice(1) || "/";
-    const skillMatch = hash.match(/^\/skills\/([a-z0-9-]+)$/);
+const BASE = "/icskills";
+
+function useRoute() {
+  const parsePath = useCallback(() => {
+    const path = window.location.pathname.replace(BASE, "").replace(/\/$/, "") || "/";
+    const skillMatch = path.match(/^\/skills\/([a-z0-9-]+)$/);
     if (skillMatch) return { page: "skill", id: skillMatch[1] };
     return { page: "home" };
   }, []);
 
-  const [route, setRoute] = useState(parseHash);
+  const [route, setRoute] = useState(parsePath);
 
   useEffect(() => {
-    const onHashChange = () => setRoute(parseHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, [parseHash]);
+    const onPopState = () => setRoute(parsePath());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [parsePath]);
 
   return route;
 }
 
 function navigate(path) {
-  window.location.hash = path;
+  window.history.pushState(null, "", BASE + path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function Link({ to, children, ...props }) {
+  const href = BASE + to;
+  const onClick = (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey) return; // allow open in new tab
+    e.preventDefault();
+    navigate(to);
+  };
+  return <a href={href} onClick={onClick} {...props}>{children}</a>;
 }
 
 const CATEGORIES = ["All", ...Array.from(new Set(SKILLS.map((s) => s.category))).sort()];
@@ -263,19 +276,19 @@ function SkillPage({ skillId, theme, setTheme }) {
         <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
           No skill with ID "{skillId}"
         </div>
-        <a href="#/" style={{
+        <Link to="/" style={{
           fontSize: "13px", color: "var(--accent-text)", textDecoration: "none",
           padding: "8px 20px", borderRadius: "6px",
           border: "1px solid rgba(var(--accent-rgb),0.3)",
           background: "rgba(var(--accent-rgb),0.08)",
-        }}>Back to skills</a>
+        }}>Back to skills</Link>
       </div>
     );
   }
 
   const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
   const githubUrl = `https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`;
-  const shareUrl = `https://joshdfn.github.io/icskills/#/skills/${skill.id}`;
+  const shareUrl = `https://joshdfn.github.io/icskills/skills/${skill.id}/`;
 
   return (
     <div style={{
@@ -306,7 +319,7 @@ function SkillPage({ skillId, theme, setTheme }) {
           height: "56px",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <a href="#/" style={{
+            <Link to="/" style={{
               display: "flex", alignItems: "center", gap: "8px",
               color: "var(--text-muted)", textDecoration: "none", fontSize: "12px",
               padding: "6px 12px", borderRadius: "6px",
@@ -316,7 +329,7 @@ function SkillPage({ skillId, theme, setTheme }) {
             }}>
               <span style={{ fontSize: "14px" }}>{"\u2190"}</span>
               All Skills
-            </a>
+            </Link>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{
                 fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
@@ -393,13 +406,13 @@ function SkillPage({ skillId, theme, setTheme }) {
               <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
               <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>requires:</span>
               {skill.dependencies.map((dep) => (
-                <a key={dep} href={`#/skills/${dep}`} style={{
+                <Link key={dep} to={`/skills/${dep}`} style={{
                   fontSize: "10px", padding: "2px 8px",
                   background: "rgba(var(--blue-rgb),0.08)",
                   border: "1px solid rgba(var(--blue-rgb),0.15)",
                   borderRadius: "3px", color: "var(--accent-blue)",
                   textDecoration: "none",
-                }}>{dep}</a>
+                }}>{dep}</Link>
               ))}
             </>
           )}
@@ -452,9 +465,9 @@ function SkillPage({ skillId, theme, setTheme }) {
           display: "flex", justifyContent: "space-between",
           fontSize: "11px", color: "var(--text-phantom)",
         }}>
-          <a href="#/" style={{ color: "var(--text-phantom)", textDecoration: "none" }}>
+          <Link to="/" style={{ color: "var(--text-phantom)", textDecoration: "none" }}>
             IC Skills {"\u2014"} The API for building on the Internet Computer
-          </a>
+          </Link>
           <span>Built for the agent era</span>
         </div>
       </footer>
@@ -485,7 +498,7 @@ function CopyButton({ text, label }) {
 }
 
 export function App() {
-  const route = useHashRoute();
+  const route = useRoute();
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("browse");
@@ -731,9 +744,9 @@ export function App() {
               gap: "16px",
             }}>
               {filtered.map((skill) => (
-                <a
+                <Link
                   key={skill.id}
-                  href={`#/skills/${skill.id}`}
+                  to={`/skills/${skill.id}`}
                   className="skill-card"
                   style={{
                     padding: "24px",
@@ -849,7 +862,7 @@ export function App() {
                       </div>
                     );
                   })()}
-                </a>
+                </Link>
               ))}
             </div>
           </>

@@ -8,7 +8,7 @@
   "scripts": {
     "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-sitemap.js",
     "dev": "npm run generate && vite",
-    "build": "npm run generate && vite build",
+    "build": "npm run generate && vite build && node scripts/generate-skill-pages.js",
     "preview": "vite preview"
   },
   "dependencies": {
