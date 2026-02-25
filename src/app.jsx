@@ -660,7 +660,7 @@ export function App() {
                 display: "flex", alignItems: "center", gap: "8px",
               }}>
                 <span style={{ display: "inline-block", width: "24px", height: "1px", background: "var(--accent)" }} />
-                Internet Computer Protocol
+                ICP Skills
               </div>
               <h1 style={{
                 fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 800,
@@ -669,14 +669,14 @@ export function App() {
                 background: "var(--gradient-hero)",
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
               }}>
-                Skills for agents,<br />not docs for humans.
+                Agent-readable instructions<br />for every IC capability.
               </h1>
               <p style={{
                 fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
                 lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
               }}>
-                Structured, versioned, agent-readable skill files for every Internet Computer capability.
-                Your AI reads the skill. It builds correctly. No hallucinations.
+                One API call, zero hallucinations. Structured skill files with correct canister IDs,
+                tested code, known pitfalls, and verification checks.
               </p>
 
               {/* Stats */}
