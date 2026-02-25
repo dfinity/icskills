@@ -1,5 +1,16 @@
 # Contributing to IC Skills
 
+## Found a Bug or Improvement?
+
+If you spot incorrect code, a wrong canister ID, a missing pitfall, or anything that could cause an agent to hallucinate:
+
+1. **Open an issue** at [github.com/JoshDFN/icskills/issues](https://github.com/JoshDFN/icskills/issues) describing what's wrong and which skill it affects.
+2. **Or submit a PR** with the fix directly — even small corrections are valuable. Every pitfall fixed is a hallucination prevented.
+
+If you're not sure whether something is wrong, open an issue. We'd rather investigate a false alarm than let a broken code example stay live.
+
+---
+
 ## Adding a New Skill
 
 ### 1. Create the skill directory
@@ -75,11 +86,9 @@ Stats (skill count, operations, categories) all update automatically.
 
 1. Edit the `SKILL.md` content
 2. Bump the `version` in the SKILL.md header line: `> version: X.Y.Z | requires: [...]`
-3. Update the matching entry in `src/app.jsx`:
-   - Set `version` to the new value
-   - Set `lastUpdated` to today's date
-   - Update `endpoints` count if it changed
-4. Submit a PR with a summary of what changed
+3. Submit a PR with a summary of what changed
+
+The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
 ---
 
