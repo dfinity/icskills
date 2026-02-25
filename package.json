@@ -1,0 +1,20 @@
+{
+  "name": "icskills",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Agent-readable skill files for the Internet Computer",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "preact": "^10.25.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.4",
+    "vite": "^6.1.0"
+  }
+}

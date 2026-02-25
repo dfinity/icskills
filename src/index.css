@@ -1,0 +1,92 @@
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Base ── */
+body {
+  background: #0a0a0f;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.2) transparent;
+}
+
+/* ── Form elements ── */
+input::placeholder {
+  color: #444;
+}
+
+input:focus {
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+  outline: none;
+}
+
+button {
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* ── Components ── */
+.skill-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.skill-card:hover {
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  background: rgba(139, 92, 246, 0.04) !important;
+  transform: translateY(-1px);
+}
+
+.category-pill:hover {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  color: #a78bfa !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  main {
+    padding: 20px 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  header > div {
+    flex-direction: column;
+    height: auto !important;
+    padding: 12px 0;
+    gap: 8px;
+  }
+}
