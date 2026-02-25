@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "preact/hooks";
+import { useState, useEffect, useMemo, useCallback } from "preact/hooks";
 import { marked } from "marked";
 import { SKILLS } from "./skills-data.js";
 
@@ -7,6 +7,29 @@ marked.setOptions({
   gfm: true,
   breaks: false,
 });
+
+function useHashRoute() {
+  const parseHash = useCallback(() => {
+    const hash = window.location.hash.slice(1) || "/";
+    const skillMatch = hash.match(/^\/skills\/([a-z0-9-]+)$/);
+    if (skillMatch) return { page: "skill", id: skillMatch[1] };
+    return { page: "home" };
+  }, []);
+
+  const [route, setRoute] = useState(parseHash);
+
+  useEffect(() => {
+    const onHashChange = () => setRoute(parseHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [parseHash]);
+
+  return route;
+}
+
+function navigate(path) {
+  window.location.hash = path;
+}
 
 const CATEGORIES = ["All", ...Array.from(new Set(SKILLS.map((s) => s.category))).sort()];
 
@@ -217,37 +240,256 @@ function TerminalHeader({ title }) {
   );
 }
 
-function SkillContent({ content }) {
-  const html = useMemo(() => marked.parse(content || ""), [content]);
-  // Content is from our own SKILL.md files (build-time inlined), not user input
+function SkillPage({ skillId, theme, setTheme }) {
+  const skill = SKILLS.find((s) => s.id === skillId);
+  const html = useMemo(() => (skill?.content ? marked.parse(skill.content) : ""), [skill?.content]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (skill) document.title = `${skill.name} — IC Skills`;
+    return () => { document.title = "IC Skills — Agent-Readable Documentation for Internet Computer"; };
+  }, [skillId, skill]);
+
+  if (!skill) {
+    return (
+      <div style={{
+        minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-body)",
+        fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      }}>
+        <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
+          Skill not found
+        </div>
+        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
+          No skill with ID "{skillId}"
+        </div>
+        <a href="#/" style={{
+          fontSize: "13px", color: "var(--accent-text)", textDecoration: "none",
+          padding: "8px 20px", borderRadius: "6px",
+          border: "1px solid rgba(var(--accent-rgb),0.3)",
+          background: "rgba(var(--accent-rgb),0.08)",
+        }}>Back to skills</a>
+      </div>
+    );
+  }
+
+  const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
+  const githubUrl = `https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`;
+  const shareUrl = `https://joshdfn.github.io/icskills/#/skills/${skill.id}`;
+
   return (
-    <div
-      className="skill-content"
-      onClick={(e) => e.stopPropagation()}
-      dangerouslySetInnerHTML={{ __html: html }}
-      style={{
-        marginTop: "16px",
-        paddingTop: "16px",
+    <div style={{
+      minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-body)",
+      fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
+      position: "relative", overflow: "hidden",
+    }}>
+      {/* Grid background */}
+      <div style={{
+        position: "fixed", inset: 0, opacity: "var(--grid-opacity)",
+        backgroundImage: `
+          linear-gradient(rgba(var(--accent-rgb),0.5) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(var(--accent-rgb),0.5) 1px, transparent 1px)
+        `,
+        backgroundSize: "60px 60px", pointerEvents: "none",
+      }} />
+
+      {/* Header */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 20,
+        borderBottom: "1px solid rgba(var(--accent-rgb),0.12)",
+        padding: "0 32px",
+        background: "var(--bg-header)", backdropFilter: "blur(12px)",
+      }}>
+        <div style={{
+          maxWidth: "860px", margin: "0 auto",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          height: "56px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <a href="#/" style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              color: "var(--text-muted)", textDecoration: "none", fontSize: "12px",
+              padding: "6px 12px", borderRadius: "6px",
+              border: "1px solid var(--border-default)",
+              background: "var(--bg-card)",
+              transition: "all 0.15s",
+            }}>
+              <span style={{ fontSize: "14px" }}>{"\u2190"}</span>
+              All Skills
+            </a>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+                fontSize: "14px", color: "var(--text-primary)",
+              }}>{skill.name}</span>
+              <span style={{
+                fontSize: "10px", padding: "2px 8px",
+                background: "rgba(var(--accent-rgb),0.1)",
+                border: "1px solid rgba(var(--accent-rgb),0.2)",
+                borderRadius: "4px", color: "var(--accent-text)",
+              }}>v{skill.version}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <a href={githubUrl} target="_blank" rel="noopener noreferrer"
+              title="View on GitHub"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: "32px", height: "32px", borderRadius: "6px",
+                color: "var(--text-faint)", background: "var(--bg-card)",
+                border: "1px solid var(--border-default)", transition: "color 0.2s",
+              }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            </a>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: "8px", color: "var(--text-faint)",
+                display: "flex", alignItems: "center",
+              }}
+            >
+              {theme === "dark" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Skill content */}
+      <main style={{ position: "relative", zIndex: 10, maxWidth: "860px", margin: "0 auto", padding: "40px 32px 80px" }}>
+        {/* Metadata bar */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px",
+          flexWrap: "wrap",
+        }}>
+          <span style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            fontSize: "11px", color: "var(--text-muted)",
+            padding: "4px 12px", borderRadius: "6px",
+            background: "rgba(var(--accent-rgb),0.06)",
+            border: "1px solid rgba(var(--accent-rgb),0.12)",
+          }}>
+            <CategoryIcon category={skill.category} size={14} />
+            {skill.category}
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
+            {skill.endpoints} operations
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
+          <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
+            updated {skill.lastUpdated}
+          </span>
+          {skill.dependencies.length > 0 && (
+            <>
+              <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
+              <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>requires:</span>
+              {skill.dependencies.map((dep) => (
+                <a key={dep} href={`#/skills/${dep}`} style={{
+                  fontSize: "10px", padding: "2px 8px",
+                  background: "rgba(var(--blue-rgb),0.08)",
+                  border: "1px solid rgba(var(--blue-rgb),0.15)",
+                  borderRadius: "3px", color: "var(--accent-blue)",
+                  textDecoration: "none",
+                }}>{dep}</a>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Agent context bar */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "8px",
+          marginBottom: "32px", padding: "12px 16px",
+          background: "var(--bg-code)",
+          border: "1px solid var(--border-default)",
+          borderRadius: "8px",
+        }}>
+          <span style={{ fontSize: "11px", color: "var(--text-ghost)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            paste in agent:
+          </span>
+          <code style={{
+            flex: 1, fontSize: "11px", color: "var(--accent)",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            minWidth: 0,
+          }}>
+            curl -sL {rawUrl}
+          </code>
+          <CopyButton text={`curl -sL ${rawUrl}`} />
+          <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
+          <CopyButton text={shareUrl} label="link" />
+        </div>
+
+        {/* Rendered markdown */}
+        <div
+          className="skill-content"
+          dangerouslySetInnerHTML={{ __html: html }}
+          style={{
+            fontSize: "14px",
+            lineHeight: 1.8,
+            color: "var(--text-dim)",
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        />
+      </main>
+
+      {/* Footer */}
+      <footer style={{
+        position: "relative", zIndex: 10,
         borderTop: "1px solid var(--border-subtle)",
-        fontSize: "13px",
-        lineHeight: 1.7,
-        color: "var(--text-dim)",
-        fontFamily: "'Inter', system-ui, sans-serif",
-        maxHeight: "600px",
-        overflowY: "auto",
-        cursor: "default",
-      }}
-    />
+        padding: "24px 32px",
+      }}>
+        <div style={{
+          maxWidth: "860px", margin: "0 auto",
+          display: "flex", justifyContent: "space-between",
+          fontSize: "11px", color: "var(--text-phantom)",
+        }}>
+          <a href="#/" style={{ color: "var(--text-phantom)", textDecoration: "none" }}>
+            IC Skills {"\u2014"} The API for building on the Internet Computer
+          </a>
+          <span>Built for the agent era</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function CopyButton({ text, label }) {
+  const [copied, setCopied] = useState(false);
+  const onClick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={onClick} title={`Copy ${label || "command"}`} style={{
+      background: copied ? "rgba(var(--green-rgb),0.1)" : "rgba(var(--accent-rgb),0.06)",
+      border: `1px solid ${copied ? "rgba(var(--green-rgb),0.2)" : "rgba(var(--accent-rgb),0.1)"}`,
+      borderRadius: "4px", cursor: "pointer", padding: "4px 8px", flexShrink: 0,
+      color: copied ? "var(--green)" : "var(--text-faint)",
+      fontSize: "10px", lineHeight: 1, transition: "all 0.2s",
+      display: "flex", alignItems: "center", gap: "4px",
+    }}>
+      {copied ? "\u2713 copied" : label ? `\u2398 ${label}` : "\u2398 copy"}
+    </button>
   );
 }
 
 export function App() {
+  const route = useHashRoute();
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState(null);
   const [activeTab, setActiveTab] = useState("browse");
   const [expandedEndpoint, setExpandedEndpoint] = useState(null);
-  const [copiedUrl, setCopiedUrl] = useState(null);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("ic-skills-theme");
@@ -262,11 +504,10 @@ export function App() {
     localStorage.setItem("ic-skills-theme", theme);
   }, [theme]);
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).catch(() => {});
-    setCopiedUrl(text);
-    setTimeout(() => setCopiedUrl(null), 2000);
-  };
+  // Route to skill page
+  if (route.page === "skill") {
+    return <SkillPage skillId={route.id} theme={theme} setTheme={setTheme} />;
+  }
 
   const query = searchQuery.toLowerCase();
   const filtered = SKILLS.filter((s) => {
@@ -490,18 +731,19 @@ export function App() {
               gap: "16px",
             }}>
               {filtered.map((skill) => (
-                <div
+                <a
                   key={skill.id}
+                  href={`#/skills/${skill.id}`}
                   className="skill-card"
-                  onClick={() => setSelectedSkill(selectedSkill === skill.id ? null : skill.id)}
                   style={{
                     padding: "24px",
-                    background: selectedSkill === skill.id
-                      ? `rgba(var(--accent-rgb),0.06)`
-                      : "var(--bg-card)",
-                    border: `1px solid ${selectedSkill === skill.id ? `rgba(var(--accent-rgb),0.3)` : "var(--border-default)"}`,
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-default)",
                     borderRadius: "12px",
                     cursor: "pointer",
+                    textDecoration: "none",
+                    color: "inherit",
+                    display: "block",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
@@ -603,31 +845,11 @@ export function App() {
                         }}>
                           {fetchCmd}
                         </code>
-                        <button
-                          onClick={() => copyToClipboard(fetchCmd)}
-                          title="Copy fetch command"
-                          aria-label="Copy fetch command"
-                          style={{
-                            background: copiedUrl === fetchCmd ? `rgba(var(--green-rgb),0.1)` : `rgba(var(--accent-rgb),0.06)`,
-                            border: `1px solid ${copiedUrl === fetchCmd ? `rgba(var(--green-rgb),0.2)` : `rgba(var(--accent-rgb),0.1)`}`,
-                            borderRadius: "4px", cursor: "pointer",
-                            padding: "4px 8px", flexShrink: 0,
-                            color: copiedUrl === fetchCmd ? "var(--green)" : "var(--text-faint)",
-                            fontSize: "10px", lineHeight: 1,
-                            transition: "all 0.2s",
-                            display: "flex", alignItems: "center", gap: "4px",
-                          }}
-                        >
-                          {copiedUrl === fetchCmd ? "\u2713 copied" : "\u2398 copy"}
-                        </button>
+                        <CopyButton text={fetchCmd} />
                       </div>
                     );
                   })()}
-
-                  {selectedSkill === skill.id && skill.content && (
-                    <SkillContent content={skill.content} />
-                  )}
-                </div>
+                </a>
               ))}
             </div>
           </>
@@ -921,7 +1143,7 @@ export function App() {
               <p style={{
                 fontSize: "14px", color: "var(--text-faint)", margin: "0 0 24px 0",
                 fontFamily: SANS_FONT,
-              }}>No other blockchain has this. Not Solana. Not Ethereum. Not anyone.</p>
+              }}>Structured skill files that prevent hallucinations. One API call away.</p>
               <code style={{
                 display: "inline-block", padding: "12px 24px",
                 background: "var(--bg-code)",
