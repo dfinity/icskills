@@ -61,20 +61,68 @@ The simplest way — paste the raw skill file into your agent's system prompt or
 curl -s https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md
 ```
 
-### Claude Code (`.claude/skills/`)
+### Claude Code
+
+Copy skills into `.claude/skills/` — they're automatically loaded into context:
 
 ```bash
-# Clone the skills you need into your project
 mkdir -p .claude/skills/ckbtc
 curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
   > .claude/skills/ckbtc/SKILL.md
 ```
 
-Claude Code automatically loads skill files from `.claude/skills/*/SKILL.md` into context.
+### OpenCode
 
-### Cursor / Windsurf / Any Agent
+Add skills as remote instructions in `opencode.json`:
 
-Add the skill content to your agent's rules, instructions, or context file — whatever your tool supports. The files are plain markdown. No special tooling required.
+```json
+{
+  "instructions": [
+    "https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md",
+    "https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/internet-identity/SKILL.md"
+  ]
+}
+```
+
+Or copy into `.opencode/rules/` for automatic discovery:
+
+```bash
+mkdir -p .opencode/rules
+curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+  > .opencode/rules/ckbtc.md
+```
+
+### OpenClaw
+
+Install as a skill or paste into your assistant's context during conversation. OpenClaw can also fetch skills directly from URLs when asked.
+
+### Cursor
+
+Add to `.cursor/rules/`:
+
+```bash
+mkdir -p .cursor/rules
+curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+  > .cursor/rules/ckbtc.md
+```
+
+### Windsurf
+
+Add to `.windsurfrules` or paste into Windsurf's custom instructions.
+
+### GitHub Copilot
+
+Add to `.github/copilot-instructions.md`:
+
+```bash
+mkdir -p .github
+curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+  >> .github/copilot-instructions.md
+```
+
+### Any Other Agent
+
+The files are plain markdown. Copy the content into whatever instructions, rules, or context file your tool supports.
 
 ## API (Planned)
 
