@@ -46,11 +46,11 @@ Built-in providers (no API key needed for defaults):
 
 | Provider | Ethereum | Sepolia | Arbitrum | Base | Optimism |
 |---|---|---|---|---|---|
-| Alchemy | yes | yes | - | - | - |
+| Alchemy | yes | yes | yes | yes | yes |
 | Ankr | yes | - | yes | yes | yes |
 | BlockPi | yes | yes | yes | yes | yes |
 | Cloudflare | yes | - | - | - | - |
-| LlamaNodes | yes | - | - | - | - |
+| LlamaNodes | yes | - | yes | yes | yes |
 | PublicNode | yes | yes | yes | yes | yes |
 
 ## Cycle Costs

@@ -19,8 +19,8 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 ## Prerequisites
 
 - dfx >= 0.30.0
-- For Motoko: `moc` compiler (included with dfx)
-- For Rust: `ic-cdk >= 0.17`, `serde_json` for JSON parsing
+- For Motoko: `moc` compiler (included with dfx), `mo:core` 2.0 in mops.toml
+- For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
 
 ## Canister IDs
 
@@ -55,13 +55,13 @@ You do not deploy anything extra. The management canister is built into every su
 ### Motoko
 
 ```motoko
-import Blob "mo:base/Blob";
-import Cycles "mo:base/ExperimentalCycles";
-import Debug "mo:base/Debug";
-import Nat64 "mo:base/Nat64";
-import Text "mo:base/Text";
+import Blob "mo:core/Blob";
+import Nat64 "mo:core/Nat64";
+import Text "mo:core/Text";
+import Runtime "mo:core/Runtime";
+import Iter "mo:core/Iter";
 
-actor {
+persistent actor {
 
   // Type definitions for the management canister HTTP interface
   type HttpRequestArgs = {
@@ -101,7 +101,7 @@ actor {
   };
 
   // The management canister for making outcalls
-  let ic : actor {
+  transient let ic : actor {
     http_request : HttpRequestArgs -> async HttpResponsePayload;
   } = actor "aaaaa-aa";
 
@@ -130,20 +130,20 @@ actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = Blob.fromArray([]);
+        context = Blob.fromIter(Iter.empty());
       };
     };
 
     // Attach cycles for the outcall (200M is safe for most requests)
-    Cycles.add<system>(200_000_000);
-
-    let response = await ic.http_request(request);
+    // In mo:core, use `await (with cycles = N)` instead of the old Cycles.add<system>(N)
+    let response = await (with cycles = 200_000_000) ic.http_request(request);
 
     // Decode the response body
-    let body = Text.decodeUtf8(Blob.fromArray(response.body));
+    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
-      case (null) { Debug.trap("Response is not valid UTF-8") };
+      case (null) { Runtime.trap("Response is not valid UTF-8") };
     };
   };
 
@@ -151,7 +151,7 @@ actor {
   public func postData(jsonPayload : Text) : async Text {
     let url = "https://httpbin.org/post";
 
-    let bodyBytes = Blob.toArray(Text.encodeUtf8(jsonPayload));
+    let bodyBytes = Iter.toArray(Blob.values(Text.encodeUtf8(jsonPayload)));
 
     let request : HttpRequestArgs = {
       url = url;
@@ -166,18 +166,18 @@ actor {
       method = #post;
       transform = ?{
         function = transform;
-        context = Blob.fromArray([]);
+        context = Blob.fromIter(Iter.empty());
       };
     };
 
-    Cycles.add<system>(300_000_000); // POST may cost more due to request body size
+    // POST may cost more due to request body size
+    let response = await (with cycles = 300_000_000) ic.http_request(request);
 
-    let response = await ic.http_request(request);
-
-    let body = Text.decodeUtf8(Blob.fromArray(response.body));
+    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
-      case (null) { Debug.trap("Response is not valid UTF-8") };
+      case (null) { Runtime.trap("Response is not valid UTF-8") };
     };
   };
 };
@@ -195,7 +195,7 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::api::management_canister::http_request::{
+use ic_cdk::management_canister::http_request::{
     http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
     TransformArgs, TransformContext, TransformFunc,
 };

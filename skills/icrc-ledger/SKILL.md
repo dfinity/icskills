@@ -10,7 +10,7 @@ dependencies: []
 ---
 
 # ICRC Ledger Standards
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.3.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -48,6 +48,8 @@ Index canisters (for transaction history):
 6. **Hardcoding canister IDs as text** -- Always use `Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai")` (Motoko) or `Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai")` (Rust). Never pass raw strings where a Principal is expected.
 
 7. **Calling ledger from frontend** -- ICRC-1 transfers should originate from a backend canister, not directly from the frontend. Frontend-initiated transfers expose the user to reentrancy and can bypass business logic. Use a backend canister as the intermediary.
+
+8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(dfx identity get-principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
 
 ## Implementation
 
@@ -160,6 +162,7 @@ persistent actor {
   };
 
   // Transfer tokens (this canister sends from its own account)
+  // WARNING: Add access control in production — this allows any caller to transfer tokens
   public func sendTokens(to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc1_transfer({
@@ -203,6 +206,7 @@ persistent actor {
   };
 
   // ICRC-2: Transfer from another account (requires prior approval)
+  // WARNING: Add access control in production — this allows any caller to transfer tokens
   public func transferFrom(from : Principal, to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc2_transfer_from({
@@ -272,6 +276,7 @@ async fn get_balance(who: Principal) -> Nat {
 }
 
 // Transfer tokens from this canister's account
+// WARNING: Add access control in production — this allows any caller to transfer tokens
 #[update]
 async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
     let transfer_arg = TransferArg {
@@ -335,6 +340,7 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
 }
 
 // ICRC-2: Transfer from another account (requires prior approval)
+// WARNING: Add access control in production — this allows any caller to transfer tokens
 #[update]
 async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Nat, String> {
     let args = TransferFromArgs {
@@ -384,25 +390,27 @@ Add to `dfx.json`:
 }
 ```
 
-Create `icrc1_ledger_init.args`:
+Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `dfx identity get-principal`):
+
+> **Pitfall:** Shell substitutions like `$(dfx identity get-principal)` will NOT expand inside this file. You must paste the literal principal string.
 
 ```
 (variant { Init = record {
   token_symbol = "TEST";
   token_name = "Test Token";
-  minting_account = record { owner = principal "$(dfx identity get-principal)" };
+  minting_account = record { owner = principal "YOUR_PRINCIPAL" };
   transfer_fee = 10_000 : nat;
   metadata = vec {};
   initial_balances = vec {
     record {
-      record { owner = principal "$(dfx identity get-principal)" };
+      record { owner = principal "YOUR_PRINCIPAL" };
       100_000_000_000 : nat;
     };
   };
   archive_options = record {
     num_blocks_to_archive = 1000 : nat64;
     trigger_threshold = 2000 : nat64;
-    controller_id = principal "$(dfx identity get-principal)";
+    controller_id = principal "YOUR_PRINCIPAL";
   };
   feature_flags = opt record { icrc2 = true };
 }})

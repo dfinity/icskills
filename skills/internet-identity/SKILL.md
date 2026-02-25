@@ -10,7 +10,7 @@ dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 2.1]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 3.0]
 
 ## What This Is
 
@@ -20,7 +20,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 - dfx >= 0.30.0
 - Node.js >= 18 (for frontend)
-- `@dfinity/auth-client` npm package (>= 2.1.0)
+- `@dfinity/auth-client` npm package (>= 3.0.0)
 - `@dfinity/agent` npm package
 - `@dfinity/identity` npm package
 - `@dfinity/principal` npm package
@@ -29,14 +29,14 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 | Environment | Canister ID | URL |
 |-------------|-------------|-----|
-| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://id.ai` |
+| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://identity.ic0.app` (also `https://identity.internetcomputer.org`) |
 | Local | Assigned on deploy | `http://<local-canister-id>.localhost:4943` |
 
 ## Mistakes That Break Your Build
 
 1. **Not rejecting anonymous principal.** The anonymous principal `2vxsx-fae` is sent when a user is not authenticated. If your backend does not explicitly reject it, unauthenticated users can call protected endpoints. ALWAYS check `Principal.isAnonymous(caller)` and reject.
 
-2. **Using the wrong II URL for the environment.** Local development must point to `http://<canister-id>.localhost:4943`. Mainnet must use `https://id.ai` (previously `identity.ic0.app`). Hardcoding one breaks the other.
+2. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID is different from mainnet). Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `dfx deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` or your `.dfx/local/canister_ids.json`.
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -86,15 +86,21 @@ import { HttpAgent, Actor } from "@dfinity/agent";
 const authClient = await AuthClient.create();
 
 // 2. Determine II URL based on environment
+// The local II canister gets a different canister ID each time you deploy it.
+// Pass it via an environment variable at build time (e.g., Vite: import.meta.env.VITE_II_CANISTER_ID).
 function getIdentityProviderUrl() {
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
   if (isLocal) {
-    // Replace with your local II canister ID (from .dfx/local/canister_ids.json)
-    const iiCanisterId = "rdmx6-jaaaa-aaaaa-aaadq-cai"; // or read from env
+    // Read from env variable set during build, or from canister_ids.json
+    // For Vite: define VITE_II_CANISTER_ID in .env.local
+    // For webpack: use DefinePlugin with process.env.II_CANISTER_ID
+    const iiCanisterId = import.meta.env.VITE_II_CANISTER_ID
+      ?? process.env.CANISTER_ID_INTERNET_IDENTITY  // dfx auto-generates this
+      ?? "be2us-64aaa-aaaaa-qaabq-cai"; // fallback -- replace with your actual local II canister ID
     return `http://${iiCanisterId}.localhost:4943`;
   }
-  return "https://id.ai";
+  return "https://identity.ic0.app";
 }
 
 // 3. Login
@@ -102,7 +108,7 @@ async function login() {
   return new Promise((resolve, reject) => {
     authClient.login({
       identityProvider: getIdentityProviderUrl(),
-      maxTimeToLive: BigInt(8 * 60 * 60 * 1000_000_000), // 8 hours in nanoseconds
+      maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
       onSuccess: () => {
         const identity = authClient.getIdentity();
         const principal = identity.getPrincipal().toText();

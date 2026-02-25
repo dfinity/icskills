@@ -45,7 +45,7 @@ Access patterns:
 
 5. **Deploying to the wrong canister name.** If dfx.json has `"frontend"` but you run `dfx deploy assets`, it creates a new canister instead of updating the existing one.
 
-6. **Exceeding the 4GB Wasm heap memory limit.** The asset canister stores all files in a single canister. Large media files (videos, datasets) will exhaust canister storage. Use a dedicated storage solution for large files.
+6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the `@dfinity/assets` library handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
 7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
 
@@ -135,19 +135,19 @@ www.yourdomain.com
 
 2. Add DNS records:
 ```
-# CNAME record
+# CNAME record pointing to boundary nodes
 yourdomain.com.  CNAME  icp1.io.
 
-# TXT record for verification
+# ACME challenge record for TLS certificate provisioning
+_acme-challenge.yourdomain.com.  CNAME  _acme-challenge.<your-canister-id>.icp2.io.
+
+# Canister ID TXT record for verification
 _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 ```
 
-3. Register the domain with the boundary nodes:
-```bash
-dfx canister call frontend authorize '(principal "<your-canister-id>")'
-```
+3. Deploy your canister so the `.well-known/ic-domains` file is available, then register the custom domain with the boundary nodes. Registration is automatic -- the boundary nodes periodically check for the `.well-known/ic-domains` file and the DNS records. No NNS proposal is needed.
 
-4. Submit to the custom domains registry (use the NNS dapp or `ic-admin` CLI).
+4. Wait for the boundary nodes to pick up the registration and provision the TLS certificate. This typically takes a few minutes. You can verify by visiting `https://yourdomain.com` once DNS has propagated.
 
 ### Programmatic Uploads with @dfinity/assets
 

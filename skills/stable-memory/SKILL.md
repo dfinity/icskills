@@ -18,7 +18,7 @@ Stable memory is persistent storage on Internet Computer that survives canister 
 ## Prerequisites
 - dfx >= 0.30.0
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
-- For Rust: `ic-stable-structures = "0.6"` in Cargo.toml
+- For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
 ## Canister IDs
 No external canister dependencies. Stable memory is a local canister feature.
@@ -31,7 +31,7 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 3. **Using `stable` keyword in persistent actors (Motoko)** -- In mo:core `persistent actor`, all `let` and `var` declarations are automatically stable. Writing `stable let` produces warning M0218 and `stable var` is redundant. Just use `let` and `var`.
 
-4. **Exceeding 4GB stable memory without MemoryManager (Rust)** -- A single `StableBTreeMap` gets one 4GB memory region. If you need multiple stable structures, you MUST use `MemoryManager` to partition stable memory into virtual memories. Without it, your second structure overwrites the first.
+4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the 4GB heap AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
 
 5. **Changing record field types between upgrades (Motoko)** -- Altering the type of a persistent field (e.g., `Nat` to `Int`, or renaming a record field) will trap on upgrade and data is unrecoverable. Only ADD new optional fields. Never remove or rename existing ones.
 
@@ -116,14 +116,14 @@ core = "2.0.0"
 
 ### Rust
 
-Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions up to 500GB of stable memory per canister into virtual memories, each backing a different data structure.
+Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions stable memory (up to hundreds of GB, limited by subnet storage) into virtual memories, each backing a different data structure.
 
 #### Cargo.toml
 
 ```toml
 [dependencies]
 ic-cdk = "0.18"
-ic-stable-structures = "0.6"
+ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```

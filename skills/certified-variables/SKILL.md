@@ -84,7 +84,7 @@ ic-cdk = "0.18"
 ic-certified-map = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
-serde_cbor = "0.11"
+ciborium = "0.2"
 ```
 
 **Complete certified key-value store:**
@@ -106,7 +106,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::set_certified_data(&tree.root_hash());
     });
 }
 
@@ -150,7 +150,7 @@ struct CertifiedResponse {
 #[query]
 fn get(key: String) -> CertifiedResponse {
     // data_certificate() is only available in query calls
-    let certificate = ic_cdk::api::data_certificate()
+    let certificate = ic_cdk::data_certificate()
         .expect("data_certificate only available in query calls");
 
     TREE.with(|tree| {
@@ -165,9 +165,8 @@ fn get(key: String) -> CertifiedResponse {
 
         // Serialize the witness as CBOR
         let mut witness_buf = vec![];
-        let mut serializer = serde_cbor::Serializer::new(&mut witness_buf);
-        serializer.self_describe().unwrap();
-        witness.serialize(&mut serializer).unwrap();
+        ciborium::into_writer(&witness, &mut witness_buf)
+            .expect("Failed to serialize witness as CBOR");
 
         CertifiedResponse {
             value,
@@ -230,7 +229,7 @@ fn certify_response(path: &str, response: &HttpResponse) {
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::set_certified_data(&tree.root_hash());
     });
 }
 ```

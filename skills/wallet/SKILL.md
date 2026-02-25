@@ -15,6 +15,8 @@ dependencies: []
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
 
+**Note:** dfx 0.30+ uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default instead of the legacy per-identity cycles wallet. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `dfx cycles balance`, `dfx cycles convert`, and `dfx canister deposit-cycles` now go through the cycles ledger. The legacy cycles wallet (`dfx identity get-wallet`) still works but is no longer created automatically for new identities. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
+
 ## Prerequisites
 - dfx >= 0.30.0
 - An identity with ICP balance for converting to cycles (mainnet)
@@ -160,21 +162,21 @@ serde = { version = "1", features = ["derive"] }
 #### Checking Balance and Accepting Cycles
 
 ```rust
-use ic_cdk::{query, update, api};
+use ic_cdk::{query, update};
 use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(api::canister_balance128())
+    Nat::from(ic_cdk::canister_balance128())
 }
 
 #[update]
 fn deposit() -> Nat {
-    let available = ic_cdk::api::call::msg_cycles_available128();
+    let available = ic_cdk::msg_cycles_available128();
     if available == 0 {
         ic_cdk::trap("No cycles sent with this call");
     }
-    let accepted = ic_cdk::api::call::msg_cycles_accept128(available);
+    let accepted = ic_cdk::msg_cycles_accept128(available);
     Nat::from(accepted)
 }
 ```
@@ -184,7 +186,7 @@ fn deposit() -> Nat {
 ```rust
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::{
     create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
     CreateCanisterArgument, CanisterIdRecord,
     CanisterSettings, CanisterStatusResponse,

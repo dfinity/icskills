@@ -10,7 +10,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.17]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -20,7 +20,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 - `dfx` >= 0.30.0
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk`, `candid`, `serde`
+- For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
 
 ## When to Use Multi-Canister
@@ -499,7 +499,11 @@ ic-stable-structures = "0.6"
 ```rust
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::{init, post_upgrade, query, update};
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell};
 use std::cell::RefCell;
+
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 struct Post {
@@ -517,11 +521,40 @@ struct UserProfile {
     created: i64,
 }
 
+// Stable storage -- survives canister upgrades
 thread_local! {
-    static POSTS: RefCell<Vec<Post>> = RefCell::new(Vec::new());
-    static POST_COUNTER: RefCell<u64> = RefCell::new(0);
-    // Store the user_service canister ID (set during init)
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    // Posts keyed by id (u64 as big-endian bytes) -> candid-encoded Post
+    static POSTS: RefCell<StableBTreeMap<Vec<u8>, Vec<u8>, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
+
+    // Post counter in stable memory
+    static POST_COUNTER: RefCell<StableCell<u64, Memory>> = RefCell::new(
+        StableCell::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
+            0u64,
+        ).unwrap()
+    );
+
+    // Store the user_service canister ID (set during init, re-set on upgrade)
     static USER_SERVICE_ID: RefCell<Option<Principal>> = RefCell::new(None);
+}
+
+fn post_id_to_key(id: u64) -> Vec<u8> {
+    id.to_be_bytes().to_vec()
+}
+
+fn serialize_post(post: &Post) -> Vec<u8> {
+    candid::encode_one(post).unwrap()
+}
+
+fn deserialize_post(bytes: &[u8]) -> Post {
+    candid::decode_one(bytes).unwrap()
 }
 
 #[init]
@@ -531,6 +564,8 @@ fn init(user_service_id: Principal) {
 
 #[post_upgrade]
 fn post_upgrade(user_service_id: Principal) {
+    // Re-set the user_service ID (not stored in stable memory for simplicity,
+    // since it is always passed as an init/upgrade argument)
     init(user_service_id);
 }
 
@@ -543,7 +578,7 @@ fn get_user_service_id() -> Principal {
 // CRITICAL: capture caller BEFORE any await
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
-    // Capture caller BEFORE the await — caller() is wrong after await
+    // Capture caller BEFORE the await -- caller() is wrong after await
     let original_caller = ic_cdk::caller();
 
     if original_caller == Principal::anonymous() {
@@ -560,21 +595,23 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
         return Err("User not registered".to_string());
     }
 
-    let post = POST_COUNTER.with(|counter| {
+    let id = POST_COUNTER.with(|counter| {
         let mut counter = counter.borrow_mut();
-        let id = *counter;
-        *counter += 1;
+        let id = *counter.get();
+        counter.set(id + 1).unwrap();
+        id
+    });
 
-        let post = Post {
-            id,
-            author: original_caller, // Use captured caller
-            title,
-            body,
-            created: ic_cdk::api::time() as i64,
-        };
+    let post = Post {
+        id,
+        author: original_caller, // Use captured caller
+        title,
+        body,
+        created: ic_cdk::api::time() as i64,
+    };
 
-        POSTS.with(|posts| posts.borrow_mut().push(post.clone()));
-        post
+    POSTS.with(|posts| {
+        posts.borrow_mut().insert(post_id_to_key(id), serialize_post(&post));
     });
 
     Ok(post)
@@ -582,7 +619,11 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 
 #[query]
 fn get_posts() -> Vec<Post> {
-    POSTS.with(|posts| posts.borrow().clone())
+    POSTS.with(|posts| {
+        posts.borrow().iter()
+            .map(|(_, v)| deserialize_post(&v))
+            .collect()
+    })
 }
 
 // Cross-canister enrichment: get posts with author profile
@@ -604,11 +645,9 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
         };
 
     let author_posts = POSTS.with(|posts| {
-        posts
-            .borrow()
-            .iter()
+        posts.borrow().iter()
+            .map(|(_, v)| deserialize_post(&v))
             .filter(|p| p.author == author_id)
-            .cloned()
             .collect()
     });
 
@@ -621,14 +660,17 @@ async fn delete_post(id: u64) -> Result<(), String> {
 
     POSTS.with(|posts| {
         let mut posts = posts.borrow_mut();
-        if let Some(pos) = posts.iter().position(|p| p.id == id) {
-            if posts[pos].author != original_caller {
-                return Err("Unauthorized".to_string());
+        let key = post_id_to_key(id);
+        match posts.get(&key) {
+            Some(bytes) => {
+                let post = deserialize_post(&bytes);
+                if post.author != original_caller {
+                    return Err("Unauthorized".to_string());
+                }
+                posts.remove(&key);
+                Ok(())
             }
-            posts.remove(pos);
-            Ok(())
-        } else {
-            Err("Not found".to_string())
+            None => Err("Not found".to_string()),
         }
     })
 }
@@ -716,16 +758,27 @@ persistent actor Self {
 
 ```rust
 use candid::{CandidType, Deserialize, Principal, encode_one};
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::main::{
     create_canister, install_code,
     CreateCanisterArgument, InstallCodeArgument, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::cell::RefCell;
-use std::collections::HashMap;
+
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
-    static CHILD_CANISTERS: RefCell<HashMap<Principal, Principal>> = RefCell::new(HashMap::new());
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    // Stable storage: owner principal -> child canister principal (survives upgrades)
+    static CHILD_CANISTERS: RefCell<StableBTreeMap<Vec<u8>, Vec<u8>, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
 }
 
 #[update]
@@ -767,7 +820,10 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
 
     // Track the child canister
     CHILD_CANISTERS.with(|canisters| {
-        canisters.borrow_mut().insert(caller, canister_id);
+        canisters.borrow_mut().insert(
+            caller.as_slice().to_vec(),
+            canister_id.as_slice().to_vec(),
+        );
     });
 
     canister_id
@@ -775,7 +831,10 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
 
 #[ic_cdk::query]
 fn get_child_canister(owner: Principal) -> Option<Principal> {
-    CHILD_CANISTERS.with(|canisters| canisters.borrow().get(&owner).copied())
+    CHILD_CANISTERS.with(|canisters| {
+        canisters.borrow().get(&owner.as_slice().to_vec())
+            .map(|bytes| Principal::from_slice(&bytes))
+    })
 }
 ```
 
@@ -800,7 +859,11 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 ```bash
 # Upgrade canisters in dependency order
 dfx deploy user_service
-dfx deploy content_service
+
+# Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
+USER_SERVICE_ID=$(dfx canister id user_service)
+dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+
 dfx generate user_service
 dfx generate content_service
 npm run build
@@ -817,7 +880,10 @@ dfx start --background
 
 # Deploy in dependency order
 dfx deploy user_service
-dfx deploy content_service
+
+# content_service (Rust) requires the user_service canister ID as an init argument
+USER_SERVICE_ID=$(dfx canister id user_service)
+dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Generate declarations for frontend
 dfx generate user_service
@@ -828,7 +894,7 @@ npm run build
 dfx deploy frontend
 ```
 
-### Test Inter-Canister Calls
+### Test Inter-Canister Calls (Motoko)
 
 ```bash
 # Register a user
@@ -848,6 +914,25 @@ dfx canister call content_service getPosts
 # Expected: (vec { record { id = 0; ... } })
 ```
 
+### Test Inter-Canister Calls (Rust)
+
+Rust canisters use snake_case function names:
+
+```bash
+PRINCIPAL=$(dfx identity get-principal)
+dfx canister call user_service register "(\"alice\")"
+
+dfx canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
+# Expected: (true)
+
+# content_service must have been deployed with --argument "(principal \"<user_service_id>\")"
+dfx canister call content_service create_post "(\"Hello World\", \"My first post\")"
+# Expected: (variant { ok = record { id = 0 : nat64; author = principal "..."; ... } })
+
+dfx canister call content_service get_posts
+# Expected: (vec { record { id = 0 : nat64; ... } })
+```
+
 ## Verify It Works
 
 ### Verify User Registration
@@ -861,6 +946,7 @@ dfx canister call user_service register '("testuser")'
 
 ```bash
 # This call should succeed (user is registered)
+# Motoko: createPost / Rust: create_post
 dfx canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
@@ -878,6 +964,7 @@ dfx identity use default
 
 ```bash
 PRINCIPAL=$(dfx identity get-principal)
+# Motoko: getPostsWithAuthor / Rust: get_posts_with_author
 dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
 # Expected: (opt record { id = ...; username = "testuser"; ... }, vec { record { ... } })
 ```

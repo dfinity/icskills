@@ -10,7 +10,11 @@ dependencies: [internet-identity]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-vetkeys]
+> version: 1.0.0 | requires: [dfx >= 0.30.0]
+>
+> **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
+> may change between IC SDK releases. Pin your dependency versions and test after every dfx upgrade.
+> Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.
 
 ## What This Is
 
@@ -19,9 +23,9 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 ## Prerequisites
 
 - `dfx` >= 0.30.0
-- Rust: `ic-vetkeys` crate from crates.io
-- Motoko: `ic-vetkeys` package from mops (`mops add ic-vetkeys`)
-- Frontend: `@dfinity/vetkeys` npm package
+- Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
+- Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
+- Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
 - For local testing: `dfx start` creates a local test key automatically
 
 ## Canister IDs
@@ -50,19 +54,21 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across dfx versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
-2. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result.
+2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
-3. **Confusing vetKD with traditional public-key crypto.** There are no static key pairs per user. Keys are derived on-demand from the IC's threshold master key. The same (canister, context, input) always yields the same derived key.
+3. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result.
 
-4. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
+4. **Confusing vetKD with traditional public-key crypto.** There are no static key pairs per user. Keys are derived on-demand from the IC's threshold master key. The same (canister, context, input) always yields the same derived key.
 
-5. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
+5. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
 
-6. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
+6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
 
-7. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` consumes cycles. If the call runs out, it traps with an unhelpful error.
+7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
+
+8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `call_with_payment128` (not plain `call`). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
 
 ## System API (Candid)
 
@@ -114,11 +120,14 @@ ic-cdk = "0.18"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
-# Option A: Use the high-level ic-vetkeys library (recommended)
+# Option A: Use the high-level ic-vetkeys library (if available on crates.io)
+# ⚠ Verify this crate exists before adding. If not published, use a git dependency:
+# ic-vetkeys = { git = "https://github.com/dfinity/examples", branch = "master" }
+# Or use Option B (raw canister calls) which has no extra dependency.
 ic-vetkeys = "0.1"
 
-# Option B: Call management canister directly (lower level)
-# No extra dependency -- use ic_cdk::api::call::call
+# Option B: Call management canister directly (lower level, always works)
+# No extra dependency -- use ic_cdk::api::call::call_with_payment128
 ```
 
 **Using ic-vetkeys library (recommended):**
@@ -129,8 +138,12 @@ use ic_cdk::update;
 
 // The ic-vetkeys crate provides KeyManager and EncryptedMaps
 // which handle the low-level vetKD API calls for you.
-
-// Note: ic-vetkeys API is under active development. Verify signatures against latest docs.
+//
+// ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
+// with "could not find `ic_vetkeys`", switch to the raw management canister
+// approach below (Option B), or add as a git dependency from dfinity/examples.
+//
+// API is under active development — verify function signatures against latest docs.
 use ic_vetkeys::KeyManager;
 
 // Initialize KeyManager in your canister
@@ -224,10 +237,13 @@ async fn vetkd_public_key() -> Vec<u8> {
         key_id: key_id(),
     };
 
-    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::call(
+    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
+    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call_with_payment128(
         Principal::management_canister(), // aaaaa-aa
         "vetkd_public_key",
         (request,),
+        100_000_000, // cycles to attach
     )
     .await
     .expect("vetkd_public_key call failed");
@@ -246,10 +262,12 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
         key_id: key_id(),
     };
 
-    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::call(
+    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
         Principal::management_canister(),
         "vetkd_derive_key",
         (request,),
+        100_000_000, // cycles to attach
     )
     .await
     .expect("vetkd_derive_key call failed");
@@ -269,10 +287,12 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
+# ⚠ Verify ic-vetkeys exists on mops.one before adding.
+# If not yet published, use the raw management canister approach below instead.
 ic-vetkeys = "0.1.0"
 ```
 
-**Using the management canister directly:**
+**Using the management canister directly (recommended — no dependency on unpublished packages):**
 
 ```motoko
 import Blob "mo:core/Blob";
@@ -349,7 +369,7 @@ The frontend generates a transport key pair, sends the public half to the canist
 
 ```javascript
 // The @dfinity/vetkeys package API is evolving rapidly.
-// Check https://github.com/ArcMichael/ic-vetkeys for the latest usage.
+// Check https://github.com/dfinity/examples for the latest vetKD usage examples.
 // High-level flow:
 // 1. Generate a transport key pair (BLS12-381, NOT P-256)
 // 2. Call backend canister to derive encrypted key

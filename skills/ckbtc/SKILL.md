@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.1.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -57,9 +57,10 @@ Call `icrc1_transfer` on the ckBTC ledger. Fee is 10 satoshis. Settles in 1-2 se
 
 ### Withdrawal Flow (ckBTC -> BTC)
 
-1. Call `retrieve_btc` on the minter with the destination Bitcoin address and amount.
-2. The minter burns the ckBTC and submits a Bitcoin transaction.
-3. The BTC arrives at the destination address after Bitcoin confirmations.
+1. Call `icrc2_approve` on the ckBTC ledger to grant the minter canister an allowance to spend from your account.
+2. Call `retrieve_btc_with_approval` on the minter with `{ address, amount, from_subaccount: null }`.
+3. The minter uses the approval to burn the ckBTC and submits a Bitcoin transaction.
+4. The BTC arrives at the destination address after Bitcoin confirmations.
 
 ### Subaccount Generation
 
@@ -77,7 +78,7 @@ Each user gets a unique deposit address derived from their principal + an option
 
 5. **Subaccount must be exactly 32 bytes or null.** Passing a subaccount shorter or longer than 32 bytes causes a trap. Pad with leading zeros if deriving from a shorter value.
 
-6. **Calling `retrieve_btc` with amount below the minimum.** The minter has a minimum withdrawal amount (currently 10,000 satoshis / 0.0001 BTC). Below this, you get `AmountTooLow`.
+6. **Calling `retrieve_btc` with amount below the minimum.** The minter has a minimum withdrawal amount (currently 50,000 satoshis / 0.0005 BTC). Below this, you get `AmountTooLow`.
 
 7. **Not checking the `retrieve_btc` response for errors.** The response is a variant: `Ok` contains `{ block_index }`, `Err` contains specific errors like `MalformedAddress`, `InsufficientFunds`, `TemporarilyUnavailable`. Always match both arms.
 
@@ -209,9 +210,33 @@ persistent actor {
     confirmations : Nat32;
   };
 
-  type RetrieveBtcArgs = {
+  type ApproveArgs = {
+    from_subaccount : ?Blob;
+    spender : Account;
+    amount : Nat;
+    expected_allowance : ?Nat;
+    expires_at : ?Nat64;
+    fee : ?Nat;
+    memo : ?Blob;
+    created_at_time : ?Nat64;
+  };
+
+  type ApproveError = {
+    #BadFee : { expected_fee : Nat };
+    #InsufficientFunds : { balance : Nat };
+    #AllowanceChanged : { current_allowance : Nat };
+    #Expired : { ledger_time : Nat64 };
+    #TooOld;
+    #CreatedInFuture : { ledger_time : Nat64 };
+    #Duplicate : { duplicate_of : Nat };
+    #TemporarilyUnavailable;
+    #GenericError : { error_code : Nat; message : Text };
+  };
+
+  type RetrieveBtcWithApprovalArgs = {
     address : Text;
     amount : Nat64;
+    from_subaccount : ?Blob;
   };
 
   type RetrieveBtcResult = {
@@ -224,6 +249,7 @@ persistent actor {
     #AlreadyProcessing;
     #AmountTooLow : Nat64;
     #InsufficientFunds : { balance : Nat64 };
+    #InsufficientAllowance : { allowance : Nat64 };
     #TemporarilyUnavailable : Text;
     #GenericError : { error_code : Nat64; error_message : Text };
   };
@@ -234,6 +260,7 @@ persistent actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
+    icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
   let ckbtcMinter : actor {
@@ -245,7 +272,7 @@ persistent actor {
       owner : ?Principal;
       subaccount : ?Blob;
     }) -> async UpdateBalanceResult;
-    retrieve_btc : shared (RetrieveBtcArgs) -> async RetrieveBtcResult;
+    retrieve_btc_with_approval : shared (RetrieveBtcWithApprovalArgs) -> async RetrieveBtcResult;
   } = actor "mqygn-kiaaa-aaaar-qaadq-cai";
 
   // -- Subaccount derivation --
@@ -322,29 +349,32 @@ persistent actor {
   public shared ({ caller }) func withdraw(btcAddress : Text, amount : Nat64) : async RetrieveBtcResult {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
 
-    // First transfer ckBTC from user's subaccount to minter
+    // Step 1: Approve the minter to spend ckBTC from the user's subaccount
     let fromSubaccount = principalToSubaccount(caller);
-    let transferResult = await ckbtcLedger.icrc1_transfer({
+    let approveResult = await ckbtcLedger.icrc2_approve({
       from_subaccount = ?fromSubaccount;
-      to = {
+      spender = {
         owner = Principal.fromText("mqygn-kiaaa-aaaar-qaadq-cai");
         subaccount = null;
       };
-      amount = Nat64.toNat(amount);
+      amount = Nat64.toNat(amount) + 10; // amount + fee for the minter's burn
+      expected_allowance = null;
+      expires_at = null;
       fee = ?10;
       memo = null;
       created_at_time = null;
     });
 
-    switch (transferResult) {
-      case (#Err(e)) { return #Err(#GenericError({ error_code = 0; error_message = "Transfer to minter failed" })) };
+    switch (approveResult) {
+      case (#Err(e)) { return #Err(#GenericError({ error_code = 0; error_message = "Approve for minter failed" })) };
       case (#Ok(_)) {};
     };
 
-    // Then call retrieve_btc on the minter
-    await ckbtcMinter.retrieve_btc({
+    // Step 2: Call retrieve_btc_with_approval on the minter
+    await ckbtcMinter.retrieve_btc_with_approval({
       address = btcAddress;
       amount = amount;
+      from_subaccount = ?fromSubaccount;
     })
   };
 };
@@ -379,6 +409,7 @@ use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::{query, update};
 use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
+use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
 
 // -- Canister IDs --
 const CKBTC_LEDGER: &str = "mxzaz-hqaaa-aaaar-qaada-cai";
@@ -399,9 +430,10 @@ struct UpdateBalanceArgs {
 }
 
 #[derive(CandidType, Deserialize, Debug)]
-struct RetrieveBtcArgs {
+struct RetrieveBtcWithApprovalArgs {
     address: String,
     amount: u64,
+    from_subaccount: Option<Vec<u8>>,
 }
 
 #[derive(CandidType, Deserialize, Debug)]
@@ -415,6 +447,7 @@ enum RetrieveBtcError {
     AlreadyProcessing,
     AmountTooLow(u64),
     InsufficientFunds { balance: u64 },
+    InsufficientAllowance { allowance: u64 },
     TemporarilyUnavailable(String),
     GenericError { error_code: u64, error_message: String },
 }
@@ -580,41 +613,45 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
     let caller = ic_cdk::caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
-    // First transfer ckBTC from user's subaccount to the minter
+    // Step 1: Approve the minter to spend ckBTC from the user's subaccount
     let from_subaccount = principal_to_subaccount(&caller);
-    let transfer_args = TransferArg {
+    let approve_args = ApproveArgs {
         from_subaccount: Some(from_subaccount),
-        to: Account {
+        spender: Account {
             owner: minter_id(),
             subaccount: None,
         },
-        amount: Nat::from(amount),
+        amount: Nat::from(amount) + Nat::from(10u64), // amount + fee for the minter's burn
+        expected_allowance: None,
+        expires_at: None,
         fee: Some(Nat::from(10u64)),
         memo: None,
         created_at_time: None,
     };
 
-    let (transfer_result,): (Result<Nat, TransferError>,) =
-        ic_cdk::call(ledger_id(), "icrc1_transfer", (transfer_args,))
+    let (approve_result,): (Result<Nat, ApproveError>,) =
+        ic_cdk::call(ledger_id(), "icrc2_approve", (approve_args,))
             .await
-            .expect("Failed to transfer to minter");
+            .expect("Failed to call icrc2_approve");
 
-    if let Err(e) = transfer_result {
+    if let Err(e) = approve_result {
         return Err(RetrieveBtcError::GenericError {
             error_code: 0,
-            error_message: format!("Transfer to minter failed: {:?}", e),
+            error_message: format!("Approve for minter failed: {:?}", e),
         });
     }
 
-    // Then call retrieve_btc on the minter
-    let args = RetrieveBtcArgs {
+    // Step 2: Call retrieve_btc_with_approval on the minter
+    let args = RetrieveBtcWithApprovalArgs {
         address: btc_address,
         amount,
+        from_subaccount: Some(from_subaccount.to_vec()),
     };
 
-    let (result,): (RetrieveBtcResult,) = ic_cdk::call(minter_id(), "retrieve_btc", (args,))
-        .await
-        .expect("Failed to call retrieve_btc");
+    let (result,): (RetrieveBtcResult,) =
+        ic_cdk::call(minter_id(), "retrieve_btc_with_approval", (args,))
+            .await
+            .expect("Failed to call retrieve_btc_with_approval");
 
     result
 }
@@ -667,9 +704,10 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     created_at_time = null;
   })' --network ic
 
-# Withdraw ckBTC to a BTC address (amount in satoshis, minimum 10_000)
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc \
-  '(record { address = "bc1q...your-btc-address"; amount = 50_000 })' \
+# Withdraw ckBTC to a BTC address (amount in satoshis, minimum 50_000)
+# Note: In production, use icrc2_approve + retrieve_btc_with_approval (see withdraw function above)
+dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
+  '(record { address = "bc1q...your-btc-address"; amount = 50_000; from_subaccount = null })' \
   --network ic
 
 # Check transfer fee

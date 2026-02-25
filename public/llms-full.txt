@@ -54,7 +54,7 @@ Access patterns:
 
 5. **Deploying to the wrong canister name.** If dfx.json has `"frontend"` but you run `dfx deploy assets`, it creates a new canister instead of updating the existing one.
 
-6. **Exceeding the 4GB Wasm heap memory limit.** The asset canister stores all files in a single canister. Large media files (videos, datasets) will exhaust canister storage. Use a dedicated storage solution for large files.
+6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the `@dfinity/assets` library handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
 7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
 
@@ -144,19 +144,19 @@ www.yourdomain.com
 
 2. Add DNS records:
 ```
-# CNAME record
+# CNAME record pointing to boundary nodes
 yourdomain.com.  CNAME  icp1.io.
 
-# TXT record for verification
+# ACME challenge record for TLS certificate provisioning
+_acme-challenge.yourdomain.com.  CNAME  _acme-challenge.<your-canister-id>.icp2.io.
+
+# Canister ID TXT record for verification
 _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 ```
 
-3. Register the domain with the boundary nodes:
-```bash
-dfx canister call frontend authorize '(principal "<your-canister-id>")'
-```
+3. Deploy your canister so the `.well-known/ic-domains` file is available, then register the custom domain with the boundary nodes. Registration is automatic -- the boundary nodes periodically check for the `.well-known/ic-domains` file and the DNS records. No NNS proposal is needed.
 
-4. Submit to the custom domains registry (use the NNS dapp or `ic-admin` CLI).
+4. Wait for the boundary nodes to pick up the registration and provision the TLS certificate. This typically takes a few minutes. You can verify by visiting `https://yourdomain.com` once DNS has propagated.
 
 ### Programmatic Uploads with @dfinity/assets
 
@@ -383,7 +383,7 @@ ic-cdk = "0.18"
 ic-certified-map = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
-serde_cbor = "0.11"
+ciborium = "0.2"
 ```
 
 **Complete certified key-value store:**
@@ -405,7 +405,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::set_certified_data(&tree.root_hash());
     });
 }
 
@@ -449,7 +449,7 @@ struct CertifiedResponse {
 #[query]
 fn get(key: String) -> CertifiedResponse {
     // data_certificate() is only available in query calls
-    let certificate = ic_cdk::api::data_certificate()
+    let certificate = ic_cdk::data_certificate()
         .expect("data_certificate only available in query calls");
 
     TREE.with(|tree| {
@@ -464,9 +464,8 @@ fn get(key: String) -> CertifiedResponse {
 
         // Serialize the witness as CBOR
         let mut witness_buf = vec![];
-        let mut serializer = serde_cbor::Serializer::new(&mut witness_buf);
-        serializer.self_describe().unwrap();
-        witness.serialize(&mut serializer).unwrap();
+        ciborium::into_writer(&witness, &mut witness_buf)
+            .expect("Failed to serialize witness as CBOR");
 
         CertifiedResponse {
             value,
@@ -529,7 +528,7 @@ fn certify_response(path: &str, response: &HttpResponse) {
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::set_certified_data(&tree.root_hash());
     });
 }
 ```
@@ -774,7 +773,7 @@ dependencies: [icrc-ledger, wallet]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.1.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -821,9 +820,10 @@ Call `icrc1_transfer` on the ckBTC ledger. Fee is 10 satoshis. Settles in 1-2 se
 
 ### Withdrawal Flow (ckBTC -> BTC)
 
-1. Call `retrieve_btc` on the minter with the destination Bitcoin address and amount.
-2. The minter burns the ckBTC and submits a Bitcoin transaction.
-3. The BTC arrives at the destination address after Bitcoin confirmations.
+1. Call `icrc2_approve` on the ckBTC ledger to grant the minter canister an allowance to spend from your account.
+2. Call `retrieve_btc_with_approval` on the minter with `{ address, amount, from_subaccount: null }`.
+3. The minter uses the approval to burn the ckBTC and submits a Bitcoin transaction.
+4. The BTC arrives at the destination address after Bitcoin confirmations.
 
 ### Subaccount Generation
 
@@ -841,7 +841,7 @@ Each user gets a unique deposit address derived from their principal + an option
 
 5. **Subaccount must be exactly 32 bytes or null.** Passing a subaccount shorter or longer than 32 bytes causes a trap. Pad with leading zeros if deriving from a shorter value.
 
-6. **Calling `retrieve_btc` with amount below the minimum.** The minter has a minimum withdrawal amount (currently 10,000 satoshis / 0.0001 BTC). Below this, you get `AmountTooLow`.
+6. **Calling `retrieve_btc` with amount below the minimum.** The minter has a minimum withdrawal amount (currently 50,000 satoshis / 0.0005 BTC). Below this, you get `AmountTooLow`.
 
 7. **Not checking the `retrieve_btc` response for errors.** The response is a variant: `Ok` contains `{ block_index }`, `Err` contains specific errors like `MalformedAddress`, `InsufficientFunds`, `TemporarilyUnavailable`. Always match both arms.
 
@@ -973,9 +973,33 @@ persistent actor {
     confirmations : Nat32;
   };
 
-  type RetrieveBtcArgs = {
+  type ApproveArgs = {
+    from_subaccount : ?Blob;
+    spender : Account;
+    amount : Nat;
+    expected_allowance : ?Nat;
+    expires_at : ?Nat64;
+    fee : ?Nat;
+    memo : ?Blob;
+    created_at_time : ?Nat64;
+  };
+
+  type ApproveError = {
+    #BadFee : { expected_fee : Nat };
+    #InsufficientFunds : { balance : Nat };
+    #AllowanceChanged : { current_allowance : Nat };
+    #Expired : { ledger_time : Nat64 };
+    #TooOld;
+    #CreatedInFuture : { ledger_time : Nat64 };
+    #Duplicate : { duplicate_of : Nat };
+    #TemporarilyUnavailable;
+    #GenericError : { error_code : Nat; message : Text };
+  };
+
+  type RetrieveBtcWithApprovalArgs = {
     address : Text;
     amount : Nat64;
+    from_subaccount : ?Blob;
   };
 
   type RetrieveBtcResult = {
@@ -988,6 +1012,7 @@ persistent actor {
     #AlreadyProcessing;
     #AmountTooLow : Nat64;
     #InsufficientFunds : { balance : Nat64 };
+    #InsufficientAllowance : { allowance : Nat64 };
     #TemporarilyUnavailable : Text;
     #GenericError : { error_code : Nat64; error_message : Text };
   };
@@ -998,6 +1023,7 @@ persistent actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
+    icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
   let ckbtcMinter : actor {
@@ -1009,7 +1035,7 @@ persistent actor {
       owner : ?Principal;
       subaccount : ?Blob;
     }) -> async UpdateBalanceResult;
-    retrieve_btc : shared (RetrieveBtcArgs) -> async RetrieveBtcResult;
+    retrieve_btc_with_approval : shared (RetrieveBtcWithApprovalArgs) -> async RetrieveBtcResult;
   } = actor "mqygn-kiaaa-aaaar-qaadq-cai";
 
   // -- Subaccount derivation --
@@ -1086,29 +1112,32 @@ persistent actor {
   public shared ({ caller }) func withdraw(btcAddress : Text, amount : Nat64) : async RetrieveBtcResult {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
 
-    // First transfer ckBTC from user's subaccount to minter
+    // Step 1: Approve the minter to spend ckBTC from the user's subaccount
     let fromSubaccount = principalToSubaccount(caller);
-    let transferResult = await ckbtcLedger.icrc1_transfer({
+    let approveResult = await ckbtcLedger.icrc2_approve({
       from_subaccount = ?fromSubaccount;
-      to = {
+      spender = {
         owner = Principal.fromText("mqygn-kiaaa-aaaar-qaadq-cai");
         subaccount = null;
       };
-      amount = Nat64.toNat(amount);
+      amount = Nat64.toNat(amount) + 10; // amount + fee for the minter's burn
+      expected_allowance = null;
+      expires_at = null;
       fee = ?10;
       memo = null;
       created_at_time = null;
     });
 
-    switch (transferResult) {
-      case (#Err(e)) { return #Err(#GenericError({ error_code = 0; error_message = "Transfer to minter failed" })) };
+    switch (approveResult) {
+      case (#Err(e)) { return #Err(#GenericError({ error_code = 0; error_message = "Approve for minter failed" })) };
       case (#Ok(_)) {};
     };
 
-    // Then call retrieve_btc on the minter
-    await ckbtcMinter.retrieve_btc({
+    // Step 2: Call retrieve_btc_with_approval on the minter
+    await ckbtcMinter.retrieve_btc_with_approval({
       address = btcAddress;
       amount = amount;
+      from_subaccount = ?fromSubaccount;
     })
   };
 };
@@ -1143,6 +1172,7 @@ use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::{query, update};
 use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
+use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
 
 // -- Canister IDs --
 const CKBTC_LEDGER: &str = "mxzaz-hqaaa-aaaar-qaada-cai";
@@ -1163,9 +1193,10 @@ struct UpdateBalanceArgs {
 }
 
 #[derive(CandidType, Deserialize, Debug)]
-struct RetrieveBtcArgs {
+struct RetrieveBtcWithApprovalArgs {
     address: String,
     amount: u64,
+    from_subaccount: Option<Vec<u8>>,
 }
 
 #[derive(CandidType, Deserialize, Debug)]
@@ -1179,6 +1210,7 @@ enum RetrieveBtcError {
     AlreadyProcessing,
     AmountTooLow(u64),
     InsufficientFunds { balance: u64 },
+    InsufficientAllowance { allowance: u64 },
     TemporarilyUnavailable(String),
     GenericError { error_code: u64, error_message: String },
 }
@@ -1344,41 +1376,45 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
     let caller = ic_cdk::caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
-    // First transfer ckBTC from user's subaccount to the minter
+    // Step 1: Approve the minter to spend ckBTC from the user's subaccount
     let from_subaccount = principal_to_subaccount(&caller);
-    let transfer_args = TransferArg {
+    let approve_args = ApproveArgs {
         from_subaccount: Some(from_subaccount),
-        to: Account {
+        spender: Account {
             owner: minter_id(),
             subaccount: None,
         },
-        amount: Nat::from(amount),
+        amount: Nat::from(amount) + Nat::from(10u64), // amount + fee for the minter's burn
+        expected_allowance: None,
+        expires_at: None,
         fee: Some(Nat::from(10u64)),
         memo: None,
         created_at_time: None,
     };
 
-    let (transfer_result,): (Result<Nat, TransferError>,) =
-        ic_cdk::call(ledger_id(), "icrc1_transfer", (transfer_args,))
+    let (approve_result,): (Result<Nat, ApproveError>,) =
+        ic_cdk::call(ledger_id(), "icrc2_approve", (approve_args,))
             .await
-            .expect("Failed to transfer to minter");
+            .expect("Failed to call icrc2_approve");
 
-    if let Err(e) = transfer_result {
+    if let Err(e) = approve_result {
         return Err(RetrieveBtcError::GenericError {
             error_code: 0,
-            error_message: format!("Transfer to minter failed: {:?}", e),
+            error_message: format!("Approve for minter failed: {:?}", e),
         });
     }
 
-    // Then call retrieve_btc on the minter
-    let args = RetrieveBtcArgs {
+    // Step 2: Call retrieve_btc_with_approval on the minter
+    let args = RetrieveBtcWithApprovalArgs {
         address: btc_address,
         amount,
+        from_subaccount: Some(from_subaccount.to_vec()),
     };
 
-    let (result,): (RetrieveBtcResult,) = ic_cdk::call(minter_id(), "retrieve_btc", (args,))
-        .await
-        .expect("Failed to call retrieve_btc");
+    let (result,): (RetrieveBtcResult,) =
+        ic_cdk::call(minter_id(), "retrieve_btc_with_approval", (args,))
+            .await
+            .expect("Failed to call retrieve_btc_with_approval");
 
     result
 }
@@ -1431,9 +1467,10 @@ dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
     created_at_time = null;
   })' --network ic
 
-# Withdraw ckBTC to a BTC address (amount in satoshis, minimum 10_000)
-dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc \
-  '(record { address = "bc1q...your-btc-address"; amount = 50_000 })' \
+# Withdraw ckBTC to a BTC address (amount in satoshis, minimum 50_000)
+# Note: In production, use icrc2_approve + retrieve_btc_with_approval (see withdraw function above)
+dfx canister call mqygn-kiaaa-aaaar-qaadq-cai retrieve_btc_with_approval \
+  '(record { address = "bc1q...your-btc-address"; amount = 50_000; from_subaccount = null })' \
   --network ic
 
 # Check transfer fee
@@ -1550,11 +1587,11 @@ Built-in providers (no API key needed for defaults):
 
 | Provider | Ethereum | Sepolia | Arbitrum | Base | Optimism |
 |---|---|---|---|---|---|
-| Alchemy | yes | yes | - | - | - |
+| Alchemy | yes | yes | yes | yes | yes |
 | Ankr | yes | - | yes | yes | yes |
 | BlockPi | yes | yes | yes | yes | yes |
 | Cloudflare | yes | - | - | - | - |
-| LlamaNodes | yes | - | - | - | - |
+| LlamaNodes | yes | - | yes | yes | yes |
 | PublicNode | yes | yes | yes | yes | yes |
 
 ## Cycle Costs
@@ -2355,8 +2392,8 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 ## Prerequisites
 
 - dfx >= 0.30.0
-- For Motoko: `moc` compiler (included with dfx)
-- For Rust: `ic-cdk >= 0.17`, `serde_json` for JSON parsing
+- For Motoko: `moc` compiler (included with dfx), `mo:core` 2.0 in mops.toml
+- For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
 
 ## Canister IDs
 
@@ -2391,13 +2428,13 @@ You do not deploy anything extra. The management canister is built into every su
 ### Motoko
 
 ```motoko
-import Blob "mo:base/Blob";
-import Cycles "mo:base/ExperimentalCycles";
-import Debug "mo:base/Debug";
-import Nat64 "mo:base/Nat64";
-import Text "mo:base/Text";
+import Blob "mo:core/Blob";
+import Nat64 "mo:core/Nat64";
+import Text "mo:core/Text";
+import Runtime "mo:core/Runtime";
+import Iter "mo:core/Iter";
 
-actor {
+persistent actor {
 
   // Type definitions for the management canister HTTP interface
   type HttpRequestArgs = {
@@ -2437,7 +2474,7 @@ actor {
   };
 
   // The management canister for making outcalls
-  let ic : actor {
+  transient let ic : actor {
     http_request : HttpRequestArgs -> async HttpResponsePayload;
   } = actor "aaaaa-aa";
 
@@ -2466,20 +2503,20 @@ actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = Blob.fromArray([]);
+        context = Blob.fromIter(Iter.empty());
       };
     };
 
     // Attach cycles for the outcall (200M is safe for most requests)
-    Cycles.add<system>(200_000_000);
-
-    let response = await ic.http_request(request);
+    // In mo:core, use `await (with cycles = N)` instead of the old Cycles.add<system>(N)
+    let response = await (with cycles = 200_000_000) ic.http_request(request);
 
     // Decode the response body
-    let body = Text.decodeUtf8(Blob.fromArray(response.body));
+    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
-      case (null) { Debug.trap("Response is not valid UTF-8") };
+      case (null) { Runtime.trap("Response is not valid UTF-8") };
     };
   };
 
@@ -2487,7 +2524,7 @@ actor {
   public func postData(jsonPayload : Text) : async Text {
     let url = "https://httpbin.org/post";
 
-    let bodyBytes = Blob.toArray(Text.encodeUtf8(jsonPayload));
+    let bodyBytes = Iter.toArray(Blob.values(Text.encodeUtf8(jsonPayload)));
 
     let request : HttpRequestArgs = {
       url = url;
@@ -2502,18 +2539,18 @@ actor {
       method = #post;
       transform = ?{
         function = transform;
-        context = Blob.fromArray([]);
+        context = Blob.fromIter(Iter.empty());
       };
     };
 
-    Cycles.add<system>(300_000_000); // POST may cost more due to request body size
+    // POST may cost more due to request body size
+    let response = await (with cycles = 300_000_000) ic.http_request(request);
 
-    let response = await ic.http_request(request);
-
-    let body = Text.decodeUtf8(Blob.fromArray(response.body));
+    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
-      case (null) { Debug.trap("Response is not valid UTF-8") };
+      case (null) { Runtime.trap("Response is not valid UTF-8") };
     };
   };
 };
@@ -2531,7 +2568,7 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::api::management_canister::http_request::{
+use ic_cdk::management_canister::http_request::{
     http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
     TransformArgs, TransformContext, TransformFunc,
 };
@@ -2795,7 +2832,7 @@ dependencies: []
 ---
 
 # ICRC Ledger Standards
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
+> version: 2.3.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -2833,6 +2870,8 @@ Index canisters (for transaction history):
 6. **Hardcoding canister IDs as text** -- Always use `Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai")` (Motoko) or `Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai")` (Rust). Never pass raw strings where a Principal is expected.
 
 7. **Calling ledger from frontend** -- ICRC-1 transfers should originate from a backend canister, not directly from the frontend. Frontend-initiated transfers expose the user to reentrancy and can bypass business logic. Use a backend canister as the intermediary.
+
+8. **Shell substitution in `--argument-file` / `init_arg_file`** -- Expressions like `$(dfx identity get-principal)` do NOT expand inside files referenced by `init_arg_file` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
 
 ## Implementation
 
@@ -2945,6 +2984,7 @@ persistent actor {
   };
 
   // Transfer tokens (this canister sends from its own account)
+  // WARNING: Add access control in production — this allows any caller to transfer tokens
   public func sendTokens(to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc1_transfer({
@@ -2988,6 +3028,7 @@ persistent actor {
   };
 
   // ICRC-2: Transfer from another account (requires prior approval)
+  // WARNING: Add access control in production — this allows any caller to transfer tokens
   public func transferFrom(from : Principal, to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc2_transfer_from({
@@ -3057,6 +3098,7 @@ async fn get_balance(who: Principal) -> Nat {
 }
 
 // Transfer tokens from this canister's account
+// WARNING: Add access control in production — this allows any caller to transfer tokens
 #[update]
 async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
     let transfer_arg = TransferArg {
@@ -3120,6 +3162,7 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
 }
 
 // ICRC-2: Transfer from another account (requires prior approval)
+// WARNING: Add access control in production — this allows any caller to transfer tokens
 #[update]
 async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Nat, String> {
     let args = TransferFromArgs {
@@ -3169,25 +3212,27 @@ Add to `dfx.json`:
 }
 ```
 
-Create `icrc1_ledger_init.args`:
+Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `dfx identity get-principal`):
+
+> **Pitfall:** Shell substitutions like `$(dfx identity get-principal)` will NOT expand inside this file. You must paste the literal principal string.
 
 ```
 (variant { Init = record {
   token_symbol = "TEST";
   token_name = "Test Token";
-  minting_account = record { owner = principal "$(dfx identity get-principal)" };
+  minting_account = record { owner = principal "YOUR_PRINCIPAL" };
   transfer_fee = 10_000 : nat;
   metadata = vec {};
   initial_balances = vec {
     record {
-      record { owner = principal "$(dfx identity get-principal)" };
+      record { owner = principal "YOUR_PRINCIPAL" };
       100_000_000_000 : nat;
     };
   };
   archive_options = record {
     num_blocks_to_archive = 1000 : nat64;
     trigger_threshold = 2000 : nat64;
-    controller_id = principal "$(dfx identity get-principal)";
+    controller_id = principal "YOUR_PRINCIPAL";
   };
   feature_flags = opt record { icrc2 = true };
 }})
@@ -3305,7 +3350,7 @@ dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 2.1]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, @dfinity/auth-client >= 3.0]
 
 ## What This Is
 
@@ -3315,7 +3360,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 - dfx >= 0.30.0
 - Node.js >= 18 (for frontend)
-- `@dfinity/auth-client` npm package (>= 2.1.0)
+- `@dfinity/auth-client` npm package (>= 3.0.0)
 - `@dfinity/agent` npm package
 - `@dfinity/identity` npm package
 - `@dfinity/principal` npm package
@@ -3324,14 +3369,14 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 | Environment | Canister ID | URL |
 |-------------|-------------|-----|
-| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://id.ai` |
+| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://identity.ic0.app` (also `https://identity.internetcomputer.org`) |
 | Local | Assigned on deploy | `http://<local-canister-id>.localhost:4943` |
 
 ## Mistakes That Break Your Build
 
 1. **Not rejecting anonymous principal.** The anonymous principal `2vxsx-fae` is sent when a user is not authenticated. If your backend does not explicitly reject it, unauthenticated users can call protected endpoints. ALWAYS check `Principal.isAnonymous(caller)` and reject.
 
-2. **Using the wrong II URL for the environment.** Local development must point to `http://<canister-id>.localhost:4943`. Mainnet must use `https://id.ai` (previously `identity.ic0.app`). Hardcoding one breaks the other.
+2. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID is different from mainnet). Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `dfx deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` or your `.dfx/local/canister_ids.json`.
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -3381,15 +3426,21 @@ import { HttpAgent, Actor } from "@dfinity/agent";
 const authClient = await AuthClient.create();
 
 // 2. Determine II URL based on environment
+// The local II canister gets a different canister ID each time you deploy it.
+// Pass it via an environment variable at build time (e.g., Vite: import.meta.env.VITE_II_CANISTER_ID).
 function getIdentityProviderUrl() {
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
   if (isLocal) {
-    // Replace with your local II canister ID (from .dfx/local/canister_ids.json)
-    const iiCanisterId = "rdmx6-jaaaa-aaaaa-aaadq-cai"; // or read from env
+    // Read from env variable set during build, or from canister_ids.json
+    // For Vite: define VITE_II_CANISTER_ID in .env.local
+    // For webpack: use DefinePlugin with process.env.II_CANISTER_ID
+    const iiCanisterId = import.meta.env.VITE_II_CANISTER_ID
+      ?? process.env.CANISTER_ID_INTERNET_IDENTITY  // dfx auto-generates this
+      ?? "be2us-64aaa-aaaaa-qaabq-cai"; // fallback -- replace with your actual local II canister ID
     return `http://${iiCanisterId}.localhost:4943`;
   }
-  return "https://id.ai";
+  return "https://identity.ic0.app";
 }
 
 // 3. Login
@@ -3397,7 +3448,7 @@ async function login() {
   return new Promise((resolve, reject) => {
     authClient.login({
       identityProvider: getIdentityProviderUrl(),
-      maxTimeToLive: BigInt(8 * 60 * 60 * 1000_000_000), // 8 hours in nanoseconds
+      maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
       onSuccess: () => {
         const identity = authClient.getIdentity();
         const principal = identity.getPrincipal().toText();
@@ -3667,7 +3718,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.17]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -3677,7 +3728,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 - `dfx` >= 0.30.0
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk`, `candid`, `serde`
+- For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
 
 ## When to Use Multi-Canister
@@ -4156,7 +4207,11 @@ ic-stable-structures = "0.6"
 ```rust
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::{init, post_upgrade, query, update};
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell};
 use std::cell::RefCell;
+
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 struct Post {
@@ -4174,11 +4229,40 @@ struct UserProfile {
     created: i64,
 }
 
+// Stable storage -- survives canister upgrades
 thread_local! {
-    static POSTS: RefCell<Vec<Post>> = RefCell::new(Vec::new());
-    static POST_COUNTER: RefCell<u64> = RefCell::new(0);
-    // Store the user_service canister ID (set during init)
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    // Posts keyed by id (u64 as big-endian bytes) -> candid-encoded Post
+    static POSTS: RefCell<StableBTreeMap<Vec<u8>, Vec<u8>, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
+
+    // Post counter in stable memory
+    static POST_COUNTER: RefCell<StableCell<u64, Memory>> = RefCell::new(
+        StableCell::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
+            0u64,
+        ).unwrap()
+    );
+
+    // Store the user_service canister ID (set during init, re-set on upgrade)
     static USER_SERVICE_ID: RefCell<Option<Principal>> = RefCell::new(None);
+}
+
+fn post_id_to_key(id: u64) -> Vec<u8> {
+    id.to_be_bytes().to_vec()
+}
+
+fn serialize_post(post: &Post) -> Vec<u8> {
+    candid::encode_one(post).unwrap()
+}
+
+fn deserialize_post(bytes: &[u8]) -> Post {
+    candid::decode_one(bytes).unwrap()
 }
 
 #[init]
@@ -4188,6 +4272,8 @@ fn init(user_service_id: Principal) {
 
 #[post_upgrade]
 fn post_upgrade(user_service_id: Principal) {
+    // Re-set the user_service ID (not stored in stable memory for simplicity,
+    // since it is always passed as an init/upgrade argument)
     init(user_service_id);
 }
 
@@ -4200,7 +4286,7 @@ fn get_user_service_id() -> Principal {
 // CRITICAL: capture caller BEFORE any await
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
-    // Capture caller BEFORE the await — caller() is wrong after await
+    // Capture caller BEFORE the await -- caller() is wrong after await
     let original_caller = ic_cdk::caller();
 
     if original_caller == Principal::anonymous() {
@@ -4217,21 +4303,23 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
         return Err("User not registered".to_string());
     }
 
-    let post = POST_COUNTER.with(|counter| {
+    let id = POST_COUNTER.with(|counter| {
         let mut counter = counter.borrow_mut();
-        let id = *counter;
-        *counter += 1;
+        let id = *counter.get();
+        counter.set(id + 1).unwrap();
+        id
+    });
 
-        let post = Post {
-            id,
-            author: original_caller, // Use captured caller
-            title,
-            body,
-            created: ic_cdk::api::time() as i64,
-        };
+    let post = Post {
+        id,
+        author: original_caller, // Use captured caller
+        title,
+        body,
+        created: ic_cdk::api::time() as i64,
+    };
 
-        POSTS.with(|posts| posts.borrow_mut().push(post.clone()));
-        post
+    POSTS.with(|posts| {
+        posts.borrow_mut().insert(post_id_to_key(id), serialize_post(&post));
     });
 
     Ok(post)
@@ -4239,7 +4327,11 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 
 #[query]
 fn get_posts() -> Vec<Post> {
-    POSTS.with(|posts| posts.borrow().clone())
+    POSTS.with(|posts| {
+        posts.borrow().iter()
+            .map(|(_, v)| deserialize_post(&v))
+            .collect()
+    })
 }
 
 // Cross-canister enrichment: get posts with author profile
@@ -4261,11 +4353,9 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
         };
 
     let author_posts = POSTS.with(|posts| {
-        posts
-            .borrow()
-            .iter()
+        posts.borrow().iter()
+            .map(|(_, v)| deserialize_post(&v))
             .filter(|p| p.author == author_id)
-            .cloned()
             .collect()
     });
 
@@ -4278,14 +4368,17 @@ async fn delete_post(id: u64) -> Result<(), String> {
 
     POSTS.with(|posts| {
         let mut posts = posts.borrow_mut();
-        if let Some(pos) = posts.iter().position(|p| p.id == id) {
-            if posts[pos].author != original_caller {
-                return Err("Unauthorized".to_string());
+        let key = post_id_to_key(id);
+        match posts.get(&key) {
+            Some(bytes) => {
+                let post = deserialize_post(&bytes);
+                if post.author != original_caller {
+                    return Err("Unauthorized".to_string());
+                }
+                posts.remove(&key);
+                Ok(())
             }
-            posts.remove(pos);
-            Ok(())
-        } else {
-            Err("Not found".to_string())
+            None => Err("Not found".to_string()),
         }
     })
 }
@@ -4373,16 +4466,27 @@ persistent actor Self {
 
 ```rust
 use candid::{CandidType, Deserialize, Principal, encode_one};
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::main::{
     create_canister, install_code,
     CreateCanisterArgument, InstallCodeArgument, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::cell::RefCell;
-use std::collections::HashMap;
+
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
-    static CHILD_CANISTERS: RefCell<HashMap<Principal, Principal>> = RefCell::new(HashMap::new());
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    // Stable storage: owner principal -> child canister principal (survives upgrades)
+    static CHILD_CANISTERS: RefCell<StableBTreeMap<Vec<u8>, Vec<u8>, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
 }
 
 #[update]
@@ -4424,7 +4528,10 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
 
     // Track the child canister
     CHILD_CANISTERS.with(|canisters| {
-        canisters.borrow_mut().insert(caller, canister_id);
+        canisters.borrow_mut().insert(
+            caller.as_slice().to_vec(),
+            canister_id.as_slice().to_vec(),
+        );
     });
 
     canister_id
@@ -4432,7 +4539,10 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
 
 #[ic_cdk::query]
 fn get_child_canister(owner: Principal) -> Option<Principal> {
-    CHILD_CANISTERS.with(|canisters| canisters.borrow().get(&owner).copied())
+    CHILD_CANISTERS.with(|canisters| {
+        canisters.borrow().get(&owner.as_slice().to_vec())
+            .map(|bytes| Principal::from_slice(&bytes))
+    })
 }
 ```
 
@@ -4457,7 +4567,11 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 ```bash
 # Upgrade canisters in dependency order
 dfx deploy user_service
-dfx deploy content_service
+
+# Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
+USER_SERVICE_ID=$(dfx canister id user_service)
+dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+
 dfx generate user_service
 dfx generate content_service
 npm run build
@@ -4474,7 +4588,10 @@ dfx start --background
 
 # Deploy in dependency order
 dfx deploy user_service
-dfx deploy content_service
+
+# content_service (Rust) requires the user_service canister ID as an init argument
+USER_SERVICE_ID=$(dfx canister id user_service)
+dfx deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Generate declarations for frontend
 dfx generate user_service
@@ -4485,7 +4602,7 @@ npm run build
 dfx deploy frontend
 ```
 
-### Test Inter-Canister Calls
+### Test Inter-Canister Calls (Motoko)
 
 ```bash
 # Register a user
@@ -4505,6 +4622,25 @@ dfx canister call content_service getPosts
 # Expected: (vec { record { id = 0; ... } })
 ```
 
+### Test Inter-Canister Calls (Rust)
+
+Rust canisters use snake_case function names:
+
+```bash
+PRINCIPAL=$(dfx identity get-principal)
+dfx canister call user_service register "(\"alice\")"
+
+dfx canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
+# Expected: (true)
+
+# content_service must have been deployed with --argument "(principal \"<user_service_id>\")"
+dfx canister call content_service create_post "(\"Hello World\", \"My first post\")"
+# Expected: (variant { ok = record { id = 0 : nat64; author = principal "..."; ... } })
+
+dfx canister call content_service get_posts
+# Expected: (vec { record { id = 0 : nat64; ... } })
+```
+
 ## Verify It Works
 
 ### Verify User Registration
@@ -4518,6 +4654,7 @@ dfx canister call user_service register '("testuser")'
 
 ```bash
 # This call should succeed (user is registered)
+# Motoko: createPost / Rust: create_post
 dfx canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
@@ -4535,6 +4672,7 @@ dfx identity use default
 
 ```bash
 PRINCIPAL=$(dfx identity get-principal)
+# Motoko: getPostsWithAuthor / Rust: get_posts_with_author
 dfx canister call content_service getPostsWithAuthor "(principal \"$PRINCIPAL\")"
 # Expected: (opt record { id = ...; username = "testuser"; ... }, vec { record { ... } })
 ```
@@ -4566,7 +4704,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.30.0, sns-cli, NNS neuron with stake]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 
@@ -4574,8 +4712,8 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0 with `sns` extension installed
-- `sns-cli` (built from `dfinity/ic` repo or bundled with dfx)
+- `dfx` >= 0.30.0 with `sns` extension installed (`dfx extension install sns`)
+- `quill` CLI for advanced proposal submission (alternative to `dfx sns propose`)
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined
@@ -4732,7 +4870,7 @@ Swap:
 ```
 Stage 1:  Developer defines parameters in sns_init.yaml
 Stage 2:  Developer adds NNS Root as co-controller of dapp canisters
-Stage 3:  Developer submits NNS proposal using sns-cli
+Stage 3:  Developer submits NNS proposal using `dfx sns propose` (or quill)
 Stage 4:  NNS community votes on the proposal
 Stage 5:  (If adopted) SNS-W deploys uninitialized SNS canisters
 Stage 6:  SNS Root becomes sole controller of dapp canisters
@@ -4761,8 +4899,13 @@ persistent actor {
 
   var snsGovernanceId : ?Principal = null;
 
+  // ⚠ SECURITY: This setter MUST be access-controlled. Without a check, any caller
+  // can front-run you and set themselves as governance, permanently locking you out.
+  // Replace DEPLOYER_PRINCIPAL with your actual principal or use an admin list.
   public shared ({ caller }) func setSnsGovernance(id : Principal) : async () {
-    // Only callable during setup, before SNS launch
+    // Only the deployer (or canister controllers) should call this.
+    assert (Principal.isController(caller));
+
     switch (snsGovernanceId) {
       case (null) { snsGovernanceId := ?id };
       case (?_) { Runtime.trap("SNS governance already set") };
@@ -4799,7 +4942,11 @@ struct Config {
 }
 
 thread_local! {
-    // WARNING: Use stable storage in production — heap data is lost on canister upgrade
+    // ⚠ STATE LOSS: RefCell<T> in thread_local! is HEAP storage — it is wiped on every
+    // canister upgrade. In production, use ic-stable-structures (StableCell or StableBTreeMap)
+    // to persist this across upgrades. At minimum, implement #[pre_upgrade]/#[post_upgrade]
+    // hooks to serialize/deserialize this data. Without that, an upgrade erases your
+    // governance config and locks out SNS control.
     static CONFIG: RefCell<Config> = RefCell::new(Config {
         sns_governance: None,
     });
@@ -4816,8 +4963,14 @@ fn require_governance(caller: Principal) {
     });
 }
 
+// ⚠ SECURITY: This setter MUST be access-controlled. Without a check, any caller
+// can front-run you and set themselves as governance, permanently locking you out.
 #[update]
 fn set_sns_governance(id: Principal) {
+    // Only canister controllers should call this.
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        ic_cdk::trap("Only canister controllers can set governance");
+    }
     CONFIG.with(|c| {
         let mut config = c.borrow_mut();
         if config.sns_governance.is_some() {
@@ -4888,10 +5041,13 @@ dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
 dfx sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
 dfx sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
 
-# Step 2: Validate your config
-dfx sns propose --network ic --neuron NEURON_ID --dry-run sns_init.yaml
+# Step 2: Validate your config locally before submitting
+# Note: There is no --dry-run flag for `dfx sns propose`. Instead, validate offline:
+sns-cli validate --init-config-file sns_init.yaml
+# Or review the rendered proposal by inspecting the yaml output carefully.
+# You can also test the full flow on a local replica first (see Local Testing above).
 
-# Step 3: Submit the proposal
+# Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
 dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
 ```
 
@@ -4962,7 +5118,7 @@ Stable memory is persistent storage on Internet Computer that survives canister 
 ## Prerequisites
 - dfx >= 0.30.0
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
-- For Rust: `ic-stable-structures = "0.6"` in Cargo.toml
+- For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
 ## Canister IDs
 No external canister dependencies. Stable memory is a local canister feature.
@@ -4975,7 +5131,7 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 3. **Using `stable` keyword in persistent actors (Motoko)** -- In mo:core `persistent actor`, all `let` and `var` declarations are automatically stable. Writing `stable let` produces warning M0218 and `stable var` is redundant. Just use `let` and `var`.
 
-4. **Exceeding 4GB stable memory without MemoryManager (Rust)** -- A single `StableBTreeMap` gets one 4GB memory region. If you need multiple stable structures, you MUST use `MemoryManager` to partition stable memory into virtual memories. Without it, your second structure overwrites the first.
+4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the 4GB heap AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
 
 5. **Changing record field types between upgrades (Motoko)** -- Altering the type of a persistent field (e.g., `Nat` to `Int`, or renaming a record field) will trap on upgrade and data is unrecoverable. Only ADD new optional fields. Never remove or rename existing ones.
 
@@ -5060,14 +5216,14 @@ core = "2.0.0"
 
 ### Rust
 
-Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions up to 500GB of stable memory per canister into virtual memories, each backing a different data structure.
+Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryManager` partitions stable memory (up to hundreds of GB, limited by subnet storage) into virtual memories, each backing a different data structure.
 
 #### Cargo.toml
 
 ```toml
 [dependencies]
 ic-cdk = "0.18"
-ic-stable-structures = "0.6"
+ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -5318,7 +5474,11 @@ dependencies: [internet-identity]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 1.0.0 | requires: [dfx >= 0.30.0, ic-vetkeys]
+> version: 1.0.0 | requires: [dfx >= 0.30.0]
+>
+> **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
+> may change between IC SDK releases. Pin your dependency versions and test after every dfx upgrade.
+> Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.
 
 ## What This Is
 
@@ -5327,9 +5487,9 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 ## Prerequisites
 
 - `dfx` >= 0.30.0
-- Rust: `ic-vetkeys` crate from crates.io
-- Motoko: `ic-vetkeys` package from mops (`mops add ic-vetkeys`)
-- Frontend: `@dfinity/vetkeys` npm package
+- Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
+- Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
+- Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
 - For local testing: `dfx start` creates a local test key automatically
 
 ## Canister IDs
@@ -5358,19 +5518,21 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across dfx versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
-2. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result.
+2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
-3. **Confusing vetKD with traditional public-key crypto.** There are no static key pairs per user. Keys are derived on-demand from the IC's threshold master key. The same (canister, context, input) always yields the same derived key.
+3. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result.
 
-4. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
+4. **Confusing vetKD with traditional public-key crypto.** There are no static key pairs per user. Keys are derived on-demand from the IC's threshold master key. The same (canister, context, input) always yields the same derived key.
 
-5. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
+5. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
 
-6. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
+6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
 
-7. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` consumes cycles. If the call runs out, it traps with an unhelpful error.
+7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
+
+8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `call_with_payment128` (not plain `call`). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
 
 ## System API (Candid)
 
@@ -5422,11 +5584,14 @@ ic-cdk = "0.18"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
-# Option A: Use the high-level ic-vetkeys library (recommended)
+# Option A: Use the high-level ic-vetkeys library (if available on crates.io)
+# ⚠ Verify this crate exists before adding. If not published, use a git dependency:
+# ic-vetkeys = { git = "https://github.com/dfinity/examples", branch = "master" }
+# Or use Option B (raw canister calls) which has no extra dependency.
 ic-vetkeys = "0.1"
 
-# Option B: Call management canister directly (lower level)
-# No extra dependency -- use ic_cdk::api::call::call
+# Option B: Call management canister directly (lower level, always works)
+# No extra dependency -- use ic_cdk::api::call::call_with_payment128
 ```
 
 **Using ic-vetkeys library (recommended):**
@@ -5437,8 +5602,12 @@ use ic_cdk::update;
 
 // The ic-vetkeys crate provides KeyManager and EncryptedMaps
 // which handle the low-level vetKD API calls for you.
-
-// Note: ic-vetkeys API is under active development. Verify signatures against latest docs.
+//
+// ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
+// with "could not find `ic_vetkeys`", switch to the raw management canister
+// approach below (Option B), or add as a git dependency from dfinity/examples.
+//
+// API is under active development — verify function signatures against latest docs.
 use ic_vetkeys::KeyManager;
 
 // Initialize KeyManager in your canister
@@ -5532,10 +5701,13 @@ async fn vetkd_public_key() -> Vec<u8> {
         key_id: key_id(),
     };
 
-    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::call(
+    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
+    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call_with_payment128(
         Principal::management_canister(), // aaaaa-aa
         "vetkd_public_key",
         (request,),
+        100_000_000, // cycles to attach
     )
     .await
     .expect("vetkd_public_key call failed");
@@ -5554,10 +5726,12 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
         key_id: key_id(),
     };
 
-    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::call(
+    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
         Principal::management_canister(),
         "vetkd_derive_key",
         (request,),
+        100_000_000, // cycles to attach
     )
     .await
     .expect("vetkd_derive_key call failed");
@@ -5577,10 +5751,12 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
+# ⚠ Verify ic-vetkeys exists on mops.one before adding.
+# If not yet published, use the raw management canister approach below instead.
 ic-vetkeys = "0.1.0"
 ```
 
-**Using the management canister directly:**
+**Using the management canister directly (recommended — no dependency on unpublished packages):**
 
 ```motoko
 import Blob "mo:core/Blob";
@@ -5657,7 +5833,7 @@ The frontend generates a transport key pair, sends the public half to the canist
 
 ```javascript
 // The @dfinity/vetkeys package API is evolving rapidly.
-// Check https://github.com/ArcMichael/ic-vetkeys for the latest usage.
+// Check https://github.com/dfinity/examples for the latest vetKD usage examples.
 // High-level flow:
 // 1. Generate a transport key pair (BLS12-381, NOT P-256)
 // 2. Call backend canister to derive encrypted key
@@ -5745,6 +5921,8 @@ dependencies: []
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
+
+**Note:** dfx 0.30+ uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default instead of the legacy per-identity cycles wallet. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `dfx cycles balance`, `dfx cycles convert`, and `dfx canister deposit-cycles` now go through the cycles ledger. The legacy cycles wallet (`dfx identity get-wallet`) still works but is no longer created automatically for new identities. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
 ## Prerequisites
 - dfx >= 0.30.0
@@ -5891,21 +6069,21 @@ serde = { version = "1", features = ["derive"] }
 #### Checking Balance and Accepting Cycles
 
 ```rust
-use ic_cdk::{query, update, api};
+use ic_cdk::{query, update};
 use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(api::canister_balance128())
+    Nat::from(ic_cdk::canister_balance128())
 }
 
 #[update]
 fn deposit() -> Nat {
-    let available = ic_cdk::api::call::msg_cycles_available128();
+    let available = ic_cdk::msg_cycles_available128();
     if available == 0 {
         ic_cdk::trap("No cycles sent with this call");
     }
-    let accepted = ic_cdk::api::call::msg_cycles_accept128(available);
+    let accepted = ic_cdk::msg_cycles_accept128(available);
     Nat::from(accepted)
 }
 ```
@@ -5915,7 +6093,7 @@ fn deposit() -> Nat {
 ```rust
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::{
     create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
     CreateCanisterArgument, CanisterIdRecord,
     CanisterSettings, CanisterStatusResponse,

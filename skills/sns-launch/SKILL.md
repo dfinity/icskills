@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.0.0 | requires: [dfx >= 0.30.0, sns-cli, NNS neuron with stake]
+> version: 1.0.0 | requires: [dfx >= 0.30.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 
@@ -18,8 +18,8 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `dfx` >= 0.30.0 with `sns` extension installed
-- `sns-cli` (built from `dfinity/ic` repo or bundled with dfx)
+- `dfx` >= 0.30.0 with `sns` extension installed (`dfx extension install sns`)
+- `quill` CLI for advanced proposal submission (alternative to `dfx sns propose`)
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined
@@ -176,7 +176,7 @@ Swap:
 ```
 Stage 1:  Developer defines parameters in sns_init.yaml
 Stage 2:  Developer adds NNS Root as co-controller of dapp canisters
-Stage 3:  Developer submits NNS proposal using sns-cli
+Stage 3:  Developer submits NNS proposal using `dfx sns propose` (or quill)
 Stage 4:  NNS community votes on the proposal
 Stage 5:  (If adopted) SNS-W deploys uninitialized SNS canisters
 Stage 6:  SNS Root becomes sole controller of dapp canisters
@@ -205,8 +205,13 @@ persistent actor {
 
   var snsGovernanceId : ?Principal = null;
 
+  // ⚠ SECURITY: This setter MUST be access-controlled. Without a check, any caller
+  // can front-run you and set themselves as governance, permanently locking you out.
+  // Replace DEPLOYER_PRINCIPAL with your actual principal or use an admin list.
   public shared ({ caller }) func setSnsGovernance(id : Principal) : async () {
-    // Only callable during setup, before SNS launch
+    // Only the deployer (or canister controllers) should call this.
+    assert (Principal.isController(caller));
+
     switch (snsGovernanceId) {
       case (null) { snsGovernanceId := ?id };
       case (?_) { Runtime.trap("SNS governance already set") };
@@ -243,7 +248,11 @@ struct Config {
 }
 
 thread_local! {
-    // WARNING: Use stable storage in production — heap data is lost on canister upgrade
+    // ⚠ STATE LOSS: RefCell<T> in thread_local! is HEAP storage — it is wiped on every
+    // canister upgrade. In production, use ic-stable-structures (StableCell or StableBTreeMap)
+    // to persist this across upgrades. At minimum, implement #[pre_upgrade]/#[post_upgrade]
+    // hooks to serialize/deserialize this data. Without that, an upgrade erases your
+    // governance config and locks out SNS control.
     static CONFIG: RefCell<Config> = RefCell::new(Config {
         sns_governance: None,
     });
@@ -260,8 +269,14 @@ fn require_governance(caller: Principal) {
     });
 }
 
+// ⚠ SECURITY: This setter MUST be access-controlled. Without a check, any caller
+// can front-run you and set themselves as governance, permanently locking you out.
 #[update]
 fn set_sns_governance(id: Principal) {
+    // Only canister controllers should call this.
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        ic_cdk::trap("Only canister controllers can set governance");
+    }
     CONFIG.with(|c| {
         let mut config = c.borrow_mut();
         if config.sns_governance.is_some() {
@@ -332,10 +347,13 @@ dfx sns deploy-testflight --network ic --init-config-file sns_init.yaml
 dfx sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
 dfx sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
 
-# Step 2: Validate your config
-dfx sns propose --network ic --neuron NEURON_ID --dry-run sns_init.yaml
+# Step 2: Validate your config locally before submitting
+# Note: There is no --dry-run flag for `dfx sns propose`. Instead, validate offline:
+sns-cli validate --init-config-file sns_init.yaml
+# Or review the rendered proposal by inspecting the yaml output carefully.
+# You can also test the full flow on a local replica first (see Local Testing above).
 
-# Step 3: Submit the proposal
+# Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
 dfx sns propose --network ic --neuron NEURON_ID sns_init.yaml
 ```
 
