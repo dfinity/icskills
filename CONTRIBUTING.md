@@ -4,7 +4,7 @@
 
 If you spot incorrect code, a wrong canister ID, a missing pitfall, or anything that could cause an agent to hallucinate:
 
-1. **Open an issue** at [github.com/JoshDFN/icskills/issues](https://github.com/JoshDFN/icskills/issues) describing what's wrong and which skill it affects.
+1. **Open an issue** at [github.com/dfinity/icskills/issues](https://github.com/dfinity/icskills/issues) describing what's wrong and which skill it affects.
 2. **Or submit a PR** with the fix directly — even small corrections are valuable. Every pitfall fixed is a hallucination prevented.
 
 If you're not sure whether something is wrong, open an issue. We'd rather investigate a false alarm than let a broken code example stay live.

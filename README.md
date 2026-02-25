@@ -58,7 +58,7 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 The simplest way — paste the raw skill file into your agent's system prompt or context window:
 
 ```
-curl -s https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md
+curl -s https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md
 ```
 
 ### Claude Code
@@ -67,7 +67,7 @@ Copy skills into `.claude/skills/` — they're automatically loaded into context
 
 ```bash
 mkdir -p .claude/skills/ckbtc
-curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
   > .claude/skills/ckbtc/SKILL.md
 ```
 
@@ -78,8 +78,8 @@ Add skills as remote instructions in `opencode.json`:
 ```json
 {
   "instructions": [
-    "https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md",
-    "https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/internet-identity/SKILL.md"
+    "https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md",
+    "https://raw.githubusercontent.com/dfinity/icskills/main/skills/internet-identity/SKILL.md"
   ]
 }
 ```
@@ -88,7 +88,7 @@ Or copy into `.opencode/rules/` for automatic discovery:
 
 ```bash
 mkdir -p .opencode/rules
-curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
   > .opencode/rules/ckbtc.md
 ```
 
@@ -102,7 +102,7 @@ Add to `.cursor/rules/`:
 
 ```bash
 mkdir -p .cursor/rules
-curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
   > .cursor/rules/ckbtc.md
 ```
 
@@ -116,7 +116,7 @@ Add to `.github/copilot-instructions.md`:
 
 ```bash
 mkdir -p .github
-curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/ckbtc/SKILL.md \
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
   >> .github/copilot-instructions.md
 ```
 

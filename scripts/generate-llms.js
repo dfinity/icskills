@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const SKILLS_DIR = join(ROOT, "skills");
 const OUTPUT = join(ROOT, "public", "llms.txt");
-const RAW = "https://raw.githubusercontent.com/JoshDFN/icskills/main";
+const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -64,7 +64,7 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 \`\`\`
-curl -sL https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/<skill-id>/SKILL.md
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-id>/SKILL.md
 \`\`\`
 
 ## Skills
@@ -76,8 +76,8 @@ const lines = skills.map((s) => `- [${s.name}](${s.url}): ${s.description}`);
 const footer = `
 ## Source
 
-- [GitHub Repository](https://github.com/JoshDFN/icskills): All skill files, contribution guide, and website source
-- [Contributing Guide](https://github.com/JoshDFN/icskills/blob/main/CONTRIBUTING.md): How to add or update skills
+- [GitHub Repository](https://github.com/dfinity/icskills): All skill files, contribution guide, and website source
+- [Contributing Guide](https://github.com/dfinity/icskills/blob/main/CONTRIBUTING.md): How to add or update skills
 `;
 
 writeFileSync(OUTPUT, header + lines.join("\n") + "\n" + footer);

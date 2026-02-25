@@ -22,7 +22,7 @@ const dirs = readdirSync(SKILLS_DIR).filter((d) => {
 const header = `# IC Skills — Full Reference
 
 All IC Skills in a single file for direct context injection.
-Source: https://github.com/JoshDFN/icskills
+Source: https://github.com/dfinity/icskills
 Skills: ${dirs.length}
 `;
 

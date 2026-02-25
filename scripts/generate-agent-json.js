@@ -51,7 +51,7 @@ for (const dir of dirs) {
 const agentJson = {
   name: "IC Skills",
   description: "Provides agent-readable skill files for Internet Computer (ICP) development. Retrieve structured markdown with pitfalls, working code, and deploy commands for any IC capability.",
-  url: "https://joshdfn.github.io/icskills",
+  url: "https://dfinity.github.io/icskills",
   version: "1.0.0",
   capabilities: {
     skills: skillIds,

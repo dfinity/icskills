@@ -285,9 +285,9 @@ function SkillPage({ skillId, theme, setTheme }) {
     );
   }
 
-  const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
-  const githubUrl = `https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`;
-  const shareUrl = `https://joshdfn.github.io/icskills/skills/${skill.id}/`;
+  const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.id}/SKILL.md`;
+  const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skill.id}/SKILL.md`;
+  const shareUrl = `https://dfinity.github.io/icskills/skills/${skill.id}/`;
 
   return (
     <div style={{
@@ -725,7 +725,7 @@ export function App() {
                 borderRadius: "8px", fontSize: "12px", color: "var(--accent-text)",
                 whiteSpace: "nowrap",
               }}>
-                fetch("joshdfn.github.io/icskills/api/v1/skills/{"{"}
+                fetch("dfinity.github.io/icskills/api/v1/skills/{"{"}
                 <span style={{ color: "var(--accent-blue)" }}>id</span>
                 {"}"}")
               </div>
@@ -790,7 +790,7 @@ export function App() {
                         v{skill.version} {"\u00B7"} {skill.category}
                       </div>
                     </div>
-                    <a href={`https://github.com/JoshDFN/icskills/blob/main/skills/${skill.id}/SKILL.md`}
+                    <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.id}/SKILL.md`}
                       target="_blank" rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       title="View on GitHub"
@@ -845,7 +845,7 @@ export function App() {
                   )}
 
                   {(() => {
-                    const rawUrl = `https://raw.githubusercontent.com/JoshDFN/icskills/main/skills/${skill.id}/SKILL.md`;
+                    const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.id}/SKILL.md`;
                     const fetchCmd = `curl -sL ${rawUrl}`;
                     return (
                       <div
@@ -1110,7 +1110,7 @@ export function App() {
                   whiteSpace: "pre-wrap",
                 }}>
 <span>{`// 1. Agent decides it needs ckBTC integration\n`}</span>
-<span style={{color:"var(--accent-blue)"}}>{`const skill = await fetch(\n  "https://joshdfn.github.io/icskills/api/v1/skills/ckbtc"\n);\n`}</span>
+<span style={{color:"var(--accent-blue)"}}>{`const skill = await fetch(\n  "https://dfinity.github.io/icskills/api/v1/skills/ckbtc"\n);\n`}</span>
 <span>{`\n// 2. Gets back structured instructions\n`}</span>
 <span style={{color:"var(--accent-text)"}}>{`const { pitfalls, steps, code_templates, verification } =\n  await skill.json();\n`}</span>
 <span>{`\n// 3. Pitfalls prevent hallucination\n`}</span>
@@ -1174,7 +1174,7 @@ export function App() {
                 background: "var(--bg-code)",
                 border: `1px solid rgba(var(--accent-rgb),0.3)`,
                 borderRadius: "8px", fontSize: "13px", color: "var(--accent-text)",
-              }}>joshdfn.github.io/icskills/api/v1/skills</code>
+              }}>dfinity.github.io/icskills/api/v1/skills</code>
             </div>
           </div>
         )}
@@ -1197,7 +1197,7 @@ export function App() {
                   color: "var(--accent-text)",
                   background: `rgba(var(--accent-rgb),0.1)`,
                   padding: "2px 8px", borderRadius: "3px",
-                }}>https://joshdfn.github.io/icskills/api/v1</code>
+                }}>https://dfinity.github.io/icskills/api/v1</code>
               </p>
             </div>
 
@@ -1279,13 +1279,13 @@ export function App() {
                   whiteSpace: "pre-wrap",
                 }}>
 <span style={{color:"var(--text-faint)"}}># Get a skill as JSON</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" joshdfn.github.io/icskills/api/v1/skills/ckbtc\n\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc\n\n"}
 <span style={{color:"var(--text-faint)"}}># Get raw markdown for agent context</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" joshdfn.github.io/icskills/api/v1/skills/ckbtc/raw\n\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc/raw\n\n"}
 <span style={{color:"var(--text-faint)"}}># Search for a skill</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" joshdfn.github.io/icskills/api/v1/skills/search?q=token\n\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/search?q=token\n\n"}
 <span style={{color:"var(--text-faint)"}}># Get multiple at once</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{' -X POST joshdfn.github.io/icskills/api/v1/skills/batch \\\n  -d \'{"ids":["ckbtc","icrc-ledger","wallet"]}\''}</pre>
+<span style={{color:"var(--accent-text)"}}>curl</span>{' -X POST dfinity.github.io/icskills/api/v1/skills/batch \\\n  -d \'{"ids":["ckbtc","icrc-ledger","wallet"]}\''}</pre>
               </div>
             </div>
 

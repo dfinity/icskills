@@ -7,7 +7,7 @@
   "auth": {
     "type": "none"
   },
-  "logo_url": "https://joshdfn.github.io/icskills/favicon.svg",
+  "logo_url": "https://dfinity.github.io/icskills/favicon.svg",
   "contact_email": "skills@internetcomputer.org",
-  "legal_info_url": "https://joshdfn.github.io/icskills/"
+  "legal_info_url": "https://dfinity.github.io/icskills/"
 }

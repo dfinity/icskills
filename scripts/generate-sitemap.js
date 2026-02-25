@@ -11,8 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const SKILLS_DIR = join(ROOT, "skills");
 const OUTPUT = join(ROOT, "public", "sitemap.xml");
-const SITE = "https://joshdfn.github.io/icskills";
-const RAW = "https://raw.githubusercontent.com/JoshDFN/icskills/main";
+const SITE = "https://dfinity.github.io/icskills";
+const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
 function getLastMod(filePath) {
   try {

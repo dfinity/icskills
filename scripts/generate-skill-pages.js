@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const DIST = join(ROOT, "dist");
 const SKILLS_DIR = join(ROOT, "skills");
-const SITE = "https://joshdfn.github.io/icskills";
+const SITE = "https://dfinity.github.io/icskills";
 
 // Read the built index.html as template
 const template = readFileSync(join(DIST, "index.html"), "utf-8");
