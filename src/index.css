@@ -111,6 +111,35 @@ button:hover {
 
   .comparison-grid {
     grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+
+  .comparison-grid > div:nth-child(2) {
+    transform: rotate(90deg);
+  }
+
+  .comparison-panel {
+    border-radius: 12px !important;
+  }
+
+  .anatomy-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .anatomy-row > div {
+    border-right: none !important;
+  }
+
+  .frameworks-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .api-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .endpoint-desc {
+    display: none !important;
   }
 
   .hero-stats {
@@ -123,7 +152,7 @@ button:hover {
   }
 
   .api-endpoint-card {
-    padding: 16px !important;
+    padding: 0 !important;
   }
 }
 
@@ -150,6 +179,10 @@ button:hover {
 
   .endpoint-hint {
     display: none !important;
+  }
+
+  .frameworks-grid {
+    grid-template-columns: 1fr !important;
   }
 
   .hero-stats {

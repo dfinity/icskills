@@ -78,7 +78,7 @@ const SKILLS = [
     name: "Asset Canister & Frontend",
     category: "Frontend",
     difficulty: "Beginner",
-    description: "Deploy frontend assets on-chain. Certified assets, custom domains, SPA routing, and content encoding.",
+    description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding.",
     endpoints: 5,
     lastUpdated: "2026-02-17",
     version: "3.2.0",
@@ -149,189 +149,205 @@ const SKILLS = [
 
 const CATEGORIES = ["All", "Architecture", "Auth", "DeFi", "Frontend", "Governance", "Infrastructure", "Integration", "Security", "Tokens"];
 
-const SKILL_PREVIEW = `# ckBTC Integration
-## SKILL.md v2.1.0
-
-> This skill enables an AI agent to integrate ckBTC
-> into any Internet Computer canister.
-
-## Prerequisites
-- dfx >= 0.24.0
-- Rust canister OR Motoko canister
-- Requires: icrc-ledger skill, wallet skill
-
-## What This Does
-ckBTC is chain-key Bitcoin on the Internet Computer.
-This skill covers:
-1. Accepting ckBTC deposits
-2. Sending ckBTC transfers
-3. Checking balances
-4. Managing UTXOs
-5. Minting ckBTC from BTC
-
-## Common Agent Mistakes
-- DO NOT use the ckBTC minter canister ID from
-  pre-2025 docs (it changed)
-- DO NOT forget to set the fee (10 satoshis)
-- DO NOT skip the subaccount for user deposits
-- The ledger canister ID on mainnet is:
-  mxzaz-hqaaa-aaaar-qaada-cai
-
-## Step 1: Add Dependencies
-
-### Motoko (mops.toml)
-\`\`\`toml
-[dependencies]
-icrc1 = "https://github.com/dfinity/..."
-\`\`\`
-
-### Rust (Cargo.toml)
-\`\`\`toml
-[dependencies]
-icrc-ledger-types = "0.1"
-candid = "0.10"
-\`\`\`
-
-## Step 2: Import and Configure
-...
-
-## Verification
-After completing this skill, verify:
-- dfx canister call ckbtc_ledger icrc1_balance_of
-- Transfer returns { Ok: nat }
-- Subaccounts generate unique deposit addrs`;
-
-const AGENT_EXAMPLE = `// Any AI agent reads the skill endpoint:
-
-const skill = await fetch(
-  "https://skills.internetcomputer.org/api/v1/skills/ckbtc"
-);
-
-const {
-  instructions,
-  code_templates,
-  pitfalls,
-  verification
-} = await skill.json();
-
-// Agent now knows EXACTLY how to:
-// - Which canister IDs to use (no hallucination)
-// - What the correct API calls are
-// - What mistakes to avoid
-// - How to verify it worked
-
-// Works with ANY agent framework:
-// Claude, GPT, Copilot, Devin, Cursor...`;
-
 const SANS_FONT = "'Inter', system-ui, sans-serif";
 
-const SECTION_LABEL = {
-  fontSize: "11px",
-  letterSpacing: "2px",
-  textTransform: "uppercase",
-};
-
 const DIFFICULTY_COLORS = {
-  Beginner: "#34d399",
-  Intermediate: "#60a5fa",
-  Advanced: "#fbbf24",
-  Expert: "#f87171",
-};
-
-const TAB_LABELS = {
-  "browse": "Browse",
-  "how-it-works": "How It Works",
-  "api": "API",
+  Beginner: { bg: "rgba(52,211,153,0.15)", text: "#34d399", border: "rgba(52,211,153,0.3)" },
+  Intermediate: { bg: "rgba(96,165,250,0.15)", text: "#60a5fa", border: "rgba(96,165,250,0.3)" },
+  Advanced: { bg: "rgba(251,191,36,0.15)", text: "#fbbf24", border: "rgba(251,191,36,0.3)" },
+  Expert: { bg: "rgba(248,113,113,0.15)", text: "#f87171", border: "rgba(248,113,113,0.3)" },
 };
 
 const TOTAL_ENDPOINTS = SKILLS.reduce((sum, s) => sum + s.endpoints, 0);
 
-function CategoryIcon({ category, size = 18 }) {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: "0 0 18 18",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    xmlns: "http://www.w3.org/2000/svg",
-  };
+const API_ENDPOINTS = [
+  {
+    method: "GET",
+    path: "/skills",
+    desc: "All skills, with metadata.",
+    response: `{
+  "skills": [
+    {
+      "id": "ckbtc",
+      "name": "ckBTC Integration",
+      "version": "2.1.0",
+      "category": "defi",
+      "difficulty": "advanced",
+      "dependencies": ["icrc-ledger", "wallet"],
+      "updated": "2026-02-20"
+    },
+    ...
+  ]
+}`,
+  },
+  {
+    method: "GET",
+    path: "/skills/{id}",
+    desc: "Full skill. This is the main one.",
+    response: `{
+  "id": "ckbtc",
+  "version": "2.1.0",
+  "what": "ckBTC is chain-key Bitcoin on the IC...",
+  "prerequisites": {
+    "dfx": ">=0.24.0",
+    "language": ["motoko", "rust"],
+    "skills": ["icrc-ledger", "wallet"]
+  },
+  "pitfalls": [
+    "DO NOT use the old minter canister ID",
+    "Fee is 10 satoshis, not 0",
+    "Must use subaccounts for user deposits"
+  ],
+  "steps": [...],
+  "verification": [
+    {
+      "run": "dfx canister call ckbtc_ledger icrc1_balance_of ...",
+      "expect": "(nat)"
+    }
+  ]
+}`,
+  },
+  {
+    method: "GET",
+    path: "/skills/{id}/raw",
+    desc: "Raw SKILL.md. Drop it straight into agent context.",
+    response: `# ckBTC Integration
+## SKILL.md v2.1.0
 
-  switch (category) {
-    case "Architecture":
-      return (
-        <svg {...common}>
-          <path d="M9 2L2 6l7 4 7-4z" />
-          <path d="M2 9l7 4 7-4" />
-          <path d="M2 12l7 4 7-4" />
-        </svg>
-      );
-    case "Auth":
-      return (
-        <svg {...common}>
-          <path d="M6 8V5.5a3 3 0 016 0V8" />
-          <path d="M4 8h10a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" />
-        </svg>
-      );
-    case "DeFi":
-      return (
-        <svg {...common}>
-          <path d="M2 14l4-5 3 2.5L16 4" />
-          <path d="M12 4h4v4" />
-        </svg>
-      );
-    case "Frontend":
-      return (
-        <svg {...common}>
-          <path d="M2.5 4h13a1 1 0 011 1v9a1 1 0 01-1 1h-13a1 1 0 01-1-1V5a1 1 0 011-1z" />
-          <path d="M1.5 7h15" />
-        </svg>
-      );
-    case "Governance":
-      return (
-        <svg {...common}>
-          <path d="M2 15h14" />
-          <path d="M4 15V8" />
-          <path d="M9 15V8" />
-          <path d="M14 15V8" />
-          <path d="M2 8l7-5.5 7 5.5" />
-        </svg>
-      );
-    case "Infrastructure":
-      return (
-        <svg {...common}>
-          <circle cx="9" cy="9" r="2.5" />
-          <path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.8 3.8l1.4 1.4M12.8 12.8l1.4 1.4M3.8 14.2l1.4-1.4M12.8 5.2l1.4-1.4" />
-        </svg>
-      );
-    case "Integration":
-      return (
-        <svg {...common}>
-          <path d="M7 11L5 13a2.8 2.8 0 01-4-4l2-2" />
-          <path d="M11 7l2-2a2.8 2.8 0 014 4l-2 2" />
-          <path d="M7 11l4-4" />
-        </svg>
-      );
-    case "Security":
-      return (
-        <svg {...common}>
-          <path d="M9 1.5L3 4.5v4c0 4 2.5 7 6 8.5 3.5-1.5 6-4.5 6-8.5v-4z" />
-        </svg>
-      );
-    case "Tokens":
-      return (
-        <svg {...common}>
-          <path d="M9 2a7 7 0 100 14A7 7 0 009 2z" />
-          <path d="M9 5v8" />
-          <path d="M7 7.5h4" />
-          <path d="M7 10.5h4" />
-        </svg>
-      );
+## What this is
+ckBTC is chain-key Bitcoin...
+
+## Prerequisites
+- dfx >= 0.24.0
+...
+
+## \u26A0 Agent Mistakes
+- DO NOT use the old minter canister ID
+...`,
+  },
+  {
+    method: "GET",
+    path: "/skills/{id}/deps",
+    desc: "Dependency tree. What else the agent needs to read first.",
+    response: `{
+  "skill": "ckbtc",
+  "requires": ["icrc-ledger", "wallet"],
+  "tree": {
+    "icrc-ledger": { "requires": [] },
+    "wallet": { "requires": [] }
+  }
+}`,
+  },
+  {
+    method: "GET",
+    path: "/skills/search?q={query}",
+    desc: "Search. For when the agent knows the task but not the skill name.",
+    response: `{
+  "query": "bitcoin",
+  "results": [
+    { "id": "ckbtc", "name": "ckBTC Integration", "relevance": 0.97 },
+    { "id": "evm-rpc", "name": "EVM RPC Integration", "relevance": 0.31 }
+  ]
+}`,
+  },
+  {
+    method: "POST",
+    path: "/skills/batch",
+    desc: "Multiple skills in one call. Send an array of IDs.",
+    response: `// Request body:
+{ "ids": ["ckbtc", "icrc-ledger", "wallet"] }
+
+// Response:
+{
+  "skills": [
+    { "id": "ckbtc", "version": "2.1.0", ... },
+    { "id": "icrc-ledger", "version": "2.3.0", ... },
+    { "id": "wallet", "version": "1.4.0", ... }
+  ]
+}`,
+  },
+];
+
+const FRAMEWORKS = [
+  { name: "Claude", note: "Skills as context", color: "#D97757" },
+  { name: "ChatGPT", note: "Function calling", color: "#10a37f" },
+  { name: "Cursor", note: "Rules files", color: "#fff" },
+  { name: "Devin", note: "Knowledge base", color: "#9F7AEA" },
+  { name: "Copilot", note: "Custom instructions", color: "#0078D4" },
+  { name: "Windsurf", note: "Cascade context", color: "#06B6D4" },
+  { name: "Claude Code", note: "SKILL.md files", color: "#D97757" },
+  { name: "Your Agent", note: "REST API", color: "#fbbf24" },
+];
+
+function FrameworkIcon({ name, size = 20 }) {
+  const s = { width: size, height: size, viewBox: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg" };
+  switch (name) {
+    case "Claude":
+      return (<svg {...s} fill="#D97757"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>);
+    case "ChatGPT":
+      return (<svg {...s} fill="#10a37f"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.14-.08 4.778-2.758a.795.795 0 0 0 .393-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.677l5.814 3.354-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.856L13.104 8.364l2.015-1.164a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zM8.307 12.863l-2.02-1.164a.08.08 0 0 1-.038-.057V6.074a4.5 4.5 0 0 1 7.376-3.454l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.098-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>);
+    case "Cursor":
+      return (<svg {...s} fill="none"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0" fill="#fff" opacity="0.15"/><path d="M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" fill="#fff"/></svg>);
+    case "Devin":
+      return (<svg {...s} fill="none" stroke="#9F7AEA" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M8 12H16M12 8V16" strokeLinecap="round"/></svg>);
+    case "Copilot":
+      return (<svg {...s} fill="#8957e5"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256zm-9.422 1.258c.549 0 1-.451 1-1v-2c0-.549-.451-1-1-1-.549 0-1 .451-1 1v2c0 .549.451 1 1 1zm-5 0c.549 0 1-.451 1-1v-2c0-.549-.451-1-1-1-.549 0-1 .451-1 1v2c0 .549.451 1 1 1z"/></svg>);
+    case "Windsurf":
+      return (<svg {...s} fill="#06B6D4"><path d="M23.55 5.067c-1.204-.002-2.181.973-2.181 2.177v4.867c0 .972-.803 1.76-1.76 1.76-.568 0-1.135-.286-1.472-.766l-4.971-7.1c-.413-.59-1.084-.941-1.81-.941-1.134 0-2.154.964-2.154 2.153v4.896c0 .972-.797 1.76-1.76 1.76-.57 0-1.136-.286-1.473-.766L.408 5.16C.282 4.98 0 5.069 0 5.288v4.245c0 .215.066.423.188.6l5.475 7.818c.323.462.8.805 1.351.93 1.377.313 2.644-.747 2.644-2.098v-4.893c0-.972.788-1.76 1.76-1.76h.003c.57 0 1.136.286 1.472.766l4.972 7.1c.414.59 1.05.94 1.81.94 1.158 0 2.151-.964 2.151-2.153v-4.895c0-.972.788-1.759 1.76-1.759h.194a.22.22 0 0 0 .22-.22V5.287a.22.22 0 0 0-.22-.22z"/></svg>);
+    case "Claude Code":
+      return (<svg {...s} fill="none" stroke="#D97757" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6L3 12L8 18"/><path d="M16 6L21 12L16 18"/><path d="M14 4L10 20" opacity="0.5"/></svg>);
+    case "Your Agent":
+      return (<svg {...s} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>);
     default:
       return null;
   }
+}
+
+function CategoryIcon({ category, size = 18 }) {
+  const common = {
+    width: size, height: size, viewBox: "0 0 18 18",
+    fill: "none", stroke: "currentColor", strokeWidth: "1.5",
+    strokeLinecap: "round", strokeLinejoin: "round",
+    xmlns: "http://www.w3.org/2000/svg",
+  };
+  switch (category) {
+    case "Architecture":
+      return (<svg {...common}><path d="M9 2L2 6l7 4 7-4z" /><path d="M2 9l7 4 7-4" /><path d="M2 12l7 4 7-4" /></svg>);
+    case "Auth":
+      return (<svg {...common}><path d="M6 8V5.5a3 3 0 016 0V8" /><path d="M4 8h10a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" /></svg>);
+    case "DeFi":
+      return (<svg {...common}><path d="M2 14l4-5 3 2.5L16 4" /><path d="M12 4h4v4" /></svg>);
+    case "Frontend":
+      return (<svg {...common}><path d="M2.5 4h13a1 1 0 011 1v9a1 1 0 01-1 1h-13a1 1 0 01-1-1V5a1 1 0 011-1z" /><path d="M1.5 7h15" /></svg>);
+    case "Governance":
+      return (<svg {...common}><path d="M2 15h14" /><path d="M4 15V8" /><path d="M9 15V8" /><path d="M14 15V8" /><path d="M2 8l7-5.5 7 5.5" /></svg>);
+    case "Infrastructure":
+      return (<svg {...common}><circle cx="9" cy="9" r="2.5" /><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.8 3.8l1.4 1.4M12.8 12.8l1.4 1.4M3.8 14.2l1.4-1.4M12.8 5.2l1.4-1.4" /></svg>);
+    case "Integration":
+      return (<svg {...common}><path d="M7 11L5 13a2.8 2.8 0 01-4-4l2-2" /><path d="M11 7l2-2a2.8 2.8 0 014 4l-2 2" /><path d="M7 11l4-4" /></svg>);
+    case "Security":
+      return (<svg {...common}><path d="M9 1.5L3 4.5v4c0 4 2.5 7 6 8.5 3.5-1.5 6-4.5 6-8.5v-4z" /></svg>);
+    case "Tokens":
+      return (<svg {...common}><path d="M9 2a7 7 0 100 14A7 7 0 009 2z" /><path d="M9 5v8" /><path d="M7 7.5h4" /><path d="M7 10.5h4" /></svg>);
+    default:
+      return null;
+  }
+}
+
+function TerminalHeader({ title }) {
+  return (
+    <div style={{
+      padding: "12px 20px",
+      background: "rgba(139,92,246,0.04)",
+      borderBottom: "1px solid rgba(139,92,246,0.08)",
+      display: "flex", alignItems: "center", gap: "8px",
+    }}>
+      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "rgba(248,113,113,0.5)" }} />
+      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "rgba(251,191,36,0.5)" }} />
+      <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "rgba(52,211,153,0.5)" }} />
+      <span style={{ marginLeft: "8px", fontSize: "11px", color: "#555" }}>{title}</span>
+    </div>
+  );
 }
 
 export function App() {
@@ -339,6 +355,14 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [activeTab, setActiveTab] = useState("browse");
+  const [expandedEndpoint, setExpandedEndpoint] = useState(null);
+  const [copiedUrl, setCopiedUrl] = useState(null);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedUrl(text);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
 
   const query = searchQuery.toLowerCase();
   const filtered = SKILLS.filter((s) => {
@@ -384,24 +408,31 @@ export function App() {
       {/* Header */}
       <header style={{
         position: "relative", zIndex: 10,
-        borderBottom: "1px solid rgba(139,92,246,0.15)",
+        borderBottom: "1px solid rgba(139,92,246,0.12)",
         padding: "0 32px",
+        background: "rgba(10,10,15,0.8)",
+        backdropFilter: "blur(12px)",
       }}>
         <div style={{
           maxWidth: "1200px", margin: "0 auto",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          height: "64px",
+          height: "72px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.5px", color: "#fff" }}>
-              IC Skills
+          <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
+            <span style={{
+              fontSize: "20px", letterSpacing: "-0.8px",
+              color: "#fff", lineHeight: 1,
+            }}>
+              <span style={{ fontWeight: 900 }}>IC</span>
+              <span style={{ fontWeight: 300, color: "#666", margin: "0 1px", fontSize: "16px" }}>skills</span>
             </span>
             <span style={{
-              fontSize: "10px", padding: "2px 8px",
-              background: "rgba(139,92,246,0.2)",
-              border: "1px solid rgba(139,92,246,0.3)",
+              fontSize: "9px", padding: "3px 10px",
+              background: "rgba(139,92,246,0.12)",
+              border: "1px solid rgba(139,92,246,0.25)",
               borderRadius: "99px", color: "#a78bfa",
-              letterSpacing: "1px", textTransform: "uppercase",
+              letterSpacing: "1.5px", textTransform: "uppercase",
+              fontWeight: 600,
             }}>Agent-First</span>
           </div>
           <div style={{ display: "flex", gap: "4px" }}>
@@ -413,8 +444,9 @@ export function App() {
                 borderRadius: "6px",
                 color: activeTab === tab ? "#a78bfa" : "#666",
                 cursor: "pointer", transition: "all 0.2s",
+                textTransform: "capitalize",
               }}>
-                {TAB_LABELS[tab]}
+                {tab.replace(/-/g, " ")}
               </button>
             ))}
           </div>
@@ -423,6 +455,7 @@ export function App() {
 
       <main style={{ position: "relative", zIndex: 10, maxWidth: "1200px", margin: "0 auto", padding: "32px" }}>
 
+        {/* ═══════════════ BROWSE TAB ═══════════════ */}
         {activeTab === "browse" && (
           <>
             {/* Hero */}
@@ -453,17 +486,16 @@ export function App() {
               </p>
 
               {/* Stats */}
-              <div className="hero-stats" style={{
-                display: "flex", gap: "32px", marginTop: "32px",
-              }}>
+              <div className="hero-stats" style={{ display: "flex", gap: "32px", marginTop: "32px" }}>
                 {[
-                  { val: TOTAL_ENDPOINTS, label: "API Endpoints" },
                   { val: SKILLS.length, label: "Skills" },
+                  { val: API_ENDPOINTS.length, label: "API Routes" },
+                  { val: TOTAL_ENDPOINTS, label: "Operations" },
                   { val: "0", label: "Hallucinations" },
                 ].map(({ val, label }) => (
                   <div key={label}>
                     <div style={{ fontSize: "28px", fontWeight: 800, color: "#fff", letterSpacing: "-1px" }}>{val}</div>
-                    <div style={{ ...SECTION_LABEL, color: "#555" }}>{label}</div>
+                    <div style={{ fontSize: "11px", color: "#555", textTransform: "uppercase", letterSpacing: "2px" }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -490,8 +522,7 @@ export function App() {
                     border: "1px solid rgba(255,255,255,0.08)",
                     borderRadius: "8px", color: "#e2e2e8",
                     fontSize: "13px", outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
+                    fontFamily: "inherit", boxSizing: "border-box",
                   }}
                 />
               </div>
@@ -509,10 +540,7 @@ export function App() {
             </div>
 
             {/* Category filters */}
-            <div style={{
-              display: "flex", gap: "6px", marginBottom: "32px",
-              flexWrap: "wrap",
-            }}>
+            <div style={{ display: "flex", gap: "6px", marginBottom: "32px", flexWrap: "wrap" }}>
               {CATEGORIES.map((cat) => (
                 <button key={cat} className="category-pill" onClick={() => setActiveCategory(cat)} style={{
                   padding: "6px 14px", fontSize: "11px",
@@ -520,8 +548,7 @@ export function App() {
                   border: `1px solid ${activeCategory === cat ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.06)"}`,
                   borderRadius: "6px",
                   color: activeCategory === cat ? "#a78bfa" : "#666",
-                  cursor: "pointer",
-                  letterSpacing: "0.5px",
+                  cursor: "pointer", letterSpacing: "0.5px",
                   display: "flex", alignItems: "center", gap: "6px",
                 }}>
                   {cat !== "All" && <CategoryIcon category={cat} size={14} />}
@@ -553,49 +580,44 @@ export function App() {
                       cursor: "pointer",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
                         <span style={{
                           fontSize: "18px", width: "36px", height: "36px",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           background: "rgba(139,92,246,0.08)",
-                          borderRadius: "8px",
-                          color: "#a78bfa",
+                          borderRadius: "8px", color: "#a78bfa",
+                          flexShrink: 0,
                         }}><CategoryIcon category={skill.category} /></span>
-                        <div>
-                          <div style={{ fontSize: "14px", fontWeight: 700, color: "#fff", letterSpacing: "-0.3px" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{
+                            fontSize: "14px", fontWeight: 700, color: "#fff", letterSpacing: "-0.3px",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                          }}>
                             {skill.name}
                           </div>
-                          <div style={{ fontSize: "11px", color: "#555" }}>
-                            v{skill.version} \u00B7 {skill.category}
+                          <div style={{ fontSize: "11px", color: "#555", marginTop: "2px" }}>
+                            v{skill.version} {"\u00B7"} {skill.category}
                           </div>
                         </div>
                       </div>
                       <span style={{
-                        fontSize: "9px",
-                        display: "flex", alignItems: "center", gap: "5px",
-                      }}>
-                        <span style={{
-                          display: "inline-block",
-                          width: "4px", height: "4px",
-                          borderRadius: "50%",
-                          background: dc,
-                        }} />
-                        <span style={{ color: "#555" }}>{skill.difficulty}</span>
-                      </span>
+                        fontSize: "10px", padding: "3px 8px",
+                        background: dc.bg, color: dc.text,
+                        border: `1px solid ${dc.border}`,
+                        borderRadius: "4px", letterSpacing: "0.5px",
+                        flexShrink: 0, whiteSpace: "nowrap",
+                      }}>{skill.difficulty}</span>
                     </div>
 
                     <p style={{
                       fontSize: "12px", color: "#777", lineHeight: 1.6,
-                      margin: "0 0 16px 0",
-                      fontFamily: SANS_FONT,
+                      margin: "0 0 16px 0", fontFamily: SANS_FONT,
                     }}>{skill.description}</p>
 
-                    <div style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                    }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ fontSize: "11px", color: "#444" }}>
-                        {skill.endpoints} operations \u00B7 updated {skill.lastUpdated}
+                        {skill.endpoints} operations {"\u00B7"} updated {skill.lastUpdated}
                       </div>
                       {skill.status === "beta" && (
                         <span style={{
@@ -626,26 +648,44 @@ export function App() {
                       </div>
                     )}
 
-                    {selectedSkill === skill.id && (
-                      <div style={{
-                        marginTop: "16px", paddingTop: "16px",
-                        borderTop: "1px solid rgba(139,92,246,0.15)",
-                      }}>
+                    {selectedSkill === skill.id && (() => {
+                      const url = `https://skills.internetcomputer.org/api/v1/skills/${skill.id}`;
+                      return (
                         <div style={{
-                          fontSize: "11px", color: "#a78bfa",
-                          fontFamily: "inherit", marginBottom: "8px",
-                        }}>Agent Endpoint:</div>
-                        <code style={{
-                          display: "block", padding: "12px 16px",
-                          background: "rgba(0,0,0,0.4)",
-                          border: "1px solid rgba(139,92,246,0.15)",
-                          borderRadius: "6px", fontSize: "11px", color: "#8b5cf6",
-                          wordBreak: "break-all",
+                          marginTop: "16px", paddingTop: "16px",
+                          borderTop: "1px solid rgba(139,92,246,0.15)",
                         }}>
-                          GET https://skills.internetcomputer.org/api/v1/skills/{skill.id}
-                        </code>
-                      </div>
-                    )}
+                          <div style={{ fontSize: "11px", color: "#a78bfa", marginBottom: "8px" }}>
+                            Agent Endpoint:
+                          </div>
+                          <div style={{ position: "relative" }}>
+                            <code style={{
+                              display: "block", padding: "12px 40px 12px 16px",
+                              background: "rgba(0,0,0,0.4)",
+                              border: "1px solid rgba(139,92,246,0.15)",
+                              borderRadius: "6px", fontSize: "11px", color: "#8b5cf6",
+                              wordBreak: "break-all",
+                            }}>
+                              GET {url}
+                            </code>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(url); }}
+                              title="Copy URL"
+                              style={{
+                                position: "absolute", top: "8px", right: "8px",
+                                background: "none", border: "none",
+                                cursor: "pointer", padding: "4px",
+                                color: copiedUrl === url ? "#34d399" : "#555",
+                                fontSize: "14px", lineHeight: 1,
+                                transition: "color 0.2s",
+                              }}
+                            >
+                              {copiedUrl === url ? "\u2713" : "\u2398"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -653,314 +693,431 @@ export function App() {
           </>
         )}
 
+        {/* ═══════════════ HOW IT WORKS TAB ═══════════════ */}
         {activeTab === "how-it-works" && (
-          <div style={{ maxWidth: "900px" }}>
-            {/* Hero statement */}
-            <div style={{ marginBottom: "64px", textAlign: "center" }}>
+          <div style={{ maxWidth: "960px" }}>
+            {/* Hero */}
+            <div style={{ textAlign: "center", marginBottom: "72px" }}>
               <h2 style={{
-                fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 800, color: "#fff",
-                letterSpacing: "-2px", margin: "0 0 16px 0", lineHeight: 1.1,
-              }}>Agents don't read docs.<br />
-                <span style={{ background: "linear-gradient(135deg, #a78bfa, #60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  They read skills.
-                </span>
+                fontSize: "clamp(36px, 6vw, 56px)", fontWeight: 800, color: "#fff",
+                letterSpacing: "-3px", margin: "0 0 20px 0", lineHeight: 1.05,
+              }}>
+                <span style={{ color: "#555" }}>Docs are for humans.</span><br />
+                <span style={{
+                  background: "linear-gradient(135deg, #a78bfa, #60a5fa)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>Skills are for agents.</span>
               </h2>
               <p style={{
-                fontSize: "15px", color: "#666", lineHeight: 1.7, maxWidth: "520px", margin: "0 auto",
-                fontFamily: SANS_FONT,
+                fontSize: "16px", color: "#555", maxWidth: "500px", margin: "0 auto",
+                lineHeight: 1.7, fontFamily: SANS_FONT,
               }}>
-                Documentation explains concepts so humans understand them.
-                A skill file gives an agent everything it needs to do the thing correctly on the first try.
+                One API call. Structured instructions. Zero hallucinations.
               </p>
             </div>
 
             {/* 3-step flow */}
-            <div className="step-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "2px", marginBottom: "64px" }}>
+            <div className="step-grid" style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "2px",
+              marginBottom: "72px",
+            }}>
               {[
-                { step: "01", title: "Agent fetches skill", desc: "One API call. Raw markdown. Straight into context.", color: "#8b5cf6" },
-                { step: "02", title: "Reads instructions", desc: "Correct canister IDs, working code, known pitfalls.", color: "#60a5fa" },
-                { step: "03", title: "Builds correctly", desc: "Deploys, verifies, ships. No hallucinations.", color: "#34d399" },
-              ].map(({ step, title, desc, color }) => (
-                <div key={step} className="step-card" style={{
-                  padding: "28px 24px",
-                  background: "rgba(255,255,255,0.02)",
+                { num: "01", title: "Agent fetches skill", code: "GET /api/v1/skills/ckbtc", color: "#8b5cf6", rgb: "139,92,246",
+                  desc: "Agent identifies what it needs to build and pulls the right skill from the API" },
+                { num: "02", title: "Reads instructions", code: "{ pitfalls, steps, verify }", color: "#60a5fa", rgb: "96,165,250",
+                  desc: "Gets structured steps, working code, known pitfalls, and verification checks" },
+                { num: "03", title: "Builds correctly", code: "\u2713 deployed & verified", color: "#34d399", rgb: "52,211,153",
+                  desc: "Executes with zero hallucinations because every detail is precise and tested" },
+              ].map(({ num, title, code, color, rgb, desc }) => (
+                <div key={num} className="step-card" style={{
+                  padding: "32px 24px",
+                  background: `rgba(${rgb},0.04)`,
                   borderTop: `2px solid ${color}`,
+                  position: "relative",
                 }}>
-                  <div style={{ fontSize: "32px", fontWeight: 800, color, opacity: 0.3, marginBottom: "12px", letterSpacing: "-1px" }}>{step}</div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>{title}</div>
-                  <div style={{ fontSize: "12px", color: "#555", lineHeight: 1.6, fontFamily: SANS_FONT }}>{desc}</div>
+                  <div style={{
+                    fontSize: "48px", fontWeight: 900, color, opacity: 0.12,
+                    position: "absolute", top: "16px", right: "16px", lineHeight: 1,
+                  }}>{num}</div>
+                  <div style={{
+                    fontSize: "11px", fontWeight: 700, color,
+                    letterSpacing: "2px", textTransform: "uppercase", marginBottom: "12px",
+                  }}>Step {num}</div>
+                  <div style={{
+                    fontSize: "18px", fontWeight: 800, color: "#fff",
+                    letterSpacing: "-0.5px", marginBottom: "8px",
+                  }}>{title}</div>
+                  <code style={{
+                    display: "inline-block", padding: "4px 10px",
+                    background: "rgba(0,0,0,0.4)",
+                    borderRadius: "4px", fontSize: "11px", color,
+                    marginBottom: "12px",
+                  }}>{code}</code>
+                  <p style={{
+                    fontSize: "13px", color: "#555", lineHeight: 1.6, margin: 0,
+                    fontFamily: SANS_FONT,
+                  }}>{desc}</p>
                 </div>
               ))}
             </div>
 
             {/* Before / After comparison */}
-            <div style={{
-              ...SECTION_LABEL, color: "#555", marginBottom: "20px",
-            }}>Why skills beat documentation</div>
-            <div className="comparison-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px", marginBottom: "64px", background: "rgba(255,255,255,0.04)", borderRadius: "12px", overflow: "hidden" }}>
-              {[
-                {
-                  title: "Traditional Docs", color: "#f87171", textColor: "#444", icon: "\u2715",
-                  items: ["Written for humans to browse", "Scattered across pages", "Examples may be outdated", "Agents hallucinate missing context", "No verification steps", "Unstructured prose"],
-                },
-                {
-                  title: "IC Skills", color: "#34d399", textColor: "#555", icon: "\u2713",
-                  items: ["Written for agents to execute", "One skill = one capability", "Versioned & tested code", "Pitfalls section prevents errors", "Built-in verification checks", "Structured SKILL.md format"],
-                },
-              ].map(({ title, color, textColor, icon, items }) => (
-                <div key={title} className="comparison-panel" style={{ padding: "28px", background: "#0a0a0f" }}>
+            <div style={{ marginBottom: "72px" }}>
+              <div style={{
+                fontSize: "11px", color: "#555", letterSpacing: "3px",
+                textTransform: "uppercase", marginBottom: "24px", textAlign: "center",
+              }}>What changes</div>
+
+              <div className="comparison-grid" style={{
+                display: "grid", gridTemplateColumns: "1fr 48px 1fr", gap: "0",
+                alignItems: "stretch",
+              }}>
+                {/* Before */}
+                <div className="comparison-panel" style={{
+                  padding: "32px",
+                  background: "rgba(248,113,113,0.03)",
+                  border: "1px solid rgba(248,113,113,0.1)",
+                  borderRadius: "16px 0 0 16px",
+                }}>
                   <div style={{
-                    fontSize: "11px", color, fontWeight: 700, marginBottom: "20px",
-                    letterSpacing: "1px", textTransform: "uppercase",
-                    display: "flex", alignItems: "center", gap: "8px",
-                  }}>
-                    <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: color }} />
-                    {title}
-                  </div>
-                  {items.map((item) => (
-                    <div key={item} style={{
-                      fontSize: "13px", color: textColor, lineHeight: 1.5, padding: "6px 0",
-                      fontFamily: SANS_FONT,
-                      display: "flex", alignItems: "center", gap: "10px",
+                    fontSize: "28px", fontWeight: 900, color: "rgba(248,113,113,0.2)",
+                    marginBottom: "20px", letterSpacing: "-1px",
+                  }}>Before</div>
+                  {[
+                    "Agent guesses canister IDs",
+                    "Hallucinated Motoko syntax",
+                    "Outdated dfx commands",
+                    "No idea about cycles or fees",
+                    "Broken deploys, wasted time",
+                    "Human has to fix everything",
+                  ].map((text, i) => (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: "12px",
+                      padding: "10px 0",
+                      borderBottom: i < 5 ? "1px solid rgba(248,113,113,0.06)" : "none",
                     }}>
-                      <span style={{ color, fontSize: "10px", flexShrink: 0 }}>{icon}</span>
-                      {item}
+                      <span style={{ color: "rgba(248,113,113,0.4)", fontSize: "14px" }}>{"\u25CC"}</span>
+                      <span style={{ fontSize: "13px", color: "#666", fontFamily: SANS_FONT }}>{text}</span>
                     </div>
                   ))}
                 </div>
-              ))}
+
+                {/* Arrow */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.02)",
+                }}>
+                  <div style={{ fontSize: "24px", color: "#333", transform: "scaleX(1.5)" }}>{"\u2192"}</div>
+                </div>
+
+                {/* After */}
+                <div className="comparison-panel" style={{
+                  padding: "32px",
+                  background: "rgba(139,92,246,0.04)",
+                  border: "1px solid rgba(139,92,246,0.15)",
+                  borderRadius: "0 16px 16px 0",
+                }}>
+                  <div style={{
+                    fontSize: "28px", fontWeight: 900,
+                    background: "linear-gradient(135deg, #a78bfa, #60a5fa)",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                    marginBottom: "20px", letterSpacing: "-1px",
+                  }}>After</div>
+                  {[
+                    "Exact canister IDs from skill",
+                    "Tested, working code templates",
+                    "Current dfx commands, verified",
+                    "Fees and cycles handled correctly",
+                    "Deploys work first try",
+                    "Agent ships autonomously",
+                  ].map((text, i) => (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: "12px",
+                      padding: "10px 0",
+                      borderBottom: i < 5 ? "1px solid rgba(139,92,246,0.08)" : "none",
+                    }}>
+                      <span style={{ color: "#8b5cf6", fontSize: "10px" }}>{"\u25C6"}</span>
+                      <span style={{ fontSize: "13px", color: "#ccc", fontFamily: SANS_FONT }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Anatomy of a skill */}
-            <div style={{ marginBottom: "64px" }}>
+            {/* Skill anatomy */}
+            <div style={{ marginBottom: "72px" }}>
               <div style={{
-                ...SECTION_LABEL, color: "#8b5cf6", marginBottom: "8px",
-              }}>Anatomy of a Skill File</div>
-              <p style={{
-                fontSize: "13px", color: "#555", marginBottom: "20px",
-                fontFamily: SANS_FONT,
-              }}>Every skill follows the same structure. An agent reads it once, executes correctly.</p>
+                fontSize: "11px", color: "#555", letterSpacing: "3px",
+                textTransform: "uppercase", marginBottom: "24px", textAlign: "center",
+              }}>Anatomy of a skill</div>
 
-              <div style={{ position: "relative" }}>
-                {/* Line connector */}
-                <div style={{
-                  position: "absolute", left: "15px", top: "20px", bottom: "20px",
-                  width: "1px", background: "rgba(139,92,246,0.15)",
-                }} />
-
+              <div className="anatomy-table" style={{
+                border: "1px solid rgba(139,92,246,0.15)",
+                borderRadius: "16px",
+                overflow: "hidden",
+              }}>
                 {[
-                  { label: "Header", desc: "Name, version, dependencies, difficulty", color: "#8b5cf6" },
-                  { label: "Canister IDs", desc: "Exact mainnet IDs \u2014 the #1 thing agents hallucinate", color: "#f87171" },
-                  { label: "Mistakes", desc: "Numbered list of specific things that break your build", color: "#fbbf24" },
-                  { label: "Motoko + Rust", desc: "Complete, tested, copy-paste-ready implementations", color: "#60a5fa" },
-                  { label: "Verification", desc: "Exact commands + expected output to confirm it worked", color: "#34d399" },
-                ].map(({ label, desc, color }) => (
-                  <div key={label} style={{
-                    display: "flex", alignItems: "flex-start", gap: "16px",
-                    padding: "12px 0", position: "relative",
+                  { section: "What this is", color: "#a78bfa",
+                    preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
+                    tag: "1 paragraph" },
+                  { section: "Prerequisites", color: "#60a5fa",
+                    preview: "dfx >= 0.24.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
+                    tag: "exact versions" },
+                  { section: "\u26A0 Common Agent Mistakes", color: "#fbbf24",
+                    preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",
+                    tag: "guardrails" },
+                  { section: "Step-by-step Instructions", color: "#34d399",
+                    preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer \u2192 5. Deploy",
+                    tag: "tested code" },
+                  { section: "Verification", color: "#8b5cf6",
+                    preview: "\u2713 dfx canister call ckbtc_ledger icrc1_balance_of \u2192 returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
+                    tag: "confirm it works" },
+                ].map((item, i, arr) => (
+                  <div key={i} className="anatomy-row" style={{
+                    display: "grid", gridTemplateColumns: "200px 1fr 100px",
+                    borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                    alignItems: "center",
                   }}>
                     <div style={{
-                      width: "30px", height: "30px", borderRadius: "50%",
-                      background: `${color}15`, border: `1px solid ${color}30`,
+                      padding: "20px 24px",
+                      fontSize: "13px", fontWeight: 700, color: item.color,
+                      borderRight: "1px solid rgba(255,255,255,0.04)",
+                    }}>{item.section}</div>
+                    <div style={{
+                      padding: "20px 24px",
+                      fontSize: "12px", color: "#666",
+                      fontFamily: SANS_FONT, lineHeight: 1.5,
+                    }}>{item.preview}</div>
+                    <div style={{ padding: "20px 16px", textAlign: "right" }}>
+                      <span style={{
+                        fontSize: "9px", padding: "3px 8px",
+                        background: `${item.color}15`,
+                        border: `1px solid ${item.color}30`,
+                        borderRadius: "4px", color: item.color,
+                        textTransform: "uppercase", letterSpacing: "1px",
+                      }}>{item.tag}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Terminal code example */}
+            <div style={{ marginBottom: "72px" }}>
+              <div style={{
+                fontSize: "11px", color: "#555", letterSpacing: "3px",
+                textTransform: "uppercase", marginBottom: "24px", textAlign: "center",
+              }}>Any agent, any framework</div>
+
+              <div style={{
+                borderRadius: "16px", overflow: "hidden",
+                border: "1px solid rgba(96,165,250,0.15)",
+              }}>
+                <TerminalHeader title="agent.js" />
+                <pre style={{
+                  padding: "24px",
+                  background: "rgba(0,0,0,0.5)",
+                  fontSize: "12px", lineHeight: 1.8,
+                  color: "#888", overflow: "auto", margin: 0,
+                  whiteSpace: "pre-wrap",
+                }}>
+<span>{`// 1. Agent decides it needs ckBTC integration\n`}</span>
+<span style={{color:"#60a5fa"}}>{`const skill = await fetch(\n  "https://skills.internetcomputer.org/api/v1/skills/ckbtc"\n);\n`}</span>
+<span>{`\n// 2. Gets back structured instructions\n`}</span>
+<span style={{color:"#a78bfa"}}>{`const { pitfalls, steps, code_templates, verification } =\n  await skill.json();\n`}</span>
+<span>{`\n// 3. Pitfalls prevent hallucination\n`}</span>
+<span style={{color:"#fbbf24"}}>{`// Agent now knows:\n// - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai\n// - Fee is 10 satoshis (not 0)\n// - Must use subaccounts for deposits\n`}</span>
+<span>{`\n// 4. Agent executes with tested code\n`}</span>
+<span style={{color:"#34d399"}}>{`// \u2192 Deploys correctly on first try\n// \u2192 Runs verification checks\n// \u2192 Ships autonomously`}</span></pre>
+              </div>
+
+              {/* Framework logos grid */}
+              <div className="frameworks-grid" style={{
+                display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px",
+                marginTop: "24px",
+              }}>
+                {FRAMEWORKS.map((fw) => (
+                  <div key={fw.name} className="framework-card" style={{
+                    padding: "16px",
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "10px",
+                    display: "flex", alignItems: "center", gap: "12px",
+                    transition: "all 0.2s",
+                  }}>
+                    <div style={{
+                      width: "36px", height: "36px", borderRadius: "8px",
+                      background: `${fw.color}10`,
+                      border: `1px solid ${fw.color}25`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, zIndex: 1,
+                      flexShrink: 0,
                     }}>
-                      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color }} />
+                      <FrameworkIcon name={fw.name} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#fff", marginBottom: "2px" }}>{label}</div>
-                      <div style={{ fontSize: "12px", color: "#555", fontFamily: SANS_FONT }}>{desc}</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#ccc" }}>{fw.name}</div>
+                      <div style={{ fontSize: "11px", color: "#444" }}>{fw.note}</div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Live skill preview */}
-            <div style={{ marginBottom: "64px" }}>
-              <div style={{
-                ...SECTION_LABEL, color: "#8b5cf6", marginBottom: "8px",
-              }}>Example: ckBTC Skill File</div>
-              <p style={{
-                fontSize: "13px", color: "#555", marginBottom: "16px",
-                fontFamily: SANS_FONT,
-              }}>This is what an agent actually reads. Raw markdown, straight into context.</p>
-              <div style={{ position: "relative" }}>
-                <div style={{
-                  position: "absolute", top: "12px", right: "12px",
-                  fontSize: "10px", padding: "3px 10px",
-                  background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)",
-                  borderRadius: "4px", color: "#a78bfa", letterSpacing: "0.5px",
-                  zIndex: 1,
-                }}>SKILL.md</div>
-                <pre style={{
-                  padding: "24px",
-                  background: "rgba(0,0,0,0.5)",
-                  border: "1px solid rgba(139,92,246,0.1)",
-                  borderRadius: "12px",
-                  fontSize: "11.5px",
-                  lineHeight: 1.7,
-                  color: "#888",
-                  overflow: "auto",
-                  maxHeight: "480px",
-                  whiteSpace: "pre-wrap",
-                }}>{SKILL_PREVIEW}</pre>
-              </div>
-            </div>
-
-            {/* Agent integration code */}
-            <div style={{ marginBottom: "48px" }}>
-              <div style={{
-                ...SECTION_LABEL, color: "#60a5fa", marginBottom: "8px",
-              }}>Works With Any Agent</div>
-              <p style={{
-                fontSize: "13px", color: "#555", marginBottom: "16px",
-                fontFamily: SANS_FONT,
-              }}>Claude, GPT, Copilot, Devin, Cursor, or anything built next year. One fetch call.</p>
-              <div style={{ position: "relative" }}>
-                <div style={{
-                  position: "absolute", top: "12px", right: "12px",
-                  fontSize: "10px", padding: "3px 10px",
-                  background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.25)",
-                  borderRadius: "4px", color: "#60a5fa", letterSpacing: "0.5px",
-                  zIndex: 1,
-                }}>agent.js</div>
-                <pre style={{
-                  padding: "24px",
-                  background: "rgba(0,0,0,0.5)",
-                  border: "1px solid rgba(96,165,250,0.1)",
-                  borderRadius: "12px",
-                  fontSize: "11.5px",
-                  lineHeight: 1.7,
-                  color: "#60a5fa",
-                  overflow: "auto",
-                  whiteSpace: "pre-wrap",
-                }}>{AGENT_EXAMPLE}</pre>
-              </div>
-            </div>
-
-            {/* Bottom CTA stats */}
+            {/* Bottom CTA */}
             <div style={{
-              padding: "32px",
-              background: "rgba(139,92,246,0.04)",
-              border: "1px solid rgba(139,92,246,0.12)",
-              borderRadius: "12px",
-              textAlign: "center",
+              textAlign: "center", padding: "48px 32px",
+              background: "linear-gradient(180deg, rgba(139,92,246,0.06) 0%, transparent 100%)",
+              borderRadius: "16px",
+              border: "1px solid rgba(139,92,246,0.1)",
             }}>
-              <div style={{ fontSize: "13px", color: "#777", marginBottom: "20px", fontFamily: SANS_FONT }}>
-                The first blockchain to become truly agent-buildable wins the next wave of development.
-              </div>
-              <div className="cta-stats" style={{ display: "flex", justifyContent: "center", gap: "48px" }}>
-                {[
-                  { val: "12", label: "IC capabilities covered" },
-                  { val: "2", label: "Languages (Motoko + Rust)" },
-                  { val: "0", label: "Agent hallucinations" },
-                ].map(({ val, label }) => (
-                  <div key={label}>
-                    <div style={{ fontSize: "24px", fontWeight: 800, color: "#fff", letterSpacing: "-1px" }}>{val}</div>
-                    <div style={{ fontSize: "10px", color: "#444", textTransform: "uppercase", letterSpacing: "1.5px" }}>{label}</div>
-                  </div>
-                ))}
-              </div>
+              <div style={{
+                fontSize: "24px", fontWeight: 800, color: "#fff",
+                letterSpacing: "-1px", marginBottom: "12px",
+              }}>The first chain agents can actually build on.</div>
+              <p style={{
+                fontSize: "14px", color: "#555", margin: "0 0 24px 0",
+                fontFamily: SANS_FONT,
+              }}>No other blockchain has this. Not Solana. Not Ethereum. Not anyone.</p>
+              <code style={{
+                display: "inline-block", padding: "12px 24px",
+                background: "rgba(0,0,0,0.4)",
+                border: "1px solid rgba(139,92,246,0.3)",
+                borderRadius: "8px", fontSize: "13px", color: "#a78bfa",
+              }}>skills.internetcomputer.org/api/v1/skills</code>
             </div>
           </div>
         )}
 
+        {/* ═══════════════ API TAB ═══════════════ */}
         {activeTab === "api" && (
-          <div style={{ maxWidth: "800px" }}>
-            <h2 style={{
-              fontSize: "32px", fontWeight: 800, color: "#fff",
-              letterSpacing: "-1.5px", margin: "0 0 12px 0",
-            }}>Agent API</h2>
-            <p style={{
-              fontSize: "15px", color: "#777", lineHeight: 1.7,
-              margin: "0 0 40px 0", fontFamily: SANS_FONT,
-            }}>
-              Every skill is served from on-chain canisters. Agents fetch skills via a simple REST API or directly from the canister.
-            </p>
-
-            {[
-              {
-                method: "GET",
-                path: "/api/v1/skills",
-                desc: "List all available skills with metadata",
-                response: `{ "skills": [{ "id": "ckbtc", "name": "ckBTC Integration", "version": "2.1.0", ... }] }`
-              },
-              {
-                method: "GET",
-                path: "/api/v1/skills/{id}",
-                desc: "Get full skill file with instructions, code, and pitfalls",
-                response: `{ "id": "ckbtc", "instructions": "...", "code_templates": {...}, "pitfalls": [...], "verification": [...] }`
-              },
-              {
-                method: "GET",
-                path: "/api/v1/skills/{id}/raw",
-                desc: "Get raw SKILL.md markdown \u2014 drop straight into agent context",
-                response: `# ckBTC Integration\n## SKILL.md v2.1.0\n...`
-              },
-              {
-                method: "GET",
-                path: "/api/v1/skills/{id}/dependencies",
-                desc: "Resolve full dependency tree for a skill",
-                response: `{ "skill": "ckbtc", "requires": ["icrc-ledger", "wallet"], "resolved": [...] }`
-              },
-            ].map((endpoint) => (
-              <div key={endpoint.path} className="api-endpoint-card" style={{
-                marginBottom: "24px", padding: "24px",
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "12px",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{
-                    fontSize: "10px", fontWeight: 800, padding: "3px 8px",
-                    background: "rgba(52,211,153,0.15)",
-                    color: "#34d399",
-                    borderRadius: "4px", letterSpacing: "1px",
-                  }}>{endpoint.method}</span>
-                  <code style={{ fontSize: "13px", color: "#a78bfa" }}>{endpoint.path}</code>
-                </div>
-                <p style={{
-                  fontSize: "13px", color: "#666", margin: "8px 0 12px 0",
-                  fontFamily: SANS_FONT,
-                }}>{endpoint.desc}</p>
-                <pre style={{
-                  padding: "12px 16px",
-                  background: "rgba(0,0,0,0.3)",
-                  borderRadius: "6px",
-                  fontSize: "11px", color: "#555",
-                  overflow: "auto",
-                  whiteSpace: "pre-wrap",
-                  margin: 0,
-                }}>{endpoint.response}</pre>
-              </div>
-            ))}
-
-            <div style={{
-              marginTop: "40px", padding: "24px",
-              background: "rgba(139,92,246,0.05)",
-              border: "1px solid rgba(139,92,246,0.2)",
-              borderRadius: "12px",
-            }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, color: "#a78bfa", marginBottom: "8px" }}>
-                Canister Direct Access
-              </div>
+          <div style={{ maxWidth: "860px" }}>
+            <div style={{ marginBottom: "48px" }}>
               <p style={{
-                fontSize: "13px", color: "#666", margin: "0 0 12px 0",
+                fontSize: "clamp(18px, 3vw, 26px)", fontWeight: 700, color: "#fff",
+                letterSpacing: "-0.5px", lineHeight: 1.4, margin: "0 0 12px 0",
+              }}>
+                REST API. No auth. No keys.
+              </p>
+              <p style={{
+                fontSize: "14px", color: "#555", margin: 0,
                 fontFamily: SANS_FONT,
               }}>
-                Agents can also call the skills canister directly via Candid:
+                Base URL: <code style={{
+                  color: "#a78bfa",
+                  background: "rgba(139,92,246,0.1)",
+                  padding: "2px 8px", borderRadius: "3px",
+                }}>https://skills.internetcomputer.org/api/v1</code>
               </p>
-              <pre style={{
-                padding: "12px 16px",
-                background: "rgba(0,0,0,0.3)",
-                borderRadius: "6px",
-                fontSize: "11px", color: "#8b5cf6",
-                overflow: "auto", margin: 0,
-                whiteSpace: "pre-wrap",
-              }}>{`dfx canister call skills_registry get_skill '("ckbtc")'
-dfx canister call skills_registry list_skills '()'
-dfx canister call skills_registry resolve_deps '("sns-launch")'`}</pre>
+            </div>
+
+            {/* Collapsible endpoints */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "48px" }}>
+              {API_ENDPOINTS.map((endpoint, i) => (
+                <div key={i} className="api-endpoint-card" style={{
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                }}>
+                  <div
+                    onClick={() => setExpandedEndpoint(expandedEndpoint === i ? null : i)}
+                    style={{
+                      padding: "14px 20px",
+                      background: expandedEndpoint === i ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.015)",
+                      borderBottom: expandedEndpoint === i ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      display: "flex", alignItems: "center", gap: "12px",
+                      cursor: "pointer", transition: "background 0.15s",
+                    }}
+                  >
+                    <span style={{
+                      fontSize: "10px", fontWeight: 800, padding: "3px 10px",
+                      background: endpoint.method === "POST" ? "rgba(96,165,250,0.15)" : "rgba(52,211,153,0.15)",
+                      color: endpoint.method === "POST" ? "#60a5fa" : "#34d399",
+                      borderRadius: "4px", letterSpacing: "1px",
+                    }}>{endpoint.method}</span>
+                    <code style={{ fontSize: "14px", color: "#ddd", fontWeight: 600 }}>{endpoint.path}</code>
+                    <span className="endpoint-desc" style={{
+                      fontSize: "12px", color: "#555", marginLeft: "auto",
+                      fontFamily: SANS_FONT, marginRight: "8px",
+                    }}>{endpoint.desc}</span>
+                    <span style={{
+                      fontSize: "16px", color: "#444",
+                      transform: expandedEndpoint === i ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s", lineHeight: 1,
+                    }}>{"\u25BE"}</span>
+                  </div>
+                  {expandedEndpoint === i && (
+                    <div style={{
+                      padding: "16px 20px",
+                      background: "rgba(0,0,0,0.3)",
+                    }}>
+                      <div style={{
+                        fontSize: "10px", color: "#444", textTransform: "uppercase",
+                        letterSpacing: "1px", marginBottom: "8px",
+                      }}>Response</div>
+                      <pre style={{
+                        fontSize: "11px", color: "#777", margin: 0,
+                        whiteSpace: "pre-wrap", lineHeight: 1.6,
+                      }}>{endpoint.response}</pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Quick start terminal */}
+            <div style={{ marginBottom: "48px" }}>
+              <div style={{
+                fontSize: "11px", color: "#444", letterSpacing: "2px",
+                textTransform: "uppercase", marginBottom: "16px",
+              }}>Quick start</div>
+
+              <div style={{
+                borderRadius: "10px", overflow: "hidden",
+                border: "1px solid rgba(139,92,246,0.12)",
+              }}>
+                <TerminalHeader title="terminal" />
+                <pre style={{
+                  padding: "20px",
+                  background: "rgba(0,0,0,0.5)",
+                  fontSize: "12px", lineHeight: 1.8,
+                  color: "#888", margin: 0,
+                  whiteSpace: "pre-wrap",
+                }}>
+<span style={{color:"#555"}}># Get a skill as JSON</span>{"\n"}
+<span style={{color:"#a78bfa"}}>curl</span>{" skills.internetcomputer.org/api/v1/skills/ckbtc\n\n"}
+<span style={{color:"#555"}}># Get raw markdown for agent context</span>{"\n"}
+<span style={{color:"#a78bfa"}}>curl</span>{" skills.internetcomputer.org/api/v1/skills/ckbtc/raw\n\n"}
+<span style={{color:"#555"}}># Search for a skill</span>{"\n"}
+<span style={{color:"#a78bfa"}}>curl</span>{" skills.internetcomputer.org/api/v1/skills/search?q=token\n\n"}
+<span style={{color:"#555"}}># Get multiple at once</span>{"\n"}
+<span style={{color:"#a78bfa"}}>curl</span>{' -X POST skills.internetcomputer.org/api/v1/skills/batch \\\n  -d \'{"ids":["ckbtc","icrc-ledger","wallet"]}\''}</pre>
+              </div>
+            </div>
+
+            {/* Info cards */}
+            <div className="api-info-grid" style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px",
+            }}>
+              {[
+                { title: "No auth needed", desc: "Open API. No keys, no signup, no rate limits for normal use." },
+                { title: "JSON + Markdown", desc: "Structured JSON for programmatic use. Raw markdown for context injection." },
+                { title: "Always current", desc: "Skills update when dfx or canister IDs change. Versioned." },
+              ].map((note) => (
+                <div key={note.title} style={{
+                  padding: "20px",
+                  background: "rgba(255,255,255,0.015)",
+                  border: "1px solid rgba(255,255,255,0.04)",
+                  borderRadius: "8px",
+                }}>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#aaa", marginBottom: "6px" }}>
+                    {note.title}
+                  </div>
+                  <div style={{
+                    fontSize: "12px", color: "#444", lineHeight: 1.5,
+                    fontFamily: SANS_FONT,
+                  }}>{note.desc}</div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -978,7 +1135,7 @@ dfx canister call skills_registry resolve_deps '("sns-launch")'`}</pre>
           display: "flex", justifyContent: "space-between",
           fontSize: "11px", color: "#333",
         }}>
-          <span>IC Skills \u2014 100% hosted on the Internet Computer</span>
+          <span>ICskills {"\u2014"} The API for building on the Internet Computer</span>
           <span>Built for the agent era</span>
         </div>
       </footer>
