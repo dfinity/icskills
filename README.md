@@ -4,8 +4,6 @@
 
 Structured, versioned, agent-readable skill files for every Internet Computer capability. Your AI reads the skill. It builds correctly. No hallucinations.
 
-**[icskills.dev](https://joshdfn.github.io/icskills/)**
-
 ---
 
 ## The Problem
