@@ -10,6 +10,7 @@ dependencies: [@dfinity/utils, @dfinity/zod-schemas, @icp-sdk/canisters, @icp-sd
 ---
 
 # OISY Wallet Signer
+
 > version: 4.1.0 | requires: [@dfinity/utils >= 4.1, @dfinity/zod-schemas >= 3, @icp-sdk/canisters >= 3.2, @icp-sdk/core >= 5, zod >= 4]
 
 ## What This Is
@@ -17,11 +18,13 @@ dependencies: [@dfinity/utils, @dfinity/zod-schemas, @icp-sdk/canisters, @icp-sd
 A TypeScript library that enables secure communication between dApps and wallets on the Internet Computer using JSON-RPC 2.0 over `window.postMessage`. OISY signer = **explicit per-action approval**. `connect()` establishes a channel. Nothing more.
 
 **It is not:**
+
 - A session system
 - A delegated identity (no ICRC-34)
 - A background executor
 
 **ICRC standards implemented:**
+
 - ICRC-21 — Canister call consent messages
 - ICRC-25 — Signer interaction standard (permissions)
 - ICRC-27 — Accounts
@@ -29,21 +32,22 @@ A TypeScript library that enables secure communication between dApps and wallets
 - ICRC-49 — Call canister
 
 **Not yet implemented:**
+
 - ICRC-46 — Session-based delegation (not supported; use a delegation-capable model if you need sessions)
 
 ## When to Use
 
 - Clear, intentional, high-value actions: token transfers (ICP / ICRC-1 / ICRC-2), NFT mint/claim, single approvals
 - Funding / deposit flows: "Top up", "Deposit into protocol"
-- Any action where a confirmation dialog per operation feels natural
+- Any action where a confirmation dialogue per operation feels natural
 
 ## When NOT to Use
 
-- **Delegation or sessions**: sign once / act many times, background execution, autonomous behavior
+- **Delegation or sessions**: sign once / act many times, background execution, autonomous behaviour
 - **High-frequency interactions**: games, social actions, rapid write operations
 - **Invisible writes**: autosave, cron jobs, auto-compounding
 
-> **Decision test:** If your app still feels good when every meaningful update shows a confirmation dialog, OISY is appropriate. If not, use a delegation-capable model instead.
+> **Decision test:** If your app still feels good when every meaningful update shows a confirmation dialogue, OISY Wallet Signer is appropriate. If not, use a delegation-capable model instead.
 
 ## Prerequisites
 
@@ -84,7 +88,7 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 
 7. **`sender` not matching `owner`.** The signer validates that `sender` in every `icrc49_call_canister` request matches the signer's `owner` identity. A mismatch returns error 502 (`SENDER_NOT_ALLOWED`). Always use the `owner` from `accounts()`.
 
-8. **Not calling `disconnect()`.** Both `Signer.disconnect()` and `wallet.disconnect()` must be called on cleanup. Forgetting this leaks event listeners and leaves popup windows open.
+8. **Not calling `disconnect()`.** Both `Signer.disconnect()` and `wallet.disconnect()` must be called on clean-up. Forgetting this leaks event listeners and leaves popup windows open.
 
 9. **Ignoring permission expiration.** Permissions default to a 7-day validity period. After expiry, they silently revert to `ask_on_use`. Don't cache permission state client-side beyond a session.
 
@@ -129,11 +133,11 @@ import {IcrcWallet} from '@dfinity/oisy-wallet-signer/icrc-wallet';
 
 #### Choosing the Right Class
 
-| Class | Use for |
-|-------|---------|
-| `IcpWallet` | ICP ledger operations — `ledgerCanisterId` optional (defaults to ICP ledger) |
-| `IcrcWallet` | Any ICRC ledger — `ledgerCanisterId` **required** |
-| `RelyingParty` | Low-level custom canister calls via protected `call()` |
+| Class          | Use for                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `IcpWallet`    | ICP ledger operations — `ledgerCanisterId` optional (defaults to ICP ledger) |
+| `IcrcWallet`   | Any ICRC ledger — `ledgerCanisterId` **required**                            |
+| `RelyingParty` | Low-level custom canister calls via protected `call()`                       |
 
 #### Connect, Permissions, Accounts
 
@@ -143,7 +147,9 @@ const wallet = await IcrcWallet.connect({
   host: 'https://icp-api.io',
   windowOptions: {width: 576, height: 625, position: 'center'},
   connectionOptions: {timeoutInMilliseconds: 120_000},
-  onDisconnect: () => { /* wallet popup closed */ }
+  onDisconnect: () => {
+    /* wallet popup closed */
+  }
 });
 
 const {allPermissionsGranted} = await wallet.requestPermissionsNotGranted();
@@ -238,7 +244,7 @@ try {
 
 ### Wallet Side (Signer)
 
-#### Initialize and Register All Prompts
+#### Initialise and Register All Prompts
 
 ```typescript
 const signer = Signer.init({
@@ -252,10 +258,12 @@ const signer = Signer.init({
 signer.register({
   method: ICRC25_REQUEST_PERMISSIONS,
   prompt: ({requestedScopes, confirm, origin}: PermissionsPromptPayload) => {
-    confirm(requestedScopes.map(({scope}) => ({
-      scope,
-      state: userApproved ? ICRC25_PERMISSION_GRANTED : ICRC25_PERMISSION_DENIED
-    })));
+    confirm(
+      requestedScopes.map(({scope}) => ({
+        scope,
+        state: userApproved ? ICRC25_PERMISSION_GRANTED : ICRC25_PERMISSION_DENIED
+      }))
+    );
   }
 });
 
@@ -283,9 +291,13 @@ signer.register({
 signer.register({
   method: ICRC49_CALL_CANISTER,
   prompt: (payload: CallCanisterPromptPayload) => {
-    if (payload.status === 'executing') { /* show progress */ }
-    else if (payload.status === 'result') { /* call succeeded */ }
-    else if (payload.status === 'error') { /* call failed */ }
+    if (payload.status === 'executing') {
+      /* show progress */
+    } else if (payload.status === 'result') {
+      /* call succeeded */
+    } else if (payload.status === 'error') {
+      /* call failed */
+    }
   }
 });
 ```
@@ -305,26 +317,26 @@ signer.disconnect();
 
 ### Error Code Reference
 
-| Code | Name | Meaning |
-|------|------|---------|
-| 500 | `ORIGIN_ERROR` | Origin mismatch |
-| 501 | `PERMISSIONS_PROMPT_NOT_REGISTERED` | Missing prompt handler |
-| 502 | `SENDER_NOT_ALLOWED` | `sender` ≠ `owner` |
-| 503 | `BUSY` | Concurrent request rejected |
-| 504 | `NOT_INITIALIZED` | Owner identity not set |
-| 1000 | `GENERIC_ERROR` | Catch-all |
-| 2000 | `REQUEST_NOT_SUPPORTED` | Method not supported |
-| 3000 | `PERMISSION_NOT_GRANTED` | Permission denied |
-| 3001 | `ACTION_ABORTED` | User cancelled |
-| 4000 | `NETWORK_ERROR` | IC call failure |
+| Code | Name                                | Meaning                     |
+| ---- | ----------------------------------- | --------------------------- |
+| 500  | `ORIGIN_ERROR`                      | Origin mismatch             |
+| 501  | `PERMISSIONS_PROMPT_NOT_REGISTERED` | Missing prompt handler      |
+| 502  | `SENDER_NOT_ALLOWED`                | `sender` ≠ `owner`          |
+| 503  | `BUSY`                              | Concurrent request rejected |
+| 504  | `NOT_INITIALIZED`                   | Owner identity not set      |
+| 1000 | `GENERIC_ERROR`                     | Catch-all                   |
+| 2000 | `REQUEST_NOT_SUPPORTED`             | Method not supported        |
+| 3000 | `PERMISSION_NOT_GRANTED`            | Permission denied           |
+| 3001 | `ACTION_ABORTED`                    | User cancelled              |
+| 4000 | `NETWORK_ERROR`                     | IC call failure             |
 
 ### Permission States
 
-| State | Constant | Behavior |
-|-------|----------|----------|
-| Granted | `ICRC25_PERMISSION_GRANTED` | Proceeds without prompting |
-| Denied | `ICRC25_PERMISSION_DENIED` | Rejected immediately (error 3000) |
-| Ask on use | `ICRC25_PERMISSION_ASK_ON_USE` | Prompts user on access (default) |
+| State      | Constant                       | Behavior                          |
+| ---------- | ------------------------------ | --------------------------------- |
+| Granted    | `ICRC25_PERMISSION_GRANTED`    | Proceeds without prompting        |
+| Denied     | `ICRC25_PERMISSION_DENIED`     | Rejected immediately (error 3000) |
+| Ask on use | `ICRC25_PERMISSION_ASK_ON_USE` | Prompts user on access (default)  |
 
 Permissions stored in `localStorage` as `oisy_signer_{origin}_{owner}` with timestamps. Default validity: 7 days.
 
