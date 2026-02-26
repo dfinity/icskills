@@ -100,30 +100,22 @@ core = "2.0.0"
 icrc2-types = "0.1.0"
 ```
 
-#### icp.json (local development with ckBTC)
+#### icp.yaml (local development with ckBTC)
 
 For local testing, pull the ckBTC canisters:
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": []
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies: []
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 For mainnet, your canister calls the ckBTC ledger and minter directly by principal.
@@ -521,7 +513,7 @@ async fn get_deposit_address() -> String {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = GetBtcAddressArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::id()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -541,7 +533,7 @@ async fn update_balance() -> UpdateBalanceResult {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = UpdateBalanceArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::id()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -561,7 +553,7 @@ async fn get_balance() -> Nat {
 
     let subaccount = principal_to_subaccount(&caller);
     let account = Account {
-        owner: ic_cdk::id(),
+        owner: ic_cdk::api::id(),
         subaccount: Some(subaccount),
     };
 
@@ -755,7 +747,7 @@ icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-icp canister call YOUR-CANISTER getBalanceUpdate -e ic
+icp canister call YOUR-CANISTER getBalance -e ic
 # Expected: balance reflects minted ckBTC
 ```
 

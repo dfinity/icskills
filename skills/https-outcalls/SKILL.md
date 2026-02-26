@@ -202,7 +202,7 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::api::management_canister::http_request::{
+use ic_cdk::management_canister::http_request::{
     http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
     TransformArgs, TransformContext, TransformFunc,
 };
@@ -242,7 +242,7 @@ async fn fetch_price() -> String {
         body: None,
         transform: Some(TransformContext {
             function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
+                principal: ic_cdk::api::canister_self(),
                 method: "transform".to_string(),
             }),
             context: vec![],
@@ -318,7 +318,7 @@ async fn post_data(json_payload: String) -> String {
         body: Some(json_payload.into_bytes()),
         transform: Some(TransformContext {
             function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
+                principal: ic_cdk::api::canister_self(),
                 method: "transform".to_string(),
             }),
             context: vec![],

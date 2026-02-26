@@ -337,12 +337,12 @@ persistent actor {
     encrypted_key : Blob;
   };
 
-  let managementCanister : actor {
+  transient let managementCanister : actor {
     vetkd_public_key : VetKdPublicKeyRequest -> async VetKdPublicKeyResponse;
     vetkd_derive_key : VetKdDeriveKeyRequest -> async VetKdDeriveKeyResponse;
   } = actor "aaaaa-aa";
 
-  let context : Blob = Text.encodeUtf8("my_app_v1");
+  transient let context : Blob = Text.encodeUtf8("my_app_v1");
 
   // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
@@ -432,12 +432,12 @@ icp canister call backend deriveKey '(blob "\00\01...")'
 # To verify the underlying key is correct, decrypt both blobs with the transport secret and confirm they match.
 
 # 4. Verify isolation: different callers get different keys
-icp identity new test-user-1 --storage-mode=plaintext
-icp identity new test-user-2 --storage-mode=plaintext
-icp identity default test-user-1
+icp identity new test-user-1 --storage plaintext
+icp identity new test-user-2 --storage plaintext
+icp identity use test-user-1
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Note the output
-icp identity default test-user-2
+icp identity use test-user-2
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: DIFFERENT encrypted_key (different caller = different derived key)
 

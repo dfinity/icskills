@@ -370,10 +370,10 @@ dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-icp canister status sns_governance --id-only
-icp canister status sns_ledger --id-only
-icp canister status sns_root --id-only
-icp canister status sns_swap --id-only
+icp canister id sns_governance
+icp canister id sns_ledger
+icp canister id sns_root
+icp canister id sns_swap
 
 # Verify SNS governance is operational
 icp canister call sns_governance get_nervous_system_parameters '()'

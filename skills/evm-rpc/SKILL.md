@@ -80,28 +80,24 @@ Use `requestCost` to get an exact estimate before calling.
 
 6. **Calling `eth_sendRawTransaction` without signing first.** The EVM RPC canister does not sign transactions. You must sign the transaction yourself (using threshold ECDSA via the IC management canister) and pass the raw signed bytes.
 
-7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In modern Motoko with mo:core, attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. The old `Cycles.add<system>(amount)` pattern from mo:base still works but the inline syntax is preferred for clarity.
+7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In mo:core 2.0, `Cycles.add` does not exist. Attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. This is the only way to attach cycles in mo:core.
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "pull",
-      "id": "7hfb6-caaaa-aaaar-qadga-cai"
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: pull
+    id: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 Then run:
@@ -113,26 +109,20 @@ icp deps deploy
 
 #### Option B: Custom wasm (for local development)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "custom",
-      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
-      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
-      "remote": {
-        "id": {
-          "ic": "7hfb6-caaaa-aaaar-qadga-cai"
-        }
-      }
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: custom
+    candid: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did
+    wasm: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
+    remote:
+      id:
+        ic: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 ### Motoko
@@ -390,7 +380,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128; // Note: ic_cdk::api::call is deprecated in 0.18 but still compiles
+use ic_cdk::call::call_with_payment128;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";

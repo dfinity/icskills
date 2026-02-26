@@ -51,23 +51,21 @@ Access patterns:
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
-```json
-{
-  "canisters": {
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "build": ["npm run build"],
-      "dependencies": ["backend"]
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo"
-    }
-  }
-}
+```yaml
+canisters:
+  frontend:
+    type: assets
+    source:
+      - dist
+    build:
+      - npm run build
+    dependencies:
+      - backend
+  backend:
+    type: motoko
+    main: src/backend/main.mo
 ```
 
 Key fields:
@@ -279,7 +277,7 @@ icp canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-icp canister status frontend --id-only
+icp canister id frontend
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage

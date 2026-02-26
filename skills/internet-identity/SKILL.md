@@ -50,26 +50,20 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
 
-```json
-{
-  "canisters": {
-    "internet_identity": {
-      "type": "custom",
-      "candid": "deps/internet-identity/internet_identity.did",
-      "wasm": "deps/internet-identity/internet_identity_dev.wasm.gz",
-      "build": "",
-      "remote": {
-        "id": {
-          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
-        }
-      }
-    }
-  }
-}
+```yaml
+canisters:
+  internet_identity:
+    type: custom
+    candid: deps/internet-identity/internet_identity.did
+    wasm: deps/internet-identity/internet_identity_dev.wasm.gz
+    build: ""
+    remote:
+      id:
+        ic: rdmx6-jaaaa-aaaaa-aaadq-cai
 ```
 
 The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
@@ -360,10 +354,10 @@ icp canister call backend whoAmI
 # unless you explicitly use --identity anonymous
 
 # 5. Test with explicit anonymous identity
-icp identity default anonymous
+icp identity use anonymous
 icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
-icp identity default default  # Switch back
+icp identity use default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943

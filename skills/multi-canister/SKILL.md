@@ -27,7 +27,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 | Reason | Threshold |
 |---|---|
-| Storage limits | Each canister: 4GB stable memory + 4GB heap. If your data could exceed this, split storage across canisters. |
+| Storage limits | Each canister: up to hundreds of GB stable memory + 4GB heap. If your data could exceed heap limits or benefit from partitioning, split storage across canisters. |
 | Separation of concerns | Auth service, content service, payment service as independent units. |
 | Independent upgrades | Upgrade the payments canister without touching the user canister. |
 | Access control | Different controllers for different canisters (e.g., DAO controls one, team controls another). |
@@ -62,7 +62,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in icp.json so `icp deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
 
 6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
@@ -80,7 +80,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   mops.toml
   src/
     shared/
@@ -93,37 +93,31 @@ my-project/
       ...               # Frontend assets
 ```
 
-### icp.json
+### icp.yaml
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "user_service": {
-      "type": "motoko",
-      "main": "src/user_service/main.mo"
-    },
-    "content_service": {
-      "type": "motoko",
-      "main": "src/content_service/main.mo",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  user_service:
+    type: motoko
+    main: src/user_service/main.mo
+  content_service:
+    type: motoko
+    main: src/content_service/main.mo
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 ### Motoko
@@ -227,7 +221,7 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Types "../shared/Types";
 
-// Import the other canister — name must match icp.json key
+// Import the other canister — name must match icp.yaml canister key
 import UserService "canister:user_service";
 
 persistent actor {
@@ -316,7 +310,7 @@ persistent actor {
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   Cargo.toml          # workspace
   src/
     user_service/
@@ -337,34 +331,30 @@ members = [
 ]
 ```
 
-#### icp.json (Rust)
+#### icp.yaml (Rust)
 
-```json
-{
-  "canisters": {
-    "user_service": {
-      "type": "rust",
-      "package": "user_service",
-      "candid": "src/user_service/user_service.did"
-    },
-    "content_service": {
-      "type": "rust",
-      "package": "content_service",
-      "candid": "src/content_service/content_service.did",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+canisters:
+  user_service:
+    type: rust
+    package: user_service
+    candid: src/user_service/user_service.did
+  content_service:
+    type: rust
+    package: content_service
+    candid: src/content_service/content_service.did
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 #### src/user_service/Cargo.toml
@@ -860,7 +850,7 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 npm run build
@@ -879,7 +869,7 @@ icp network start -d
 icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
