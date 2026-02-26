@@ -1,6 +1,8 @@
 # IC Skills
 
-**Skills for agents, not docs for humans.**
+> **⚠️ Under active development** — Skill files are being reviewed and signed off by DFINITY engineers. Content may change. Feedback and PRs are welcome.
+
+**Agent-readable instructions for every IC need.**
 
 Structured, versioned, agent-readable skill files for every Internet Computer capability. Your AI reads the skill. It builds correctly. No hallucinations.
 
