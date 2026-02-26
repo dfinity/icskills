@@ -390,7 +390,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128;
+use ic_cdk::api::call::call_with_payment128; // Note: ic_cdk::api::call is deprecated in 0.18 but still compiles
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -454,9 +454,15 @@ enum L2MainnetService {
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
+struct HttpHeader {
+    name: String,
+    value: String,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
 struct CustomRpcService {
     url: String,
-    headers: Option<Vec<(String, String)>>,
+    headers: Option<Vec<HttpHeader>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -551,7 +557,7 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: Option<String>,
+    transactions_root: String,
     uncles: Vec<String>,
 }
 
@@ -561,6 +567,9 @@ enum SendRawTransactionStatus {
     InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
+    InsufficientGas,
+    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
+    // for the complete set of SendRawTransactionStatus variants.
 }
 
 // -- Get ETH balance via raw JSON-RPC --

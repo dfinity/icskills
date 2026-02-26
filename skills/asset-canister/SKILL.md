@@ -154,12 +154,14 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@icp-sdk/canisters/assets";
-import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { AssetManager } from "@dfinity/assets"; // Asset management utility (may migrate to @icp-sdk/assets)
+import { HttpAgent } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
-const agent = new HttpAgent({ host: "http://localhost:4943" });
-await agent.fetchRootKey(); // Local only
+const agent = await HttpAgent.create({
+  host: "http://localhost:4943",
+  fetchRootKey: true, // Local only
+});
 
 const assetManager = new AssetManager({
   canisterId: "your-asset-canister-id",

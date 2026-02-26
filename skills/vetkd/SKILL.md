@@ -25,7 +25,7 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
 - Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
-- Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
+- Frontend: `@icp-sdk/vetkeys` npm package (check npm registry -- may still be published under `@dfinity/vetkeys`)
 - For local testing: `icp network start` creates a local test key automatically
 
 ## Canister IDs
@@ -54,7 +54,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@icp-sdk/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
 2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
@@ -149,7 +149,7 @@ use ic_cdk::update;
 //
 // ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
 // with "could not find `ic_vetkeys`", switch to the raw management canister
-// approach below (Option B), or add as a git dependency from dfinity/examples.
+// approach below (Option B), or add as a git dependency from dfinity/ic-vetkeys.
 //
 // API is under active development — verify function signatures against latest docs.
 use ic_vetkeys::KeyManager;
@@ -376,7 +376,7 @@ persistent actor {
 The frontend generates a transport key pair, sends the public half to the canister, receives the encrypted derived key, decrypts it, and uses the result for AES encryption/decryption.
 
 ```javascript
-// The @dfinity/vetkeys package API is evolving rapidly.
+// The @icp-sdk/vetkeys package API is evolving rapidly.
 // Check https://github.com/dfinity/examples for the latest vetKD usage examples.
 // High-level flow:
 // 1. Generate a transport key pair (BLS12-381, NOT P-256)

@@ -256,14 +256,14 @@ persistent actor {
 
   // -- Remote canister references (mainnet) --
 
-  let ckbtcLedger : actor {
+  transient let ckbtcLedger : actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
     icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
-  let ckbtcMinter : actor {
+  transient let ckbtcMinter : actor {
     get_btc_address : shared ({
       owner : ?Principal;
       subaccount : ?Blob;
@@ -314,13 +314,7 @@ persistent actor {
 
   // -- Check user's ckBTC balance --
 
-  public shared query ({ caller }) func getBalance() : async Nat {
-    // Note: for cross-canister query, remove 'query' and use await
-    // This is a simplified version — in production, call icrc1_balance_of
-    0 // placeholder for query context
-  };
-
-  public shared ({ caller }) func getBalanceUpdate() : async Nat {
+  public shared ({ caller }) func getBalance() : async Nat {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
