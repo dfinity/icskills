@@ -1,8 +1,12 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
 
-# Default — Josh reviews everything
-* @JoshDFN
+# Infra & build
+/.github/                        @JoshDFN @marc0olo
+/.claude/                        @JoshDFN @marc0olo
+/scripts/                        @JoshDFN @marc0olo
+/src/                            @JoshDFN @marc0olo
+package.json                     @JoshDFN @marc0olo
 
 # Skill files — domain experts
 /skills/asset-canister/          @raymondk
@@ -15,6 +19,6 @@
 /skills/sns-launch/              @bjoernek
 /skills/https-outcalls/          @derlerd-dfinity
 /skills/multi-canister/          @derlerd-dfinity
-/skills/stable-memory/            @derlerd-dfinity
+/skills/stable-memory/           @derlerd-dfinity
 /skills/vetkd/                   @andreacerulli
 /skills/oisy-wallet-signer/      @AntonioVentilii
