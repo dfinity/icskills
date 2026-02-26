@@ -435,7 +435,7 @@ icp network start -d
 icp deploy icrc1_ledger
 
 # Verify it deployed
-icp canister status icrc1_ledger --id-only
+icp canister id icrc1_ledger
 ```
 
 ### Interact with Mainnet Ledgers
