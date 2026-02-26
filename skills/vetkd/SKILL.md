@@ -114,6 +114,14 @@ vetkd_derive_key : (record {
 **Cargo.toml:**
 
 ```toml
+[package]
+name = "vetkd_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 candid = "0.10"
 ic-cdk = "0.18"

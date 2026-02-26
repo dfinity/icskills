@@ -143,7 +143,7 @@ Distribution:
       vesting_period: 31_557_600             # seconds (12 months)
 
   InitialBalances:
-    governance: 520_000_000_000_000  # e8s (5_200_000 tokens) — Treasury (controlled by DAO)
+    governance: 500_000_000_000_000  # e8s (5_000_000 tokens) — Treasury (controlled by DAO)
     swap: 250_000_000_000_000       # e8s (2_500_000 tokens) — Sold during decentralization swap
 
   total: 1_000_000_000_000_000     # e8s (10_000_000 tokens) — Must equal sum of all allocations

@@ -153,6 +153,14 @@ persistent actor {
 #### Cargo.toml Dependencies
 
 ```toml
+[package]
+name = "wallet_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 ic-cdk = "0.18"
 candid = "0.10"
