@@ -10,6 +10,7 @@
       "ckbtc",
       "evm-rpc",
       "https-outcalls",
+      "ic-dashboard",
       "icrc-ledger",
       "internet-identity",
       "multi-canister",
@@ -18,6 +19,11 @@
       "vetkd",
       "wallet"
     ]
+  },
+  "endpoints": {
+    "list": "https://dfinity.github.io/icskills/llms.txt",
+    "full": "https://dfinity.github.io/icskills/llms-full.txt",
+    "skill": "https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md"
   },
   "defaultInputModes": [
     "text/plain"

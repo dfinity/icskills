@@ -4,13 +4,14 @@ name: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 5.0.0
+version: 5.0.2
 status: stable
 dependencies: [asset-canister]
+requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
+tags: [auth, login, passkey, webauthn, identity, session, delegation, principal]
 ---
 
 # Internet Identity Authentication
-> version: 5.0.0 | requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
 
 ## What This Is
 
@@ -40,7 +41,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
+5. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves the caller across `.await` points, but capturing it early guards against future executor changes. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of async update functions.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust.
 
@@ -256,8 +257,7 @@ fn require_auth() -> Principal {
 
 #[update]
 fn init_owner() -> String {
-    // IMPORTANT: Capture caller BEFORE any .await calls.
-    // After .await, ic_cdk::caller() returns the canister's own principal.
+    // Defensive: capture caller before any .await calls.
     let caller = require_auth();
 
     OWNER.with(|owner| {
@@ -299,20 +299,16 @@ fn who_am_i() -> String {
     }
 }
 
-// For async functions, ALWAYS capture caller before await:
+// For async functions, capture caller before await as defensive practice:
 #[update]
 async fn protected_async_action() -> String {
-    let caller = require_auth(); // Capture HERE, before any await
-
-    // After this await, ic_cdk::caller() would return wrong principal
-    let _result = some_async_operation().await; // (pseudocode -- replace with your actual async call)
-
-    // Use the captured `caller` variable, NOT ic_cdk::caller()
+    let caller = require_auth(); // Capture before any await
+    let _result = some_async_operation().await;
     format!("Action completed by {}", caller)
 }
 ```
 
-**Rust critical rule:** In any `async` update function, `ic_cdk::api::msg_caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of the function.
+**Rust defensive practice:** Bind `let caller = ic_cdk::api::msg_caller();` at the top of async update functions. The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes.
 
 ## Deploy & Test
 

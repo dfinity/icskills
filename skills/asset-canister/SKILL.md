@@ -4,9 +4,11 @@ name: "Asset Canister & Frontend"
 category: Frontend
 description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
 endpoints: 5
-version: 3.2.0
+version: 3.3.0
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [frontend, assets, hosting, spa, certified, domain, upload, static]
 ---
 
 # Asset Canister & Frontend Hosting

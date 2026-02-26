@@ -2,7 +2,7 @@
 
 All IC Skills in a single file for direct context injection.
 Source: https://github.com/dfinity/icskills
-Skills: 12
+Skills: 13
 
 
 ---
@@ -13,17 +13,18 @@ name: "Asset Canister & Frontend"
 category: Frontend
 description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
 endpoints: 5
-version: 3.2.0
+version: 3.2.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [frontend, assets, hosting, spa, certified, domain, upload, static]
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 3.3.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
-The asset canister hosts static files (HTML, CSS, JS, images) directly on the Internet Computer. This is how web frontends are deployed on-chain. Responses are certified by the subnet, and HTTP gateways automatically verify integrity, i.e. that content was served by the blockchain. The content can also be verified in the browser -- not a centralized server. 
+The asset canister hosts static files (HTML, CSS, JS, images) directly on the Internet Computer. Responses are certified by the subnet, meaning browsers can verify that content was served by the blockchain -- not a centralized server. This is how frontends are deployed on-chain.
 
 ## Prerequisites
 
@@ -56,7 +57,7 @@ Access patterns:
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
-7. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
+7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
 
 ## Implementation
 
@@ -83,7 +84,7 @@ Key fields:
 - `build` -- commands `icp deploy` runs before uploading (your frontend build step)
 - `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
-### SPA Routing and Default Headers: `.ic-assets.json5`
+### SPA Routing: `.ic-assets.json5`
 
 Create this file in your `source` directory (e.g., `dist/.ic-assets.json5`) or project root. For it to be included in the asset canister, it must end up in the `source` directory at deploy time.
 
@@ -92,14 +93,11 @@ Recommended approach: place the file in your `public/` or `static/` folder so yo
 ```json5
 [
   {
-    // Default headers for all paths: caching, security, and raw access policy
+    // Set default cache headers for all paths
     "match": "**/*",
-    "security_policy": "standard",
     "headers": {
       "Cache-Control": "public, max-age=0, must-revalidate"
-    },
-    // Disable raw (uncertified) access by default -- see mistake #7 above
-    "allow_raw_access": false
+    }
   },
   {
     // Cache static assets aggressively (they have content hashes in filenames)
@@ -117,8 +115,6 @@ Recommended approach: place the file in your `public/` or `static/` folder so yo
 ```
 
 For the SPA fallback to work, the critical setting is `"enable_aliasing": true` -- this tells the asset canister to serve `index.html` when a requested path has no matching file.
-
-If the standard security policy above blocks the app from working, overwrite the default security headers with custom values, adding them after `Cache-Control` above. Act like a senior security engineer, making these headers as secure as possible. The standard policy headers can be found here: https://github.com/dfinity/sdk/blob/master/src/canisters/frontend/ic-asset/src/security_policy.rs
 
 ### Content Encoding
 
@@ -169,19 +165,10 @@ For uploading files from code (not just via `icp deploy`):
 import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-// SECURITY: shouldFetchRootKey fetches the root public key from the replica at
-// runtime. In production the root key is hardcoded and trusted. Fetching it at
-// runtime lets a man-in-the-middle supply a fake key and forge certified responses.
-// NEVER set shouldFetchRootKey to true when host points to mainnet.
-const LOCAL_REPLICA = "http://localhost:4943";
-const MAINNET = "https://ic0.app";
-const host = LOCAL_REPLICA; // Change to MAINNET for production
-
+// Create an agent with an authorized identity
 const agent = await HttpAgent.create({
-  host,
-  // Only fetch the root key when talking to a local replica.
-  // Setting this to true against mainnet is a security vulnerability.
-  shouldFetchRootKey: host === LOCAL_REPLICA,
+  host: "http://localhost:4943",
+  shouldFetchRootKey: true, // Local only
 });
 
 const assetManager = new AssetManager({
@@ -216,31 +203,21 @@ for (const file of files) {
 
 ### Authorization for Uploads
 
-The asset canister has a built-in permission system with three roles (from least to most privileged):
-- **Prepare** -- can upload chunks and propose batches, but cannot commit them live.
-- **Commit** -- can upload and commit assets (make them live). This is the standard role for deploy pipelines.
-- **ManagePermissions** -- can grant and revoke permissions to other principals.
-
-Use `grant_permission` to give principals only the access they need. Do **not** use `--add-controller` for upload access -- controllers have full canister control (upgrade code, change settings, delete the canister, drain cycles).
+Only canister controllers can upload to asset canisters. To grant upload permission:
 
 ```bash
-# Grant "prepare" permission (can upload but not commit) -- use for preview/staging workflows
+# Add a principal as a controller
+icp canister update-settings frontend --add-controller <principal-id>
+
+# Or grant "prepare" permission (can upload but not commit) -- more restrictive
 icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
 
-# Grant commit permission -- use for deploy pipelines that need to publish assets
+# Grant full commit permission
 icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
-
-# Grant permission management -- use for principals that need to onboard/offboard other uploaders
-icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { ManagePermissions } })'
 
 # List current permissions
 icp canister call frontend list_permitted '(record { permission = variant { Commit } })'
-
-# Revoke a permission
-icp canister call frontend revoke_permission '(record { of_principal = principal "<principal-id>"; permission = variant { Commit } })'
 ```
-
-> **Security Warning:** `icp canister update-settings frontend --add-controller <principal-id>` grants full canister control -- not just upload permission. A controller can upgrade the canister WASM, change all settings, or delete the canister entirely. Only add controllers when you genuinely need full administrative access.
 
 ## Deploy & Test
 
@@ -327,13 +304,14 @@ name: Certified Variables
 category: Security
 description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
 endpoints: 4
-version: 1.2.0
+version: 1.2.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]
+tags: [certification, query, merkle, verified, response, trust, proof]
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.2.0 | requires: [icp-cli >= 0.1.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
@@ -818,13 +796,14 @@ name: ckBTC Integration
 category: DeFi
 description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
 endpoints: 14
-version: 2.1.0
+version: 2.1.1
 status: stable
 dependencies: [icrc-ledger, wallet]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -1598,13 +1577,14 @@ name: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.0
+version: 1.1.1
 status: stable
 dependencies: [https-outcalls]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -2435,13 +2415,14 @@ name: HTTPS Outcalls
 category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
 endpoints: 4
-version: 1.5.0
+version: 1.5.2
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [http, api, fetch, external, request, transform, outcall]
 ---
 
 # HTTPS Outcalls
-> version: 1.5.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -2451,7 +2432,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 - icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `moc` compiler (included with icp-cli), `mo:core` 2.0 in mops.toml
-- For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
+- For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 
 ## Canister IDs
 
@@ -2880,18 +2861,225 @@ fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
 ---
 
 ---
+id: ic-dashboard
+name: IC Dashboard APIs
+category: Integration
+description: "Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics."
+endpoints: 12
+version: 1.0.0
+status: stable
+dependencies: []
+requires: []
+tags: [dashboard, api, rest, openapi, swagger, ic-api, icrc-api, sns-api, ledger-api, metrics-api]
+---
+
+# IC Dashboard APIs
+
+## What This Is
+
+These public REST APIs power **dashboard.internetcomputer.org**. They expose read-only access to canister metadata, ICRC ledgers, SNS data, the ICP ledger, and network metrics via OpenAPI specs and Swagger UI. Agents and scripts can call them over HTTPS from off-chain (no canister deployment or cycles required). **Prefer v2 or higher API versions** where available; they provide cursor-based pagination (`after`, `before`, `limit`) and are the same surface the dashboard uses.
+
+## Prerequisites
+
+- Any HTTP client: `curl`, `fetch`, `axios`, or the language’s native HTTP library.
+- No `icp-cli` or canister deployment needed for read-only API access.
+- For OpenAPI-based codegen: optional use of the `openapi.json` URLs with your preferred OpenAPI tooling.
+
+## API Base URLs and Docs
+
+| API | Base URL | OpenAPI spec | Swagger / Docs | Prefer |
+|-----|----------|--------------|----------------|--------|
+| IC API | `https://ic-api.internetcomputer.org` | `/api/v3/openapi.json` | `/api/v3/swagger` | v4 for canisters, subnets (cursor pagination) |
+| ICRC API | `https://icrc-api.internetcomputer.org` | `/openapi.json` | `/docs` | v2 for ledgers (TestICP and other ICRC tokens; **not** mainnet ICP) |
+| SNS API | `https://sns-api.internetcomputer.org` | `/openapi.json` | `/docs` | v2 for snses, proposals, neurons |
+| Ledger API (mainnet ICP) | `https://ledger-api.internetcomputer.org` | `/openapi.json` | `/swagger-ui/` | Use for **ICP token**; v2 for cursor pagination |
+| Metrics API | `https://metrics-api.internetcomputer.org` | `/api/v1/openapi.json` | `/api/v1/docs` | v1 (no newer version) |
+
+Full URLs for specs and UI:
+
+- IC API: https://ic-api.internetcomputer.org/api/v3/openapi.json — https://ic-api.internetcomputer.org/api/v3/swagger
+- ICRC API: https://icrc-api.internetcomputer.org/openapi.json — https://icrc-api.internetcomputer.org/docs
+- SNS API: https://sns-api.internetcomputer.org/openapi.json — https://sns-api.internetcomputer.org/docs
+- Ledger API: https://ledger-api.internetcomputer.org/openapi.json — https://ledger-api.internetcomputer.org/swagger-ui/
+- Metrics API: https://metrics-api.internetcomputer.org/api/v1/openapi.json — https://metrics-api.internetcomputer.org/api/v1/docs
+
+## How It Works
+
+1. **Prefer v2+ APIs with cursor pagination.** IC API v4 (`/api/v4/canisters`, `/api/v4/subnets`), ICRC API v2 (`/api/v2/ledgers`, `/api/v2/ledgers/{id}/transactions`, etc.), and SNS API v2 (`/api/v2/snses`, `/api/v2/snses/{id}/proposals`, `/api/v2/snses/{id}/neurons`) use `after`, `before`, and `limit` for stable, efficient paging. Avoid v1/offset-based endpoints when a v2+ alternative exists.
+2. **Choose the right API** for the data you need: IC API (canisters, subnets, NNS neurons/proposals), **Ledger API for mainnet ICP** (accounts, transactions, supply), ICRC API for **other** ICRC ledgers only (ckBTC, SNS tokens, testicp — ICRC API does not expose mainnet ICP), SNS API (SNS list, neurons, proposals), Metrics API (governance, cycles, Bitcoin, etc.).
+3. **Use the OpenAPI spec** to get exact path, query, and body schemas and response shapes; prefer the spec over hand-written docs to avoid drift.
+4. **Call over HTTPS** with `GET` (or documented method). Use the `next_cursor` / `previous_cursor` from v2+ responses to request the next or previous page.
+
+## Mistakes That Break Your Build
+
+1. **Wrong base URL or API version.** IC API uses `/api/v3/` (and v4 for canisters/subnets); ICRC has `/api/v1/` and `/api/v2/` (ICRC API does not serve mainnet ICP — use Ledger API). Ledger API uses unversioned paths for some endpoints (e.g. `/accounts`, `/supply/total/latest`) and `/v2/` for cursor-paginated lists. Metrics API uses `/api/v1/`. Using the wrong prefix returns 404 or wrong schema.
+
+2. **Canister ID format.** Canister IDs in paths and queries must match the principal-like pattern: 27 characters, five groups of five plus a final three (e.g. `ryjl3-tyaaa-aaaaa-aaaba-cai`). Subnet IDs use the longer pattern (e.g. 63 chars). Sending a raw principal string in the wrong encoding or length causes 422 or 400.
+
+3. **Using ICRC API for mainnet ICP.** ICRC API exposes **test ICP (TestICP) only**, not mainnet ICP. For mainnet ICP token data (accounts, transactions, supply) use **Ledger API** (`ledger-api.internetcomputer.org`). Use ICRC API for other ICRC ledgers (e.g. ckBTC, SNS tokens) and for TestICP.
+
+4. **ICRC API: ledger_canister_id in path.** ICRC endpoints require `ledger_canister_id` in the path (e.g. `/api/v2/ledgers/{ledger_canister_id}/transactions`). Use the canister ID of the ledger you want (e.g. ckBTC `mxzaz-hqaaa-aaaar-qaada-cai`). Do not use ICRC API for mainnet ICP — use Ledger API instead.
+
+5. **Using v1 or offset-based pagination when v2+ exists.** Always prefer v2 or higher endpoints that support cursor pagination (`after`, `before`, `limit`). IC API v4 (canisters, subnets), ICRC API v2 (ledgers, accounts, transactions), and SNS API v2 (snses, proposals, neurons) return `next_cursor`/`previous_cursor` and accept cursor query params. Older v1/offset/`max_*_index` endpoints are legacy; using the wrong pagination model returns empty or incorrect pages.
+
+6. **Timestamps.** Most time-range query params (`start`, `end`) expect Unix seconds (integer). Sending milliseconds or ISO strings causes validation errors (422).
+
+7. **Account identifier format.** Ledger API and ICRC/ICP endpoints use **account identifiers** (hex hashes), not raw principals, for account-specific paths. Use the same encoding the API documents (e.g. 64-char hex for account_identifier where required).
+
+8. **Assuming authentication.** These public dashboard APIs do not require API keys or auth for the documented read endpoints. If you get 401/403, confirm you are not hitting a different environment or a write endpoint that requires auth.
+
+## Implementation
+
+### IC API — Canisters and subnets (prefer v4 with cursor pagination)
+
+```bash
+# List canisters (v4: cursor pagination, next_cursor/previous_cursor in response)
+curl -s "https://ic-api.internetcomputer.org/api/v4/canisters?limit=5"
+
+# Next page: use after= from previous response's next_cursor (see OpenAPI for cursor format)
+# curl -s "https://ic-api.internetcomputer.org/api/v4/canisters?limit=5&after=..."
+
+# Get one canister by ID (v3; no v4 single-canister endpoint)
+curl -s "https://ic-api.internetcomputer.org/api/v3/canisters/ryjl3-tyaaa-aaaaa-aaaba-cai"
+
+# List subnets (v4: cursor pagination)
+curl -s "https://ic-api.internetcomputer.org/api/v4/subnets?limit=10"
+
+# List NNS proposals (v3; use limit)
+curl -s "https://ic-api.internetcomputer.org/api/v3/proposals?limit=5"
+```
+
+### ICRC API — Other ICRC ledgers only (v2 with cursor pagination)
+
+ICRC API exposes **TestICP and other ICRC ledgers (e.g. ckBTC, SNS tokens), not mainnet ICP.** For mainnet ICP use Ledger API.
+
+```bash
+# List ledgers (v2: after/before/limit, next_cursor/previous_cursor in response)
+curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers?limit=10"
+
+# Get one ledger (e.g. ckBTC — mainnet ICP is not on ICRC API)
+curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-qaada-cai"
+
+# List transactions for a ledger (v2: cursor pagination)
+curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-qaada-cai/transactions?limit=5"
+
+# List accounts for a ledger (v2: after/before/limit)
+curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-qaada-cai/accounts?limit=10"
+```
+
+### SNS API — SNS list and proposals (prefer v2 with cursor pagination)
+
+```bash
+# List SNSes (v2: after/before/limit, next_cursor/previous_cursor)
+curl -s "https://sns-api.internetcomputer.org/api/v2/snses?limit=10"
+
+# List proposals for an SNS root canister (v2: cursor pagination)
+# Replace ROOT_CANISTER_ID with a real SNS root canister ID
+curl -s "https://sns-api.internetcomputer.org/api/v2/snses/ROOT_CANISTER_ID/proposals?limit=5"
+
+# List neurons for an SNS (v2: after/before/limit)
+curl -s "https://sns-api.internetcomputer.org/api/v2/snses/ROOT_CANISTER_ID/neurons?limit=10"
+```
+
+### Ledger API — Mainnet ICP token (prefer v2 for cursor pagination)
+
+```bash
+# List accounts (v2: after/before/limit, next_cursor/prev_cursor)
+curl -s "https://ledger-api.internetcomputer.org/v2/accounts?limit=10"
+
+# Get account by account_identifier (64-char hex)
+curl -s "https://ledger-api.internetcomputer.org/accounts/ACCOUNT_IDENTIFIER"
+
+# List transactions (v2: cursor pagination)
+curl -s "https://ledger-api.internetcomputer.org/v2/transactions?limit=10"
+
+# Total supply (latest)
+curl -s "https://ledger-api.internetcomputer.org/supply/total/latest"
+```
+
+### Metrics API
+
+```bash
+# Average cycle burn rate
+curl -s "https://metrics-api.internetcomputer.org/api/v1/average-cycle-burn-rate"
+
+# Governance metrics
+curl -s "https://metrics-api.internetcomputer.org/api/v1/governance-metrics"
+
+# ICP/XDR conversion rates (with optional start/end/step)
+curl -s "https://metrics-api.internetcomputer.org/api/v1/icp-xdr-conversion-rates?start=1700000000&end=1700086400&step=86400"
+```
+
+### Fetching OpenAPI spec (for codegen or validation)
+
+```bash
+# IC API v3
+curl -s "https://ic-api.internetcomputer.org/api/v3/openapi.json" -o ic-api-v3.json
+
+# ICRC API
+curl -s "https://icrc-api.internetcomputer.org/openapi.json" -o icrc-api.json
+
+# SNS API
+curl -s "https://sns-api.internetcomputer.org/openapi.json" -o sns-api.json
+
+# Ledger API
+curl -s "https://ledger-api.internetcomputer.org/openapi.json" -o ledger-api.json
+
+# Metrics API v1
+curl -s "https://metrics-api.internetcomputer.org/api/v1/openapi.json" -o metrics-api-v1.json
+```
+
+## Deploy & Test
+
+No canister deployment is required. These are external HTTP APIs. Test from the shell or your app:
+
+```bash
+# Smoke test: IC API root
+curl -s -o /dev/null -w "%{http_code}" "https://ic-api.internetcomputer.org/api/v3/"
+# Expected: 200
+
+# Smoke test: ICRC ledgers list
+curl -s -o /dev/null -w "%{http_code}" "https://icrc-api.internetcomputer.org/api/v2/ledgers?limit=1"
+# Expected: 200
+```
+
+## Verify It Works
+
+```bash
+# 1. IC API returns canister list with data array
+curl -s "https://ic-api.internetcomputer.org/api/v3/canisters?limit=1" | head -c 200
+# Expected: JSON with "data" or similar key and at least one canister
+
+# 2. ICRC API returns ledger list
+curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers?limit=1" | head -c 200
+# Expected: JSON with "data" and ledger entries
+
+# 3. Ledger API returns supply (array of [timestamp, value])
+curl -s "https://ledger-api.internetcomputer.org/supply/total/latest"
+# Expected: JSON array with two elements (timestamp and supply string)
+
+# 4. OpenAPI specs are valid JSON
+curl -s "https://ic-api.internetcomputer.org/api/v3/openapi.json" | python3 -c "import sys,json; json.load(sys.stdin); print('OK')"
+# Expected: OK
+```
+
+
+---
+
+---
 id: icrc-ledger
 name: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11
-version: 2.3.0
+version: 2.3.2
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -3068,7 +3256,7 @@ persistent actor {
 
   // ICRC-2: Approve a spender
   public shared ({ caller }) func approveSpender(spender : Principal, amount : Nat) : async Nat {
-    // caller is captured before await -- critical for security
+    // caller is captured at function entry in Motoko -- safe across await
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc2_approve({
       from_subaccount = null;
@@ -3409,13 +3597,14 @@ name: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 5.0.0
+version: 5.0.2
 status: stable
 dependencies: [asset-canister]
+requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
+tags: [auth, login, passkey, webauthn, identity, session, delegation, principal]
 ---
 
 # Internet Identity Authentication
-> version: 5.0.0 | requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
 
 ## What This Is
 
@@ -3445,7 +3634,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
+5. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves the caller across `.await` points, but capturing it early guards against future executor changes. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of async update functions.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust.
 
@@ -3661,8 +3850,7 @@ fn require_auth() -> Principal {
 
 #[update]
 fn init_owner() -> String {
-    // IMPORTANT: Capture caller BEFORE any .await calls.
-    // After .await, ic_cdk::caller() returns the canister's own principal.
+    // Defensive: capture caller before any .await calls.
     let caller = require_auth();
 
     OWNER.with(|owner| {
@@ -3704,20 +3892,16 @@ fn who_am_i() -> String {
     }
 }
 
-// For async functions, ALWAYS capture caller before await:
+// For async functions, capture caller before await as defensive practice:
 #[update]
 async fn protected_async_action() -> String {
-    let caller = require_auth(); // Capture HERE, before any await
-
-    // After this await, ic_cdk::caller() would return wrong principal
-    let _result = some_async_operation().await; // (pseudocode -- replace with your actual async call)
-
-    // Use the captured `caller` variable, NOT ic_cdk::caller()
+    let caller = require_auth(); // Capture before any await
+    let _result = some_async_operation().await;
     format!("Action completed by {}", caller)
 }
 ```
 
-**Rust critical rule:** In any `async` update function, `ic_cdk::api::msg_caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of the function.
+**Rust defensive practice:** Bind `let caller = ic_cdk::api::msg_caller();` at the top of async update functions. The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes.
 
 ## Deploy & Test
 
@@ -3783,13 +3967,14 @@ name: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.0.1
+version: 3.0.3
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -3816,20 +4001,13 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Mistakes That Break Your Build
 
-1. **`ic_cdk::api::msg_caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::api::msg_caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
+1. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry.
 
     ```rust
-    // WRONG (Rust) — caller() is wrong after await:
+    // Recommended (Rust) — capture caller before await:
     #[update]
     async fn do_thing() {
-        let _ = some_canister_call().await;
-        let who = ic_cdk::api::msg_caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
-    }
-
-    // CORRECT (Rust) — capture before await:
-    #[update]
-    async fn do_thing() {
-        let original_caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
+        let original_caller = ic_cdk::api::msg_caller(); // Defensive: capture before await
         let _ = some_canister_call().await;
         let who = original_caller; // Safe
     }
@@ -4343,10 +4521,10 @@ fn get_user_service_id() -> Principal {
     })
 }
 
-// CRITICAL: capture caller BEFORE any await
+// Defensive: capture caller before any await
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
-    // Capture caller BEFORE the await -- caller() is wrong after await
+    // Capture caller before the await as defensive practice
     let original_caller = ic_cdk::api::msg_caller();
 
     if original_caller == Principal::anonymous() {
@@ -4756,13 +4934,14 @@ name: SNS DAO Launch
 category: Governance
 description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
 endpoints: 22
-version: 1.8.0
+version: 1.9.0
 status: stable
 dependencies: [icrc-ledger, multi-canister]
+requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
+tags: [dao, governance, sns, token, swap, decentralization, proposal, neuron]
 ---
 
 # SNS DAO Launch
-> version: 1.8.0 | requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 
@@ -4854,71 +5033,74 @@ dapp_canisters:
 Token:
   name: MyToken
   symbol: MYT
-  transaction_fee: 10_000        # e8s (0.0001 tokens)
+  transaction_fee: 0.0001 tokens
   logo: token_logo.png
 
 # === GOVERNANCE PARAMETERS ===
 Proposals:
-  rejection_fee: 100_000_000              # e8s (1 token)
-  initial_voting_period: 345_600           # seconds (4 days)
-  maximum_wait_for_quiet_deadline_extension: 86_400  # seconds (1 day)
+  rejection_fee: 1 token
+  initial_voting_period: 4 days
+  maximum_wait_for_quiet_deadline_extension: 1 day
 
 Neurons:
-  minimum_creation_stake: 100_000_000      # e8s (1 token)
+  minimum_creation_stake: 1 token
 
 Voting:
-  minimum_dissolve_delay: 2_629_800        # seconds (1 month)
-  MaximumDissolveDelayBonus:
-    duration: 252_288_000                  # seconds (8 years)
-    bonus: 100%            # 2x voting power at max dissolve
-  MaximumAgeBonusPercentage: 25%
+  minimum_dissolve_delay: 1 month
+  MaximumVotingPowerBonuses:
+    DissolveDelay:
+      duration: 8 years
+      bonus: 100%                            # 2x voting power at max dissolve
+    Age:
+      duration: 4 years
+      bonus: 25%
   RewardRate:
     initial: 2.5%
     final: 2.5%
-    transition_duration: 0                  # seconds
+    transition_duration: 0 seconds
 
 # === TOKEN DISTRIBUTION ===
 Distribution:
   Neurons:
     # Developer allocation (with vesting)
     - principal: DEVELOPER_PRINCIPAL
-      stake: 200_000_000_000_000             # e8s (2_000_000 tokens)
+      stake: 2_000_000 tokens
       memo: 0
-      dissolve_delay: 15_778_800             # seconds (6 months)
-      vesting_period: 63_115_200             # seconds (24 months)
+      dissolve_delay: 6 months
+      vesting_period: 24 months
 
     # Seed investors
     - principal: INVESTOR_PRINCIPAL
-      stake: 50_000_000_000_000              # e8s (500_000 tokens)
+      stake: 500_000 tokens
       memo: 1
-      dissolve_delay: 7_889_400              # seconds (3 months)
-      vesting_period: 31_557_600             # seconds (12 months)
+      dissolve_delay: 3 months
+      vesting_period: 12 months
 
   InitialBalances:
-    governance: 500_000_000_000_000  # e8s (5_000_000 tokens) — Treasury (controlled by DAO)
-    swap: 250_000_000_000_000       # e8s (2_500_000 tokens) — Sold during decentralization swap
+    treasury: 5_000_000 tokens               # Treasury (controlled by DAO)
+    swap: 2_500_000 tokens                   # Sold during decentralization swap
 
-  total: 1_000_000_000_000_000     # e8s (10_000_000 tokens) — Must equal sum of all allocations
+  total: 10_000_000 tokens                   # Must equal sum of all allocations
 
 # === DECENTRALIZATION SWAP ===
 Swap:
   minimum_participants: 100
-  minimum_direct_participation_icp: 5_000_000_000_000    # e8s (50_000 ICP)
-  maximum_direct_participation_icp: 50_000_000_000_000   # e8s (500_000 ICP)
-  minimum_participant_icp: 100_000_000                   # e8s (1 ICP)
-  maximum_participant_icp: 2_500_000_000_000             # e8s (25_000 ICP)
-  duration: 604_800                                      # seconds (7 days)
+  minimum_direct_participation_icp: 50_000 tokens
+  maximum_direct_participation_icp: 500_000 tokens
+  minimum_participant_icp: 1 token
+  maximum_participant_icp: 25_000 tokens
+  duration: 7 days
   neurons_fund_participation: true
 
   VestingSchedule:
-    events: 5                      # Neurons unlock in 5 stages
-    interval: 7_889_400              # seconds (3 months)
+    events: 5                                # Neurons unlock in 5 stages
+    interval: 3 months
 
   confirmation_text: >
     I confirm that I am not a resident of a restricted jurisdiction
     and I understand the risks of participating in this token swap.
 
-  RestrictedCountries:
+  restricted_countries:
     - US
     - CN
 ```
@@ -5169,13 +5351,14 @@ name: "Stable Memory & Upgrades"
 category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
 endpoints: 6
-version: 2.0.0
+version: 2.0.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [storage, persistence, upgrade, memory, stable-structures, heap, state]
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 2.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
@@ -5541,17 +5724,18 @@ name: vetKD Encryption
 category: Security
 description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 0.9.0
+version: 1.0.0
 status: beta
 dependencies: [internet-identity]
+requires: [icp-cli >= 0.1.0]
+tags: [encryption, decryption, key-derivation, threshold, privacy, secret, aes]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 0.9.0 | requires: [icp-cli >= 0.1.0]
->
-> **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
-> may change between IC SDK releases. Pin your dependency versions and test after every icp-cli upgrade.
-> Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.
+
+> **Note:** vetKD is a newer feature of the IC. The `ic-vetkeys` Rust crate and `@dfinity/vetkeys`
+> npm package are published, but the APIs may still change over time.
+> Pin your dependency versions and check the [DFINITY forum](https://forum.dfinity.org) for any migration guides after upgrades.
 
 ## What This Is
 
@@ -5560,9 +5744,9 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 ## Prerequisites
 
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
-- Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
-- Frontend: `@icp-sdk/vetkeys` npm package (check npm registry -- may still be published under `@dfinity/vetkeys`)
+- Rust: `ic-vetkeys = "0.6"` ([crates.io](https://crates.io/crates/ic-vetkeys))
+- Motoko: Use the raw management canister approach shown below
+- Frontend: `@dfinity/vetkeys` v0.4.0 (`npm install @dfinity/vetkeys`)
 - For local testing: `icp network start` creates a local test key automatically
 
 ## Canister IDs
@@ -5591,21 +5775,21 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@icp-sdk/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
+1. **Not pinning dependency versions.** The `ic-vetkeys` crate and `@dfinity/vetkeys` npm package are published, but the APIs may still change in new releases. Pin your versions and re-test after upgrades. If something stops working after an upgrade, consult the relevant change notes to understand what happened.
 
-2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
+2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed. The Rust and TypeScript libraries include support for generating keys safely; use them if at all possible.
 
-3. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result.
+3. **Using raw `vetkd_derive_key` output as an encryption key.** The output is an encrypted key blob, not a usable symmetric key. You must decrypt it with the transport secret first, then derive the symmetric key from the result. The Rust and TypeScript libraries include support for safely hashing VetKD outputs into symmetric keys.
 
 4. **Confusing vetKD with traditional public-key crypto.** There are no static key pairs per user. Keys are derived on-demand from the IC's threshold master key. The same (canister, context, input) always yields the same derived key.
 
 5. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
 
-6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
+6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await as defensive practice.
 
 7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
 
-8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `Call::unbounded_wait(...).with_cycles()` (not a plain call without cycles). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
+8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. `key_1` costs ~26B cycles and `test_key_1` costs ~10B cycles. In Rust, use `call_with_payment128` (not plain `call`). In Motoko, use `await (with cycles = 26_000_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
 
 ## System API (Candid)
 
@@ -5625,6 +5809,8 @@ vetkd_public_key : (record {
 - `context`: Domain separator (arbitrary bytes).
 - `key_id.curve`: `bls12_381_g2` (only supported curve).
 - `key_id.name`: Master key name (`dfx_test_key` for local, `test_key_1`, or `key_1`).
+
+It is possible to derive public keys offline using the VetKD support libraries; see "Offline Public Key Derivation" below.
 
 ### vetkd_derive_key
 
@@ -5651,114 +5837,77 @@ vetkd_derive_key : (record {
 **Cargo.toml:**
 
 ```toml
-[package]
-name = "vetkd_backend"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
 candid = "0.10"
 ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
-# Option A: Use the high-level ic-vetkeys library (if available on crates.io)
-# ⚠ Verify this crate exists before adding. If not published, use a git dependency:
-# ic-vetkeys = { git = "https://github.com/dfinity/ic-vetkeys" }
-# Or use Option B (raw canister calls) which has no extra dependency.
-ic-vetkeys = "0.6.0"
+# High-level library (recommended) — source: https://github.com/dfinity/vetkeys
+ic-vetkeys = "0.6"
 ic-stable-structures = "0.7"
-
-# Option B: Call management canister directly (lower level, always works)
-# No extra dependency -- use ic_cdk::call::Call::unbounded_wait(...).with_cycles()
 ```
 
 **Using ic-vetkeys library (recommended):**
 
 ```rust
 use candid::Principal;
-use ic_cdk::{init, update};
-use ic_cdk::management_canister::{VetKDCurve, VetKDKeyId};
-use ic_vetkeys::key_manager::KeyManager;
-use ic_vetkeys::types::AccessRights;
+use ic_cdk::update;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::DefaultMemoryImpl;
-use std::cell::RefCell;
+use ic_vetkeys::key_manager::KeyManager;
+use ic_vetkeys::types::{AccessRights, VetKDCurve, VetKDKeyId};
 
-// ⚠ ic-vetkeys API is under active development — verify function signatures against
-// https://docs.rs/ic-vetkeys/latest and https://github.com/dfinity/vetkeys.
-
-type Memory = VirtualMemory<DefaultMemoryImpl>;
-
+// KeyManager is generic over an AccessControl type — AccessRights is the default.
+// It uses stable memory for persistent storage of access control state.
 thread_local! {
-    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
-        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-    static KEY_MANAGER: RefCell<Option<KeyManager<AccessRights>>> =
-        RefCell::new(None);
+    static MEMORY_MANAGER: std::cell::RefCell<MemoryManager<DefaultMemoryImpl>> =
+        std::cell::RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    static KEY_MANAGER: std::cell::RefCell<Option<KeyManager<AccessRights>>> =
+        std::cell::RefCell::new(None);
 }
 
-fn get_memory(id: u8) -> Memory {
-    MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(id)))
-}
-
-// KeyManager requires 3 stable memory regions (config, access control, shared keys).
-// Call init_key_manager in both #[init] and #[post_upgrade] — StableCell/StableBTreeMap
-// reconnect to existing data on upgrade, so this is safe to call repeatedly.
-fn init_key_manager() {
+#[ic_cdk::init]
+fn init() {
     let key_id = VetKDKeyId {
-        curve: VetKDCurve::Bls12_381_G2,
-        // "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
-        name: "key_1".to_string(),
+        curve: VetKDCurve::Bls12381G2,
+        name: "key_1".to_string(), // "dfx_test_key" for local, "test_key_1" for testing
     };
-    KEY_MANAGER.with(|km| {
-        *km.borrow_mut() = Some(KeyManager::init(
-            "my_app_v1",    // domain separator
-            key_id,
-            get_memory(0),  // config memory
-            get_memory(1),  // access control memory
-            get_memory(2),  // shared keys memory
-        ));
+    MEMORY_MANAGER.with(|mm| {
+        let mm = mm.borrow();
+        KEY_MANAGER.with(|km| {
+            *km.borrow_mut() = Some(KeyManager::init(
+                "my_app_v1",              // domain separator
+                key_id,
+                mm.get(MemoryId::new(0)), // config memory
+                mm.get(MemoryId::new(1)), // access control memory
+                mm.get(MemoryId::new(2)), // shared keys memory
+            ));
+        });
     });
 }
 
-#[init]
-fn init() {
-    init_key_manager();
-}
-
-#[ic_cdk::post_upgrade]
-fn post_upgrade() {
-    init_key_manager();
+#[update]
+async fn get_encrypted_vetkey(subkey_id: Vec<u8>, transport_public_key: Vec<u8>) -> Vec<u8> {
+    let caller = ic_cdk::caller(); // Capture BEFORE await
+    let future = KEY_MANAGER.with(|km| {
+        let km = km.borrow();
+        let km = km.as_ref().expect("not initialized");
+        km.get_encrypted_vetkey(caller, subkey_id, transport_public_key)
+            .expect("access denied")
+    });
+    future.await
 }
 
 #[update]
-async fn get_verification_key() -> Vec<u8> {
+async fn get_vetkey_verification_key() -> Vec<u8> {
     let future = KEY_MANAGER.with(|km| {
         let km = km.borrow();
-        let km = km.as_ref().expect("KeyManager not initialized");
+        let km = km.as_ref().expect("not initialized");
         km.get_vetkey_verification_key()
     });
-    future.await.to_vec()
-}
-
-#[update]
-async fn get_encrypted_vetkey(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
-
-    // KeyId = (owner_principal, 32-byte key name)
-    let key_id = (caller, [0u8; 32].into());
-
-    let future = KEY_MANAGER.with(|km| {
-        let km = km.borrow();
-        let km = km.as_ref().expect("KeyManager not initialized");
-        km.get_encrypted_vetkey(caller, key_id, transport_public_key.into())
-    })
-    .expect("Access denied");
-
-    future.await.to_vec()
+    future.await
 }
 ```
 
@@ -5767,7 +5916,6 @@ async fn get_encrypted_vetkey(transport_public_key: Vec<u8>) -> Vec<u8> {
 ```rust
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::update;
-use ic_cdk::call::Call;
 
 #[derive(CandidType, Deserialize)]
 struct VetKdKeyId {
@@ -5824,25 +5972,23 @@ async fn vetkd_public_key() -> Vec<u8> {
         key_id: key_id(),
     };
 
-    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    // vetkd_public_key requires ~26B cycles on mainnet.
-    let (response,): (VetKdPublicKeyResponse,) = Call::unbounded_wait(
-        Principal::management_canister(),
+    // Must attach cycles — vetKD calls are expensive.
+    // key_1 costs ~26B cycles, test_key_1 costs ~10B cycles.
+    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call_with_payment128(
+        Principal::management_canister(), // aaaaa-aa
         "vetkd_public_key",
+        (request,),
+        26_000_000_000, // cycles for key_1 (use 10_000_000_000 for test_key_1)
     )
-    .with_arg(request)
-    .with_cycles(26_153_846_153u128)
     .await
-    .expect("vetkd_public_key call failed")
-    .candid_tuple()
-    .expect("Failed to decode response");
+    .expect("vetkd_public_key call failed");
 
     response.public_key
 }
 
 #[update]
 async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::api::msg_caller(); // MUST capture before await
+    let caller = ic_cdk::caller(); // MUST capture before await
 
     let request = VetKdDeriveKeyRequest {
         input: caller.as_slice().to_vec(), // derive key specific to this caller
@@ -5851,18 +5997,15 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
         key_id: key_id(),
     };
 
-    // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    // vetkd_derive_key requires ~26B cycles on mainnet.
-    let (response,): (VetKdDeriveKeyResponse,) = Call::unbounded_wait(
+    // key_1 costs ~26B cycles, test_key_1 costs ~10B cycles.
+    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
         Principal::management_canister(),
         "vetkd_derive_key",
+        (request,),
+        26_000_000_000, // cycles for key_1 (use 10_000_000_000 for test_key_1)
     )
-    .with_arg(request)
-    .with_cycles(26_153_846_153u128)
     .await
-    .expect("vetkd_derive_key call failed")
-    .candid_tuple()
-    .expect("Failed to decode response");
+    .expect("vetkd_derive_key call failed");
 
     response.encrypted_key
 }
@@ -5879,12 +6022,9 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
-# ⚠ Verify ic-vetkeys exists on mops.one before adding.
-# If not yet published, use the raw management canister approach below instead.
-ic-vetkeys = "0.4.0"
 ```
 
-**Using the management canister directly (recommended — no dependency on unpublished packages):**
+**Using the management canister directly:**
 
 ```motoko
 import Blob "mo:core/Blob";
@@ -5921,12 +6061,12 @@ persistent actor {
     encrypted_key : Blob;
   };
 
-  transient let managementCanister : actor {
+  let managementCanister : actor {
     vetkd_public_key : VetKdPublicKeyRequest -> async VetKdPublicKeyResponse;
     vetkd_derive_key : VetKdDeriveKeyRequest -> async VetKdDeriveKeyResponse;
   } = actor "aaaaa-aa";
 
-  transient let context : Blob = Text.encodeUtf8("my_app_v1");
+  let context : Blob = Text.encodeUtf8("my_app_v1");
 
   // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
@@ -5934,7 +6074,7 @@ persistent actor {
   };
 
   public shared func getPublicKey() : async Blob {
-    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_public_key({
+    let response = await (with cycles = 26_000_000_000) managementCanister.vetkd_public_key({
       canister_id = null;
       context;
       key_id = keyId();
@@ -5944,7 +6084,7 @@ persistent actor {
 
   public shared ({ caller }) func deriveKey(transportPublicKey : Blob) : async Blob {
     // caller is captured here, before the await
-    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_derive_key({
+    let response = await (with cycles = 26_000_000_000) managementCanister.vetkd_derive_key({
       input = Principal.toBlob(caller);
       context;
       transport_public_key = transportPublicKey;
@@ -5959,15 +6099,182 @@ persistent actor {
 
 The frontend generates a transport key pair, sends the public half to the canister, receives the encrypted derived key, decrypts it, and uses the result for AES encryption/decryption.
 
-```javascript
-// The @icp-sdk/vetkeys package API is evolving rapidly.
-// Check https://github.com/dfinity/examples for the latest vetKD usage examples.
-// High-level flow:
-// 1. Generate a transport key pair (BLS12-381, NOT P-256)
-// 2. Call backend canister to derive encrypted key
-// 3. Decrypt with transport private key
-// 4. Use derived symmetric key for AES-GCM encryption/decryption
+```typescript
+import { TransportSecretKey, DerivedPublicKey, EncryptedVetKey } from "@dfinity/vetkeys";
+
+// 1. Generate a transport secret key (BLS12-381)
+const seed = crypto.getRandomValues(new Uint8Array(32));
+const transportSecretKey = TransportSecretKey.fromSeed(seed);
+const transportPublicKey = transportSecretKey.publicKey();
+
+// 2. Request encrypted vetkey and verification key from your canister
+const [encryptedKeyBytes, verificationKeyBytes] = await Promise.all([
+  backendActor.get_encrypted_vetkey(subkeyId, transportPublicKey),
+  backendActor.get_vetkey_verification_key(),
+]);
+
+// 3. Deserialize and decrypt
+const verificationKey = DerivedPublicKey.deserialize(new Uint8Array(verificationKeyBytes));
+const encryptedVetKey = EncryptedVetKey.deserialize(new Uint8Array(encryptedKeyBytes));
+const vetKey = encryptedVetKey.decryptAndVerify(
+  transportSecretKey,
+  verificationKey,
+  new Uint8Array(subkeyId),
+);
+
+// 4. Derive a symmetric key for AES-GCM
+const aesKeyMaterial = vetKey.toDerivedKeyMaterial();
+const aesKey = await crypto.subtle.importKey(
+  "raw",
+  aesKeyMaterial.data.slice(0, 32), // 256-bit AES key
+  { name: "AES-GCM" },
+  false,
+  ["encrypt", "decrypt"],
+);
+
+// 5. Encrypt
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const ciphertext = await crypto.subtle.encrypt(
+  { name: "AES-GCM", iv },
+  aesKey,
+  new TextEncoder().encode("secret message"),
+);
+
+// 6. Decrypt
+const plaintext = await crypto.subtle.decrypt(
+  { name: "AES-GCM", iv },
+  aesKey,
+  ciphertext,
+);
 ```
+
+The `@dfinity/vetkeys` package also provides higher-level abstractions via sub-paths:
+
+- **`@dfinity/vetkeys/key_manager`** -- `KeyManager` and `DefaultKeyManagerClient` for managing access-controlled keys
+- **`@dfinity/vetkeys/encrypted_maps`** -- `EncryptedMaps` and `DefaultEncryptedMapsClient` for encrypted key-value storage
+
+These mirror the Rust `KeyManager` and `EncryptedMaps` types and handle the transport key flow automatically.
+
+### Offline Public Key Derivation
+
+You can derive public keys offline (without any canister calls) from the known mainnet master public key. This is useful for IBE — you can encrypt to a (canister, identity) pair without the recipient or the canister being online.
+
+**Rust:**
+
+```rust
+use ic_vetkeys::{MasterPublicKey, DerivedPublicKey};
+
+// Start from the known mainnet master public key for key_1
+let master_key = MasterPublicKey::for_mainnet_key("key_1")
+    .expect("unknown key name");
+
+// Derive the canister-level key
+let canister_key = master_key.derive_canister_key(canister_id.as_slice());
+
+// Derive a sub-key for a specific context/identity
+let derived_key: DerivedPublicKey = canister_key.derive_sub_key(b"my_app_v1");
+
+// Use derived_key for IBE encryption — no canister call needed
+```
+
+**TypeScript:**
+
+```typescript
+import { MasterPublicKey, DerivedPublicKey } from "@dfinity/vetkeys";
+
+// Start from the known mainnet master public key
+const masterKey = MasterPublicKey.productionKey();
+
+// Derive the canister-level key
+const canisterKey = masterKey.deriveCanisterKey(canisterId);
+
+// Derive a sub-key for a specific context/identity
+const derivedKey: DerivedPublicKey = canisterKey.deriveSubKey(
+  new TextEncoder().encode("my_app_v1"),
+);
+
+// Use derivedKey for IBE encryption — no canister call needed
+```
+
+### Identity-Based Encryption (IBE)
+
+IBE lets you encrypt a message to an identity (e.g., a principal) using only the derived public key — the recipient doesn't need to be online or have registered a key. The recipient later decrypts by obtaining their vetKey from the canister.
+
+**TypeScript:**
+
+```typescript
+import {
+  TransportSecretKey, DerivedPublicKey, EncryptedVetKey,
+  IbeCiphertext, IbeIdentity, IbeSeed,
+} from "@dfinity/vetkeys";
+
+// --- Encrypt (sender side, no canister call needed) ---
+
+// Derive the recipient's public key offline (see "Offline Public Key Derivation" above)
+const recipientIdentity = IbeIdentity.fromBytes(recipientPrincipalBytes);
+const seed = IbeSeed.random();
+const plaintext = new TextEncoder().encode("secret message");
+
+const ciphertext = IbeCiphertext.encrypt(derivedPublicKey, recipientIdentity, plaintext, seed);
+const serialized = ciphertext.serialize(); // store or transmit this
+
+// --- Decrypt (recipient side, requires canister call to get vetKey) ---
+
+// 1. Get the vetKey (same flow as the Frontend section above)
+const transportSecretKey = TransportSecretKey.fromSeed(crypto.getRandomValues(new Uint8Array(32)));
+const [encryptedKeyBytes, verificationKeyBytes] = await Promise.all([
+  backendActor.get_encrypted_vetkey(subkeyId, transportSecretKey.publicKey()),
+  backendActor.get_vetkey_verification_key(),
+]);
+const verificationKey = DerivedPublicKey.deserialize(new Uint8Array(verificationKeyBytes));
+const encryptedVetKey = EncryptedVetKey.deserialize(new Uint8Array(encryptedKeyBytes));
+const vetKey = encryptedVetKey.decryptAndVerify(
+  transportSecretKey, verificationKey, new Uint8Array(subkeyId),
+);
+
+// 2. Decrypt the IBE ciphertext
+const deserialized = IbeCiphertext.deserialize(serialized);
+const decrypted = deserialized.decrypt(vetKey);
+// decrypted is Uint8Array containing "secret message"
+```
+
+**Rust (off-chain client or test):**
+
+```rust
+use ic_vetkeys::{
+    DerivedPublicKey, IbeCiphertext, IbeIdentity, IbeSeed, VetKey,
+};
+
+// --- Encrypt ---
+let identity = IbeIdentity::from_bytes(recipient_principal.as_slice());
+let seed = IbeSeed::new(&mut rand::rng());
+let plaintext = b"secret message";
+
+let ciphertext = IbeCiphertext::encrypt(
+    &derived_public_key,
+    &identity,
+    plaintext,
+    &seed,
+);
+let serialized = ciphertext.serialize();
+
+// --- Decrypt (after obtaining the VetKey) ---
+let deserialized = IbeCiphertext::deserialize(&serialized)
+    .expect("invalid ciphertext");
+let decrypted = deserialized.decrypt(&vet_key)
+    .expect("decryption failed");
+// decrypted == b"secret message"
+```
+
+### Higher-Level Abstractions: KeyManager & EncryptedMaps
+
+Both the Rust crate and TypeScript package provide two higher-level modules that handle the transport key flow, access control, and encrypted storage for you:
+
+- **`KeyManager<T: AccessControl>`** (Rust) / **`KeyManager`** (TS) -- Manages access-controlled vetKD keys with stable storage. Handles key derivation, user rights (`Read`, `ReadWrite`, `ReadWriteManage`), and key sharing between principals.
+
+- **`EncryptedMaps<T: AccessControl>`** (Rust) / **`EncryptedMaps`** (TS) -- Builds on KeyManager to provide an encrypted key-value store. Each map is access-controlled and encrypted with a derived vetKD key. Values are encrypted/decrypted transparently on the frontend.
+
+In Rust, these live in `ic_vetkeys::key_manager` and `ic_vetkeys::encrypted_maps`. In TypeScript, import from `@dfinity/vetkeys/key_manager` and `@dfinity/vetkeys/encrypted_maps`. See the [vetkeys repository](https://github.com/dfinity/vetkeys) for full examples.
 
 ## Deploy & Test
 
@@ -6010,18 +6317,17 @@ icp canister call backend getPublicKey '()'
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: (blob "\12\34\56...")  -- encrypted key material
 
-# 3. Note: vetkd_derive_key uses randomized encryption — the encrypted blobs DIFFER each call.
-# The underlying derived key is deterministic (same canister/context/input always produces the same key),
-# but the encrypted_key blob varies because a fresh random nonce is used each time.
-# To verify the underlying key is correct, decrypt both blobs with the transport secret and confirm they match.
+# 3. Verify determinism: same inputs produce same output
+# Call deriveKey twice with identical transport key
+# Expected: identical encrypted_key blobs both times
 
 # 4. Verify isolation: different callers get different keys
-icp identity new test-user-1 --storage plaintext
-icp identity new test-user-2 --storage plaintext
-icp identity use test-user-1
+icp identity new test-user-1 --storage-mode=plaintext
+icp identity new test-user-2 --storage-mode=plaintext
+icp identity default test-user-1
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Note the output
-icp identity use test-user-2
+icp identity default test-user-2
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: DIFFERENT encrypted_key (different caller = different derived key)
 
@@ -6040,13 +6346,14 @@ name: Cycles Wallet Management
 category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
 endpoints: 7
-version: 1.4.0
+version: 1.4.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [cycles, wallet, topup, canister, funding, management, icp]
 ---
 
 # Cycles & Canister Management
-> version: 1.4.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
