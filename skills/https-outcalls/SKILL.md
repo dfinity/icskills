@@ -129,7 +129,7 @@ persistent actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = Blob.empty();
+        context = "" : Blob;
       };
     };
 
@@ -165,7 +165,7 @@ persistent actor {
       method = #post;
       transform = ?{
         function = transform;
-        context = Blob.empty();
+        context = "" : Blob;
       };
     };
 
@@ -202,8 +202,9 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
+use ic_cdk::api::canister_self;
+use ic_cdk::management_canister::{
+    http_request, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult,
     TransformArgs, TransformContext, TransformFunc,
 };
 use ic_cdk::{query, update};
@@ -212,8 +213,8 @@ use serde::Deserialize;
 /// Transform function: strips non-deterministic headers so all replicas agree.
 /// MUST be a #[query] function.
 #[query]
-fn transform(args: TransformArgs) -> HttpResponse {
-    HttpResponse {
+fn transform(args: TransformArgs) -> HttpRequestResult {
+    HttpRequestResult {
         status: args.response.status,
         body: args.response.body,
         headers: vec![], // Strip all headers for consensus
@@ -229,7 +230,7 @@ fn transform(args: TransformArgs) -> HttpResponse {
 async fn fetch_price() -> String {
     let url = "https://api.coingecko.com/api/v3/simple/price?ids=internet-computer&vs_currencies=usd";
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: url.to_string(),
         max_response_bytes: Some(10_000),
         method: HttpMethod::GET,
@@ -241,19 +242,14 @@ async fn fetch_price() -> String {
         ],
         body: None,
         transform: Some(TransformContext {
-            function: TransformFunc(candid::Func {
-                principal: ic_cdk::api::canister_self(),
-                method: "transform".to_string(),
-            }),
+            function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
     };
 
-    // Attach 200M cycles for the outcall
-    let cycles: u128 = 200_000_000;
-
-    match http_request(request, cycles).await {
-        Ok((response,)) => {
+    // ic-cdk 0.18 automatically computes and attaches the required cycles
+    match http_request(&request).await {
+        Ok(response) => {
             let body = String::from_utf8(response.body)
                 .unwrap_or_else(|_| "Invalid UTF-8 in response".to_string());
 
@@ -263,8 +259,8 @@ async fn fetch_price() -> String {
 
             body
         }
-        Err((code, msg)) => {
-            format!("HTTP outcall failed: {:?} - {}", code, msg)
+        Err(err) => {
+            format!("HTTP outcall failed: {:?}", err)
         }
     }
 }
@@ -296,7 +292,7 @@ async fn get_icp_price_usd() -> String {
 async fn post_data(json_payload: String) -> String {
     let url = "https://httpbin.org/post";
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: url.to_string(),
         max_response_bytes: Some(50_000),
         method: HttpMethod::POST,
@@ -317,23 +313,19 @@ async fn post_data(json_payload: String) -> String {
         ],
         body: Some(json_payload.into_bytes()),
         transform: Some(TransformContext {
-            function: TransformFunc(candid::Func {
-                principal: ic_cdk::api::canister_self(),
-                method: "transform".to_string(),
-            }),
+            function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
     };
 
-    let cycles: u128 = 300_000_000;
-
-    match http_request(request, cycles).await {
-        Ok((response,)) => {
+    // ic-cdk 0.18 automatically computes and attaches the required cycles
+    match http_request(&request).await {
+        Ok(response) => {
             String::from_utf8(response.body)
                 .unwrap_or_else(|_| "Invalid UTF-8 in response".to_string())
         }
-        Err((code, msg)) => {
-            format!("HTTP outcall failed: {:?} - {}", code, msg)
+        Err(err) => {
+            format!("HTTP outcall failed: {:?}", err)
         }
     }
 }
