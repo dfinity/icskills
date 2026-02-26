@@ -1,42 +1,28 @@
 #!/usr/bin/env node
-// Generates sitemap.xml from skill directories
-// Run: node scripts/generate-sitemap.js
+// Post-build: generates dist/sitemap.xml from skill directories.
+// Uses git commit dates for lastmod (deterministic, no "today" drift).
+// Run after vite build: node scripts/generate-sitemap.js
 
-import { readdirSync, writeFileSync, statSync } from "fs";
-import { execFileSync } from "child_process";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { writeFileSync } from "fs";
+import { join } from "path";
+import { ROOT, listSkillDirs, getLastUpdated, SKILLS_DIR } from "./lib/parse-skill.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-const SKILLS_DIR = join(ROOT, "skills");
-const OUTPUT = join(ROOT, "public", "sitemap.xml");
+const DIST = join(ROOT, "dist");
 const SITE = "https://dfinity.github.io/icskills";
-const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
-function getLastMod(filePath) {
-  try {
-    const date = execFileSync("git", ["log", "-1", "--format=%cs", "--", filePath], { cwd: ROOT, encoding: "utf-8" }).trim();
-    if (date) return date;
-  } catch {}
-  return statSync(filePath).mtime.toISOString().split("T")[0];
-}
+const dirs = listSkillDirs();
 
-const dirs = readdirSync(SKILLS_DIR).filter((d) => {
-  try {
-    return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
-  } catch {
-    return false;
-  }
-}).sort();
-
-const today = new Date().toISOString().split("T")[0];
+// Derive homepage/aggregate lastmod from the most recently changed skill
+const skillDates = dirs.map((dir) =>
+  getLastUpdated(join(SKILLS_DIR, dir, "SKILL.md"))
+);
+const latestDate = skillDates.sort().pop() || "2025-01-01";
 
 let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${SITE}/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${latestDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -44,8 +30,7 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>
 
 for (const dir of dirs) {
   const filePath = join(SKILLS_DIR, dir, "SKILL.md");
-  const lastmod = getLastMod(filePath);
-  // Skill page URL (rendered HTML)
+  const lastmod = getLastUpdated(filePath);
   xml += `  <url>
     <loc>${SITE}/skills/${dir}/</loc>
     <lastmod>${lastmod}</lastmod>
@@ -53,23 +38,22 @@ for (const dir of dirs) {
     <priority>0.9</priority>
   </url>
 `;
-  // Note: raw.githubusercontent.com URLs omitted — sitemaps must be same-origin
 }
 
 xml += `  <url>
     <loc>${SITE}/llms.txt</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${latestDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>${SITE}/llms-full.txt</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${latestDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 </urlset>
 `;
 
-writeFileSync(OUTPUT, xml);
-console.log(`Generated sitemap.xml (${dirs.length} skills)`);
+writeFileSync(join(DIST, "sitemap.xml"), xml);
+console.log(`Generated sitemap.xml (${dirs.length} skills) -> dist/`);

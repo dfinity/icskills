@@ -13,13 +13,14 @@ name: "Asset Canister & Frontend"
 category: Frontend
 description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
 endpoints: 5
-version: 3.2.0
+version: 3.2.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [frontend, assets, hosting, spa, certified, domain, upload, static]
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 3.2.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -303,13 +304,14 @@ name: Certified Variables
 category: Security
 description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
 endpoints: 4
-version: 1.2.0
+version: 1.2.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]
+tags: [certification, query, merkle, verified, response, trust, proof]
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.2.0 | requires: [icp-cli >= 0.1.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
@@ -794,13 +796,14 @@ name: ckBTC Integration
 category: DeFi
 description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
 endpoints: 14
-version: 2.1.0
+version: 2.1.1
 status: stable
 dependencies: [icrc-ledger, wallet]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 
@@ -1574,13 +1577,14 @@ name: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.0
+version: 1.1.1
 status: stable
 dependencies: [https-outcalls]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -2411,13 +2415,14 @@ name: HTTPS Outcalls
 category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
 endpoints: 4
-version: 1.5.0
+version: 1.5.2
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [http, api, fetch, external, request, transform, outcall]
 ---
 
 # HTTPS Outcalls
-> version: 1.5.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -2427,7 +2432,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 - icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `moc` compiler (included with icp-cli), `mo:core` 2.0 in mops.toml
-- For Rust: `ic-cdk >= 0.18`, `serde_json` for JSON parsing
+- For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 
 ## Canister IDs
 
@@ -2861,13 +2866,14 @@ name: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11
-version: 2.3.0
+version: 2.3.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -3385,13 +3391,14 @@ name: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 5.0.0
+version: 5.0.1
 status: stable
 dependencies: [asset-canister]
+requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
+tags: [auth, login, passkey, webauthn, identity, session, delegation, principal]
 ---
 
 # Internet Identity Authentication
-> version: 5.0.0 | requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
 
 ## What This Is
 
@@ -3759,13 +3766,14 @@ name: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.0.1
+version: 3.0.2
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -4732,13 +4740,14 @@ name: SNS DAO Launch
 category: Governance
 description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
 endpoints: 22
-version: 1.8.0
+version: 1.8.1
 status: stable
 dependencies: [icrc-ledger, multi-canister]
+requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
+tags: [dao, governance, sns, token, swap, decentralization, proposal, neuron]
 ---
 
 # SNS DAO Launch
-> version: 1.8.0 | requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 
@@ -5145,13 +5154,14 @@ name: "Stable Memory & Upgrades"
 category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
 endpoints: 6
-version: 2.0.0
+version: 2.0.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [storage, persistence, upgrade, memory, stable-structures, heap, state]
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 2.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
@@ -5517,14 +5527,15 @@ name: vetKD Encryption
 category: Security
 description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 0.9.0
+version: 0.9.1
 status: beta
 dependencies: [internet-identity]
+requires: [icp-cli >= 0.1.0]
+tags: [encryption, decryption, key-derivation, threshold, privacy, secret, aes]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 0.9.0 | requires: [icp-cli >= 0.1.0]
->
+
 > **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
 > may change between IC SDK releases. Pin your dependency versions and test after every icp-cli upgrade.
 > Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.
@@ -6016,13 +6027,14 @@ name: Cycles Wallet Management
 category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
 endpoints: 7
-version: 1.4.0
+version: 1.4.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [cycles, wallet, topup, canister, funding, management, icp]
 ---
 
 # Cycles & Canister Management
-> version: 1.4.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).

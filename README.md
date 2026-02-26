@@ -27,9 +27,11 @@ Every skill follows the same structure:
 
 | Section | Purpose |
 |---------|---------|
-| **What this is** | One paragraph. What the technology does. |
-| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.18`. |
-| **Mistakes that break your build** | Numbered pitfalls that prevent hallucinations. |
+| **What This Is** | One paragraph. What the technology does. |
+| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.19`. |
+| **Canister IDs** *(optional)* | External canister principals for mainnet/testnet. |
+| **How It Works** *(optional)* | Flow descriptions for multi-step processes. |
+| **Mistakes That Break Your Build** | Numbered pitfalls that prevent hallucinations. |
 | **Implementation** | Tested, copy-paste-correct code blocks. |
 | **Deploy & Test** | Step-by-step commands for local and mainnet. |
 | **Verify It Works** | Concrete commands to confirm it works. |
@@ -65,12 +67,11 @@ curl -s https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKI
 
 ### Claude Code
 
-Copy skills into `.claude/skills/` — they're automatically loaded into context:
+Fetch the raw skill and paste it into context, or use it as a custom slash command:
 
 ```bash
-mkdir -p .claude/skills/ckbtc
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
-  > .claude/skills/ckbtc/SKILL.md
+# Fetch directly in conversation
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md
 ```
 
 ### OpenCode
@@ -126,9 +127,16 @@ curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SK
 
 The files are plain markdown. Copy the content into whatever instructions, rules, or context file your tool supports.
 
-## API (Planned)
+## Programmatic Access
 
-The website documents a REST API for programmatic access:
+| Resource | URL | Description |
+|----------|-----|-------------|
+| Skill index | [`llms.txt`](https://dfinity.github.io/icskills/llms.txt) | Short index with links to each skill |
+| All skills | [`llms-full.txt`](https://dfinity.github.io/icskills/llms-full.txt) | All skills concatenated for direct context injection |
+| Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md` | Raw markdown for one skill |
+| Agent discovery | [`.well-known/agent.json`](https://dfinity.github.io/icskills/.well-known/agent.json) | Machine-readable skill manifest |
+
+## REST API (Planned)
 
 | Endpoint | Description |
 |----------|-------------|
@@ -150,6 +158,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 - **Site**: [Preact](https://preactjs.com/) + [Vite](https://vite.dev/) — 3kb runtime, ~16kb gzipped total
 - **Hosting**: GitHub Pages via Actions
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
+- **Validation**: Structural linter for frontmatter, sections, and dependency graph (`npm run validate`)
+- **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 
 ## License
 

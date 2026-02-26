@@ -4,13 +4,14 @@ name: SNS DAO Launch
 category: Governance
 description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
 endpoints: 22
-version: 1.8.0
+version: 1.8.1
 status: stable
 dependencies: [icrc-ledger, multi-canister]
+requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
+tags: [dao, governance, sns, token, swap, decentralization, proposal, neuron]
 ---
 
 # SNS DAO Launch
-> version: 1.8.0 | requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 

@@ -4,13 +4,14 @@ name: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.0.1
+version: 3.0.2
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
