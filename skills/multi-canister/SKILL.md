@@ -536,7 +536,7 @@ thread_local! {
         StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).unwrap()
+        )
     );
 
     // Store the user_service canister ID (set during init, re-set on upgrade)
@@ -596,7 +596,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
     let id = POST_COUNTER.with(|counter| {
         let mut counter = counter.borrow_mut();
         let id = *counter.get();
-        counter.set(id + 1).unwrap();
+        counter.set(id + 1);
         id
     });
 
@@ -755,9 +755,9 @@ persistent actor Self {
 #### Rust Factory
 
 ```rust
-use candid::{CandidType, Deserialize, Principal, encode_one};
+use candid::{CandidType, Deserialize, Nat, Principal, encode_one};
 use ic_cdk::management_canister::{
-    create_canister, install_code,
+    create_canister_with_extra_cycles, install_code,
     CreateCanisterArgs, InstallCodeArgs, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
@@ -787,18 +787,19 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
     // Create canister
     let create_args = CreateCanisterArgs {
         settings: Some(CanisterSettings {
-            controllers: Some(vec![ic_cdk::id(), caller]),
+            controllers: Some(vec![ic_cdk::api::id(), caller]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
             reserved_cycles_limit: None,
             log_visibility: None,
             wasm_memory_limit: None,
+            wasm_memory_threshold: None,
         }),
     };
 
     // Attach 1T cycles for the new canister
-    let create_result = create_canister(&create_args, 1_000_000_000_000u128)
+    let create_result = create_canister_with_extra_cycles(&create_args, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
@@ -943,7 +944,7 @@ icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
 # Create a new identity that is NOT registered
-icp identity new unregistered --storage-mode=plaintext
+icp identity new unregistered --storage plaintext
 icp identity default unregistered
 icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
