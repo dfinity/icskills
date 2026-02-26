@@ -513,7 +513,7 @@ async fn get_deposit_address() -> String {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = GetBtcAddressArgs {
-        owner: Some(ic_cdk::api::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -533,7 +533,7 @@ async fn update_balance() -> UpdateBalanceResult {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = UpdateBalanceArgs {
-        owner: Some(ic_cdk::api::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -553,7 +553,7 @@ async fn get_balance() -> Nat {
 
     let subaccount = principal_to_subaccount(&caller);
     let account = Account {
-        owner: ic_cdk::api::id(),
+        owner: ic_cdk::api::canister_self(),
         subaccount: Some(subaccount),
     };
 

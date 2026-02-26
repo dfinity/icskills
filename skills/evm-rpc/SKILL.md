@@ -380,7 +380,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::call::call_with_payment128;
+use ic_cdk::api::call::call_with_payment128;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";

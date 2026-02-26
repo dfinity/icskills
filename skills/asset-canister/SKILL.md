@@ -35,15 +35,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.yaml.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.yaml, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.yaml has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -69,10 +69,10 @@ canisters:
 ```
 
 Key fields:
-- `"type": "assets"` -- tells `icp` this is an asset canister
-- `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
-- `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
+- `type: assets` -- tells `icp` this is an asset canister
+- `source` -- array of directories to upload (contents, not the directory itself)
+- `build` -- commands `icp deploy` runs before uploading (your frontend build step)
+- `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
 
