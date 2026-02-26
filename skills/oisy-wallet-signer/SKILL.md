@@ -6,7 +6,7 @@ description: Guides integration with @dfinity/oisy-wallet-signer for building dA
 version: 4.1.0
 endpoints: 5
 status: stable
-dependencies: [@dfinity/utils, @dfinity/zod-schemas, @icp-sdk/canisters, @icp-sdk/core, zod]
+dependencies: ["@dfinity/utils", "@dfinity/zod-schemas", "@icp-sdk/canisters", "@icp-sdk/core", "zod"]
 ---
 
 # OISY Wallet Signer
