@@ -114,7 +114,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::set_certified_data(&tree.root_hash());
     });
 }
 
@@ -158,7 +158,7 @@ struct CertifiedResponse {
 #[query]
 fn get(key: String) -> CertifiedResponse {
     // data_certificate() is only available in query calls
-    let certificate = ic_cdk::data_certificate()
+    let certificate = ic_cdk::api::data_certificate()
         .expect("data_certificate only available in query calls");
 
     TREE.with(|tree| {
@@ -247,7 +247,7 @@ fn certify_response(path: &str, response: &HttpResponse) {
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::set_certified_data(&tree.root_hash());
     });
 }
 ```

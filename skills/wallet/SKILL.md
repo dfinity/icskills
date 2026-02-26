@@ -175,7 +175,7 @@ use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(ic_cdk::api::canister_balance128())
+    Nat::from(ic_cdk::api::canister_cycle_balance())
 }
 
 #[update]
@@ -202,7 +202,7 @@ use ic_cdk::management_canister::{
 
 #[update]
 async fn create_new_canister() -> Principal {
-    let caller = ic_cdk::api::id(); // capture canister's own principal
+    let caller = ic_cdk::api::canister_self(); // capture canister's own principal
     let user = ic_cdk::caller(); // capture caller before await
 
     let settings = CanisterSettings {
