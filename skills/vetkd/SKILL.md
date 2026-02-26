@@ -133,6 +133,7 @@ serde_bytes = "0.11"
 # ic-vetkeys = { git = "https://github.com/dfinity/ic-vetkeys" }
 # Or use Option B (raw canister calls) which has no extra dependency.
 ic-vetkeys = "0.6.0"
+ic-stable-structures = "0.7"
 
 # Option B: Call management canister directly (lower level, always works)
 # No extra dependency -- use ic_cdk::call::Call::unbounded_wait(...).with_cycles()
@@ -142,45 +143,85 @@ ic-vetkeys = "0.6.0"
 
 ```rust
 use candid::Principal;
-use ic_cdk::update;
+use ic_cdk::{init, update};
+use ic_cdk::management_canister::{VetKDCurve, VetKDKeyId};
+use ic_vetkeys::key_manager::KeyManager;
+use ic_vetkeys::types::AccessRights;
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::DefaultMemoryImpl;
+use std::cell::RefCell;
 
-// The ic-vetkeys crate provides KeyManager and EncryptedMaps
-// which handle the low-level vetKD API calls for you.
-//
-// ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
-// with "could not find `ic_vetkeys`", switch to the raw management canister
-// approach below (Option B), or add as a git dependency from dfinity/ic-vetkeys.
-//
-// API is under active development — verify function signatures against latest docs.
-use ic_vetkeys::KeyManager;
+// ⚠ ic-vetkeys API is under active development — verify function signatures against
+// https://docs.rs/ic-vetkeys/latest and https://github.com/dfinity/vetkeys.
 
-// Initialize KeyManager in your canister
+type Memory = VirtualMemory<DefaultMemoryImpl>;
+
 thread_local! {
-    static KEY_MANAGER: std::cell::RefCell<KeyManager> = std::cell::RefCell::new(
-        KeyManager::new(
-            "key_1".to_string(),          // master key name
-            b"my_app_v1".to_vec(),        // context / domain separator
-        )
-    );
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+    static KEY_MANAGER: RefCell<Option<KeyManager<AccessRights>>> =
+        RefCell::new(None);
+}
+
+fn get_memory(id: u8) -> Memory {
+    MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(id)))
+}
+
+// KeyManager requires 3 stable memory regions (config, access control, shared keys).
+// Call init_key_manager in both #[init] and #[post_upgrade] — StableCell/StableBTreeMap
+// reconnect to existing data on upgrade, so this is safe to call repeatedly.
+fn init_key_manager() {
+    let key_id = VetKDKeyId {
+        curve: VetKDCurve::Bls12_381_G2,
+        // "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
+        name: "key_1".to_string(),
+    };
+    KEY_MANAGER.with(|km| {
+        *km.borrow_mut() = Some(KeyManager::init(
+            "my_app_v1",    // domain separator
+            key_id,
+            get_memory(0),  // config memory
+            get_memory(1),  // access control memory
+            get_memory(2),  // shared keys memory
+        ));
+    });
+}
+
+#[init]
+fn init() {
+    init_key_manager();
+}
+
+#[ic_cdk::post_upgrade]
+fn post_upgrade() {
+    init_key_manager();
 }
 
 #[update]
-async fn get_encrypted_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::api::msg_caller();  // Capture BEFORE await
-    KEY_MANAGER.with(|km| {
+async fn get_verification_key() -> Vec<u8> {
+    let future = KEY_MANAGER.with(|km| {
         let km = km.borrow();
-        km.derive_key(caller.as_slice().to_vec(), transport_public_key)
-    }).await
-    .expect("vetKD key derivation failed")
+        let km = km.as_ref().expect("KeyManager not initialized");
+        km.get_vetkey_verification_key()
+    });
+    future.await.to_vec()
 }
 
 #[update]
-async fn get_public_key() -> Vec<u8> {
-    KEY_MANAGER.with(|km| {
+async fn get_encrypted_vetkey(transport_public_key: Vec<u8>) -> Vec<u8> {
+    let caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
+
+    // KeyId = (owner_principal, 32-byte key name)
+    let key_id = (caller, [0u8; 32].into());
+
+    let future = KEY_MANAGER.with(|km| {
         let km = km.borrow();
-        km.public_key()
-    }).await
-    .expect("vetKD public key retrieval failed")
+        let km = km.as_ref().expect("KeyManager not initialized");
+        km.get_encrypted_vetkey(caller, key_id, transport_public_key.into())
+    })
+    .expect("Access denied");
+
+    future.await.to_vec()
 }
 ```
 

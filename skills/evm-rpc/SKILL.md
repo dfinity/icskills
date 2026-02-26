@@ -413,7 +413,6 @@ enum RpcService {
     BaseMainnet(L2MainnetService),
     OptimismMainnet(L2MainnetService),
     Custom(CustomRpcService),
-    Chain(u64),
     Provider(u64),
 }
 
@@ -430,8 +429,10 @@ enum EthMainnetService {
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum EthSepoliaService {
     Alchemy,
+    Ankr,
     BlockPi,
     PublicNode,
+    Sepolia,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -491,12 +492,29 @@ enum ProviderError {
     MissingRequiredProvider,
     ProviderNotFound,
     NoPermission,
+    InvalidRpcConfig(String),
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+enum RejectionCode {
+    NoError,
+    CanisterError,
+    SysTransient,
+    DestinationInvalid,
+    Unknown,
+    SysFatal,
+    CanisterReject,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum HttpOutcallError {
-    IcError { code: i32, message: String },
-    InvalidHttpJsonRpcResponse { status: u16, body: String, parsing_error: Option<String> },
+    IcError { code: RejectionCode, message: String },
+    InvalidHttpJsonRpcResponse {
+        status: u16,
+        body: String,
+        #[serde(rename = "parsingError")]
+        parsing_error: Option<String>,
+    },
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -507,11 +525,8 @@ struct JsonRpcError {
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum ValidationError {
-    HostNotAllowed(String),
-    UrlParseError(String),
     Custom(String),
-    CredentialPathNotAllowed,
-    CredentialHeaderNotAllowed,
+    InvalidHex(String),
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -547,19 +562,16 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: String,
+    transactions_root: Option<String>,
     uncles: Vec<String>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum SendRawTransactionStatus {
     Ok(Option<String>),
-    InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
-    InsufficientGas,
-    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
-    // for the complete set of SendRawTransactionStatus variants.
+    InsufficientFunds,
 }
 
 // -- Get ETH balance via raw JSON-RPC --
