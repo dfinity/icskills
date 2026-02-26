@@ -133,7 +133,7 @@ import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 
-persistent actor {
+persistent actor Self {
 
   // -- Types --
 
@@ -288,7 +288,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcMinter.get_btc_address({
-      owner = ?Principal.fromActor(this);
+      owner = ?Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -299,7 +299,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcMinter.update_balance({
-      owner = ?Principal.fromActor(this);
+      owner = ?Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -310,7 +310,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
-      owner = Principal.fromActor(this);
+      owner = Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -522,7 +522,7 @@ async fn get_deposit_address() -> String {
         .with_arg(args)
         .await
         .expect("Failed to get BTC address")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     address
@@ -545,7 +545,7 @@ async fn update_balance() -> UpdateBalanceResult {
         .with_arg(args)
         .await
         .expect("Failed to call update_balance")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     result
@@ -568,7 +568,7 @@ async fn get_balance() -> Nat {
         .with_arg(account)
         .await
         .expect("Failed to get balance")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     balance
@@ -598,7 +598,7 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
             .with_arg(args)
             .await
             .expect("Failed to call icrc1_transfer")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     result
@@ -631,7 +631,7 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
             .with_arg(approve_args)
             .await
             .expect("Failed to call icrc2_approve")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     if let Err(e) = approve_result {
@@ -652,7 +652,7 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
             .with_arg(args)
             .await
             .expect("Failed to call retrieve_btc_with_approval")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     result

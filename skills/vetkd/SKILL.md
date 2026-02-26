@@ -247,16 +247,16 @@ async fn vetkd_public_key() -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
+    // vetkd_public_key requires ~26B cycles on mainnet.
     let (response,): (VetKdPublicKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_public_key",
     )
     .with_arg(request)
-    .with_cycles(100_000_000u128)
+    .with_cycles(26_153_846_153u128)
     .await
     .expect("vetkd_public_key call failed")
-    .candid()
+    .candid_tuple()
     .expect("Failed to decode response");
 
     response.public_key
@@ -274,15 +274,16 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    // vetkd_derive_key requires ~26B cycles on mainnet.
     let (response,): (VetKdDeriveKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_derive_key",
     )
     .with_arg(request)
-    .with_cycles(100_000_000u128)
+    .with_cycles(26_153_846_153u128)
     .await
     .expect("vetkd_derive_key call failed")
-    .candid()
+    .candid_tuple()
     .expect("Failed to decode response");
 
     response.encrypted_key
@@ -355,7 +356,7 @@ persistent actor {
   };
 
   public shared func getPublicKey() : async Blob {
-    let response = await (with cycles = 100_000_000) managementCanister.vetkd_public_key({
+    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_public_key({
       canister_id = null;
       context;
       key_id = keyId();
@@ -365,7 +366,7 @@ persistent actor {
 
   public shared ({ caller }) func deriveKey(transportPublicKey : Blob) : async Blob {
     // caller is captured here, before the await
-    let response = await (with cycles = 100_000_000) managementCanister.vetkd_derive_key({
+    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_derive_key({
       input = Principal.toBlob(caller);
       context;
       transport_public_key = transportPublicKey;

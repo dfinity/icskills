@@ -94,7 +94,7 @@ persistent actor {
 import Cycles "mo:core/Cycles";
 import Principal "mo:core/Principal";
 
-persistent actor {
+persistent actor Self {
 
   type CanisterId = { canister_id : Principal };
 
@@ -126,7 +126,7 @@ persistent actor {
   public func createNewCanister() : async Principal {
     let result = await (with cycles = 1_000_000_000_000) ic.create_canister({
       settings = ?{
-        controllers = ?[Principal.fromActor(this)];
+        controllers = ?[Principal.fromActor(Self)];
         compute_allocation = null;
         memory_allocation = null;
         freezing_threshold = ?2_592_000; // 30 days in seconds

@@ -167,7 +167,7 @@ import { HttpAgent } from "@icp-sdk/core/agent";
 // Create an agent with an authorized identity
 const agent = await HttpAgent.create({
   host: "http://localhost:4943",
-  fetchRootKey: true, // Local only
+  shouldFetchRootKey: true, // Local only
 });
 
 const assetManager = new AssetManager({
@@ -923,7 +923,7 @@ import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 
-persistent actor {
+persistent actor Self {
 
   // -- Types --
 
@@ -1078,7 +1078,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcMinter.get_btc_address({
-      owner = ?Principal.fromActor(this);
+      owner = ?Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -1089,7 +1089,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcMinter.update_balance({
-      owner = ?Principal.fromActor(this);
+      owner = ?Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -1100,7 +1100,7 @@ persistent actor {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
-      owner = Principal.fromActor(this);
+      owner = Principal.fromActor(Self);
       subaccount = ?subaccount;
     })
   };
@@ -1312,7 +1312,7 @@ async fn get_deposit_address() -> String {
         .with_arg(args)
         .await
         .expect("Failed to get BTC address")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     address
@@ -1335,7 +1335,7 @@ async fn update_balance() -> UpdateBalanceResult {
         .with_arg(args)
         .await
         .expect("Failed to call update_balance")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     result
@@ -1358,7 +1358,7 @@ async fn get_balance() -> Nat {
         .with_arg(account)
         .await
         .expect("Failed to get balance")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     balance
@@ -1388,7 +1388,7 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
             .with_arg(args)
             .await
             .expect("Failed to call icrc1_transfer")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     result
@@ -1421,7 +1421,7 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
             .with_arg(approve_args)
             .await
             .expect("Failed to call icrc2_approve")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     if let Err(e) = approve_result {
@@ -1442,7 +1442,7 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
             .with_arg(args)
             .await
             .expect("Failed to call retrieve_btc_with_approval")
-            .candid()
+            .candid_tuple()
             .expect("Failed to decode response");
 
     result
@@ -2152,7 +2152,7 @@ async fn get_eth_balance(address: String) -> String {
         .with_cycles(cycles)
         .await
         .expect("Failed to call EVM RPC canister")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -2176,7 +2176,7 @@ async fn get_latest_block() -> Block {
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_getBlockByNumber")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -2214,7 +2214,7 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
         .with_cycles(cycles)
         .await
         .expect("Failed to call EVM RPC canister")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -2238,7 +2238,7 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_sendRawTransaction")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -2267,7 +2267,7 @@ async fn get_arbitrum_block() -> Block {
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_getBlockByNumber")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -3123,7 +3123,7 @@ async fn get_balance(who: Principal) -> Nat {
         .with_arg(account)
         .await
         .expect("Failed to call icrc1_balance_of")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
     balance
 }
@@ -3148,7 +3148,7 @@ async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
         .with_arg(transfer_arg)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     match result {
@@ -3184,7 +3184,7 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
         .with_arg(args)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("Approve error: {:?}", e))
@@ -3214,7 +3214,7 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
         .with_arg(args)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("TransferFrom error: {:?}", e))
@@ -3411,7 +3411,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
 
-6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::caller()` in Rust.
+6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust.
 
 7. **Not calling `agent.fetchRootKey()` in local development.** Without this, certificate verification fails on localhost. Never call it in production -- it's a security risk on mainnet.
 
@@ -3495,7 +3495,7 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
-    ...(isLocal && { fetchRootKey: true, verifyQuerySignatures: false }),
+    ...(isLocal && { shouldFetchRootKey: true, verifyQuerySignatures: false }),
   });
 
   return Actor.createActor(idlFactory, { agent, canisterId });
@@ -4323,7 +4323,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
         .with_arg(original_caller)
         .await
         .map_err(|e| format!("User service call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Failed to decode response: {:?}", e))?;
 
     if !is_valid {
@@ -4372,7 +4372,7 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
             .with_arg(author_id)
             .await
         {
-            Ok(response) => response.candid::<(Option<UserProfile>,)>()
+            Ok(response) => response.candid_tuple::<(Option<UserProfile>,)>()
                 .map(|(profile,)| profile)
                 .unwrap_or(None),
             Err(_) => None, // Handle gracefully if user service is down
@@ -5748,16 +5748,16 @@ async fn vetkd_public_key() -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
+    // vetkd_public_key requires ~26B cycles on mainnet.
     let (response,): (VetKdPublicKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_public_key",
     )
     .with_arg(request)
-    .with_cycles(100_000_000u128)
+    .with_cycles(26_153_846_153u128)
     .await
     .expect("vetkd_public_key call failed")
-    .candid()
+    .candid_tuple()
     .expect("Failed to decode response");
 
     response.public_key
@@ -5775,15 +5775,16 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
+    // vetkd_derive_key requires ~26B cycles on mainnet.
     let (response,): (VetKdDeriveKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_derive_key",
     )
     .with_arg(request)
-    .with_cycles(100_000_000u128)
+    .with_cycles(26_153_846_153u128)
     .await
     .expect("vetkd_derive_key call failed")
-    .candid()
+    .candid_tuple()
     .expect("Failed to decode response");
 
     response.encrypted_key
@@ -5856,7 +5857,7 @@ persistent actor {
   };
 
   public shared func getPublicKey() : async Blob {
-    let response = await (with cycles = 100_000_000) managementCanister.vetkd_public_key({
+    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_public_key({
       canister_id = null;
       context;
       key_id = keyId();
@@ -5866,7 +5867,7 @@ persistent actor {
 
   public shared ({ caller }) func deriveKey(transportPublicKey : Blob) : async Blob {
     // caller is captured here, before the await
-    let response = await (with cycles = 100_000_000) managementCanister.vetkd_derive_key({
+    let response = await (with cycles = 26_153_846_153) managementCanister.vetkd_derive_key({
       input = Principal.toBlob(caller);
       context;
       transport_public_key = transportPublicKey;
@@ -6052,7 +6053,7 @@ persistent actor {
 import Cycles "mo:core/Cycles";
 import Principal "mo:core/Principal";
 
-persistent actor {
+persistent actor Self {
 
   type CanisterId = { canister_id : Principal };
 
@@ -6084,7 +6085,7 @@ persistent actor {
   public func createNewCanister() : async Principal {
     let result = await (with cycles = 1_000_000_000_000) ic.create_canister({
       settings = ?{
-        controllers = ?[Principal.fromActor(this)];
+        controllers = ?[Principal.fromActor(Self)];
         compute_allocation = null;
         memory_allocation = null;
         freezing_threshold = ?2_592_000; // 30 days in seconds
