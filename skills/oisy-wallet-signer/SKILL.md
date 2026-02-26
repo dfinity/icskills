@@ -302,7 +302,7 @@ signer.register({
 });
 ```
 
-#### Consent Message: OK vs Warn
+#### Consent Message: `Ok` vs `Warn`
 
 - `{ Ok: consentInfo }` — canister implements ICRC-21; message is canister-verified
 - `{ Warn: { consentInfo, canisterId, method, arg } }` — signer generated a fallback (for `icrc1_transfer`, `icrc2_approve`, `icrc2_transfer_from`)
