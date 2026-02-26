@@ -63,7 +63,7 @@ Both run in CI. Validate blocks deployment on errors. Generate output is checked
 
 ## Categories
 
-DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure
+DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure, Wallet
 
 ## Project Structure
 
