@@ -4,7 +4,7 @@ name: vetKD Encryption
 category: Security
 description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 0.9.1
+version: 0.9.2
 status: beta
 dependencies: [internet-identity]
 requires: [icp-cli >= 0.1.0]
@@ -65,7 +65,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 5. **Putting secret data in the `input` field.** The input is sent to the management canister in plaintext. It is a key identifier, not encrypted payload. Use it for IDs (principal, document ID), never for the actual secret data.
 
-6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await -- after the await, `caller()` returns the canister's own principal.
+6. **Forgetting that `vetkd_derive_key` is an async inter-canister call.** It costs cycles and requires `await`. Capture `caller` before the await as defensive practice.
 
 7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
 
