@@ -21,7 +21,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 - `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
-- Frontend: `@dfinity/certificate-verification` or `@dfinity/agent` (includes verification)
+- Frontend: `@icp-sdk/core/agent` (includes certificate verification)
 
 ## Canister IDs
 
@@ -355,10 +355,10 @@ persistent actor {
 
 ### Frontend Verification (TypeScript)
 
-The `@dfinity/agent` library handles certificate verification automatically for certified query responses. For manual verification:
+The `@icp-sdk/core/agent` library handles certificate verification automatically for certified query responses. For manual verification:
 
 ```typescript
-import { Certificate, HttpAgent, lookup_path } from "@dfinity/agent";
+import { Certificate, HttpAgent, lookup_path } from "@icp-sdk/core/agent";
 
 async function verifyCertifiedResponse(
   agent: HttpAgent,
@@ -397,7 +397,7 @@ async function verifyCertifiedResponse(
 }
 ```
 
-For asset canisters, the `@dfinity/agent` service worker handles verification transparently -- no manual code needed.
+For asset canisters, the `@icp-sdk/core/agent` service worker handles verification transparently -- no manual code needed.
 
 ## Deploy & Test
 

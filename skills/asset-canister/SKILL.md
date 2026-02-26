@@ -20,7 +20,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 - icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Node.js >= 18 (for building frontend assets)
-- `@dfinity/assets` npm package (for programmatic uploads)
+- `@icp-sdk/canisters` npm package (for programmatic uploads)
 
 ## Canister IDs
 
@@ -45,7 +45,7 @@ Access patterns:
 
 5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
-6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the `@dfinity/assets` library handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
+6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
 7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
 
@@ -149,13 +149,13 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 
 4. Wait for the boundary nodes to pick up the registration and provision the TLS certificate. This typically takes a few minutes. You can verify by visiting `https://yourdomain.com` once DNS has propagated.
 
-### Programmatic Uploads with @dfinity/assets
+### Programmatic Uploads with @icp-sdk/canisters
 
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@dfinity/assets";
-import { HttpAgent, Actor } from "@dfinity/agent";
+import { AssetManager } from "@icp-sdk/canisters/assets";
+import { HttpAgent, Actor } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
 const agent = new HttpAgent({ host: "http://localhost:4943" });

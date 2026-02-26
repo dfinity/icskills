@@ -4,13 +4,13 @@ name: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 4.0.0
+version: 5.0.0
 status: stable
 dependencies: [asset-canister]
 ---
 
 # Internet Identity Authentication
-> version: 4.0.0 | requires: [icp-cli >= 0.1.0, @dfinity/auth-client >= 3.0]
+> version: 5.0.0 | requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
 
 ## What This Is
 
@@ -20,10 +20,8 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 - icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Node.js >= 18 (for frontend)
-- `@dfinity/auth-client` npm package (>= 3.0.0)
-- `@dfinity/agent` npm package
-- `@dfinity/identity` npm package
-- `@dfinity/principal` npm package
+- `@icp-sdk/auth` npm package (>= 5.0.0)
+- `@icp-sdk/core` npm package (>= 5.0.0)
 
 ## Canister IDs
 
@@ -81,8 +79,8 @@ The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet 
 This is framework-agnostic. Adapt the DOM manipulation to your framework.
 
 ```javascript
-import { AuthClient } from "@dfinity/auth-client";
-import { HttpAgent, Actor } from "@dfinity/agent";
+import { AuthClient } from "@icp-sdk/auth/client";
+import { HttpAgent, Actor } from "@icp-sdk/core/agent";
 
 // 1. Create the auth client
 const authClient = await AuthClient.create();
