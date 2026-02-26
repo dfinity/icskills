@@ -382,7 +382,7 @@ crate-type = ["cdylib"]
 ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
-ic-stable-structures = "0.6"
+ic-stable-structures = "0.7"
 ```
 
 #### src/user_service/src/lib.rs
@@ -491,7 +491,7 @@ crate-type = ["cdylib"]
 ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
-ic-stable-structures = "0.6"
+ic-stable-structures = "0.7"
 ```
 
 #### src/content_service/src/lib.rs

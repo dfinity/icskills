@@ -48,6 +48,8 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 7. **Not calling `agent.fetchRootKey()` in local development.** Without this, certificate verification fails on localhost. Never call it in production -- it's a security risk on mainnet.
 
+8. **Storing auth state in `thread_local!` without stable storage (Rust)** -- `thread_local! { RefCell<T> }` is heap memory, wiped on every canister upgrade. Use `StableCell` from `ic-stable-structures` for any state that must persist across upgrades, especially ownership/auth data.
+
 ## Implementation
 
 ### icp.json Configuration
@@ -227,19 +229,31 @@ persistent actor {
 
 ```toml
 # Cargo.toml
+[package]
+name = "ii_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
+ic-stable-structures = "0.7"
 ```
 
 ```rust
 use candid::Principal;
 use ic_cdk::{caller, query, update};
+use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
 thread_local! {
-    static OWNER: RefCell<Option<Principal>> = RefCell::new(None);
+    static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
+        StableCell::init(DefaultMemoryImpl::default(), None).unwrap()
+    );
 }
 
 /// Reject anonymous principal. Call this at the top of every protected endpoint.
@@ -258,10 +272,10 @@ fn init_owner() -> String {
     let caller = require_auth();
 
     OWNER.with(|owner| {
-        let mut owner = owner.borrow_mut();
-        match *owner {
+        let mut cell = owner.borrow_mut();
+        match cell.get() {
             None => {
-                *owner = Some(caller);
+                cell.set(Some(caller)).unwrap();
                 format!("Owner set to {}", caller)
             }
             Some(_) => "Owner already initialized".to_string(),
@@ -274,8 +288,8 @@ fn admin_action() -> String {
     let caller = require_auth();
 
     OWNER.with(|owner| {
-        let owner = owner.borrow();
-        match *owner {
+        let cell = owner.borrow();
+        match cell.get() {
             Some(o) if o == caller => "Admin action performed".to_string(),
             Some(_) => ic_cdk::trap("Only the owner can call this function."),
             None => ic_cdk::trap("Owner not set. Call init_owner first."),

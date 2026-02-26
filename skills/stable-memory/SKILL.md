@@ -121,6 +121,14 @@ Rust canisters use `ic-stable-structures` for persistent storage. The `MemoryMan
 #### Cargo.toml
 
 ```toml
+[package]
+name = "stable_memory_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 ic-cdk = "0.18"
 ic-stable-structures = "0.7"
