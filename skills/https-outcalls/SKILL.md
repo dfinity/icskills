@@ -245,9 +245,10 @@ async fn fetch_price() -> String {
             function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
+        is_replicated: None,
     };
 
-    // ic-cdk 0.18 automatically computes and attaches the required cycles
+    // ic-cdk 0.19 automatically computes and attaches the required cycles
     match http_request(&request).await {
         Ok(response) => {
             let body = String::from_utf8(response.body)
@@ -316,9 +317,10 @@ async fn post_data(json_payload: String) -> String {
             function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
+        is_replicated: None,
     };
 
-    // ic-cdk 0.18 automatically computes and attaches the required cycles
+    // ic-cdk 0.19 automatically computes and attaches the required cycles
     match http_request(&request).await {
         Ok(response) => {
             String::from_utf8(response.body)
@@ -427,7 +429,7 @@ Advanced transform that normalizes JSON:
 
 ```rust
 #[query]
-fn transform_normalize(args: TransformArgs) -> HttpResponse {
+fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
     // Parse and re-serialize to normalize field ordering
     let body = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&args.response.body) {
         serde_json::to_vec(&json).unwrap_or(args.response.body)
@@ -435,7 +437,7 @@ fn transform_normalize(args: TransformArgs) -> HttpResponse {
         args.response.body
     };
 
-    HttpResponse {
+    HttpRequestResult {
         status: args.response.status,
         body,
         headers: vec![],

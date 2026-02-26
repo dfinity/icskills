@@ -392,7 +392,7 @@ icrc-ledger-types = "0.1"
 
 ```rust
 use candid::{CandidType, Deserialize, Nat, Principal};
-use ic_cdk::{query, update};
+use ic_cdk::update;
 use ic_cdk::call::Call;
 use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};

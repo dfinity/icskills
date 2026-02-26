@@ -613,7 +613,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 fn get_posts() -> Vec<Post> {
     POSTS.with(|posts| {
         posts.borrow().iter()
-            .map(|(_, v)| deserialize_post(&v))
+            .map(|entry| deserialize_post(&entry.value()))
             .collect()
     })
 }
@@ -637,7 +637,7 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
 
     let author_posts = POSTS.with(|posts| {
         posts.borrow().iter()
-            .map(|(_, v)| deserialize_post(&v))
+            .map(|entry| deserialize_post(&entry.value()))
             .filter(|p| p.author == author_id)
             .collect()
     });
@@ -788,6 +788,7 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
             log_visibility: None,
             wasm_memory_limit: None,
             wasm_memory_threshold: None,
+            environment_variables: None,
         }),
     };
 

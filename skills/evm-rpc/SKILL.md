@@ -574,7 +574,7 @@ async fn get_eth_balance(address: String) -> String {
     let cycles: u128 = 10_000_000_000;
 
     let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
-        .with_args((
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             max_response_bytes,
@@ -598,7 +598,7 @@ async fn get_latest_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
     let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
-        .with_args((
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,  // config
             BlockTag::Latest,
@@ -636,7 +636,7 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
     let cycles: u128 = 10_000_000_000;
 
     let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
-        .with_args((
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             2048_u64,
@@ -660,7 +660,7 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
     let cycles: u128 = 10_000_000_000;
 
     let (result,): (MultiResult<SendRawTransactionStatus>,) = Call::unbounded_wait(evm_rpc_id(), "eth_sendRawTransaction")
-        .with_args((
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,
             signed_tx_hex,
@@ -689,7 +689,7 @@ async fn get_arbitrum_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
     let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
-        .with_args((
+        .with_args(&(
             RpcServices::ArbitrumOne(None),
             None::<()>,
             BlockTag::Latest,
