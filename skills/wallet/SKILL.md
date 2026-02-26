@@ -196,8 +196,8 @@ use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::management_canister::{
     create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
-    CreateCanisterArgument, CanisterIdRecord,
-    CanisterSettings, CanisterStatusResponse,
+    CreateCanisterArgs, CanisterStatusArgs, DepositCyclesArgs, StopCanisterArgs, DeleteCanisterArgs,
+    CanisterSettings, CanisterStatusResult,
 };
 
 #[update]
@@ -214,12 +214,12 @@ async fn create_new_canister() -> Principal {
         wasm_memory_limit: None,
     };
 
-    let arg = CreateCanisterArgument {
+    let arg = CreateCanisterArgs {
         settings: Some(settings),
     };
 
     // Send 1T cycles with the create call
-    let (result,) = create_canister(arg, 1_000_000_000_000u128)
+    let result = create_canister(&arg, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
@@ -227,27 +227,26 @@ async fn create_new_canister() -> Principal {
 }
 
 #[update]
-async fn check_status(canister_id: Principal) -> CanisterStatusResponse {
-    let (status,) = canister_status(CanisterIdRecord { canister_id })
+async fn check_status(canister_id: Principal) -> CanisterStatusResult {
+    canister_status(&CanisterStatusArgs { canister_id })
         .await
-        .expect("Failed to get canister status");
-    status
+        .expect("Failed to get canister status")
 }
 
 #[update]
 async fn top_up(canister_id: Principal, amount: u128) {
-    deposit_cycles(CanisterIdRecord { canister_id }, amount)
+    deposit_cycles(&DepositCyclesArgs { canister_id }, amount)
         .await
         .expect("Failed to deposit cycles");
 }
 
 #[update]
 async fn stop_and_delete(canister_id: Principal) {
-    stop_canister(CanisterIdRecord { canister_id })
+    stop_canister(&StopCanisterArgs { canister_id })
         .await
         .expect("Failed to stop canister");
 
-    delete_canister(CanisterIdRecord { canister_id })
+    delete_canister(&DeleteCanisterArgs { canister_id })
         .await
         .expect("Failed to delete canister");
 }

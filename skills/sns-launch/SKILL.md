@@ -10,7 +10,7 @@ dependencies: [icrc-ledger, multi-canister]
 ---
 
 # SNS DAO Launch
-> version: 1.8.0 | requires: [icp-cli >= 0.1.0, quill CLI, NNS neuron with stake]
+> version: 1.8.0 | requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 
@@ -19,7 +19,7 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 ## Prerequisites
 
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- `quill` CLI for proposal submission (`quill sns make-proposal` is the recommended approach)
+- `dfx` with the sns extension (`dfx extension install sns`) for prepare-canisters, validate, and propose
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined
@@ -176,7 +176,7 @@ Swap:
 ```
 Stage 1:  Developer defines parameters in sns_init.yaml
 Stage 2:  Developer adds NNS Root as co-controller of dapp canisters
-Stage 3:  Developer submits NNS proposal using `quill sns make-proposal`
+Stage 3:  Developer submits NNS proposal using `dfx sns propose`
 Stage 4:  NNS community votes on the proposal
 Stage 5:  (If adopted) SNS-W deploys uninitialized SNS canisters
 Stage 6:  SNS Root becomes sole controller of dapp canisters
@@ -343,17 +343,17 @@ icp deploy my_frontend
 
 ```bash
 # Step 1: Add NNS Root as co-controller of each dapp canister
-# Use quill to add NNS Root as co-controller:
-quill sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
-quill sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
+# Requires dfx sns extension: `dfx extension install sns`
+dfx sns prepare-canisters add-nns-root BACKEND_CANISTER_ID --network ic
+dfx sns prepare-canisters add-nns-root FRONTEND_CANISTER_ID --network ic
 
 # Step 2: Validate your config locally before submitting
-sns-cli validate --init-config-file sns_init.yaml
+dfx sns init-config-file validate
 # Or review the rendered proposal by inspecting the yaml output carefully.
 # You can also test the full flow on a local replica first (see Local Testing above).
 
 # Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
-quill sns make-proposal --network ic --neuron-id NEURON_ID sns_init.yaml
+dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 ```
 
 ## Verify It Works

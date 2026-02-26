@@ -130,9 +130,9 @@ serde_bytes = "0.11"
 
 # Option A: Use the high-level ic-vetkeys library (if available on crates.io)
 # ⚠ Verify this crate exists before adding. If not published, use a git dependency:
-# ic-vetkeys = { git = "https://github.com/dfinity/examples", branch = "master" }
+# ic-vetkeys = { git = "https://github.com/dfinity/ic-vetkeys" }
 # Or use Option B (raw canister calls) which has no extra dependency.
-ic-vetkeys = "0.1"
+ic-vetkeys = "0.6.0"
 
 # Option B: Call management canister directly (lower level, always works)
 # No extra dependency -- use ic_cdk::api::call::call_with_payment128
@@ -426,9 +426,10 @@ icp canister call backend getPublicKey '()'
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: (blob "\12\34\56...")  -- encrypted key material
 
-# 3. Verify determinism: same inputs produce same output
-# Call deriveKey twice with identical transport key
-# Expected: identical encrypted_key blobs both times
+# 3. Note: vetkd_derive_key uses randomized encryption — the encrypted blobs DIFFER each call.
+# The underlying derived key is deterministic (same canister/context/input always produces the same key),
+# but the encrypted_key blob varies because a fresh random nonce is used each time.
+# To verify the underlying key is correct, decrypt both blobs with the transport secret and confirm they match.
 
 # 4. Verify isolation: different callers get different keys
 icp identity new test-user-1 --storage-mode=plaintext
