@@ -3,72 +3,37 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages
   cancel-in-progress: true
 
 jobs:
+  checks:
+    uses: ./.github/workflows/_checks.yml
+
   build:
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: node scripts/validate-skills.js
-      - name: Verify generated files are up to date
-        run: |
-          npm run generate
-          git diff --exit-code public/ || {
-            echo "::error::Generated files are out of date. Run 'npm run generate' and commit the results."
-            exit 1
-          }
-      - name: Check version bumps for changed skills
-        if: github.event_name == 'pull_request'
-        run: |
-          changed=$(git diff --name-only origin/${{ github.base_ref }} -- 'skills/*/SKILL.md')
-          if [ -z "$changed" ]; then
-            echo "No SKILL.md files changed"
-            exit 0
-          fi
-          fail=0
-          for file in $changed; do
-            # Skip new files (no base branch version to compare)
-            if ! git show origin/${{ github.base_ref }}:"$file" > /dev/null 2>&1; then
-              echo "NEW: $file (no version check needed)"
-              continue
-            fi
-            old_version=$(git show origin/${{ github.base_ref }}:"$file" | grep '^version:' | head -1 | awk '{print $2}')
-            new_version=$(grep '^version:' "$file" | head -1 | awk '{print $2}')
-            if [ "$old_version" = "$new_version" ]; then
-              echo "::error::$file was changed but version was not bumped (still $old_version). See CONTRIBUTING.md for versioning rules."
-              fail=1
-            else
-              echo "OK: $file ($old_version -> $new_version)"
-            fi
-          done
-          exit $fail
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
         with:
           path: dist
 
   deploy:
     needs: build
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       pages: write
       id-token: write
     environment:
