@@ -162,7 +162,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -203,7 +203,7 @@ use ic_cdk::management_canister::{
 #[update]
 async fn create_new_canister() -> Principal {
     let caller = ic_cdk::api::canister_self(); // capture canister's own principal
-    let user = ic_cdk::caller(); // capture caller before await
+    let user = ic_cdk::api::msg_caller(); // capture caller before await
 
     let settings = CanisterSettings {
         controllers: Some(vec![caller, user]),

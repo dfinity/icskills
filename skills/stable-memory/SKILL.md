@@ -130,7 +130,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }

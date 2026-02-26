@@ -274,7 +274,7 @@ fn require_governance(caller: Principal) {
 #[update]
 fn set_sns_governance(id: Principal) {
     // Only canister controllers should call this.
-    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+    if !ic_cdk::api::is_controller(&ic_cdk::api::msg_caller()) {
         ic_cdk::trap("Only canister controllers can set governance");
     }
     CONFIG.with(|c| {
@@ -288,7 +288,7 @@ fn set_sns_governance(id: Principal) {
 
 #[update]
 fn update_config(new_fee: u64) {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     require_governance(caller);
     // ... apply config change
 }
@@ -307,7 +307,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 ```
 

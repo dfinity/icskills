@@ -152,7 +152,7 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@dfinity/assets"; // Asset management utility (may migrate to @icp-sdk/assets)
+import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
 import { HttpAgent } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
