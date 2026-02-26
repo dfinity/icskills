@@ -44,15 +44,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.yaml.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.yaml, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.yaml has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -60,30 +60,28 @@ Access patterns:
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
-```json
-{
-  "canisters": {
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "build": ["npm run build"],
-      "dependencies": ["backend"]
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo"
-    }
-  }
-}
+```yaml
+canisters:
+  frontend:
+    type: assets
+    source:
+      - dist
+    build:
+      - npm run build
+    dependencies:
+      - backend
+  backend:
+    type: motoko
+    main: src/backend/main.mo
 ```
 
 Key fields:
-- `"type": "assets"` -- tells `icp` this is an asset canister
-- `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
-- `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
+- `type: assets` -- tells `icp` this is an asset canister
+- `source` -- array of directories to upload (contents, not the directory itself)
+- `build` -- commands `icp deploy` runs before uploading (your frontend build step)
+- `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
 
@@ -288,7 +286,7 @@ icp canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-icp canister status frontend --id-only
+icp canister id frontend
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
@@ -415,7 +413,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::set_certified_data(&tree.root_hash());
     });
 }
 
@@ -459,7 +457,7 @@ struct CertifiedResponse {
 #[query]
 fn get(key: String) -> CertifiedResponse {
     // data_certificate() is only available in query calls
-    let certificate = ic_cdk::data_certificate()
+    let certificate = ic_cdk::api::data_certificate()
         .expect("data_certificate only available in query calls");
 
     TREE.with(|tree| {
@@ -548,7 +546,7 @@ fn certify_response(path: &str, response: &HttpResponse) {
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::set_certified_data(&tree.root_hash());
     });
 }
 ```
@@ -883,30 +881,22 @@ core = "2.0.0"
 icrc2-types = "0.1.0"
 ```
 
-#### icp.json (local development with ckBTC)
+#### icp.yaml (local development with ckBTC)
 
 For local testing, pull the ckBTC canisters:
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": []
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies: []
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 For mainnet, your canister calls the ckBTC ledger and minter directly by principal.
@@ -1304,7 +1294,7 @@ async fn get_deposit_address() -> String {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = GetBtcAddressArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -1324,7 +1314,7 @@ async fn update_balance() -> UpdateBalanceResult {
 
     let subaccount = principal_to_subaccount(&caller);
     let args = UpdateBalanceArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
@@ -1344,7 +1334,7 @@ async fn get_balance() -> Nat {
 
     let subaccount = principal_to_subaccount(&caller);
     let account = Account {
-        owner: ic_cdk::id(),
+        owner: ic_cdk::api::canister_self(),
         subaccount: Some(subaccount),
     };
 
@@ -1538,7 +1528,7 @@ icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-icp canister call YOUR-CANISTER getBalanceUpdate -e ic
+icp canister call YOUR-CANISTER getBalance -e ic
 # Expected: balance reflects minted ckBTC
 ```
 
@@ -1635,28 +1625,24 @@ Use `requestCost` to get an exact estimate before calling.
 
 6. **Calling `eth_sendRawTransaction` without signing first.** The EVM RPC canister does not sign transactions. You must sign the transaction yourself (using threshold ECDSA via the IC management canister) and pass the raw signed bytes.
 
-7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In modern Motoko with mo:core, attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. The old `Cycles.add<system>(amount)` pattern from mo:base still works but the inline syntax is preferred for clarity.
+7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In mo:core 2.0, `Cycles.add` does not exist. Attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. This is the only way to attach cycles in mo:core.
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "pull",
-      "id": "7hfb6-caaaa-aaaar-qadga-cai"
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: pull
+    id: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 Then run:
@@ -1668,26 +1654,20 @@ icp deps deploy
 
 #### Option B: Custom wasm (for local development)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "custom",
-      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
-      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
-      "remote": {
-        "id": {
-          "ic": "7hfb6-caaaa-aaaar-qadga-cai"
-        }
-      }
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: custom
+    candid: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did
+    wasm: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
+    remote:
+      id:
+        ic: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 ### Motoko
@@ -1945,7 +1925,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128; // Note: ic_cdk::api::call is deprecated in 0.18 but still compiles
+use ic_cdk::api::call::call_with_payment128;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -2597,7 +2577,7 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::api::management_canister::http_request::{
+use ic_cdk::management_canister::http_request::{
     http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
     TransformArgs, TransformContext, TransformFunc,
 };
@@ -2637,7 +2617,7 @@ async fn fetch_price() -> String {
         body: None,
         transform: Some(TransformContext {
             function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
+                principal: ic_cdk::api::canister_self(),
                 method: "transform".to_string(),
             }),
             context: vec![],
@@ -2713,7 +2693,7 @@ async fn post_data(json_payload: String) -> String {
         body: Some(json_payload.into_bytes()),
         transform: Some(TransformContext {
             function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
+                principal: ic_cdk::api::canister_self(),
                 method: "transform".to_string(),
             }),
             context: vec![],
@@ -3428,26 +3408,20 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
 
-```json
-{
-  "canisters": {
-    "internet_identity": {
-      "type": "custom",
-      "candid": "deps/internet-identity/internet_identity.did",
-      "wasm": "deps/internet-identity/internet_identity_dev.wasm.gz",
-      "build": "",
-      "remote": {
-        "id": {
-          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
-        }
-      }
-    }
-  }
-}
+```yaml
+canisters:
+  internet_identity:
+    type: custom
+    candid: deps/internet-identity/internet_identity.did
+    wasm: deps/internet-identity/internet_identity_dev.wasm.gz
+    build: ""
+    remote:
+      id:
+        ic: rdmx6-jaaaa-aaaaa-aaadq-cai
 ```
 
 The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
@@ -3622,8 +3596,10 @@ use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
 thread_local! {
-    static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None)
+    // Principal::anonymous() is used as the "not set" sentinel.
+    // Option<Principal> does not implement Storable, so we store Principal directly.
+    static OWNER: RefCell<StableCell<Principal, DefaultMemoryImpl>> = RefCell::new(
+        StableCell::init(DefaultMemoryImpl::default(), Principal::anonymous())
     );
 }
 
@@ -3644,12 +3620,12 @@ fn init_owner() -> String {
 
     OWNER.with(|owner| {
         let mut cell = owner.borrow_mut();
-        match cell.get() {
-            None => {
-                cell.set(Some(caller));
-                format!("Owner set to {}", caller)
-            }
-            Some(_) => "Owner already initialized".to_string(),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            cell.set(caller);
+            format!("Owner set to {}", caller)
+        } else {
+            "Owner already initialized".to_string()
         }
     })
 }
@@ -3660,10 +3636,13 @@ fn admin_action() -> String {
 
     OWNER.with(|owner| {
         let cell = owner.borrow();
-        match cell.get() {
-            Some(o) if o == caller => "Admin action performed".to_string(),
-            Some(_) => ic_cdk::trap("Only the owner can call this function."),
-            None => ic_cdk::trap("Owner not set. Call init_owner first."),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            ic_cdk::trap("Owner not set. Call init_owner first.");
+        } else if current == caller {
+            "Admin action performed".to_string()
+        } else {
+            ic_cdk::trap("Only the owner can call this function.");
         }
     })
 }
@@ -3738,10 +3717,10 @@ icp canister call backend whoAmI
 # unless you explicitly use --identity anonymous
 
 # 5. Test with explicit anonymous identity
-icp identity default anonymous
+icp identity use anonymous
 icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
-icp identity default default  # Switch back
+icp identity use default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943
@@ -3780,7 +3759,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 | Reason | Threshold |
 |---|---|
-| Storage limits | Each canister: 4GB stable memory + 4GB heap. If your data could exceed this, split storage across canisters. |
+| Storage limits | Each canister: up to hundreds of GB stable memory + 4GB heap. If your data could exceed heap limits or benefit from partitioning, split storage across canisters. |
 | Separation of concerns | Auth service, content service, payment service as independent units. |
 | Independent upgrades | Upgrade the payments canister without touching the user canister. |
 | Access control | Different controllers for different canisters (e.g., DAO controls one, team controls another). |
@@ -3815,7 +3794,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in icp.json so `icp deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
 
 6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
@@ -3833,7 +3812,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   mops.toml
   src/
     shared/
@@ -3846,37 +3825,31 @@ my-project/
       ...               # Frontend assets
 ```
 
-### icp.json
+### icp.yaml
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "user_service": {
-      "type": "motoko",
-      "main": "src/user_service/main.mo"
-    },
-    "content_service": {
-      "type": "motoko",
-      "main": "src/content_service/main.mo",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  user_service:
+    type: motoko
+    main: src/user_service/main.mo
+  content_service:
+    type: motoko
+    main: src/content_service/main.mo
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 ### Motoko
@@ -3980,7 +3953,7 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Types "../shared/Types";
 
-// Import the other canister — name must match icp.json key
+// Import the other canister — name must match icp.yaml canister key
 import UserService "canister:user_service";
 
 persistent actor {
@@ -4069,7 +4042,7 @@ persistent actor {
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   Cargo.toml          # workspace
   src/
     user_service/
@@ -4090,34 +4063,30 @@ members = [
 ]
 ```
 
-#### icp.json (Rust)
+#### icp.yaml (Rust)
 
-```json
-{
-  "canisters": {
-    "user_service": {
-      "type": "rust",
-      "package": "user_service",
-      "candid": "src/user_service/user_service.did"
-    },
-    "content_service": {
-      "type": "rust",
-      "package": "content_service",
-      "candid": "src/content_service/content_service.did",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+canisters:
+  user_service:
+    type: rust
+    package: user_service
+    candid: src/user_service/user_service.did
+  content_service:
+    type: rust
+    package: content_service
+    candid: src/content_service/content_service.did
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 #### src/user_service/Cargo.toml
@@ -4289,7 +4258,7 @@ thread_local! {
         StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).unwrap()
+        )
     );
 
     // Store the user_service canister ID (set during init, re-set on upgrade)
@@ -4349,7 +4318,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
     let id = POST_COUNTER.with(|counter| {
         let mut counter = counter.borrow_mut();
         let id = *counter.get();
-        counter.set(id + 1).unwrap();
+        counter.set(id + 1);
         id
     });
 
@@ -4508,9 +4477,9 @@ persistent actor Self {
 #### Rust Factory
 
 ```rust
-use candid::{CandidType, Deserialize, Principal, encode_one};
+use candid::{CandidType, Deserialize, Nat, Principal, encode_one};
 use ic_cdk::management_canister::{
-    create_canister, install_code,
+    create_canister_with_extra_cycles, install_code,
     CreateCanisterArgs, InstallCodeArgs, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
@@ -4540,18 +4509,19 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
     // Create canister
     let create_args = CreateCanisterArgs {
         settings: Some(CanisterSettings {
-            controllers: Some(vec![ic_cdk::id(), caller]),
+            controllers: Some(vec![ic_cdk::api::canister_self(), caller]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
             reserved_cycles_limit: None,
             log_visibility: None,
             wasm_memory_limit: None,
+            wasm_memory_threshold: None,
         }),
     };
 
     // Attach 1T cycles for the new canister
-    let create_result = create_canister(&create_args, 1_000_000_000_000u128)
+    let create_result = create_canister_with_extra_cycles(&create_args, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
@@ -4612,7 +4582,7 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 npm run build
@@ -4631,7 +4601,7 @@ icp network start -d
 icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
@@ -4696,13 +4666,13 @@ icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
 # Create a new identity that is NOT registered
-icp identity new unregistered --storage-mode=plaintext
-icp identity default unregistered
+icp identity new unregistered --storage plaintext
+icp identity use unregistered
 icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-icp identity default default
+icp identity use default
 ```
 
 ### Verify Cross-Canister Query
@@ -5101,10 +5071,10 @@ dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-icp canister status sns_governance --id-only
-icp canister status sns_ledger --id-only
-icp canister status sns_root --id-only
-icp canister status sns_swap --id-only
+icp canister id sns_governance
+icp canister id sns_ledger
+icp canister id sns_root
+icp canister id sns_swap
 
 # Verify SNS governance is operational
 icp canister call sns_governance get_nervous_system_parameters '()'
@@ -5308,7 +5278,7 @@ thread_local! {
         RefCell::new(ic_stable_structures::StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 }
 
 #[derive(CandidType, Deserialize, Clone)]
@@ -5334,7 +5304,7 @@ fn add_user(name: String) -> u64 {
     let id = COUNTER.with(|c| {
         let mut cell = c.borrow_mut();
         let current = *cell.get();
-        cell.set(current + 1).expect("Failed to increment counter");
+        cell.set(current + 1);
         current
     });
 
@@ -5404,13 +5374,13 @@ thread_local! {
         RefCell::new(StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(COUNTER_MEM_ID)),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 
     static AUDIT_LOG: RefCell<StableLog<Vec<u8>, Memory, Memory>> =
         RefCell::new(StableLog::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_INDEX_MEM_ID)),
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_DATA_MEM_ID)),
-        ).expect("Failed to init log"));
+        ));
 }
 ```
 
@@ -5853,12 +5823,12 @@ persistent actor {
     encrypted_key : Blob;
   };
 
-  let managementCanister : actor {
+  transient let managementCanister : actor {
     vetkd_public_key : VetKdPublicKeyRequest -> async VetKdPublicKeyResponse;
     vetkd_derive_key : VetKdDeriveKeyRequest -> async VetKdDeriveKeyResponse;
   } = actor "aaaaa-aa";
 
-  let context : Blob = Text.encodeUtf8("my_app_v1");
+  transient let context : Blob = Text.encodeUtf8("my_app_v1");
 
   // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
@@ -5948,12 +5918,12 @@ icp canister call backend deriveKey '(blob "\00\01...")'
 # To verify the underlying key is correct, decrypt both blobs with the transport secret and confirm they match.
 
 # 4. Verify isolation: different callers get different keys
-icp identity new test-user-1 --storage-mode=plaintext
-icp identity new test-user-2 --storage-mode=plaintext
-icp identity default test-user-1
+icp identity new test-user-1 --storage plaintext
+icp identity new test-user-2 --storage plaintext
+icp identity use test-user-1
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Note the output
-icp identity default test-user-2
+icp identity use test-user-2
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: DIFFERENT encrypted_key (different caller = different derived key)
 
@@ -6143,7 +6113,7 @@ use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(ic_cdk::api::canister_balance128())
+    Nat::from(ic_cdk::api::canister_cycle_balance())
 }
 
 #[update]
@@ -6170,7 +6140,7 @@ use ic_cdk::management_canister::{
 
 #[update]
 async fn create_new_canister() -> Principal {
-    let caller = ic_cdk::api::id(); // capture canister's own principal
+    let caller = ic_cdk::api::canister_self(); // capture canister's own principal
     let user = ic_cdk::caller(); // capture caller before await
 
     let settings = CanisterSettings {

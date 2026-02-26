@@ -777,7 +777,7 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
     // Create canister
     let create_args = CreateCanisterArgs {
         settings: Some(CanisterSettings {
-            controllers: Some(vec![ic_cdk::api::id(), caller]),
+            controllers: Some(vec![ic_cdk::api::canister_self(), caller]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
@@ -935,12 +935,12 @@ icp canister call content_service createPost '("Test Title", "Test Body")'
 
 # Create a new identity that is NOT registered
 icp identity new unregistered --storage plaintext
-icp identity default unregistered
+icp identity use unregistered
 icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-icp identity default default
+icp identity use default
 ```
 
 ### Verify Cross-Canister Query

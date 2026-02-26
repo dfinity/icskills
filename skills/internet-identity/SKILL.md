@@ -238,8 +238,10 @@ use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
 thread_local! {
-    static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None)
+    // Principal::anonymous() is used as the "not set" sentinel.
+    // Option<Principal> does not implement Storable, so we store Principal directly.
+    static OWNER: RefCell<StableCell<Principal, DefaultMemoryImpl>> = RefCell::new(
+        StableCell::init(DefaultMemoryImpl::default(), Principal::anonymous())
     );
 }
 
@@ -260,12 +262,12 @@ fn init_owner() -> String {
 
     OWNER.with(|owner| {
         let mut cell = owner.borrow_mut();
-        match cell.get() {
-            None => {
-                cell.set(Some(caller));
-                format!("Owner set to {}", caller)
-            }
-            Some(_) => "Owner already initialized".to_string(),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            cell.set(caller);
+            format!("Owner set to {}", caller)
+        } else {
+            "Owner already initialized".to_string()
         }
     })
 }
@@ -276,10 +278,13 @@ fn admin_action() -> String {
 
     OWNER.with(|owner| {
         let cell = owner.borrow();
-        match cell.get() {
-            Some(o) if o == caller => "Admin action performed".to_string(),
-            Some(_) => ic_cdk::trap("Only the owner can call this function."),
-            None => ic_cdk::trap("Owner not set. Call init_owner first."),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            ic_cdk::trap("Owner not set. Call init_owner first.");
+        } else if current == caller {
+            "Admin action performed".to_string()
+        } else {
+            ic_cdk::trap("Only the owner can call this function.");
         }
     })
 }
