@@ -141,13 +141,13 @@ icp canister call frontend http_request '(record {
 To serve your asset canister from a custom domain:
 
 1. Create a file `.well-known/ic-domains` in your `source` directory containing your domain:
-```
+```text
 yourdomain.com
 www.yourdomain.com
 ```
 
 2. Add DNS records:
-```
+```text
 # CNAME record pointing to boundary nodes
 yourdomain.com.  CNAME  icp1.io.
 
