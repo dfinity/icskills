@@ -382,7 +382,7 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 Add to `icp.yaml`:
 
-Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
+Pin the release version before deploying: get the latest release tag from https://github.com/dfinity/ic/releases?q=%22ledger-suite-icrc%22&expanded=false, then substitute it for `<RELEASE_TAG>` in both URLs below.
 
 ```yaml
 canisters:
@@ -390,8 +390,8 @@ canisters:
     name: icrc1_ledger
     recipe:
       type: custom
-      candid: "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did"
-      wasm: "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz"
+      candid: "https://github.com/dfinity/ic/releases/download/<RELEASE_TAG>/ledger.did"
+      wasm: "https://github.com/dfinity/ic/releases/download/<RELEASE_TAG>/ic-icrc1-ledger.wasm.gz"
     config:
       init_arg_file: "icrc1_ledger_init.args"
 ```
