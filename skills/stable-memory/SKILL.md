@@ -4,7 +4,7 @@ name: "Stable Memory & Upgrades"
 category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
 endpoints: 6
-version: 2.0.0
+version: 2.0.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]

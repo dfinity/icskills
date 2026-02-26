@@ -4,7 +4,7 @@ name: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 5.0.0
+version: 5.0.1
 status: stable
 dependencies: [asset-canister]
 requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]

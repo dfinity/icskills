@@ -4,7 +4,7 @@ name: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.0
+version: 1.1.1
 status: stable
 dependencies: [https-outcalls]
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]

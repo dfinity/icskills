@@ -4,7 +4,7 @@ name: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11
-version: 2.3.0
+version: 2.3.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]

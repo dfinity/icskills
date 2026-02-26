@@ -4,7 +4,7 @@ name: Cycles Wallet Management
 category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
 endpoints: 7
-version: 1.4.0
+version: 1.4.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]

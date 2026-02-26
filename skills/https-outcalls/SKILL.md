@@ -4,7 +4,7 @@ name: HTTPS Outcalls
 category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
 endpoints: 4
-version: 1.5.0
+version: 1.5.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
