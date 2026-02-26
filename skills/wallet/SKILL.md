@@ -214,6 +214,7 @@ async fn create_new_canister() -> Principal {
         log_visibility: None,
         wasm_memory_limit: None,
         wasm_memory_threshold: None,
+        environment_variables: None,
     };
 
     let arg = CreateCanisterArgs {

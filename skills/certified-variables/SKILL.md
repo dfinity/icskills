@@ -100,7 +100,7 @@ ciborium = "0.2"
 ```rust
 use candid::{CandidType, Deserialize};
 use ic_cdk::{init, post_upgrade, query, update};
-use ic_certified_map::{HashTree, RbTree};
+use ic_certified_map::{AsHashTree, RbTree};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 
@@ -223,8 +223,9 @@ ic-http-certification = "3.1"
 
 ```rust
 use ic_http_certification::{
-    HttpCertification, HttpCertificationTree, HttpCertificationTreeEntry,
-    HttpRequest, HttpResponse, DefaultCelBuilder,
+    HttpCertification, HttpCertificationPath, HttpCertificationTree,
+    HttpCertificationTreeEntry, HttpRequest, HttpResponse,
+    DefaultCelBuilder, DefaultResponseCertification,
 };
 use std::cell::RefCell;
 
@@ -235,15 +236,23 @@ thread_local! {
 }
 
 // Define what gets certified using CEL (Common Expression Language)
-fn certify_response(path: &str, response: &HttpResponse) {
+fn certify_response(path: &str, request: &HttpRequest, response: &HttpResponse) {
     // Full certification: certify both request path and response body
     let cel = DefaultCelBuilder::full_certification()
-        .with_response_certification()
+        .with_response_certification(DefaultResponseCertification::certified_response_headers(
+            vec!["Content-Type", "Content-Length"],
+        ))
         .build();
+
+    // Create the certification from the CEL expression, request, and response
+    let certification = HttpCertification::full(&cel, request, response, None)
+        .expect("Failed to create HTTP certification");
+
+    let http_path = HttpCertificationPath::exact(path);
 
     HTTP_TREE.with(|tree| {
         let mut tree = tree.borrow_mut();
-        let entry = HttpCertificationTreeEntry::new(path, &cel, response);
+        let entry = HttpCertificationTreeEntry::new(http_path, certification);
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
