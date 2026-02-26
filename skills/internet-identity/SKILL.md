@@ -41,7 +41,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-5. **Reading `ic_cdk::caller()` after an await in Rust.** After any `.await` point, `caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
+5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::caller()` in Rust.
 
@@ -51,26 +51,20 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
 
-```json
-{
-  "canisters": {
-    "internet_identity": {
-      "type": "custom",
-      "candid": "deps/internet-identity/internet_identity.did",
-      "wasm": "deps/internet-identity/internet_identity_dev.wasm.gz",
-      "build": "",
-      "remote": {
-        "id": {
-          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
-        }
-      }
-    }
-  }
-}
+```yaml
+canisters:
+  internet_identity:
+    type: custom
+    candid: deps/internet-identity/internet_identity.did
+    wasm: deps/internet-identity/internet_identity_dev.wasm.gz
+    build: ""
+    remote:
+      id:
+        ic: rdmx6-jaaaa-aaaaa-aaadq-cai
 ```
 
 The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
@@ -130,16 +124,11 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname.endsWith(".localhost");
 
-  const agent = new HttpAgent({
+  const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
-    ...(isLocal && { verifyQuerySignatures: false }),
+    ...(isLocal && { fetchRootKey: true, verifyQuerySignatures: false }),
   });
-
-  // CRITICAL: Fetch root key for local development only
-  if (isLocal) {
-    await agent.fetchRootKey();
-  }
 
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
@@ -237,7 +226,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -245,19 +234,21 @@ ic-stable-structures = "0.7"
 
 ```rust
 use candid::Principal;
-use ic_cdk::{caller, query, update};
+use ic_cdk::{query, update};
 use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
 thread_local! {
-    static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None).unwrap()
+    // Principal::anonymous() is used as the "not set" sentinel.
+    // Option<Principal> does not implement Storable, so we store Principal directly.
+    static OWNER: RefCell<StableCell<Principal, DefaultMemoryImpl>> = RefCell::new(
+        StableCell::init(DefaultMemoryImpl::default(), Principal::anonymous())
     );
 }
 
 /// Reject anonymous principal. Call this at the top of every protected endpoint.
 fn require_auth() -> Principal {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         ic_cdk::trap("Anonymous principal not allowed. Please authenticate.");
     }
@@ -272,12 +263,12 @@ fn init_owner() -> String {
 
     OWNER.with(|owner| {
         let mut cell = owner.borrow_mut();
-        match cell.get() {
-            None => {
-                cell.set(Some(caller));
-                format!("Owner set to {}", caller)
-            }
-            Some(_) => "Owner already initialized".to_string(),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            cell.set(caller);
+            format!("Owner set to {}", caller)
+        } else {
+            "Owner already initialized".to_string()
         }
     })
 }
@@ -288,17 +279,20 @@ fn admin_action() -> String {
 
     OWNER.with(|owner| {
         let cell = owner.borrow();
-        match cell.get() {
-            Some(o) if o == caller => "Admin action performed".to_string(),
-            Some(_) => ic_cdk::trap("Only the owner can call this function."),
-            None => ic_cdk::trap("Owner not set. Call init_owner first."),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            ic_cdk::trap("Owner not set. Call init_owner first.");
+        } else if current == caller {
+            "Admin action performed".to_string()
+        } else {
+            ic_cdk::trap("Only the owner can call this function.");
         }
     })
 }
 
 #[query]
 fn who_am_i() -> String {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         "You are not authenticated (anonymous)".to_string()
     } else {
@@ -319,7 +313,7 @@ async fn protected_async_action() -> String {
 }
 ```
 
-**Rust critical rule:** In any `async` update function, `ic_cdk::caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::caller();` at the top of the function.
+**Rust critical rule:** In any `async` update function, `ic_cdk::api::msg_caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of the function.
 
 ## Deploy & Test
 
@@ -366,10 +360,10 @@ icp canister call backend whoAmI
 # unless you explicitly use --identity anonymous
 
 # 5. Test with explicit anonymous identity
-icp identity default anonymous
+icp identity use anonymous
 icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
-icp identity default default  # Switch back
+icp identity use default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943

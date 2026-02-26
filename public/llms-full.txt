@@ -45,15 +45,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.yaml.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.yaml, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.yaml has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -61,30 +61,28 @@ Access patterns:
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
-```json
-{
-  "canisters": {
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "build": ["npm run build"],
-      "dependencies": ["backend"]
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo"
-    }
-  }
-}
+```yaml
+canisters:
+  frontend:
+    type: assets
+    source:
+      - dist
+    build:
+      - npm run build
+    dependencies:
+      - backend
+  backend:
+    type: motoko
+    main: src/backend/main.mo
 ```
 
 Key fields:
-- `"type": "assets"` -- tells `icp` this is an asset canister
-- `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
-- `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
+- `type: assets` -- tells `icp` this is an asset canister
+- `source` -- array of directories to upload (contents, not the directory itself)
+- `build` -- commands `icp deploy` runs before uploading (your frontend build step)
+- `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
 
@@ -164,12 +162,14 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@icp-sdk/canisters/assets";
-import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
+import { HttpAgent } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
-const agent = new HttpAgent({ host: "http://localhost:4943" });
-await agent.fetchRootKey(); // Local only
+const agent = await HttpAgent.create({
+  host: "http://localhost:4943",
+  fetchRootKey: true, // Local only
+});
 
 const assetManager = new AssetManager({
   canisterId: "your-asset-canister-id",
@@ -287,7 +287,7 @@ icp canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-icp canister status frontend --id-only
+icp canister id frontend
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
@@ -320,7 +320,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 ## Prerequisites
 
 - `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
-- Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
+- Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `certified_data_set` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@icp-sdk/core/agent` (includes certificate verification)
 
@@ -336,19 +336,19 @@ The IC root public key (needed for client-side verification):
 
 ## Mistakes That Break Your Build
 
-1. **Trying to store more than 32 bytes of certified data.** The `set_certified_data` API accepts exactly one blob of at most 32 bytes. You cannot certify arbitrary data directly. Instead, build a Merkle tree over your data and certify only the root hash (32 bytes). The tree structure provides proofs for individual values.
+1. **Trying to store more than 32 bytes of certified data.** The `certified_data_set` API accepts exactly one blob of at most 32 bytes. You cannot certify arbitrary data directly. Instead, build a Merkle tree over your data and certify only the root hash (32 bytes). The tree structure provides proofs for individual values.
 
-2. **Calling `set_certified_data` in a query call.** Certification can ONLY be set during update calls (which go through consensus). Calling it in a query traps. Pattern: set the hash during writes, read the certificate during queries.
+2. **Calling `certified_data_set` in a query call.** Certification can ONLY be set during update calls (which go through consensus). Calling it in a query traps. Pattern: set the hash during writes, read the certificate during queries.
 
 3. **Forgetting to include the certificate in query responses.** The certificate is obtained via `data_certificate()` during query calls. If you return data without the certificate, clients cannot verify anything. Always return a tuple of (data, certificate, witness).
 
-4. **Not updating the certified hash after data changes.** If you modify the data but forget to call `set_certified_data` with the new root hash, query responses will fail verification because the certificate proves a stale hash.
+4. **Not updating the certified hash after data changes.** If you modify the data but forget to call `certified_data_set` with the new root hash, query responses will fail verification because the certificate proves a stale hash.
 
 5. **Building the witness for the wrong key.** The witness (Merkle proof) must correspond to the exact key being queried. A witness for key "users/alice" will not verify key "users/bob".
 
 6. **Assuming `data_certificate()` returns a value in update calls.** It returns `null`/`None` during update calls. Certificates are only available during query calls.
 
-7. **Certifying data at canister init but not on upgrades.** After a canister upgrade, the certified data is cleared. You must call `set_certified_data` in both `#[init]` and `#[post_upgrade]` (Rust) or `system func postupgrade` (Motoko) to re-establish certification.
+7. **Certifying data at canister init but not on upgrades.** After a canister upgrade, the certified data is cleared. You must call `certified_data_set` in both `#[init]` and `#[post_upgrade]` (Rust) or `system func postupgrade` (Motoko) to re-establish certification.
 
 ## How Certification Works
 
@@ -356,7 +356,7 @@ The IC root public key (needed for client-side verification):
 UPDATE CALL (goes through consensus):
   1. Canister modifies data
   2. Canister builds/updates Merkle tree
-  3. Canister calls set_certified_data(root_hash)  -- 32 bytes
+  3. Canister calls certified_data_set(root_hash)  -- 32 bytes
   4. Subnet includes root_hash in its certified state tree
 
 QUERY CALL (single replica, no consensus):
@@ -389,7 +389,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 ic-certified-map = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
@@ -401,7 +401,7 @@ ciborium = "0.2"
 ```rust
 use candid::{CandidType, Deserialize};
 use ic_cdk::{init, post_upgrade, query, update};
-use ic_certified_map::{HashTree, RbTree};
+use ic_certified_map::{AsHashTree, RbTree};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 
@@ -415,7 +415,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::certified_data_set(&tree.root_hash());
     });
 }
 
@@ -459,7 +459,7 @@ struct CertifiedResponse {
 #[query]
 fn get(key: String) -> CertifiedResponse {
     // data_certificate() is only available in query calls
-    let certificate = ic_cdk::data_certificate()
+    let certificate = ic_cdk::api::data_certificate()
         .expect("data_certificate only available in query calls");
 
     TREE.with(|tree| {
@@ -515,7 +515,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-http-certification = "2.6"
+ic-http-certification = "3.1"
 ```
 
 **Certifying HTTP responses:**
@@ -524,8 +524,9 @@ ic-http-certification = "2.6"
 
 ```rust
 use ic_http_certification::{
-    HttpCertification, HttpCertificationTree, HttpCertificationTreeEntry,
-    HttpRequest, HttpResponse, DefaultCelBuilder,
+    HttpCertification, HttpCertificationPath, HttpCertificationTree,
+    HttpCertificationTreeEntry, HttpRequest, HttpResponse,
+    DefaultCelBuilder, DefaultResponseCertification,
 };
 use std::cell::RefCell;
 
@@ -536,19 +537,27 @@ thread_local! {
 }
 
 // Define what gets certified using CEL (Common Expression Language)
-fn certify_response(path: &str, response: &HttpResponse) {
+fn certify_response(path: &str, request: &HttpRequest, response: &HttpResponse) {
     // Full certification: certify both request path and response body
     let cel = DefaultCelBuilder::full_certification()
-        .with_response_certification()
+        .with_response_certification(DefaultResponseCertification::certified_response_headers(
+            vec!["Content-Type", "Content-Length"],
+        ))
         .build();
+
+    // Create the certification from the CEL expression, request, and response
+    let certification = HttpCertification::full(&cel, request, response, None)
+        .expect("Failed to create HTTP certification");
+
+    let http_path = HttpCertificationPath::exact(path);
 
     HTTP_TREE.with(|tree| {
         let mut tree = tree.borrow_mut();
-        let entry = HttpCertificationTreeEntry::new(path, &cel, response);
+        let entry = HttpCertificationTreeEntry::new(http_path, certification);
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::set_certified_data(&tree.root_hash());
+        ic_cdk::api::certified_data_set(&tree.root_hash());
     });
 }
 ```
@@ -790,7 +799,7 @@ endpoints: 14
 version: 2.1.1
 status: stable
 dependencies: [icrc-ledger, wallet]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
@@ -881,33 +890,25 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
-icrc2-types = "0.1.0"
+icrc2-types = "1.1.0"
 ```
 
-#### icp.json (local development with ckBTC)
+#### icp.yaml (local development with ckBTC)
 
 For local testing, pull the ckBTC canisters:
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": []
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies: []
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 For mainnet, your canister calls the ckBTC ledger and minter directly by principal.
@@ -1040,14 +1041,14 @@ persistent actor {
 
   // -- Remote canister references (mainnet) --
 
-  let ckbtcLedger : actor {
+  transient let ckbtcLedger : actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
     icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
-  let ckbtcMinter : actor {
+  transient let ckbtcMinter : actor {
     get_btc_address : shared ({
       owner : ?Principal;
       subaccount : ?Blob;
@@ -1098,13 +1099,7 @@ persistent actor {
 
   // -- Check user's ckBTC balance --
 
-  public shared query ({ caller }) func getBalance() : async Nat {
-    // Note: for cross-canister query, remove 'query' and use await
-    // This is a simplified version — in production, call icrc1_balance_of
-    0 // placeholder for query context
-  };
-
-  public shared ({ caller }) func getBalanceUpdate() : async Nat {
+  public shared ({ caller }) func getBalance() : async Nat {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
@@ -1178,8 +1173,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
-ic-cdk-timers = "0.12"
+ic-cdk = "0.19"
+ic-cdk-timers = "1.0"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
@@ -1190,7 +1185,8 @@ icrc-ledger-types = "0.1"
 
 ```rust
 use candid::{CandidType, Deserialize, Nat, Principal};
-use ic_cdk::{query, update};
+use ic_cdk::update;
+use ic_cdk::call::Call;
 use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
 use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
@@ -1306,18 +1302,21 @@ fn minter_id() -> Principal {
 
 #[update]
 async fn get_deposit_address() -> String {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let args = GetBtcAddressArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
-    let (address,): (String,) = ic_cdk::call(minter_id(), "get_btc_address", (args,))
+    let (address,): (String,) = Call::unbounded_wait(minter_id(), "get_btc_address")
+        .with_arg(args)
         .await
-        .expect("Failed to get BTC address");
+        .expect("Failed to get BTC address")
+        .candid()
+        .expect("Failed to decode response");
 
     address
 }
@@ -1326,18 +1325,21 @@ async fn get_deposit_address() -> String {
 
 #[update]
 async fn update_balance() -> UpdateBalanceResult {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let args = UpdateBalanceArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
-    let (result,): (UpdateBalanceResult,) = ic_cdk::call(minter_id(), "update_balance", (args,))
+    let (result,): (UpdateBalanceResult,) = Call::unbounded_wait(minter_id(), "update_balance")
+        .with_arg(args)
         .await
-        .expect("Failed to call update_balance");
+        .expect("Failed to call update_balance")
+        .candid()
+        .expect("Failed to decode response");
 
     result
 }
@@ -1346,18 +1348,21 @@ async fn update_balance() -> UpdateBalanceResult {
 
 #[update]
 async fn get_balance() -> Nat {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let account = Account {
-        owner: ic_cdk::id(),
+        owner: ic_cdk::api::canister_self(),
         subaccount: Some(subaccount),
     };
 
-    let (balance,): (Nat,) = ic_cdk::call(ledger_id(), "icrc1_balance_of", (account,))
+    let (balance,): (Nat,) = Call::unbounded_wait(ledger_id(), "icrc1_balance_of")
+        .with_arg(account)
         .await
-        .expect("Failed to get balance");
+        .expect("Failed to get balance")
+        .candid()
+        .expect("Failed to decode response");
 
     balance
 }
@@ -1366,7 +1371,7 @@ async fn get_balance() -> Nat {
 
 #[update]
 async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let from_subaccount = principal_to_subaccount(&caller);
@@ -1382,10 +1387,12 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
         created_at_time: None,
     };
 
-    let (result,): (Result<Nat, TransferError>,) =
-        ic_cdk::call(ledger_id(), "icrc1_transfer", (args,))
+    let (result,): (Result<Nat, TransferError>,) = Call::unbounded_wait(ledger_id(), "icrc1_transfer")
+            .with_arg(args)
             .await
-            .expect("Failed to call icrc1_transfer");
+            .expect("Failed to call icrc1_transfer")
+            .candid()
+            .expect("Failed to decode response");
 
     result
 }
@@ -1394,7 +1401,7 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
 
 #[update]
 async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     // Step 1: Approve the minter to spend ckBTC from the user's subaccount
@@ -1413,10 +1420,12 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
         created_at_time: None,
     };
 
-    let (approve_result,): (Result<Nat, ApproveError>,) =
-        ic_cdk::call(ledger_id(), "icrc2_approve", (approve_args,))
+    let (approve_result,): (Result<Nat, ApproveError>,) = Call::unbounded_wait(ledger_id(), "icrc2_approve")
+            .with_arg(approve_args)
             .await
-            .expect("Failed to call icrc2_approve");
+            .expect("Failed to call icrc2_approve")
+            .candid()
+            .expect("Failed to decode response");
 
     if let Err(e) = approve_result {
         return Err(RetrieveBtcError::GenericError {
@@ -1432,10 +1441,12 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
         from_subaccount: Some(from_subaccount.to_vec()),
     };
 
-    let (result,): (RetrieveBtcResult,) =
-        ic_cdk::call(minter_id(), "retrieve_btc_with_approval", (args,))
+    let (result,): (RetrieveBtcResult,) = Call::unbounded_wait(minter_id(), "retrieve_btc_with_approval")
+            .with_arg(args)
             .await
-            .expect("Failed to call retrieve_btc_with_approval");
+            .expect("Failed to call retrieve_btc_with_approval")
+            .candid()
+            .expect("Failed to decode response");
 
     result
 }
@@ -1545,7 +1556,7 @@ icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-icp canister call YOUR-CANISTER getBalanceUpdate -e ic
+icp canister call YOUR-CANISTER getBalance -e ic
 # Expected: balance reflects minted ckBTC
 ```
 
@@ -1569,7 +1580,7 @@ endpoints: 9
 version: 1.1.1
 status: stable
 dependencies: [https-outcalls]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
 ---
 
@@ -1643,28 +1654,24 @@ Use `requestCost` to get an exact estimate before calling.
 
 6. **Calling `eth_sendRawTransaction` without signing first.** The EVM RPC canister does not sign transactions. You must sign the transaction yourself (using threshold ECDSA via the IC management canister) and pass the raw signed bytes.
 
-7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In modern Motoko with mo:core, attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. The old `Cycles.add<system>(amount)` pattern from mo:base still works but the inline syntax is preferred for clarity.
+7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In mo:core 2.0, `Cycles.add` does not exist. Attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. This is the only way to attach cycles in mo:core.
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "pull",
-      "id": "7hfb6-caaaa-aaaar-qadga-cai"
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: pull
+    id: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 Then run:
@@ -1676,26 +1683,20 @@ icp deps deploy
 
 #### Option B: Custom wasm (for local development)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "custom",
-      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
-      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
-      "remote": {
-        "id": {
-          "ic": "7hfb6-caaaa-aaaar-qadga-cai"
-        }
-      }
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: custom
+    candid: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did
+    wasm: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
+    remote:
+      id:
+        ic: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 ### Motoko
@@ -1943,7 +1944,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -1953,7 +1954,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128;
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -2017,9 +2018,15 @@ enum L2MainnetService {
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
+struct HttpHeader {
+    name: String,
+    value: String,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
 struct CustomRpcService {
     url: String,
-    headers: Option<Vec<(String, String)>>,
+    headers: Option<Vec<HttpHeader>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -2114,7 +2121,7 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: Option<String>,
+    transactions_root: String,
     uncles: Vec<String>,
 }
 
@@ -2124,6 +2131,9 @@ enum SendRawTransactionStatus {
     InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
+    InsufficientGas,
+    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
+    // for the complete set of SendRawTransactionStatus variants.
 }
 
 // -- Get ETH balance via raw JSON-RPC --
@@ -2137,18 +2147,17 @@ async fn get_eth_balance(address: String) -> String {
     let max_response_bytes: u64 = 1000;
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             max_response_bytes,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -2162,18 +2171,17 @@ async fn get_eth_balance(address: String) -> String {
 async fn get_latest_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,  // config
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,
@@ -2201,18 +2209,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
     );
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             2048_u64,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -2226,18 +2233,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
 async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<SendRawTransactionStatus>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_sendRawTransaction",
-        (
+    let (result,): (MultiResult<SendRawTransactionStatus>,) = Call::unbounded_wait(evm_rpc_id(), "eth_sendRawTransaction")
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,
             signed_tx_hex,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_sendRawTransaction");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_sendRawTransaction")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(status)) => status,
@@ -2256,18 +2262,17 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
 async fn get_arbitrum_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args(&(
             RpcServices::ArbitrumOne(None),
             None::<()>,
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,
@@ -2524,7 +2529,7 @@ persistent actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = Blob.empty();
+        context = "" : Blob;
       };
     };
 
@@ -2560,7 +2565,7 @@ persistent actor {
       method = #post;
       transform = ?{
         function = transform;
-        context = Blob.empty();
+        context = "" : Blob;
       };
     };
 
@@ -2590,15 +2595,16 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
+use ic_cdk::api::canister_self;
+use ic_cdk::management_canister::{
+    http_request, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult,
     TransformArgs, TransformContext, TransformFunc,
 };
 use ic_cdk::{query, update};
@@ -2607,8 +2613,8 @@ use serde::Deserialize;
 /// Transform function: strips non-deterministic headers so all replicas agree.
 /// MUST be a #[query] function.
 #[query]
-fn transform(args: TransformArgs) -> HttpResponse {
-    HttpResponse {
+fn transform(args: TransformArgs) -> HttpRequestResult {
+    HttpRequestResult {
         status: args.response.status,
         body: args.response.body,
         headers: vec![], // Strip all headers for consensus
@@ -2624,7 +2630,7 @@ fn transform(args: TransformArgs) -> HttpResponse {
 async fn fetch_price() -> String {
     let url = "https://api.coingecko.com/api/v3/simple/price?ids=internet-computer&vs_currencies=usd";
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: url.to_string(),
         max_response_bytes: Some(10_000),
         method: HttpMethod::GET,
@@ -2636,19 +2642,15 @@ async fn fetch_price() -> String {
         ],
         body: None,
         transform: Some(TransformContext {
-            function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
-                method: "transform".to_string(),
-            }),
+            function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
+        is_replicated: None,
     };
 
-    // Attach 200M cycles for the outcall
-    let cycles: u128 = 200_000_000;
-
-    match http_request(request, cycles).await {
-        Ok((response,)) => {
+    // ic-cdk 0.19 automatically computes and attaches the required cycles
+    match http_request(&request).await {
+        Ok(response) => {
             let body = String::from_utf8(response.body)
                 .unwrap_or_else(|_| "Invalid UTF-8 in response".to_string());
 
@@ -2658,8 +2660,8 @@ async fn fetch_price() -> String {
 
             body
         }
-        Err((code, msg)) => {
-            format!("HTTP outcall failed: {:?} - {}", code, msg)
+        Err(err) => {
+            format!("HTTP outcall failed: {:?}", err)
         }
     }
 }
@@ -2691,7 +2693,7 @@ async fn get_icp_price_usd() -> String {
 async fn post_data(json_payload: String) -> String {
     let url = "https://httpbin.org/post";
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: url.to_string(),
         max_response_bytes: Some(50_000),
         method: HttpMethod::POST,
@@ -2712,23 +2714,20 @@ async fn post_data(json_payload: String) -> String {
         ],
         body: Some(json_payload.into_bytes()),
         transform: Some(TransformContext {
-            function: TransformFunc(candid::Func {
-                principal: ic_cdk::id(),
-                method: "transform".to_string(),
-            }),
+            function: TransformFunc::new(canister_self(), "transform".to_string()),
             context: vec![],
         }),
+        is_replicated: None,
     };
 
-    let cycles: u128 = 300_000_000;
-
-    match http_request(request, cycles).await {
-        Ok((response,)) => {
+    // ic-cdk 0.19 automatically computes and attaches the required cycles
+    match http_request(&request).await {
+        Ok(response) => {
             String::from_utf8(response.body)
                 .unwrap_or_else(|_| "Invalid UTF-8 in response".to_string())
         }
-        Err((code, msg)) => {
-            format!("HTTP outcall failed: {:?} - {}", code, msg)
+        Err(err) => {
+            format!("HTTP outcall failed: {:?}", err)
         }
     }
 }
@@ -2830,7 +2829,7 @@ Advanced transform that normalizes JSON:
 
 ```rust
 #[query]
-fn transform_normalize(args: TransformArgs) -> HttpResponse {
+fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
     // Parse and re-serialize to normalize field ordering
     let body = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&args.response.body) {
         serde_json::to_vec(&json).unwrap_or(args.response.body)
@@ -2838,7 +2837,7 @@ fn transform_normalize(args: TransformArgs) -> HttpResponse {
         args.response.body
     };
 
-    HttpResponse {
+    HttpRequestResult {
         status: args.response.status,
         body,
         headers: vec![],
@@ -2858,7 +2857,7 @@ endpoints: 11
 version: 2.3.1
 status: stable
 dependencies: []
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
@@ -2870,7 +2869,7 @@ ICRC-1 is the fungible token standard on Internet Computer, defining transfer, b
 ## Prerequisites
 - icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
+- For Rust: `ic-cdk = "0.19"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 
 ## Canister IDs
 
@@ -3095,7 +3094,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 icrc-ledger-types = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -3110,6 +3109,7 @@ use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
 use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
 use icrc_ledger_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 use ic_cdk::update;
+use ic_cdk::call::Call;
 
 const ICP_LEDGER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 const ICP_FEE: u64 = 10_000; // 10000 e8s
@@ -3125,13 +3125,12 @@ async fn get_balance(who: Principal) -> Nat {
         owner: who,
         subaccount: None,
     };
-    let (balance,): (Nat,) = ic_cdk::call(
-        ledger_id(),
-        "icrc1_balance_of",
-        (account,),
-    )
-    .await
-    .expect("Failed to call icrc1_balance_of");
+    let (balance,): (Nat,) = Call::unbounded_wait(ledger_id(), "icrc1_balance_of")
+        .with_arg(account)
+        .await
+        .expect("Failed to call icrc1_balance_of")
+        .candid()
+        .expect("Failed to decode response");
     balance
 }
 
@@ -3151,13 +3150,12 @@ async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, TransferError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc1_transfer",
-        (transfer_arg,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, TransferError>,) = Call::unbounded_wait(ledger_id(), "icrc1_transfer")
+        .with_arg(transfer_arg)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     match result {
         Ok(block_index) => Ok(block_index),
@@ -3188,13 +3186,12 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, ApproveError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc2_approve",
-        (args,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, ApproveError>,) = Call::unbounded_wait(ledger_id(), "icrc2_approve")
+        .with_arg(args)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("Approve error: {:?}", e))
 }
@@ -3219,13 +3216,12 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, TransferFromError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc2_transfer_from",
-        (args,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, TransferFromError>,) = Call::unbounded_wait(ledger_id(), "icrc2_transfer_from")
+        .with_arg(args)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("TransferFrom error: {:?}", e))
 }
@@ -3235,21 +3231,20 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 ### Deploy a Local ICRC-1 Ledger for Testing
 
-Add to `icp.json`:
+Add to `icp.yaml`:
 
 Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
 
-```json
-{
-  "canisters": {
-    "icrc1_ledger": {
-      "type": "custom",
-      "candid": "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did",
-      "wasm": "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz",
-      "init_arg_file": "icrc1_ledger_init.args"
-    }
-  }
-}
+```yaml
+canisters:
+  icrc1_ledger:
+    name: icrc1_ledger
+    recipe:
+      type: custom
+      candid: "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did"
+      wasm: "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz"
+    config:
+      init_arg_file: "icrc1_ledger_init.args"
 ```
 
 Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
@@ -3288,7 +3283,7 @@ icp network start -d
 icp deploy icrc1_ledger
 
 # Verify it deployed
-icp canister status icrc1_ledger --id-only
+icp canister id icrc1_ledger
 ```
 
 ### Interact with Mainnet Ledgers
@@ -3340,7 +3335,7 @@ icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+icp identity new test-recipient --storage plaintext 2>/dev/null
 RECIPIENT=$(icp identity principal --identity test-recipient)
 icp canister call icrc1_ledger icrc1_transfer \
   "(record {
@@ -3421,7 +3416,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-5. **Reading `ic_cdk::caller()` after an await in Rust.** After any `.await` point, `caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
+5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::caller()` in Rust.
 
@@ -3431,26 +3426,20 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
 
-```json
-{
-  "canisters": {
-    "internet_identity": {
-      "type": "custom",
-      "candid": "deps/internet-identity/internet_identity.did",
-      "wasm": "deps/internet-identity/internet_identity_dev.wasm.gz",
-      "build": "",
-      "remote": {
-        "id": {
-          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
-        }
-      }
-    }
-  }
-}
+```yaml
+canisters:
+  internet_identity:
+    type: custom
+    candid: deps/internet-identity/internet_identity.did
+    wasm: deps/internet-identity/internet_identity_dev.wasm.gz
+    build: ""
+    remote:
+      id:
+        ic: rdmx6-jaaaa-aaaaa-aaadq-cai
 ```
 
 The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
@@ -3510,16 +3499,11 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname.endsWith(".localhost");
 
-  const agent = new HttpAgent({
+  const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
-    ...(isLocal && { verifyQuerySignatures: false }),
+    ...(isLocal && { fetchRootKey: true, verifyQuerySignatures: false }),
   });
-
-  // CRITICAL: Fetch root key for local development only
-  if (isLocal) {
-    await agent.fetchRootKey();
-  }
 
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
@@ -3617,7 +3601,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -3625,19 +3609,21 @@ ic-stable-structures = "0.7"
 
 ```rust
 use candid::Principal;
-use ic_cdk::{caller, query, update};
+use ic_cdk::{query, update};
 use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
 thread_local! {
-    static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None).unwrap()
+    // Principal::anonymous() is used as the "not set" sentinel.
+    // Option<Principal> does not implement Storable, so we store Principal directly.
+    static OWNER: RefCell<StableCell<Principal, DefaultMemoryImpl>> = RefCell::new(
+        StableCell::init(DefaultMemoryImpl::default(), Principal::anonymous())
     );
 }
 
 /// Reject anonymous principal. Call this at the top of every protected endpoint.
 fn require_auth() -> Principal {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         ic_cdk::trap("Anonymous principal not allowed. Please authenticate.");
     }
@@ -3652,12 +3638,12 @@ fn init_owner() -> String {
 
     OWNER.with(|owner| {
         let mut cell = owner.borrow_mut();
-        match cell.get() {
-            None => {
-                cell.set(Some(caller));
-                format!("Owner set to {}", caller)
-            }
-            Some(_) => "Owner already initialized".to_string(),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            cell.set(caller);
+            format!("Owner set to {}", caller)
+        } else {
+            "Owner already initialized".to_string()
         }
     })
 }
@@ -3668,17 +3654,20 @@ fn admin_action() -> String {
 
     OWNER.with(|owner| {
         let cell = owner.borrow();
-        match cell.get() {
-            Some(o) if o == caller => "Admin action performed".to_string(),
-            Some(_) => ic_cdk::trap("Only the owner can call this function."),
-            None => ic_cdk::trap("Owner not set. Call init_owner first."),
+        let current = *cell.get();
+        if current == Principal::anonymous() {
+            ic_cdk::trap("Owner not set. Call init_owner first.");
+        } else if current == caller {
+            "Admin action performed".to_string()
+        } else {
+            ic_cdk::trap("Only the owner can call this function.");
         }
     })
 }
 
 #[query]
 fn who_am_i() -> String {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         "You are not authenticated (anonymous)".to_string()
     } else {
@@ -3699,7 +3688,7 @@ async fn protected_async_action() -> String {
 }
 ```
 
-**Rust critical rule:** In any `async` update function, `ic_cdk::caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::caller();` at the top of the function.
+**Rust critical rule:** In any `async` update function, `ic_cdk::api::msg_caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of the function.
 
 ## Deploy & Test
 
@@ -3746,10 +3735,10 @@ icp canister call backend whoAmI
 # unless you explicitly use --identity anonymous
 
 # 5. Test with explicit anonymous identity
-icp identity default anonymous
+icp identity use anonymous
 icp canister call backend adminAction
 # Expected: Error containing "Anonymous principal not allowed"
-icp identity default default  # Switch back
+icp identity use default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943
@@ -3768,7 +3757,7 @@ endpoints: 8
 version: 3.0.2
 status: stable
 dependencies: [stable-memory]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
@@ -3782,14 +3771,14 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
+- For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
 
 ## When to Use Multi-Canister
 
 | Reason | Threshold |
 |---|---|
-| Storage limits | Each canister: 4GB stable memory + 4GB heap. If your data could exceed this, split storage across canisters. |
+| Storage limits | Each canister: up to hundreds of GB stable memory + 4GB heap. If your data could exceed heap limits or benefit from partitioning, split storage across canisters. |
 | Separation of concerns | Auth service, content service, payment service as independent units. |
 | Independent upgrades | Upgrade the payments canister without touching the user canister. |
 | Access control | Different controllers for different canisters (e.g., DAO controls one, team controls another). |
@@ -3799,20 +3788,20 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Mistakes That Break Your Build
 
-1. **`ic_cdk::caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
+1. **`ic_cdk::api::msg_caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::api::msg_caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
 
     ```rust
     // WRONG (Rust) — caller() is wrong after await:
     #[update]
     async fn do_thing() {
         let _ = some_canister_call().await;
-        let who = ic_cdk::caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
+        let who = ic_cdk::api::msg_caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
     }
 
     // CORRECT (Rust) — capture before await:
     #[update]
     async fn do_thing() {
-        let original_caller = ic_cdk::caller(); // Capture BEFORE await
+        let original_caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
         let _ = some_canister_call().await;
         let who = original_caller; // Safe
     }
@@ -3824,7 +3813,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `"dependencies"` in icp.json so `icp deploy` orders them correctly.
+5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
 
 6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
@@ -3842,7 +3831,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   mops.toml
   src/
     shared/
@@ -3855,37 +3844,31 @@ my-project/
       ...               # Frontend assets
 ```
 
-### icp.json
+### icp.yaml
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "user_service": {
-      "type": "motoko",
-      "main": "src/user_service/main.mo"
-    },
-    "content_service": {
-      "type": "motoko",
-      "main": "src/content_service/main.mo",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  user_service:
+    type: motoko
+    main: src/user_service/main.mo
+  content_service:
+    type: motoko
+    main: src/content_service/main.mo
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 ### Motoko
@@ -3989,7 +3972,7 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Types "../shared/Types";
 
-// Import the other canister — name must match icp.json key
+// Import the other canister — name must match icp.yaml canister key
 import UserService "canister:user_service";
 
 persistent actor {
@@ -4078,7 +4061,7 @@ persistent actor {
 
 ```
 my-project/
-  icp.json
+  icp.yaml
   Cargo.toml          # workspace
   src/
     user_service/
@@ -4099,34 +4082,30 @@ members = [
 ]
 ```
 
-#### icp.json (Rust)
+#### icp.yaml (Rust)
 
-```json
-{
-  "canisters": {
-    "user_service": {
-      "type": "rust",
-      "package": "user_service",
-      "candid": "src/user_service/user_service.did"
-    },
-    "content_service": {
-      "type": "rust",
-      "package": "content_service",
-      "candid": "src/content_service/content_service.did",
-      "dependencies": ["user_service"]
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "dependencies": ["user_service", "content_service"]
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+canisters:
+  user_service:
+    type: rust
+    package: user_service
+    candid: src/user_service/user_service.did
+  content_service:
+    type: rust
+    package: content_service
+    candid: src/content_service/content_service.did
+    dependencies:
+      - user_service
+  frontend:
+    type: assets
+    source:
+      - dist
+    dependencies:
+      - user_service
+      - content_service
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 #### src/user_service/Cargo.toml
@@ -4141,7 +4120,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -4197,7 +4176,7 @@ fn post_upgrade() {}
 
 #[update]
 fn register(username: String) -> Result<UserProfile, String> {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         return Err("Unauthorized".to_string());
     }
@@ -4248,7 +4227,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -4258,6 +4237,7 @@ ic-stable-structures = "0.7"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
+use ic_cdk::call::Call;
 use ic_cdk::{init, post_upgrade, query, update};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell};
@@ -4298,7 +4278,7 @@ thread_local! {
         StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).unwrap()
+        )
     );
 
     // Store the user_service canister ID (set during init, re-set on upgrade)
@@ -4339,7 +4319,7 @@ fn get_user_service_id() -> Principal {
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
     // Capture caller BEFORE the await -- caller() is wrong after await
-    let original_caller = ic_cdk::caller();
+    let original_caller = ic_cdk::api::msg_caller();
 
     if original_caller == Principal::anonymous() {
         return Err("Unauthorized".to_string());
@@ -4347,9 +4327,12 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 
     // Inter-canister call to user_service
     let user_service = get_user_service_id();
-    let (is_valid,): (bool,) = ic_cdk::call(user_service, "is_valid_user", (original_caller,))
+    let (is_valid,): (bool,) = Call::unbounded_wait(user_service, "is_valid_user")
+        .with_arg(original_caller)
         .await
-        .map_err(|(code, msg)| format!("User service call failed: {:?} - {}", code, msg))?;
+        .map_err(|e| format!("User service call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Failed to decode response: {:?}", e))?;
 
     if !is_valid {
         return Err("User not registered".to_string());
@@ -4358,7 +4341,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
     let id = POST_COUNTER.with(|counter| {
         let mut counter = counter.borrow_mut();
         let id = *counter.get();
-        counter.set(id + 1).unwrap();
+        counter.set(id + 1);
         id
     });
 
@@ -4381,7 +4364,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 fn get_posts() -> Vec<Post> {
     POSTS.with(|posts| {
         posts.borrow().iter()
-            .map(|(_, v)| deserialize_post(&v))
+            .map(|entry| deserialize_post(&entry.value()))
             .collect()
     })
 }
@@ -4393,20 +4376,19 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
 
     // Call user_service for profile data
     let user_profile: Option<UserProfile> =
-        match ic_cdk::call::<(Principal,), (Option<UserProfile>,)>(
-            user_service,
-            "get_user",
-            (author_id,),
-        )
-        .await
+        match Call::unbounded_wait(user_service, "get_user")
+            .with_arg(author_id)
+            .await
         {
-            Ok((profile,)) => profile,
+            Ok(response) => response.candid::<(Option<UserProfile>,)>()
+                .map(|(profile,)| profile)
+                .unwrap_or(None),
             Err(_) => None, // Handle gracefully if user service is down
         };
 
     let author_posts = POSTS.with(|posts| {
         posts.borrow().iter()
-            .map(|(_, v)| deserialize_post(&v))
+            .map(|entry| deserialize_post(&entry.value()))
             .filter(|p| p.author == author_id)
             .collect()
     });
@@ -4416,7 +4398,7 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
 
 #[update]
 async fn delete_post(id: u64) -> Result<(), String> {
-    let original_caller = ic_cdk::caller();
+    let original_caller = ic_cdk::api::msg_caller();
 
     POSTS.with(|posts| {
         let mut posts = posts.borrow_mut();
@@ -4517,9 +4499,9 @@ persistent actor Self {
 #### Rust Factory
 
 ```rust
-use candid::{CandidType, Deserialize, Principal, encode_one};
+use candid::{CandidType, Deserialize, Nat, Principal, encode_one};
 use ic_cdk::management_canister::{
-    create_canister, install_code,
+    create_canister_with_extra_cycles, install_code,
     CreateCanisterArgs, InstallCodeArgs, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
@@ -4543,24 +4525,26 @@ thread_local! {
 
 #[update]
 async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Auth required");
 
     // Create canister
     let create_args = CreateCanisterArgs {
         settings: Some(CanisterSettings {
-            controllers: Some(vec![ic_cdk::id(), caller]),
+            controllers: Some(vec![ic_cdk::api::canister_self(), caller]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
             reserved_cycles_limit: None,
             log_visibility: None,
             wasm_memory_limit: None,
+            wasm_memory_threshold: None,
+            environment_variables: None,
         }),
     };
 
     // Attach 1T cycles for the new canister
-    let create_result = create_canister(&create_args, 1_000_000_000_000u128)
+    let create_result = create_canister_with_extra_cycles(&create_args, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
@@ -4621,7 +4605,7 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 npm run build
@@ -4640,7 +4624,7 @@ icp network start -d
 icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
+USER_SERVICE_ID=$(icp canister id user_service)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
@@ -4705,13 +4689,13 @@ icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
 # Create a new identity that is NOT registered
-icp identity new unregistered --storage-mode=plaintext
-icp identity default unregistered
+icp identity new unregistered --storage plaintext
+icp identity use unregistered
 icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-icp identity default default
+icp identity use default
 ```
 
 ### Verify Cross-Canister Query
@@ -5015,7 +4999,7 @@ fn require_governance(caller: Principal) {
 #[update]
 fn set_sns_governance(id: Principal) {
     // Only canister controllers should call this.
-    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+    if !ic_cdk::api::is_controller(&ic_cdk::api::msg_caller()) {
         ic_cdk::trap("Only canister controllers can set governance");
     }
     CONFIG.with(|c| {
@@ -5029,7 +5013,7 @@ fn set_sns_governance(id: Principal) {
 
 #[update]
 fn update_config(new_fee: u64) {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     require_governance(caller);
     // ... apply config change
 }
@@ -5038,9 +5022,17 @@ fn update_config(new_fee: u64) {
 **Cargo.toml dependencies:**
 
 ```toml
+[package]
+name = "sns_dapp_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 ```
 
@@ -5103,10 +5095,10 @@ dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-icp canister status sns_governance --id-only
-icp canister status sns_ledger --id-only
-icp canister status sns_root --id-only
-icp canister status sns_swap --id-only
+icp canister id sns_governance
+icp canister id sns_ledger
+icp canister id sns_root
+icp canister id sns_swap
 
 # Verify SNS governance is operational
 icp canister call sns_governance get_nervous_system_parameters '()'
@@ -5277,7 +5269,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
@@ -5311,7 +5303,7 @@ thread_local! {
         RefCell::new(ic_stable_structures::StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 }
 
 #[derive(CandidType, Deserialize, Clone)]
@@ -5337,7 +5329,7 @@ fn add_user(name: String) -> u64 {
     let id = COUNTER.with(|c| {
         let mut cell = c.borrow_mut();
         let current = *cell.get();
-        cell.set(current + 1).expect("Failed to increment counter");
+        cell.set(current + 1);
         current
     });
 
@@ -5407,13 +5399,13 @@ thread_local! {
         RefCell::new(StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(COUNTER_MEM_ID)),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 
     static AUDIT_LOG: RefCell<StableLog<Vec<u8>, Memory, Memory>> =
         RefCell::new(StableLog::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_INDEX_MEM_ID)),
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_DATA_MEM_ID)),
-        ).expect("Failed to init log"));
+        ));
 }
 ```
 
@@ -5545,7 +5537,7 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
 - Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
-- Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
+- Frontend: `@icp-sdk/vetkeys` npm package (check npm registry -- may still be published under `@dfinity/vetkeys`)
 - For local testing: `icp network start` creates a local test key automatically
 
 ## Canister IDs
@@ -5574,7 +5566,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@icp-sdk/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
 2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
@@ -5588,7 +5580,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
 
-8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `call_with_payment128` (not plain `call`). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
+8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `Call::unbounded_wait(...).with_cycles()` (not a plain call without cycles). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
 
 ## System API (Candid)
 
@@ -5644,7 +5636,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
@@ -5655,7 +5647,7 @@ serde_bytes = "0.11"
 ic-vetkeys = "0.6.0"
 
 # Option B: Call management canister directly (lower level, always works)
-# No extra dependency -- use ic_cdk::api::call::call_with_payment128
+# No extra dependency -- use ic_cdk::call::Call::unbounded_wait(...).with_cycles()
 ```
 
 **Using ic-vetkeys library (recommended):**
@@ -5669,7 +5661,7 @@ use ic_cdk::update;
 //
 // ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
 // with "could not find `ic_vetkeys`", switch to the raw management canister
-// approach below (Option B), or add as a git dependency from dfinity/examples.
+// approach below (Option B), or add as a git dependency from dfinity/ic-vetkeys.
 //
 // API is under active development — verify function signatures against latest docs.
 use ic_vetkeys::KeyManager;
@@ -5686,7 +5678,7 @@ thread_local! {
 
 #[update]
 async fn get_encrypted_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller();  // Capture BEFORE await
+    let caller = ic_cdk::api::msg_caller();  // Capture BEFORE await
     KEY_MANAGER.with(|km| {
         let km = km.borrow();
         km.derive_key(caller.as_slice().to_vec(), transport_public_key)
@@ -5709,6 +5701,7 @@ async fn get_public_key() -> Vec<u8> {
 ```rust
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::update;
+use ic_cdk::call::Call;
 
 #[derive(CandidType, Deserialize)]
 struct VetKdKeyId {
@@ -5767,21 +5760,23 @@ async fn vetkd_public_key() -> Vec<u8> {
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
     // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
-    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call_with_payment128(
-        Principal::management_canister(), // aaaaa-aa
+    let (response,): (VetKdPublicKeyResponse,) = Call::unbounded_wait(
+        Principal::management_canister(),
         "vetkd_public_key",
-        (request,),
-        100_000_000, // cycles to attach
     )
+    .with_arg(request)
+    .with_cycles(100_000_000u128)
     .await
-    .expect("vetkd_public_key call failed");
+    .expect("vetkd_public_key call failed")
+    .candid()
+    .expect("Failed to decode response");
 
     response.public_key
 }
 
 #[update]
 async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller(); // MUST capture before await
+    let caller = ic_cdk::api::msg_caller(); // MUST capture before await
 
     let request = VetKdDeriveKeyRequest {
         input: caller.as_slice().to_vec(), // derive key specific to this caller
@@ -5791,14 +5786,16 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
+    let (response,): (VetKdDeriveKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_derive_key",
-        (request,),
-        100_000_000, // cycles to attach
     )
+    .with_arg(request)
+    .with_cycles(100_000_000u128)
     .await
-    .expect("vetkd_derive_key call failed");
+    .expect("vetkd_derive_key call failed")
+    .candid()
+    .expect("Failed to decode response");
 
     response.encrypted_key
 }
@@ -5817,7 +5814,7 @@ version = "0.1.0"
 core = "2.0.0"
 # ⚠ Verify ic-vetkeys exists on mops.one before adding.
 # If not yet published, use the raw management canister approach below instead.
-ic-vetkeys = "0.1.0"
+ic-vetkeys = "0.4.0"
 ```
 
 **Using the management canister directly (recommended — no dependency on unpublished packages):**
@@ -5857,12 +5854,12 @@ persistent actor {
     encrypted_key : Blob;
   };
 
-  let managementCanister : actor {
+  transient let managementCanister : actor {
     vetkd_public_key : VetKdPublicKeyRequest -> async VetKdPublicKeyResponse;
     vetkd_derive_key : VetKdDeriveKeyRequest -> async VetKdDeriveKeyResponse;
   } = actor "aaaaa-aa";
 
-  let context : Blob = Text.encodeUtf8("my_app_v1");
+  transient let context : Blob = Text.encodeUtf8("my_app_v1");
 
   // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
@@ -5896,7 +5893,7 @@ persistent actor {
 The frontend generates a transport key pair, sends the public half to the canister, receives the encrypted derived key, decrypts it, and uses the result for AES encryption/decryption.
 
 ```javascript
-// The @dfinity/vetkeys package API is evolving rapidly.
+// The @icp-sdk/vetkeys package API is evolving rapidly.
 // Check https://github.com/dfinity/examples for the latest vetKD usage examples.
 // High-level flow:
 // 1. Generate a transport key pair (BLS12-381, NOT P-256)
@@ -5952,12 +5949,12 @@ icp canister call backend deriveKey '(blob "\00\01...")'
 # To verify the underlying key is correct, decrypt both blobs with the transport secret and confirm they match.
 
 # 4. Verify isolation: different callers get different keys
-icp identity new test-user-1 --storage-mode=plaintext
-icp identity new test-user-2 --storage-mode=plaintext
-icp identity default test-user-1
+icp identity new test-user-1 --storage plaintext
+icp identity new test-user-2 --storage plaintext
+icp identity use test-user-1
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Note the output
-icp identity default test-user-2
+icp identity use test-user-2
 icp canister call backend deriveKey '(blob "\00\01...")'
 # Expected: DIFFERENT encrypted_key (different caller = different derived key)
 
@@ -6135,7 +6132,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -6148,16 +6145,16 @@ use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(ic_cdk::canister_balance128())
+    Nat::from(ic_cdk::api::canister_cycle_balance())
 }
 
 #[update]
 fn deposit() -> Nat {
-    let available = ic_cdk::msg_cycles_available128();
+    let available = ic_cdk::api::msg_cycles_available();
     if available == 0 {
         ic_cdk::trap("No cycles sent with this call");
     }
-    let accepted = ic_cdk::msg_cycles_accept128(available);
+    let accepted = ic_cdk::api::msg_cycles_accept(available);
     Nat::from(accepted)
 }
 ```
@@ -6168,23 +6165,26 @@ fn deposit() -> Nat {
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::management_canister::{
-    create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
+    create_canister_with_extra_cycles, canister_status, deposit_cycles, stop_canister, delete_canister,
     CreateCanisterArgs, CanisterStatusArgs, DepositCyclesArgs, StopCanisterArgs, DeleteCanisterArgs,
     CanisterSettings, CanisterStatusResult,
 };
 
 #[update]
 async fn create_new_canister() -> Principal {
-    let caller = ic_cdk::caller(); // capture before await
+    let caller = ic_cdk::api::canister_self(); // capture canister's own principal
+    let user = ic_cdk::api::msg_caller(); // capture caller before await
 
     let settings = CanisterSettings {
-        controllers: Some(vec![ic_cdk::id(), caller]),
+        controllers: Some(vec![caller, user]),
         compute_allocation: None,
         memory_allocation: None,
         freezing_threshold: Some(Nat::from(2_592_000u64)), // 30 days
         reserved_cycles_limit: None,
         log_visibility: None,
         wasm_memory_limit: None,
+        wasm_memory_threshold: None,
+        environment_variables: None,
     };
 
     let arg = CreateCanisterArgs {
@@ -6192,7 +6192,7 @@ async fn create_new_canister() -> Principal {
     };
 
     // Send 1T cycles with the create call
-    let result = create_canister(&arg, 1_000_000_000_000u128)
+    let result = create_canister_with_extra_cycles(&arg, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 

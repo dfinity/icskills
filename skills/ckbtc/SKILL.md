@@ -7,7 +7,7 @@ endpoints: 14
 version: 2.1.1
 status: stable
 dependencies: [icrc-ledger, wallet]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
@@ -98,33 +98,25 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
-icrc2-types = "0.1.0"
+icrc2-types = "1.1.0"
 ```
 
-#### icp.json (local development with ckBTC)
+#### icp.yaml (local development with ckBTC)
 
 For local testing, pull the ckBTC canisters:
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  },
-  "canisters": {
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": []
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:4943"
-    }
-  }
-}
+```yaml
+defaults:
+  build:
+    packtool: mops sources
+canisters:
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies: []
+networks:
+  local:
+    bind: 127.0.0.1:4943
 ```
 
 For mainnet, your canister calls the ckBTC ledger and minter directly by principal.
@@ -257,14 +249,14 @@ persistent actor {
 
   // -- Remote canister references (mainnet) --
 
-  let ckbtcLedger : actor {
+  transient let ckbtcLedger : actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
     icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
-  let ckbtcMinter : actor {
+  transient let ckbtcMinter : actor {
     get_btc_address : shared ({
       owner : ?Principal;
       subaccount : ?Blob;
@@ -315,13 +307,7 @@ persistent actor {
 
   // -- Check user's ckBTC balance --
 
-  public shared query ({ caller }) func getBalance() : async Nat {
-    // Note: for cross-canister query, remove 'query' and use await
-    // This is a simplified version — in production, call icrc1_balance_of
-    0 // placeholder for query context
-  };
-
-  public shared ({ caller }) func getBalanceUpdate() : async Nat {
+  public shared ({ caller }) func getBalance() : async Nat {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
@@ -395,8 +381,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
-ic-cdk-timers = "0.12"
+ic-cdk = "0.19"
+ic-cdk-timers = "1.0"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
@@ -407,7 +393,8 @@ icrc-ledger-types = "0.1"
 
 ```rust
 use candid::{CandidType, Deserialize, Nat, Principal};
-use ic_cdk::{query, update};
+use ic_cdk::update;
+use ic_cdk::call::Call;
 use icrc_ledger_types::icrc1::account::Account;
 use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
 use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
@@ -523,18 +510,21 @@ fn minter_id() -> Principal {
 
 #[update]
 async fn get_deposit_address() -> String {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let args = GetBtcAddressArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
-    let (address,): (String,) = ic_cdk::call(minter_id(), "get_btc_address", (args,))
+    let (address,): (String,) = Call::unbounded_wait(minter_id(), "get_btc_address")
+        .with_arg(args)
         .await
-        .expect("Failed to get BTC address");
+        .expect("Failed to get BTC address")
+        .candid()
+        .expect("Failed to decode response");
 
     address
 }
@@ -543,18 +533,21 @@ async fn get_deposit_address() -> String {
 
 #[update]
 async fn update_balance() -> UpdateBalanceResult {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let args = UpdateBalanceArgs {
-        owner: Some(ic_cdk::id()),
+        owner: Some(ic_cdk::api::canister_self()),
         subaccount: Some(subaccount.to_vec()),
     };
 
-    let (result,): (UpdateBalanceResult,) = ic_cdk::call(minter_id(), "update_balance", (args,))
+    let (result,): (UpdateBalanceResult,) = Call::unbounded_wait(minter_id(), "update_balance")
+        .with_arg(args)
         .await
-        .expect("Failed to call update_balance");
+        .expect("Failed to call update_balance")
+        .candid()
+        .expect("Failed to decode response");
 
     result
 }
@@ -563,18 +556,21 @@ async fn update_balance() -> UpdateBalanceResult {
 
 #[update]
 async fn get_balance() -> Nat {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let subaccount = principal_to_subaccount(&caller);
     let account = Account {
-        owner: ic_cdk::id(),
+        owner: ic_cdk::api::canister_self(),
         subaccount: Some(subaccount),
     };
 
-    let (balance,): (Nat,) = ic_cdk::call(ledger_id(), "icrc1_balance_of", (account,))
+    let (balance,): (Nat,) = Call::unbounded_wait(ledger_id(), "icrc1_balance_of")
+        .with_arg(account)
         .await
-        .expect("Failed to get balance");
+        .expect("Failed to get balance")
+        .candid()
+        .expect("Failed to decode response");
 
     balance
 }
@@ -583,7 +579,7 @@ async fn get_balance() -> Nat {
 
 #[update]
 async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     let from_subaccount = principal_to_subaccount(&caller);
@@ -599,10 +595,12 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
         created_at_time: None,
     };
 
-    let (result,): (Result<Nat, TransferError>,) =
-        ic_cdk::call(ledger_id(), "icrc1_transfer", (args,))
+    let (result,): (Result<Nat, TransferError>,) = Call::unbounded_wait(ledger_id(), "icrc1_transfer")
+            .with_arg(args)
             .await
-            .expect("Failed to call icrc1_transfer");
+            .expect("Failed to call icrc1_transfer")
+            .candid()
+            .expect("Failed to decode response");
 
     result
 }
@@ -611,7 +609,7 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
 
 #[update]
 async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Authentication required");
 
     // Step 1: Approve the minter to spend ckBTC from the user's subaccount
@@ -630,10 +628,12 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
         created_at_time: None,
     };
 
-    let (approve_result,): (Result<Nat, ApproveError>,) =
-        ic_cdk::call(ledger_id(), "icrc2_approve", (approve_args,))
+    let (approve_result,): (Result<Nat, ApproveError>,) = Call::unbounded_wait(ledger_id(), "icrc2_approve")
+            .with_arg(approve_args)
             .await
-            .expect("Failed to call icrc2_approve");
+            .expect("Failed to call icrc2_approve")
+            .candid()
+            .expect("Failed to decode response");
 
     if let Err(e) = approve_result {
         return Err(RetrieveBtcError::GenericError {
@@ -649,10 +649,12 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
         from_subaccount: Some(from_subaccount.to_vec()),
     };
 
-    let (result,): (RetrieveBtcResult,) =
-        ic_cdk::call(minter_id(), "retrieve_btc_with_approval", (args,))
+    let (result,): (RetrieveBtcResult,) = Call::unbounded_wait(minter_id(), "retrieve_btc_with_approval")
+            .with_arg(args)
             .await
-            .expect("Failed to call retrieve_btc_with_approval");
+            .expect("Failed to call retrieve_btc_with_approval")
+            .candid()
+            .expect("Failed to decode response");
 
     result
 }
@@ -762,7 +764,7 @@ icp canister call YOUR-CANISTER updateBalance -e ic
 # Expected: (variant { Ok = vec { variant { Minted = record { ... } } } })
 
 # 4. Check ckBTC balance
-icp canister call YOUR-CANISTER getBalanceUpdate -e ic
+icp canister call YOUR-CANISTER getBalance -e ic
 # Expected: balance reflects minted ckBTC
 ```
 

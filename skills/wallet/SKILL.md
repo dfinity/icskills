@@ -163,7 +163,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ```
@@ -176,16 +176,16 @@ use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(ic_cdk::canister_balance128())
+    Nat::from(ic_cdk::api::canister_cycle_balance())
 }
 
 #[update]
 fn deposit() -> Nat {
-    let available = ic_cdk::msg_cycles_available128();
+    let available = ic_cdk::api::msg_cycles_available();
     if available == 0 {
         ic_cdk::trap("No cycles sent with this call");
     }
-    let accepted = ic_cdk::msg_cycles_accept128(available);
+    let accepted = ic_cdk::api::msg_cycles_accept(available);
     Nat::from(accepted)
 }
 ```
@@ -196,23 +196,26 @@ fn deposit() -> Nat {
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::management_canister::{
-    create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
+    create_canister_with_extra_cycles, canister_status, deposit_cycles, stop_canister, delete_canister,
     CreateCanisterArgs, CanisterStatusArgs, DepositCyclesArgs, StopCanisterArgs, DeleteCanisterArgs,
     CanisterSettings, CanisterStatusResult,
 };
 
 #[update]
 async fn create_new_canister() -> Principal {
-    let caller = ic_cdk::caller(); // capture before await
+    let caller = ic_cdk::api::canister_self(); // capture canister's own principal
+    let user = ic_cdk::api::msg_caller(); // capture caller before await
 
     let settings = CanisterSettings {
-        controllers: Some(vec![ic_cdk::id(), caller]),
+        controllers: Some(vec![caller, user]),
         compute_allocation: None,
         memory_allocation: None,
         freezing_threshold: Some(Nat::from(2_592_000u64)), // 30 days
         reserved_cycles_limit: None,
         log_visibility: None,
         wasm_memory_limit: None,
+        wasm_memory_threshold: None,
+        environment_variables: None,
     };
 
     let arg = CreateCanisterArgs {
@@ -220,7 +223,7 @@ async fn create_new_canister() -> Principal {
     };
 
     // Send 1T cycles with the create call
-    let result = create_canister(&arg, 1_000_000_000_000u128)
+    let result = create_canister_with_extra_cycles(&arg, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 

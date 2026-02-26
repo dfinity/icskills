@@ -7,7 +7,7 @@ endpoints: 9
 version: 1.1.1
 status: stable
 dependencies: [https-outcalls]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
 ---
 
@@ -81,28 +81,24 @@ Use `requestCost` to get an exact estimate before calling.
 
 6. **Calling `eth_sendRawTransaction` without signing first.** The EVM RPC canister does not sign transactions. You must sign the transaction yourself (using threshold ECDSA via the IC management canister) and pass the raw signed bytes.
 
-7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In modern Motoko with mo:core, attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. The old `Cycles.add<system>(amount)` pattern from mo:base still works but the inline syntax is preferred for clarity.
+7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In mo:core 2.0, `Cycles.add` does not exist. Attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. This is the only way to attach cycles in mo:core.
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
 #### Option A: Pull from mainnet (recommended for production)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "pull",
-      "id": "7hfb6-caaaa-aaaar-qadga-cai"
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: pull
+    id: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 Then run:
@@ -114,26 +110,20 @@ icp deps deploy
 
 #### Option B: Custom wasm (for local development)
 
-```json
-{
-  "canisters": {
-    "evm_rpc": {
-      "type": "custom",
-      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
-      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
-      "remote": {
-        "id": {
-          "ic": "7hfb6-caaaa-aaaar-qadga-cai"
-        }
-      }
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo",
-      "dependencies": ["evm_rpc"]
-    }
-  }
-}
+```yaml
+canisters:
+  evm_rpc:
+    type: custom
+    candid: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did
+    wasm: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
+    remote:
+      id:
+        ic: 7hfb6-caaaa-aaaar-qadga-cai
+  backend:
+    type: motoko
+    main: src/backend/main.mo
+    dependencies:
+      - evm_rpc
 ```
 
 ### Motoko
@@ -381,7 +371,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -391,7 +381,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128;
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -455,9 +445,15 @@ enum L2MainnetService {
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
+struct HttpHeader {
+    name: String,
+    value: String,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
 struct CustomRpcService {
     url: String,
-    headers: Option<Vec<(String, String)>>,
+    headers: Option<Vec<HttpHeader>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -552,7 +548,7 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: Option<String>,
+    transactions_root: String,
     uncles: Vec<String>,
 }
 
@@ -562,6 +558,9 @@ enum SendRawTransactionStatus {
     InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
+    InsufficientGas,
+    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
+    // for the complete set of SendRawTransactionStatus variants.
 }
 
 // -- Get ETH balance via raw JSON-RPC --
@@ -575,18 +574,17 @@ async fn get_eth_balance(address: String) -> String {
     let max_response_bytes: u64 = 1000;
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             max_response_bytes,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -600,18 +598,17 @@ async fn get_eth_balance(address: String) -> String {
 async fn get_latest_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,  // config
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,
@@ -639,18 +636,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
     );
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args(&(
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             2048_u64,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -664,18 +660,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
 async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<SendRawTransactionStatus>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_sendRawTransaction",
-        (
+    let (result,): (MultiResult<SendRawTransactionStatus>,) = Call::unbounded_wait(evm_rpc_id(), "eth_sendRawTransaction")
+        .with_args(&(
             RpcServices::EthMainnet(None),
             None::<()>,
             signed_tx_hex,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_sendRawTransaction");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_sendRawTransaction")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(status)) => status,
@@ -694,18 +689,17 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
 async fn get_arbitrum_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args(&(
             RpcServices::ArbitrumOne(None),
             None::<()>,
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,

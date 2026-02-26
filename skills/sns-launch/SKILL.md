@@ -275,7 +275,7 @@ fn require_governance(caller: Principal) {
 #[update]
 fn set_sns_governance(id: Principal) {
     // Only canister controllers should call this.
-    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+    if !ic_cdk::api::is_controller(&ic_cdk::api::msg_caller()) {
         ic_cdk::trap("Only canister controllers can set governance");
     }
     CONFIG.with(|c| {
@@ -289,7 +289,7 @@ fn set_sns_governance(id: Principal) {
 
 #[update]
 fn update_config(new_fee: u64) {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     require_governance(caller);
     // ... apply config change
 }
@@ -298,9 +298,17 @@ fn update_config(new_fee: u64) {
 **Cargo.toml dependencies:**
 
 ```toml
+[package]
+name = "sns_dapp_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 ```
 
@@ -363,10 +371,10 @@ dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 
 ```bash
 # List deployed SNS canisters
-icp canister status sns_governance --id-only
-icp canister status sns_ledger --id-only
-icp canister status sns_root --id-only
-icp canister status sns_swap --id-only
+icp canister id sns_governance
+icp canister id sns_ledger
+icp canister id sns_root
+icp canister id sns_swap
 
 # Verify SNS governance is operational
 icp canister call sns_governance get_nervous_system_parameters '()'

@@ -131,7 +131,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
@@ -165,7 +165,7 @@ thread_local! {
         RefCell::new(ic_stable_structures::StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 }
 
 #[derive(CandidType, Deserialize, Clone)]
@@ -191,7 +191,7 @@ fn add_user(name: String) -> u64 {
     let id = COUNTER.with(|c| {
         let mut cell = c.borrow_mut();
         let current = *cell.get();
-        cell.set(current + 1).expect("Failed to increment counter");
+        cell.set(current + 1);
         current
     });
 
@@ -261,13 +261,13 @@ thread_local! {
         RefCell::new(StableCell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(COUNTER_MEM_ID)),
             0u64,
-        ).expect("Failed to init counter"));
+        ));
 
     static AUDIT_LOG: RefCell<StableLog<Vec<u8>, Memory, Memory>> =
         RefCell::new(StableLog::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_INDEX_MEM_ID)),
             MEMORY_MANAGER.with(|m| m.borrow().get(LOG_DATA_MEM_ID)),
-        ).expect("Failed to init log"));
+        ));
 }
 ```
 

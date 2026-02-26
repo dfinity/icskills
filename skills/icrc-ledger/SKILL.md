@@ -7,7 +7,7 @@ endpoints: 11
 version: 2.3.1
 status: stable
 dependencies: []
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
@@ -19,7 +19,7 @@ ICRC-1 is the fungible token standard on Internet Computer, defining transfer, b
 ## Prerequisites
 - icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk = "0.18"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
+- For Rust: `ic-cdk = "0.19"`, `candid = "0.10"`, `icrc-ledger-types = "0.1"` in Cargo.toml
 
 ## Canister IDs
 
@@ -244,7 +244,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 icrc-ledger-types = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -259,6 +259,7 @@ use icrc_ledger_types::icrc1::transfer::{TransferArg, TransferError};
 use icrc_ledger_types::icrc2::approve::{ApproveArgs, ApproveError};
 use icrc_ledger_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 use ic_cdk::update;
+use ic_cdk::call::Call;
 
 const ICP_LEDGER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 const ICP_FEE: u64 = 10_000; // 10000 e8s
@@ -274,13 +275,12 @@ async fn get_balance(who: Principal) -> Nat {
         owner: who,
         subaccount: None,
     };
-    let (balance,): (Nat,) = ic_cdk::call(
-        ledger_id(),
-        "icrc1_balance_of",
-        (account,),
-    )
-    .await
-    .expect("Failed to call icrc1_balance_of");
+    let (balance,): (Nat,) = Call::unbounded_wait(ledger_id(), "icrc1_balance_of")
+        .with_arg(account)
+        .await
+        .expect("Failed to call icrc1_balance_of")
+        .candid()
+        .expect("Failed to decode response");
     balance
 }
 
@@ -300,13 +300,12 @@ async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, TransferError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc1_transfer",
-        (transfer_arg,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, TransferError>,) = Call::unbounded_wait(ledger_id(), "icrc1_transfer")
+        .with_arg(transfer_arg)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     match result {
         Ok(block_index) => Ok(block_index),
@@ -337,13 +336,12 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, ApproveError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc2_approve",
-        (args,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, ApproveError>,) = Call::unbounded_wait(ledger_id(), "icrc2_approve")
+        .with_arg(args)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("Approve error: {:?}", e))
 }
@@ -368,13 +366,12 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
         created_at_time: Some(ic_cdk::api::time()),
     };
 
-    let (result,): (Result<Nat, TransferFromError>,) = ic_cdk::call(
-        ledger_id(),
-        "icrc2_transfer_from",
-        (args,),
-    )
-    .await
-    .map_err(|e| format!("Call failed: {:?}", e))?;
+    let (result,): (Result<Nat, TransferFromError>,) = Call::unbounded_wait(ledger_id(), "icrc2_transfer_from")
+        .with_arg(args)
+        .await
+        .map_err(|e| format!("Call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("TransferFrom error: {:?}", e))
 }
@@ -384,21 +381,20 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 ### Deploy a Local ICRC-1 Ledger for Testing
 
-Add to `icp.json`:
+Add to `icp.yaml`:
 
 Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
 
-```json
-{
-  "canisters": {
-    "icrc1_ledger": {
-      "type": "custom",
-      "candid": "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did",
-      "wasm": "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz",
-      "init_arg_file": "icrc1_ledger_init.args"
-    }
-  }
-}
+```yaml
+canisters:
+  icrc1_ledger:
+    name: icrc1_ledger
+    recipe:
+      type: custom
+      candid: "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did"
+      wasm: "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz"
+    config:
+      init_arg_file: "icrc1_ledger_init.args"
 ```
 
 Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
@@ -437,7 +433,7 @@ icp network start -d
 icp deploy icrc1_ledger
 
 # Verify it deployed
-icp canister status icrc1_ledger --id-only
+icp canister id icrc1_ledger
 ```
 
 ### Interact with Mainnet Ledgers
@@ -489,7 +485,7 @@ icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+icp identity new test-recipient --storage plaintext 2>/dev/null
 RECIPIENT=$(icp identity principal --identity test-recipient)
 icp canister call icrc1_ledger icrc1_transfer \
   "(record {

@@ -36,15 +36,15 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in icp.json.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
+1. **Wrong `source` path in icp.yaml.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.json, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.yaml, but if it is empty or misconfigured, the `source` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
-5. **Deploying to the wrong canister name.** If icp.json has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
+5. **Deploying to the wrong canister name.** If icp.yaml has `"frontend"` but you run `icp deploy assets`, it creates a new canister instead of updating the existing one.
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
@@ -52,30 +52,28 @@ Access patterns:
 
 ## Implementation
 
-### icp.json Configuration
+### icp.yaml Configuration
 
-```json
-{
-  "canisters": {
-    "frontend": {
-      "type": "assets",
-      "source": ["dist"],
-      "build": ["npm run build"],
-      "dependencies": ["backend"]
-    },
-    "backend": {
-      "type": "motoko",
-      "main": "src/backend/main.mo"
-    }
-  }
-}
+```yaml
+canisters:
+  frontend:
+    type: assets
+    source:
+      - dist
+    build:
+      - npm run build
+    dependencies:
+      - backend
+  backend:
+    type: motoko
+    main: src/backend/main.mo
 ```
 
 Key fields:
-- `"type": "assets"` -- tells `icp` this is an asset canister
-- `"source"` -- array of directories to upload (contents, not the directory itself)
-- `"build"` -- commands `icp deploy` runs before uploading (your frontend build step)
-- `"dependencies"` -- ensures backend is deployed first (so canister IDs are available)
+- `type: assets` -- tells `icp` this is an asset canister
+- `source` -- array of directories to upload (contents, not the directory itself)
+- `build` -- commands `icp deploy` runs before uploading (your frontend build step)
+- `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing: `.ic-assets.json5`
 
@@ -155,12 +153,14 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@icp-sdk/canisters/assets";
-import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
+import { HttpAgent } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
-const agent = new HttpAgent({ host: "http://localhost:4943" });
-await agent.fetchRootKey(); // Local only
+const agent = await HttpAgent.create({
+  host: "http://localhost:4943",
+  fetchRootKey: true, // Local only
+});
 
 const assetManager = new AssetManager({
   canisterId: "your-asset-canister-id",
@@ -278,7 +278,7 @@ icp canister call frontend http_request '(record {
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID
-icp canister status frontend --id-only
+icp canister id frontend
 # Expected: prints the canister ID (e.g., "bkyz2-fmaaa-aaaaa-qaaaq-cai")
 
 # 7. Check storage usage
