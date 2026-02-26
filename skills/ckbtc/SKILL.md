@@ -7,10 +7,11 @@ endpoints: 14
 version: 2.1.0
 status: stable
 dependencies: [icrc-ledger, wallet]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 

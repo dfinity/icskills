@@ -3,103 +3,23 @@
 // and writes src/skills-data.js so the site auto-discovers skills.
 // Run: node scripts/generate-skills.js
 
-import { readdirSync, readFileSync, writeFileSync, statSync } from "fs";
-import { execFileSync } from "child_process";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { writeFileSync } from "fs";
+import { join } from "path";
+import { ROOT, readAllSkills, getLastUpdated } from "./lib/parse-skill.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-const SKILLS_DIR = join(ROOT, "skills");
 const OUTPUT = join(ROOT, "src", "skills-data.js");
 
-function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return null;
-
-  const yaml = match[1];
-  const data = {};
-
-  for (const line of yaml.split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    let val = line.slice(idx + 1).trim();
-
-    // Parse arrays: [a, b, c]
-    if (val.startsWith("[") && val.endsWith("]")) {
-      val = val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
-    }
-    // Parse numbers
-    else if (/^\d+$/.test(val)) {
-      val = parseInt(val, 10);
-    }
-    // Strip quotes
-    else if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-
-    data[key] = val;
-  }
-
-  return data;
-}
-
-// Extract the markdown body (everything after the frontmatter)
-function extractBody(content) {
-  const match = content.match(/^---\n[\s\S]*?\n---\n?([\s\S]*)$/);
-  return match ? match[1].trim() : content.trim();
-}
-
-// Use git log for accurate dates (file mtime is unreliable on CI)
-function getLastUpdated(filePath) {
-  try {
-    const date = execFileSync("git", ["log", "-1", "--format=%cs", "--", filePath], { cwd: ROOT, encoding: "utf-8" }).trim();
-    if (date) return date;
-  } catch {}
-  // Fallback to file mtime if not in a git repo
-  return statSync(filePath).mtime.toISOString().split("T")[0];
-}
-
-const dirs = readdirSync(SKILLS_DIR).filter((d) => {
-  try {
-    return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
-  } catch {
-    return false;
-  }
-});
-
-const skills = [];
+const allSkills = readAllSkills();
 const errors = [];
 
-for (const dir of dirs) {
-  const filePath = join(SKILLS_DIR, dir, "SKILL.md");
-  const content = readFileSync(filePath, "utf-8");
-  const meta = parseFrontmatter(content);
-
-  if (!meta) {
-    errors.push(`${dir}/SKILL.md: missing YAML frontmatter (---)`);
-    continue;
-  }
-
-  const missing = ["id", "name", "category"].filter((f) => !meta[f]);
+// Validate required fields
+for (const skill of allSkills) {
+  const missing = ["id", "name", "category"].filter((f) => !skill.meta[f]);
   if (missing.length) {
-    errors.push(`${dir}/SKILL.md: missing required fields: ${missing.join(", ")}`);
-    continue;
+    errors.push(
+      `${skill.dir}/SKILL.md: missing required fields: ${missing.join(", ")}`
+    );
   }
-
-  skills.push({
-    id: meta.id,
-    name: meta.name,
-    category: meta.category,
-    description: meta.description || "",
-    endpoints: meta.endpoints || 0,
-    lastUpdated: getLastUpdated(filePath),
-    version: meta.version || "1.0.0",
-    status: meta.status || "stable",
-    dependencies: Array.isArray(meta.dependencies) ? meta.dependencies : [],
-    content: extractBody(content),
-  });
 }
 
 if (errors.length) {
@@ -107,6 +27,40 @@ if (errors.length) {
   errors.forEach((e) => console.error(`  - ${e}`));
   process.exit(1);
 }
+
+// Validate dependency graph: every dependency must reference an existing skill ID
+const allIds = new Set(allSkills.map((s) => s.meta.id));
+for (const skill of allSkills) {
+  const deps = Array.isArray(skill.meta.dependencies)
+    ? skill.meta.dependencies
+    : [];
+  for (const dep of deps) {
+    if (!allIds.has(dep)) {
+      errors.push(
+        `${skill.dir}/SKILL.md: dependency "${dep}" does not match any skill ID`
+      );
+    }
+  }
+}
+
+if (errors.length) {
+  console.error("ERRORS in skill dependencies:");
+  errors.forEach((e) => console.error(`  - ${e}`));
+  process.exit(1);
+}
+
+const skills = allSkills.map((s) => ({
+  id: s.meta.id,
+  name: s.meta.name,
+  category: s.meta.category,
+  description: s.meta.description || "",
+  endpoints: s.meta.endpoints || 0,
+  lastUpdated: getLastUpdated(s.filePath),
+  version: s.meta.version || "1.0.0",
+  status: s.meta.status || "stable",
+  dependencies: Array.isArray(s.meta.dependencies) ? s.meta.dependencies : [],
+  content: s.body,
+}));
 
 // Sort alphabetically by name for consistent output
 skills.sort((a, b) => a.name.localeCompare(b.name));

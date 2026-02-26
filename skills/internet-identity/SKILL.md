@@ -7,10 +7,11 @@ endpoints: 6
 version: 5.0.0
 status: stable
 dependencies: [asset-canister]
+requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
+tags: [auth, login, passkey, webauthn, identity, session, delegation, principal]
 ---
 
 # Internet Identity Authentication
-> version: 5.0.0 | requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
 
 ## What This Is
 

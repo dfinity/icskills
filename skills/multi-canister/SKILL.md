@@ -7,10 +7,11 @@ endpoints: 8
 version: 3.0.1
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 

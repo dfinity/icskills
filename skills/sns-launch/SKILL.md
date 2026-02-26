@@ -7,10 +7,11 @@ endpoints: 22
 version: 1.8.0
 status: stable
 dependencies: [icrc-ledger, multi-canister]
+requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
+tags: [dao, governance, sns, token, swap, decentralization, proposal, neuron]
 ---
 
 # SNS DAO Launch
-> version: 1.8.0 | requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
 
 ## What This Is
 

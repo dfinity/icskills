@@ -7,10 +7,11 @@ endpoints: 4
 version: 1.5.0
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [http, api, fetch, external, request, transform, outcall]
 ---
 
 # HTTPS Outcalls
-> version: 1.5.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 

@@ -7,11 +7,12 @@ endpoints: 5
 version: 0.9.0
 status: beta
 dependencies: [internet-identity]
+requires: [icp-cli >= 0.1.0]
+tags: [encryption, decryption, key-derivation, threshold, privacy, secret, aes]
 ---
 
 # vetKD (Verifiable Encrypted Threshold Key Derivation)
-> version: 0.9.0 | requires: [icp-cli >= 0.1.0]
->
+
 > **Beta Notice:** vetKD is under active development. The system API, crate names, and npm packages
 > may change between IC SDK releases. Pin your dependency versions and test after every icp-cli upgrade.
 > Monitor the [DFINITY forum](https://forum.dfinity.org) and [IC developer docs](https://internetcomputer.org/docs) for breaking changes.

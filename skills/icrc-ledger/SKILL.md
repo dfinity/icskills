@@ -7,10 +7,11 @@ endpoints: 11
 version: 2.3.0
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.

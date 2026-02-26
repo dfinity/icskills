@@ -7,10 +7,11 @@ endpoints: 4
 version: 1.2.0
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]
+tags: [certification, query, merkle, verified, response, trust, proof]
 ---
 
 # Certified Variables & Certified Assets
-> version: 1.2.0 | requires: [icp-cli >= 0.1.0, ic-certified-map (Rust) or CertifiedData (Motoko)]
 
 ## What This Is
 
