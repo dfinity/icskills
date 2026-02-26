@@ -28,7 +28,7 @@ Every skill follows the same structure:
 | Section | Purpose |
 |---------|---------|
 | **What This Is** | One paragraph. What the technology does. |
-| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.18`. |
+| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.19`. |
 | **Canister IDs** *(optional)* | External canister principals for mainnet/testnet. |
 | **How It Works** *(optional)* | Flow descriptions for multi-step processes. |
 | **Mistakes That Break Your Build** | Numbered pitfalls that prevent hallucinations. |
