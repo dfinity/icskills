@@ -2,7 +2,7 @@
 id: oisy-wallet-signer
 name: OISY Wallet Signer
 category: IC-Wallet
-description: Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions OISY, wallet signer, relying party, consent messages, token transfers via signer, or canister call signing.
+description: Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing.
 version: 4.1.0
 endpoints: 5
 status: stable
@@ -15,7 +15,7 @@ dependencies: [@dfinity/utils, @dfinity/zod-schemas, @icp-sdk/canisters, @icp-sd
 
 ## What This Is
 
-A TypeScript library that enables secure communication between dApps and wallets on the Internet Computer using JSON-RPC 2.0 over `window.postMessage`. OISY signer = **explicit per-action approval**. `connect()` establishes a channel. Nothing more.
+A TypeScript library that enables secure communication between dApps and wallets on the Internet Computer using JSON-RPC 2.0 over `window.postMessage`. The signer model = **explicit per-action approval**. `connect()` establishes a channel. Nothing more.
 
 **It is not:**
 
@@ -47,7 +47,7 @@ A TypeScript library that enables secure communication between dApps and wallets
 - **High-frequency interactions**: games, social actions, rapid write operations
 - **Invisible writes**: autosave, cron jobs, auto-compounding
 
-> **Decision test:** If your app still feels good when every meaningful update shows a confirmation dialogue, OISY Wallet Signer is appropriate. If not, use a delegation-capable model instead.
+> **Decision test:** If your app still feels good when every meaningful update shows a confirmation dialogue, this library is appropriate. If not, use a delegation-capable model instead.
 
 ## Prerequisites
 
@@ -143,7 +143,7 @@ import {IcrcWallet} from '@dfinity/oisy-wallet-signer/icrc-wallet';
 
 ```typescript
 const wallet = await IcrcWallet.connect({
-  url: 'https://oisy.com/sign',
+  url: 'https://your-wallet.example.com/sign',  // URL of the wallet implementing the signer
   host: 'https://icp-api.io',
   windowOptions: {width: 576, height: 625, position: 'center'},
   connectionOptions: {timeoutInMilliseconds: 120_000},
@@ -302,7 +302,7 @@ signer.register({
 });
 ```
 
-#### Consent Message: Ok vs Warn
+#### Consent Message: OK vs Warn
 
 - `{ Ok: consentInfo }` — canister implements ICRC-21; message is canister-verified
 - `{ Warn: { consentInfo, canisterId, method, arg } }` — signer generated a fallback (for `icrc1_transfer`, `icrc2_approve`, `icrc2_transfer_from`)
@@ -355,67 +355,147 @@ Permissions stored in `localStorage` as `oisy_signer_{origin}_{owner}` with time
 
 ## Deploy & Test
 
-### Local Development
+### Local Development — Your Own Signer
 
-Start a local IC replica and pass `host` to both sides:
+If you are building both the dApp and the wallet/signer, start a local IC replica and pass `host` to both sides:
 
 ```bash
 dfx start --background
 ```
 
 ```typescript
-// dApp side
+// dApp side — point to your local wallet's /sign route
 const wallet = await IcrcWallet.connect({
-  url: 'http://localhost:5173/sign',
+  url: 'http://localhost:5174/sign',
   host: 'http://localhost:4943'
 });
 
-// Wallet side
+// Wallet/signer side — same replica host
 const signer = Signer.init({
   owner: identity,
   host: 'http://localhost:4943'
 });
 ```
 
-### Running Unit Tests
+### Local Development — Using the Pseudo Wallet Signer
+
+If you are building a dApp (relying party) and need a signer to test against locally, the library provides a pseudo wallet signer in its demo:
 
 ```bash
-npm test
+git clone https://github.com/dfinity/oisy-wallet-signer
+cd oisy-wallet-signer
+npm ci
+
+cd demo
+npm ci
+npm run sync:all
+npm run dev:wallet    # starts the pseudo wallet on port 5174
 ```
 
-### Running E2E Tests
+If your local replica runs on a non-default port, update `LOCAL_REPLICA_HOST` in `demo/.env`.
 
-Requires Playwright and a local replica:
+Then connect from your dApp:
+
+```typescript
+const wallet = await IcpWallet.connect({
+  url: 'http://localhost:5174/sign',
+  host: 'http://localhost:4943' // match your replica port
+});
+```
+
+### Local Development — Testing Against OISY Wallet
+
+To test your dApp against the actual OISY Wallet running locally:
 
 ```bash
-npm run e2e
+# Terminal 1: clone and deploy OISY
+git clone https://github.com/dfinity/oisy-wallet
+cd oisy-wallet
+npm ci
+npm run deploy
+dfx start
+
+# Terminal 2: start OISY dev server on port 5174
+npm run dev
 ```
 
-### Building the Library
+Then connect from your dApp:
+
+```typescript
+const wallet = await IcpWallet.connect({
+  url: 'http://localhost:5174/sign',
+  host: 'http://localhost:4943'
+});
+```
+
+### Mainnet
+
+On mainnet, point to the OISY production signer URL and omit `host` (defaults to `https://icp-api.io`):
+
+```typescript
+const wallet = await IcpWallet.connect({
+  url: 'https://oisy.com/sign'
+});
+```
+
+### Build Your Project
 
 ```bash
-npm run build
+npx tsc --noEmit   # TypeScript compiles without errors
+npm run build       # Your app builds successfully
 ```
-
-Output goes to `dist/` as ESM with TypeScript declarations and source maps.
 
 ## Verify It Works
 
-```bash
-# Unit tests pass
-npm test
+After integrating the library, verify each step of the flow works end-to-end:
 
-# E2E tests pass (connection, permissions, transfers, approvals, disconnect)
-npm run e2e
+### 1. Connection
 
-# TypeScript compiles without errors
-npx tsc --noEmit
+- `IcrcWallet.connect()` (or `IcpWallet.connect()`) opens a popup window
+- The signer popup loads and becomes interactive
+- `connect()` resolves without timeout (no `RelyingPartyDisconnectedError`)
 
-# Lint passes
-npm run lint
+### 2. Supported Standards
 
-# Build succeeds
-npm run build && ls dist/index.js dist/signer.js dist/relying-party.js dist/icp-wallet.js dist/icrc-wallet.js
-```
+- `wallet.supportedStandards()` returns an array containing at least ICRC-21, ICRC-25, ICRC-27, ICRC-29, ICRC-49
 
-After connecting in the browser: the signer popup opens, `icrc29_status` returns `"ready"`, permissions can be requested, and `wallet.accounts()` returns at least one account with a valid principal.
+### 3. Permissions
+
+- `wallet.requestPermissionsNotGranted()` triggers the signer's permissions prompt
+- After user approval, `wallet.permissions()` returns scopes with state `granted`
+- A second call to `requestPermissionsNotGranted()` returns `{allPermissionsGranted: true}` without prompting again
+
+### 4. Accounts
+
+- `wallet.accounts()` returns at least one account with a valid `owner` (principal text)
+- The returned `owner` matches the signer's identity principal
+
+### 5. ICRC-1 Transfer
+
+- `wallet.icrc1Transfer({...})` (or `wallet.transfer({...})`) triggers the consent message prompt on the signer
+- The consent message displays the correct amount, recipient, and fee
+- After user approval, the call resolves with a block height / block index (bigint)
+- The recipient's balance reflects the transferred amount
+
+### 6. ICRC-2 Approve
+
+- `wallet.icrc2Approve({...})` (or `wallet.approve({...})`) shows a consent message with spender and amount
+- After approval, resolves with a block height / block index
+- The spender's allowance is set correctly on the ledger
+
+### 7. ICRC-2 Transfer From
+
+- `wallet.transferFrom({...})` shows a consent message with from, to, and amount
+- After approval, resolves with a block index
+- Balances update correctly for both source and destination
+
+### 8. Rejection Handling
+
+- When the user rejects at the consent message prompt, the call throws with error code 3001 (`ACTION_ABORTED`)
+- When the user denies permissions, subsequent calls throw with error code 3000 (`PERMISSION_NOT_GRANTED`)
+
+### 9. Disconnect
+
+- `wallet.disconnect()` closes the popup window
+- Subsequent calls to `wallet.accounts()` or `wallet.transfer()` throw `RelyingPartyDisconnectedError`
+- The `onDisconnect` callback fires
