@@ -383,21 +383,20 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 ### Deploy a Local ICRC-1 Ledger for Testing
 
-Add to `icp.json`:
+Add to `icp.yaml`:
 
 Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
 
-```json
-{
-  "canisters": {
-    "icrc1_ledger": {
-      "type": "custom",
-      "candid": "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did",
-      "wasm": "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz",
-      "init_arg_file": "icrc1_ledger_init.args"
-    }
-  }
-}
+```yaml
+canisters:
+  icrc1_ledger:
+    name: icrc1_ledger
+    recipe:
+      type: custom
+      candid: "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did"
+      wasm: "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz"
+    config:
+      init_arg_file: "icrc1_ledger_init.args"
 ```
 
 Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
@@ -488,7 +487,7 @@ icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+icp identity new test-recipient --storage plaintext 2>/dev/null
 RECIPIENT=$(icp identity principal --identity test-recipient)
 icp canister call icrc1_ledger icrc1_transfer \
   "(record {

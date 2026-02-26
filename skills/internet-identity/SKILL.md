@@ -129,16 +129,11 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname.endsWith(".localhost");
 
-  const agent = new HttpAgent({
+  const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
-    ...(isLocal && { verifyQuerySignatures: false }),
+    ...(isLocal && { fetchRootKey: true, verifyQuerySignatures: false }),
   });
-
-  // CRITICAL: Fetch root key for local development only
-  if (isLocal) {
-    await agent.fetchRootKey();
-  }
 
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
@@ -250,7 +245,7 @@ use std::cell::RefCell;
 
 thread_local! {
     static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None).unwrap()
+        StableCell::init(DefaultMemoryImpl::default(), None)
     );
 }
 

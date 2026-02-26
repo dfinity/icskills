@@ -163,12 +163,14 @@ _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 For uploading files from code (not just via `icp deploy`):
 
 ```javascript
-import { AssetManager } from "@icp-sdk/canisters/assets";
-import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { AssetManager } from "@dfinity/assets"; // Asset management utility (may migrate to @icp-sdk/assets)
+import { HttpAgent } from "@icp-sdk/core/agent";
 
 // Create an agent with an authorized identity
-const agent = new HttpAgent({ host: "http://localhost:4943" });
-await agent.fetchRootKey(); // Local only
+const agent = await HttpAgent.create({
+  host: "http://localhost:4943",
+  fetchRootKey: true, // Local only
+});
 
 const assetManager = new AssetManager({
   canisterId: "your-asset-canister-id",
@@ -1037,14 +1039,14 @@ persistent actor {
 
   // -- Remote canister references (mainnet) --
 
-  let ckbtcLedger : actor {
+  transient let ckbtcLedger : actor {
     icrc1_transfer : shared (TransferArgs) -> async TransferResult;
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_fee : shared query () -> async Nat;
     icrc2_approve : shared (ApproveArgs) -> async { #Ok : Nat; #Err : ApproveError };
   } = actor "mxzaz-hqaaa-aaaar-qaada-cai";
 
-  let ckbtcMinter : actor {
+  transient let ckbtcMinter : actor {
     get_btc_address : shared ({
       owner : ?Principal;
       subaccount : ?Blob;
@@ -1095,13 +1097,7 @@ persistent actor {
 
   // -- Check user's ckBTC balance --
 
-  public shared query ({ caller }) func getBalance() : async Nat {
-    // Note: for cross-canister query, remove 'query' and use await
-    // This is a simplified version — in production, call icrc1_balance_of
-    0 // placeholder for query context
-  };
-
-  public shared ({ caller }) func getBalanceUpdate() : async Nat {
+  public shared ({ caller }) func getBalance() : async Nat {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let subaccount = principalToSubaccount(caller);
     await ckbtcLedger.icrc1_balance_of({
@@ -1949,7 +1945,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128;
+use ic_cdk::api::call::call_with_payment128; // Note: ic_cdk::api::call is deprecated in 0.18 but still compiles
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -2013,9 +2009,15 @@ enum L2MainnetService {
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
+struct HttpHeader {
+    name: String,
+    value: String,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
 struct CustomRpcService {
     url: String,
-    headers: Option<Vec<(String, String)>>,
+    headers: Option<Vec<HttpHeader>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -2110,7 +2112,7 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: Option<String>,
+    transactions_root: String,
     uncles: Vec<String>,
 }
 
@@ -2120,6 +2122,9 @@ enum SendRawTransactionStatus {
     InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
+    InsufficientGas,
+    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
+    // for the complete set of SendRawTransactionStatus variants.
 }
 
 // -- Get ETH balance via raw JSON-RPC --
@@ -3229,21 +3234,20 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 ### Deploy a Local ICRC-1 Ledger for Testing
 
-Add to `icp.json`:
+Add to `icp.yaml`:
 
 Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
 
-```json
-{
-  "canisters": {
-    "icrc1_ledger": {
-      "type": "custom",
-      "candid": "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did",
-      "wasm": "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz",
-      "init_arg_file": "icrc1_ledger_init.args"
-    }
-  }
-}
+```yaml
+canisters:
+  icrc1_ledger:
+    name: icrc1_ledger
+    recipe:
+      type: custom
+      candid: "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did"
+      wasm: "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz"
+    config:
+      init_arg_file: "icrc1_ledger_init.args"
 ```
 
 Create `icrc1_ledger_init.args` (replace `YOUR_PRINCIPAL` with the output of `icp identity principal`):
@@ -3334,7 +3338,7 @@ icp canister call icrc1_ledger icrc1_symbol '()'
 # Expected: ("TEST")
 
 # 5. Transfer to another identity
-icp identity new test-recipient --storage-mode=plaintext 2>/dev/null
+icp identity new test-recipient --storage plaintext 2>/dev/null
 RECIPIENT=$(icp identity principal --identity test-recipient)
 icp canister call icrc1_ledger icrc1_transfer \
   "(record {
@@ -3503,16 +3507,11 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname.endsWith(".localhost");
 
-  const agent = new HttpAgent({
+  const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:4943" : "https://icp-api.io",
-    ...(isLocal && { verifyQuerySignatures: false }),
+    ...(isLocal && { fetchRootKey: true, verifyQuerySignatures: false }),
   });
-
-  // CRITICAL: Fetch root key for local development only
-  if (isLocal) {
-    await agent.fetchRootKey();
-  }
 
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
@@ -3624,7 +3623,7 @@ use std::cell::RefCell;
 
 thread_local! {
     static OWNER: RefCell<StableCell<Option<Principal>, DefaultMemoryImpl>> = RefCell::new(
-        StableCell::init(DefaultMemoryImpl::default(), None).unwrap()
+        StableCell::init(DefaultMemoryImpl::default(), None)
     );
 }
 
@@ -5029,6 +5028,14 @@ fn update_config(new_fee: u64) {
 **Cargo.toml dependencies:**
 
 ```toml
+[package]
+name = "sns_dapp_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 candid = "0.10"
 ic-cdk = "0.18"
@@ -5534,7 +5541,7 @@ vetKD enables on-chain encryption by deriving cryptographic keys without any sin
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Rust: The `ic-vetkeys` crate may not yet be published on crates.io. Check [crates.io/crates/ic-vetkeys](https://crates.io/crates/ic-vetkeys) first. If unavailable, use raw management canister calls (shown below) or pull the crate from the DFINITY examples repo as a git dependency.
 - Motoko: Check [mops.one](https://mops.one) for `ic-vetkeys` availability. If not published, use the raw management canister approach shown below.
-- Frontend: `@dfinity/vetkeys` npm package (check npm registry for availability)
+- Frontend: `@icp-sdk/vetkeys` npm package (check npm registry -- may still be published under `@dfinity/vetkeys`)
 - For local testing: `icp network start` creates a local test key automatically
 
 ## Canister IDs
@@ -5563,7 +5570,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 ## Mistakes That Break Your Build
 
-1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@dfinity/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
+1. **Assuming the API is stable.** vetKD is still in beta. The management canister API, crate names (`ic-vetkeys`), npm packages (`@icp-sdk/vetkeys`), and even the Candid interface may change across icp-cli versions. Pin your dependencies and re-test after every SDK upgrade. Check the [DFINITY developer forum](https://forum.dfinity.org) for migration guides.
 
 2. **Reusing transport keys across sessions.** Each session must generate a fresh transport key pair. Reusing transport keys breaks forward secrecy -- if one session's transport key is compromised, all sessions using it are exposed.
 
@@ -5658,7 +5665,7 @@ use ic_cdk::update;
 //
 // ⚠ This crate may not be published on crates.io yet. If `cargo build` fails
 // with "could not find `ic_vetkeys`", switch to the raw management canister
-// approach below (Option B), or add as a git dependency from dfinity/examples.
+// approach below (Option B), or add as a git dependency from dfinity/ic-vetkeys.
 //
 // API is under active development — verify function signatures against latest docs.
 use ic_vetkeys::KeyManager;
@@ -5885,7 +5892,7 @@ persistent actor {
 The frontend generates a transport key pair, sends the public half to the canister, receives the encrypted derived key, decrypts it, and uses the result for AES encryption/decryption.
 
 ```javascript
-// The @dfinity/vetkeys package API is evolving rapidly.
+// The @icp-sdk/vetkeys package API is evolving rapidly.
 // Check https://github.com/dfinity/examples for the latest vetKD usage examples.
 // High-level flow:
 // 1. Generate a transport key pair (BLS12-381, NOT P-256)
@@ -6136,16 +6143,16 @@ use candid::Nat;
 
 #[query]
 fn get_balance() -> Nat {
-    Nat::from(ic_cdk::canister_balance128())
+    Nat::from(ic_cdk::api::canister_balance128())
 }
 
 #[update]
 fn deposit() -> Nat {
-    let available = ic_cdk::msg_cycles_available128();
+    let available = ic_cdk::api::msg_cycles_available();
     if available == 0 {
         ic_cdk::trap("No cycles sent with this call");
     }
-    let accepted = ic_cdk::msg_cycles_accept128(available);
+    let accepted = ic_cdk::api::msg_cycles_accept(available);
     Nat::from(accepted)
 }
 ```
@@ -6156,23 +6163,25 @@ fn deposit() -> Nat {
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::management_canister::{
-    create_canister, canister_status, deposit_cycles, stop_canister, delete_canister,
+    create_canister_with_extra_cycles, canister_status, deposit_cycles, stop_canister, delete_canister,
     CreateCanisterArgs, CanisterStatusArgs, DepositCyclesArgs, StopCanisterArgs, DeleteCanisterArgs,
     CanisterSettings, CanisterStatusResult,
 };
 
 #[update]
 async fn create_new_canister() -> Principal {
-    let caller = ic_cdk::caller(); // capture before await
+    let caller = ic_cdk::api::id(); // capture canister's own principal
+    let user = ic_cdk::caller(); // capture caller before await
 
     let settings = CanisterSettings {
-        controllers: Some(vec![ic_cdk::id(), caller]),
+        controllers: Some(vec![caller, user]),
         compute_allocation: None,
         memory_allocation: None,
         freezing_threshold: Some(Nat::from(2_592_000u64)), // 30 days
         reserved_cycles_limit: None,
         log_visibility: None,
         wasm_memory_limit: None,
+        wasm_memory_threshold: None,
     };
 
     let arg = CreateCanisterArgs {
@@ -6180,7 +6189,7 @@ async fn create_new_canister() -> Principal {
     };
 
     // Send 1T cycles with the create call
-    let result = create_canister(&arg, 1_000_000_000_000u128)
+    let result = create_canister_with_extra_cycles(&arg, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
