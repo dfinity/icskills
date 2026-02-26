@@ -582,7 +582,7 @@ async fn get_eth_balance(address: String) -> String {
         .with_cycles(cycles)
         .await
         .expect("Failed to call EVM RPC canister")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -606,7 +606,7 @@ async fn get_latest_block() -> Block {
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_getBlockByNumber")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -644,7 +644,7 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
         .with_cycles(cycles)
         .await
         .expect("Failed to call EVM RPC canister")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -668,7 +668,7 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_sendRawTransaction")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {
@@ -697,7 +697,7 @@ async fn get_arbitrum_block() -> Block {
         .with_cycles(cycles)
         .await
         .expect("Failed to call eth_getBlockByNumber")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
 
     match result {

@@ -278,7 +278,7 @@ async fn get_balance(who: Principal) -> Nat {
         .with_arg(account)
         .await
         .expect("Failed to call icrc1_balance_of")
-        .candid()
+        .candid_tuple()
         .expect("Failed to decode response");
     balance
 }
@@ -303,7 +303,7 @@ async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
         .with_arg(transfer_arg)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     match result {
@@ -339,7 +339,7 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
         .with_arg(args)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("Approve error: {:?}", e))
@@ -369,7 +369,7 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
         .with_arg(args)
         .await
         .map_err(|e| format!("Call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Decode failed: {:?}", e))?;
 
     result.map_err(|e| format!("TransferFrom error: {:?}", e))

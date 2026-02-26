@@ -580,7 +580,7 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
         .with_arg(original_caller)
         .await
         .map_err(|e| format!("User service call failed: {:?}", e))?
-        .candid()
+        .candid_tuple()
         .map_err(|e| format!("Failed to decode response: {:?}", e))?;
 
     if !is_valid {
@@ -629,7 +629,7 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
             .with_arg(author_id)
             .await
         {
-            Ok(response) => response.candid::<(Option<UserProfile>,)>()
+            Ok(response) => response.candid_tuple::<(Option<UserProfile>,)>()
                 .map(|(profile,)| profile)
                 .unwrap_or(None),
             Err(_) => None, // Handle gracefully if user service is down

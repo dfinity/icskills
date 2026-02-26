@@ -158,7 +158,7 @@ import { HttpAgent } from "@icp-sdk/core/agent";
 // Create an agent with an authorized identity
 const agent = await HttpAgent.create({
   host: "http://localhost:4943",
-  fetchRootKey: true, // Local only
+  shouldFetchRootKey: true, // Local only
 });
 
 const assetManager = new AssetManager({
