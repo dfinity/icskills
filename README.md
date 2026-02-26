@@ -1,5 +1,7 @@
 # IC Skills
 
+🌐 **https://dfinity.github.io/icskills**
+
 > **⚠️ Under active development** — Skill files are being reviewed and signed off by DFINITY engineers. Content may change. Feedback and PRs are welcome.
 
 **Agent-readable instructions for every IC need.**
