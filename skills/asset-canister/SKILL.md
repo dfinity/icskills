@@ -12,7 +12,6 @@ tags: [frontend, assets, hosting, spa, certified, domain, upload, static]
 ---
 
 # Asset Canister & Frontend Hosting
-> version: 3.3.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 
@@ -133,13 +132,13 @@ icp canister call frontend http_request '(record {
 To serve your asset canister from a custom domain:
 
 1. Create a file `.well-known/ic-domains` in your `source` directory containing your domain:
-```
+```text
 yourdomain.com
 www.yourdomain.com
 ```
 
 2. Add DNS records:
-```
+```text
 # CNAME record pointing to boundary nodes
 yourdomain.com.  CNAME  icp1.io.
 
