@@ -28,6 +28,7 @@ const VALID_CATEGORIES = [
   "Frontend",
   "Security",
   "Infrastructure",
+  "Wallet",
 ];
 
 const VALID_STATUSES = ["stable", "beta"];

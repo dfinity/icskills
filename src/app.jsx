@@ -232,6 +232,8 @@ function CategoryIcon({ category, size = 18 }) {
       return (<svg {...common}><path d="M9 1.5L3 4.5v4c0 4 2.5 7 6 8.5 3.5-1.5 6-4.5 6-8.5v-4z" /></svg>);
     case "Tokens":
       return (<svg {...common}><path d="M9 2a7 7 0 100 14A7 7 0 009 2z" /><path d="M9 5v8" /><path d="M7 7.5h4" /><path d="M7 10.5h4" /></svg>);
+    case "Wallet":
+      return (<svg {...common}><path d="M3 5a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><path d="M13 9h2v3h-2a1.5 1.5 0 010-3z" /></svg>);
     default:
       return null;
   }
