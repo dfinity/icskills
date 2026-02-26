@@ -2,8 +2,8 @@
   "schema_version": "v1",
   "name_for_human": "IC Skills",
   "name_for_model": "ic_skills",
-  "description_for_human": "Agent-readable skill files for Internet Computer (ICP) development. Covers 12 capabilities including ckBTC, ICRC ledger, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more.",
-  "description_for_model": "Retrieve structured skill files for Internet Computer (ICP) development. Each skill is a markdown document with prerequisites, pitfalls, tested code blocks, and deploy commands. Use the raw GitHub URLs to inject skills directly into context. Available skills: asset-canister, certified-variables, ckbtc, evm-rpc, https-outcalls, icrc-ledger, internet-identity, multi-canister, sns-launch, stable-memory, vetkd, wallet.",
+  "description_for_human": "Agent-readable skill files for Internet Computer (ICP) development. Covers 13 capabilities including ckBTC, ICRC ledger, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more.",
+  "description_for_model": "Retrieve structured skill files for Internet Computer (ICP) development. Each skill is a markdown document with prerequisites, pitfalls, tested code blocks, and deploy commands. Use the raw GitHub URLs to inject skills directly into context. Available skills: asset-canister, certified-variables, ckbtc, evm-rpc, https-outcalls, ic-dashboard, icrc-ledger, internet-identity, multi-canister, sns-launch, stable-memory, vetkd, wallet.",
   "auth": {
     "type": "none"
   },
