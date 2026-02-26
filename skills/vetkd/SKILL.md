@@ -68,7 +68,7 @@ The management canister is not a real canister -- it is a system-level API endpo
 
 7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
 
-8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `call_with_payment128` (not plain `call`). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
+8. **Not attaching enough cycles to the management canister call.** `vetkd_derive_key` and `vetkd_public_key` consume cycles. In Rust, use `Call::unbounded_wait(...).with_cycles()` (not a plain call without cycles). In Motoko, use `await (with cycles = 100_000_000)`. If the call runs out of cycles, it traps with an unhelpful error.
 
 ## System API (Candid)
 
@@ -124,7 +124,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
@@ -135,7 +135,7 @@ serde_bytes = "0.11"
 ic-vetkeys = "0.6.0"
 
 # Option B: Call management canister directly (lower level, always works)
-# No extra dependency -- use ic_cdk::api::call::call_with_payment128
+# No extra dependency -- use ic_cdk::call::Call::unbounded_wait(...).with_cycles()
 ```
 
 **Using ic-vetkeys library (recommended):**
@@ -166,7 +166,7 @@ thread_local! {
 
 #[update]
 async fn get_encrypted_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller();  // Capture BEFORE await
+    let caller = ic_cdk::api::msg_caller();  // Capture BEFORE await
     KEY_MANAGER.with(|km| {
         let km = km.borrow();
         km.derive_key(caller.as_slice().to_vec(), transport_public_key)
@@ -189,6 +189,7 @@ async fn get_public_key() -> Vec<u8> {
 ```rust
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::update;
+use ic_cdk::call::Call;
 
 #[derive(CandidType, Deserialize)]
 struct VetKdKeyId {
@@ -247,21 +248,23 @@ async fn vetkd_public_key() -> Vec<u8> {
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
     // 100_000_000 (0.1B) cycles is a safe default. Adjust based on actual costs.
-    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call_with_payment128(
-        Principal::management_canister(), // aaaaa-aa
+    let (response,): (VetKdPublicKeyResponse,) = Call::unbounded_wait(
+        Principal::management_canister(),
         "vetkd_public_key",
-        (request,),
-        100_000_000, // cycles to attach
     )
+    .with_arg(request)
+    .with_cycles(100_000_000u128)
     .await
-    .expect("vetkd_public_key call failed");
+    .expect("vetkd_public_key call failed")
+    .candid()
+    .expect("Failed to decode response");
 
     response.public_key
 }
 
 #[update]
 async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller(); // MUST capture before await
+    let caller = ic_cdk::api::msg_caller(); // MUST capture before await
 
     let request = VetKdDeriveKeyRequest {
         input: caller.as_slice().to_vec(), // derive key specific to this caller
@@ -271,14 +274,16 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
     };
 
     // ⚠ Must attach cycles — management canister calls for vetKD consume cycles.
-    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
+    let (response,): (VetKdDeriveKeyResponse,) = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_derive_key",
-        (request,),
-        100_000_000, // cycles to attach
     )
+    .with_arg(request)
+    .with_cycles(100_000_000u128)
     .await
-    .expect("vetkd_derive_key call failed");
+    .expect("vetkd_derive_key call failed")
+    .candid()
+    .expect("Failed to decode response");
 
     response.encrypted_key
 }
@@ -297,7 +302,7 @@ version = "0.1.0"
 core = "2.0.0"
 # ⚠ Verify ic-vetkeys exists on mops.one before adding.
 # If not yet published, use the raw management canister approach below instead.
-ic-vetkeys = "0.1.0"
+ic-vetkeys = "0.4.0"
 ```
 
 **Using the management canister directly (recommended — no dependency on unpublished packages):**

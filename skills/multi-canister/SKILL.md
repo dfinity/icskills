@@ -10,7 +10,7 @@ dependencies: [stable-memory]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -20,7 +20,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk >= 0.18`, `candid`, `serde`, `ic-stable-structures`
+- For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of async/await and error handling
 
 ## When to Use Multi-Canister
@@ -37,20 +37,20 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Mistakes That Break Your Build
 
-1. **`ic_cdk::caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
+1. **`ic_cdk::api::msg_caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::api::msg_caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
 
     ```rust
     // WRONG (Rust) — caller() is wrong after await:
     #[update]
     async fn do_thing() {
         let _ = some_canister_call().await;
-        let who = ic_cdk::caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
+        let who = ic_cdk::api::msg_caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
     }
 
     // CORRECT (Rust) — capture before await:
     #[update]
     async fn do_thing() {
-        let original_caller = ic_cdk::caller(); // Capture BEFORE await
+        let original_caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
         let _ = some_canister_call().await;
         let who = original_caller; // Safe
     }
@@ -369,7 +369,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -425,7 +425,7 @@ fn post_upgrade() {}
 
 #[update]
 fn register(username: String) -> Result<UserProfile, String> {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         return Err("Unauthorized".to_string());
     }
@@ -476,7 +476,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -486,6 +486,7 @@ ic-stable-structures = "0.7"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
+use ic_cdk::call::Call;
 use ic_cdk::{init, post_upgrade, query, update};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell};
@@ -567,7 +568,7 @@ fn get_user_service_id() -> Principal {
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
     // Capture caller BEFORE the await -- caller() is wrong after await
-    let original_caller = ic_cdk::caller();
+    let original_caller = ic_cdk::api::msg_caller();
 
     if original_caller == Principal::anonymous() {
         return Err("Unauthorized".to_string());
@@ -575,9 +576,12 @@ async fn create_post(title: String, body: String) -> Result<Post, String> {
 
     // Inter-canister call to user_service
     let user_service = get_user_service_id();
-    let (is_valid,): (bool,) = ic_cdk::call(user_service, "is_valid_user", (original_caller,))
+    let (is_valid,): (bool,) = Call::unbounded_wait(user_service, "is_valid_user")
+        .with_arg(original_caller)
         .await
-        .map_err(|(code, msg)| format!("User service call failed: {:?} - {}", code, msg))?;
+        .map_err(|e| format!("User service call failed: {:?}", e))?
+        .candid()
+        .map_err(|e| format!("Failed to decode response: {:?}", e))?;
 
     if !is_valid {
         return Err("User not registered".to_string());
@@ -621,14 +625,13 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
 
     // Call user_service for profile data
     let user_profile: Option<UserProfile> =
-        match ic_cdk::call::<(Principal,), (Option<UserProfile>,)>(
-            user_service,
-            "get_user",
-            (author_id,),
-        )
-        .await
+        match Call::unbounded_wait(user_service, "get_user")
+            .with_arg(author_id)
+            .await
         {
-            Ok((profile,)) => profile,
+            Ok(response) => response.candid::<(Option<UserProfile>,)>()
+                .map(|(profile,)| profile)
+                .unwrap_or(None),
             Err(_) => None, // Handle gracefully if user service is down
         };
 
@@ -644,7 +647,7 @@ async fn get_posts_with_author(author_id: Principal) -> (Option<UserProfile>, Ve
 
 #[update]
 async fn delete_post(id: u64) -> Result<(), String> {
-    let original_caller = ic_cdk::caller();
+    let original_caller = ic_cdk::api::msg_caller();
 
     POSTS.with(|posts| {
         let mut posts = posts.borrow_mut();
@@ -771,7 +774,7 @@ thread_local! {
 
 #[update]
 async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     assert_ne!(caller, Principal::anonymous(), "Auth required");
 
     // Create canister

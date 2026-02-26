@@ -19,7 +19,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 ## Prerequisites
 
 - `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
-- Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `set_certified_data` / `data_certificate`)
+- Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `certified_data_set` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
 - Frontend: `@icp-sdk/core/agent` (includes certificate verification)
 
@@ -35,19 +35,19 @@ The IC root public key (needed for client-side verification):
 
 ## Mistakes That Break Your Build
 
-1. **Trying to store more than 32 bytes of certified data.** The `set_certified_data` API accepts exactly one blob of at most 32 bytes. You cannot certify arbitrary data directly. Instead, build a Merkle tree over your data and certify only the root hash (32 bytes). The tree structure provides proofs for individual values.
+1. **Trying to store more than 32 bytes of certified data.** The `certified_data_set` API accepts exactly one blob of at most 32 bytes. You cannot certify arbitrary data directly. Instead, build a Merkle tree over your data and certify only the root hash (32 bytes). The tree structure provides proofs for individual values.
 
-2. **Calling `set_certified_data` in a query call.** Certification can ONLY be set during update calls (which go through consensus). Calling it in a query traps. Pattern: set the hash during writes, read the certificate during queries.
+2. **Calling `certified_data_set` in a query call.** Certification can ONLY be set during update calls (which go through consensus). Calling it in a query traps. Pattern: set the hash during writes, read the certificate during queries.
 
 3. **Forgetting to include the certificate in query responses.** The certificate is obtained via `data_certificate()` during query calls. If you return data without the certificate, clients cannot verify anything. Always return a tuple of (data, certificate, witness).
 
-4. **Not updating the certified hash after data changes.** If you modify the data but forget to call `set_certified_data` with the new root hash, query responses will fail verification because the certificate proves a stale hash.
+4. **Not updating the certified hash after data changes.** If you modify the data but forget to call `certified_data_set` with the new root hash, query responses will fail verification because the certificate proves a stale hash.
 
 5. **Building the witness for the wrong key.** The witness (Merkle proof) must correspond to the exact key being queried. A witness for key "users/alice" will not verify key "users/bob".
 
 6. **Assuming `data_certificate()` returns a value in update calls.** It returns `null`/`None` during update calls. Certificates are only available during query calls.
 
-7. **Certifying data at canister init but not on upgrades.** After a canister upgrade, the certified data is cleared. You must call `set_certified_data` in both `#[init]` and `#[post_upgrade]` (Rust) or `system func postupgrade` (Motoko) to re-establish certification.
+7. **Certifying data at canister init but not on upgrades.** After a canister upgrade, the certified data is cleared. You must call `certified_data_set` in both `#[init]` and `#[post_upgrade]` (Rust) or `system func postupgrade` (Motoko) to re-establish certification.
 
 ## How Certification Works
 
@@ -55,7 +55,7 @@ The IC root public key (needed for client-side verification):
 UPDATE CALL (goes through consensus):
   1. Canister modifies data
   2. Canister builds/updates Merkle tree
-  3. Canister calls set_certified_data(root_hash)  -- 32 bytes
+  3. Canister calls certified_data_set(root_hash)  -- 32 bytes
   4. Subnet includes root_hash in its certified state tree
 
 QUERY CALL (single replica, no consensus):
@@ -88,7 +88,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 ic-certified-map = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
@@ -114,7 +114,7 @@ fn update_certified_data() {
     TREE.with(|tree| {
         let tree = tree.borrow();
         // root_hash() returns a 32-byte SHA-256 hash of the entire tree
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::api::certified_data_set(&tree.root_hash());
     });
 }
 
@@ -214,7 +214,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-http-certification = "2.6"
+ic-http-certification = "3.1"
 ```
 
 **Certifying HTTP responses:**
@@ -247,7 +247,7 @@ fn certify_response(path: &str, response: &HttpResponse) {
         tree.insert(&entry);
 
         // Update canister certified data with tree root hash
-        ic_cdk::api::set_certified_data(&tree.root_hash());
+        ic_cdk::api::certified_data_set(&tree.root_hash());
     });
 }
 ```

@@ -40,7 +40,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-5. **Reading `ic_cdk::caller()` after an await in Rust.** After any `.await` point, `caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
+5. **Reading `ic_cdk::api::msg_caller()` after an await in Rust.** After any `.await` point, `msg_caller()` returns the canister's own principal, not the original caller. Capture the caller into a variable BEFORE any await.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. Use `shared(msg) { msg.caller }` in Motoko or `ic_cdk::caller()` in Rust.
 
@@ -225,7 +225,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 ic-stable-structures = "0.7"
@@ -233,7 +233,7 @@ ic-stable-structures = "0.7"
 
 ```rust
 use candid::Principal;
-use ic_cdk::{caller, query, update};
+use ic_cdk::{query, update};
 use ic_stable_structures::{DefaultMemoryImpl, StableCell};
 use std::cell::RefCell;
 
@@ -247,7 +247,7 @@ thread_local! {
 
 /// Reject anonymous principal. Call this at the top of every protected endpoint.
 fn require_auth() -> Principal {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         ic_cdk::trap("Anonymous principal not allowed. Please authenticate.");
     }
@@ -291,7 +291,7 @@ fn admin_action() -> String {
 
 #[query]
 fn who_am_i() -> String {
-    let caller = caller();
+    let caller = ic_cdk::api::msg_caller();
     if caller == Principal::anonymous() {
         "You are not authenticated (anonymous)".to_string()
     } else {
@@ -312,7 +312,7 @@ async fn protected_async_action() -> String {
 }
 ```
 
-**Rust critical rule:** In any `async` update function, `ic_cdk::caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::caller();` at the top of the function.
+**Rust critical rule:** In any `async` update function, `ic_cdk::api::msg_caller()` returns the correct value only before the first `.await`. After any `.await`, it returns the canister's own principal. Always bind `let caller = ic_cdk::api::msg_caller();` at the top of the function.
 
 ## Deploy & Test
 

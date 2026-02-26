@@ -10,7 +10,7 @@ dependencies: [https-outcalls]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
+> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -370,7 +370,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -380,7 +380,7 @@ serde_json = "1"
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::api::call::call_with_payment128;
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
@@ -573,18 +573,17 @@ async fn get_eth_balance(address: String) -> String {
     let max_response_bytes: u64 = 1000;
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args((
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             max_response_bytes,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -598,18 +597,17 @@ async fn get_eth_balance(address: String) -> String {
 async fn get_latest_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args((
             RpcServices::EthMainnet(None),
             None::<()>,  // config
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,
@@ -637,18 +635,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
     );
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (Result<String, RpcError>,) = call_with_payment128(
-        evm_rpc_id(),
-        "request",
-        (
+    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
+        .with_args((
             RpcService::EthMainnet(EthMainnetService::PublicNode),
             json,
             2048_u64,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call EVM RPC canister");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call EVM RPC canister")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         Ok(response) => response,
@@ -662,18 +659,17 @@ async fn get_erc20_balance(token_contract: String, wallet_address: String) -> St
 async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<SendRawTransactionStatus>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_sendRawTransaction",
-        (
+    let (result,): (MultiResult<SendRawTransactionStatus>,) = Call::unbounded_wait(evm_rpc_id(), "eth_sendRawTransaction")
+        .with_args((
             RpcServices::EthMainnet(None),
             None::<()>,
             signed_tx_hex,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_sendRawTransaction");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_sendRawTransaction")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(status)) => status,
@@ -692,18 +688,17 @@ async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus
 async fn get_arbitrum_block() -> Block {
     let cycles: u128 = 10_000_000_000;
 
-    let (result,): (MultiResult<Block>,) = call_with_payment128(
-        evm_rpc_id(),
-        "eth_getBlockByNumber",
-        (
+    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
+        .with_args((
             RpcServices::ArbitrumOne(None),
             None::<()>,
             BlockTag::Latest,
-        ),
-        cycles,
-    )
-    .await
-    .expect("Failed to call eth_getBlockByNumber");
+        ))
+        .with_cycles(cycles)
+        .await
+        .expect("Failed to call eth_getBlockByNumber")
+        .candid()
+        .expect("Failed to decode response");
 
     match result {
         MultiResult::Consistent(RpcResult::Ok(block)) => block,

@@ -195,7 +195,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.18"
+ic-cdk = "0.19"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
