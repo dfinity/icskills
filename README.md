@@ -42,20 +42,23 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 
 ## Skills
 
+<!-- SKILLS-TABLE-START -->
 | Skill | Category | Description |
 |-------|----------|-------------|
-| [ckbtc](skills/ckbtc/SKILL.md) | DeFi | Accept, send, and manage chain-key Bitcoin |
-| [icrc-ledger](skills/icrc-ledger/SKILL.md) | Tokens | ICRC-1/ICRC-2 token ledger standard |
-| [internet-identity](skills/internet-identity/SKILL.md) | Auth | Passkey authentication with Internet Identity |
-| [multi-canister](skills/multi-canister/SKILL.md) | Architecture | Inter-canister calls and multi-canister design |
-| [stable-memory](skills/stable-memory/SKILL.md) | Architecture | Persistent storage that survives upgrades |
-| [https-outcalls](skills/https-outcalls/SKILL.md) | Integration | HTTP requests from canisters to external APIs |
-| [evm-rpc](skills/evm-rpc/SKILL.md) | Integration | Read/write Ethereum from the IC |
-| [sns-launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO |
-| [asset-canister](skills/asset-canister/SKILL.md) | Frontend | Deploy frontend assets to the IC |
-| [certified-variables](skills/certified-variables/SKILL.md) | Security | Certified query responses |
-| [vetkd](skills/vetkd/SKILL.md) | Security | Threshold key derivation for encryption |
-| [wallet](skills/wallet/SKILL.md) | Infrastructure | Cycles management and canister lifecycle |
+| [Asset Canister & Frontend](skills/asset-canister/SKILL.md) | Frontend | Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding. |
+| [Certified Variables](skills/certified-variables/SKILL.md) | Security | Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns. |
+| [ckBTC Integration](skills/ckbtc/SKILL.md) | DeFi | Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management. |
+| [Cycles Wallet Management](skills/wallet/SKILL.md) | Infrastructure | Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management. |
+| [EVM RPC Integration](skills/evm-rpc/SKILL.md) | Integration | Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows. |
+| [HTTPS Outcalls](skills/https-outcalls/SKILL.md) | Integration | Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management. |
+| [IC Dashboard APIs](skills/ic-dashboard/SKILL.md) | Integration | Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics. |
+| [ICRC Ledger Standard](skills/icrc-ledger/SKILL.md) | Tokens | Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata. |
+| [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling. |
+| [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
+| [SNS DAO Launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap. |
+| [Stable Memory & Upgrades](skills/stable-memory/SKILL.md) | Architecture | Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data. |
+| [vetKD Encryption](skills/vetkd/SKILL.md) | Security | Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns. |
+<!-- SKILLS-TABLE-END -->
 
 ## Usage
 

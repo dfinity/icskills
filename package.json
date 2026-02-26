@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-skills.js",
-    "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-llms.js && node scripts/generate-agent-json.js",
+    "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-llms.js && node scripts/generate-agent-json.js && node scripts/generate-readme-table.js",
     "dev": "npm run validate && npm run generate && vite",
     "build": "npm run validate && npm run generate && vite build && node scripts/generate-skill-pages.js && node scripts/generate-sitemap.js",
     "preview": "vite preview"
