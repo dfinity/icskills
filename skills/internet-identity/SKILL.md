@@ -273,7 +273,7 @@ fn init_owner() -> String {
         let mut cell = owner.borrow_mut();
         match cell.get() {
             None => {
-                cell.set(Some(caller)).unwrap();
+                cell.set(Some(caller));
                 format!("Owner set to {}", caller)
             }
             Some(_) => "Owner already initialized".to_string(),

@@ -442,11 +442,9 @@ fn register(username: String) -> Result<UserProfile, String> {
 
     let key = principal_to_key(&caller);
     USERS.with(|users| {
-        let users = users.borrow();
-        if users.contains_key(&key) {
+        if users.borrow().contains_key(&key) {
             return Err("Already exists".to_string());
         }
-        drop(users);
 
         let profile = UserProfile {
             id: caller,
@@ -454,7 +452,7 @@ fn register(username: String) -> Result<UserProfile, String> {
             created: ic_cdk::api::time() as i64,
         };
         let bytes = serialize_profile(&profile);
-        USERS.with(|u| u.borrow_mut().insert(key, bytes));
+        users.borrow_mut().insert(key, bytes);
         Ok(profile)
     })
 }
@@ -758,9 +756,9 @@ persistent actor Self {
 
 ```rust
 use candid::{CandidType, Deserialize, Principal, encode_one};
-use ic_cdk::management_canister::main::{
+use ic_cdk::management_canister::{
     create_canister, install_code,
-    CreateCanisterArgument, InstallCodeArgument, CanisterInstallMode, CanisterSettings,
+    CreateCanisterArgs, InstallCodeArgs, CanisterInstallMode, CanisterSettings,
 };
 use ic_cdk::update;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
@@ -787,7 +785,7 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
     assert_ne!(caller, Principal::anonymous(), "Auth required");
 
     // Create canister
-    let create_args = CreateCanisterArgument {
+    let create_args = CreateCanisterArgs {
         settings: Some(CanisterSettings {
             controllers: Some(vec![ic_cdk::id(), caller]),
             compute_allocation: None,
@@ -800,21 +798,21 @@ async fn create_child_canister(wasm_module: Vec<u8>) -> Principal {
     };
 
     // Attach 1T cycles for the new canister
-    let (create_result,) = create_canister(create_args, 1_000_000_000_000u128)
+    let create_result = create_canister(&create_args, 1_000_000_000_000u128)
         .await
         .expect("Failed to create canister");
 
     let canister_id = create_result.canister_id;
 
     // Install code
-    let install_args = InstallCodeArgument {
+    let install_args = InstallCodeArgs {
         mode: CanisterInstallMode::Install,
         canister_id,
         wasm_module,
         arg: encode_one(&caller).unwrap(), // Pass owner as init arg
     };
 
-    install_code(install_args)
+    install_code(&install_args)
         .await
         .expect("Failed to install code");
 

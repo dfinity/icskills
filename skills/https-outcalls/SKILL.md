@@ -59,7 +59,6 @@ import Blob "mo:core/Blob";
 import Nat64 "mo:core/Nat64";
 import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
-import Iter "mo:core/Iter";
 
 persistent actor {
 
@@ -130,7 +129,7 @@ persistent actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = Blob.fromIter(Iter.empty());
+        context = Blob.empty();
       };
     };
 
@@ -139,7 +138,7 @@ persistent actor {
     let response = await (with cycles = 200_000_000) ic.http_request(request);
 
     // Decode the response body
-    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let bodyBlob = Blob.fromArray(response.body);
     let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
@@ -151,7 +150,7 @@ persistent actor {
   public func postData(jsonPayload : Text) : async Text {
     let url = "https://httpbin.org/post";
 
-    let bodyBytes = Iter.toArray(Blob.values(Text.encodeUtf8(jsonPayload)));
+    let bodyBytes = Blob.toArray(Text.encodeUtf8(jsonPayload));
 
     let request : HttpRequestArgs = {
       url = url;
@@ -166,14 +165,14 @@ persistent actor {
       method = #post;
       transform = ?{
         function = transform;
-        context = Blob.fromIter(Iter.empty());
+        context = Blob.empty();
       };
     };
 
     // POST may cost more due to request body size
     let response = await (with cycles = 300_000_000) ic.http_request(request);
 
-    let bodyBlob = Blob.fromIter(Iter.fromArray(response.body));
+    let bodyBlob = Blob.fromArray(response.body);
     let body = Text.decodeUtf8(bodyBlob);
     switch (body) {
       case (?text) { text };
@@ -203,7 +202,7 @@ serde_json = "1"
 ```
 
 ```rust
-use ic_cdk::management_canister::http_request::{
+use ic_cdk::api::management_canister::http_request::{
     http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
     TransformArgs, TransformContext, TransformFunc,
 };

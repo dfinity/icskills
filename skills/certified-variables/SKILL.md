@@ -78,6 +78,14 @@ CLIENT VERIFICATION:
 **Cargo.toml:**
 
 ```toml
+[package]
+name = "certified_vars_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 candid = "0.10"
 ic-cdk = "0.18"
@@ -197,11 +205,21 @@ For canisters serving HTTP responses directly (not through the asset canister), 
 **Additional Cargo.toml dependency:**
 
 ```toml
+[package]
+name = "http_certified_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 ic-http-certification = "2.6"
 ```
 
 **Certifying HTTP responses:**
+
+> **Note:** The HTTP certification API is evolving rapidly. Verify these examples against the latest [ic-http-certification docs](https://docs.rs/ic-http-certification) before use.
 
 ```rust
 use ic_http_certification::{

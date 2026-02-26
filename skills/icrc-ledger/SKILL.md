@@ -144,7 +144,7 @@ persistent actor {
   };
 
   // Remote ledger actor reference (ICP ledger shown; swap canister ID for other tokens)
-  let icpLedger = actor ("ryjl3-tyaaa-aaaaa-aaaba-cai") : actor {
+  transient let icpLedger = actor ("ryjl3-tyaaa-aaaaa-aaaba-cai") : actor {
     icrc1_balance_of : shared query (Account) -> async Nat;
     icrc1_transfer : shared (TransferArg) -> async { #Ok : Nat; #Err : TransferError };
     icrc2_approve : shared (ApproveArg) -> async { #Ok : Nat; #Err : ApproveError };
@@ -385,13 +385,15 @@ async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Na
 
 Add to `icp.json`:
 
+Pin the release hash before deploying: get the latest hash from https://dashboard.internetcomputer.org/releases, then substitute it for `<RELEASE_HASH>` in both URLs below.
+
 ```json
 {
   "canisters": {
     "icrc1_ledger": {
       "type": "custom",
-      "candid": "https://raw.githubusercontent.com/dfinity/ic/master/rs/ledger_suite/icrc1/ledger/ledger.did",
-      "wasm": "https://download.dfinity.systems/ic/master/canisters/ic-icrc1-ledger.wasm.gz",
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/<RELEASE_HASH>/rs/ledger_suite/icrc1/ledger/ledger.did",
+      "wasm": "https://download.dfinity.systems/ic/<RELEASE_HASH>/canisters/ic-icrc1-ledger.wasm.gz",
       "init_arg_file": "icrc1_ledger_init.args"
     }
   }
