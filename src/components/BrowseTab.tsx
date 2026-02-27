@@ -1,6 +1,6 @@
 import { useState, useMemo } from "preact/hooks";
 import type { Skill } from "../data/skills";
-import { API_ENDPOINTS, SANS_FONT } from "../data/constants";
+import { SANS_FONT } from "../data/constants";
 import { BASE_PATH } from "../data/site";
 import { CategoryIcon } from "./Icons";
 import CopyButton from "./CopyButton";
@@ -61,8 +61,8 @@ export default function BrowseTab({ skills }: Props) {
         <div className="hero-stats" style={{ display: "flex", gap: "32px", marginTop: "32px" }}>
           {[
             { val: skills.length, label: "Skills" },
-            { val: API_ENDPOINTS.length, label: "API Routes" },
             { val: TOTAL_ENDPOINTS, label: "Operations" },
+            { val: "5", label: "Endpoints" },
             { val: "0", label: "Hallucinations" },
           ].map(({ val, label }) => (
             <div key={label}>
