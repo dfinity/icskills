@@ -50,112 +50,7 @@ const SANS_FONT = "'Inter', system-ui, sans-serif";
 
 const TOTAL_ENDPOINTS = SKILLS.reduce((sum, s) => sum + s.endpoints, 0);
 
-const API_ENDPOINTS = [
-  {
-    method: "GET",
-    path: "/skills",
-    desc: "All skills, with metadata.",
-    response: `{
-  "skills": [
-    {
-      "id": "ckbtc",
-      "name": "ckBTC Integration",
-      "version": "2.1.0",
-      "category": "defi",
-      "dependencies": ["icrc-ledger", "wallet"],
-      "updated": "2026-02-24"
-    },
-    ...
-  ]
-}`,
-  },
-  {
-    method: "GET",
-    path: "/skills/{id}",
-    desc: "Full skill. This is the main one.",
-    response: `{
-  "id": "ckbtc",
-  "version": "2.1.0",
-  "what": "ckBTC is chain-key Bitcoin on the IC...",
-  "prerequisites": {
-    "icp-cli": ">=0.1.0",
-    "language": ["motoko", "rust"],
-    "skills": ["icrc-ledger", "wallet"]
-  },
-  "pitfalls": [
-    "DO NOT use the old minter canister ID",
-    "Fee is 10 satoshis, not 0",
-    "Must use subaccounts for user deposits"
-  ],
-  "steps": [...],
-  "verification": [
-    {
-      "run": "icp canister call ckbtc_ledger icrc1_balance_of ...",
-      "expect": "(nat)"
-    }
-  ]
-}`,
-  },
-  {
-    method: "GET",
-    path: "/skills/{id}/raw",
-    desc: "Raw SKILL.md. Drop it straight into agent context.",
-    response: `# ckBTC Integration
-## SKILL.md v2.1.0
 
-## What this is
-ckBTC is chain-key Bitcoin...
-
-## Prerequisites
-- icp-cli >= 0.1.0
-...
-
-## \u26A0 Agent Mistakes
-- DO NOT use the old minter canister ID
-...`,
-  },
-  {
-    method: "GET",
-    path: "/skills/{id}/deps",
-    desc: "Dependency tree. What else the agent needs to read first.",
-    response: `{
-  "skill": "ckbtc",
-  "requires": ["icrc-ledger", "wallet"],
-  "tree": {
-    "icrc-ledger": { "requires": [] },
-    "wallet": { "requires": [] }
-  }
-}`,
-  },
-  {
-    method: "GET",
-    path: "/skills/search?q={query}",
-    desc: "Search. For when the agent knows the task but not the skill name.",
-    response: `{
-  "query": "bitcoin",
-  "results": [
-    { "id": "ckbtc", "name": "ckBTC Integration", "relevance": 0.97 },
-    { "id": "evm-rpc", "name": "EVM RPC Integration", "relevance": 0.31 }
-  ]
-}`,
-  },
-  {
-    method: "POST",
-    path: "/skills/batch",
-    desc: "Multiple skills in one call. Send an array of IDs.",
-    response: `// Request body:
-{ "ids": ["ckbtc", "icrc-ledger", "wallet"] }
-
-// Response:
-{
-  "skills": [
-    { "id": "ckbtc", "version": "2.1.0", ... },
-    { "id": "icrc-ledger", "version": "2.3.0", ... },
-    { "id": "wallet", "version": "1.4.0", ... }
-  ]
-}`,
-  },
-];
 
 const FRAMEWORKS = [
   { name: "Claude", note: "Skills as context", color: "#D97757" },
@@ -167,7 +62,7 @@ const FRAMEWORKS = [
   { name: "Claude Code", note: "SKILL.md files", color: "#D97757" },
   { name: "OpenCode", note: "Remote instructions", color: "#00DC82" },
   { name: "OpenClaw", note: "Skills marketplace", color: "#EF4444" },
-  { name: "Your Agent", note: "REST API", color: "#fbbf24" },
+  { name: "skills.sh", note: "npx skills add", color: "#fbbf24" },
 ];
 
 const FW_LIGHT_COLORS = {
@@ -176,7 +71,7 @@ const FW_LIGHT_COLORS = {
   Windsurf: "#0891b2",
   OpenCode: "#059669",
   OpenClaw: "#dc2626",
-  "Your Agent": "#d97706",
+  "skills.sh": "#d97706",
 };
 
 function FrameworkIcon({ name, size = 20, color }) {
@@ -200,7 +95,7 @@ function FrameworkIcon({ name, size = 20, color }) {
       return (<svg {...s} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17L10 11L4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>);
     case "OpenClaw":
       return (<svg {...s} fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.5v-2c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3v-2l4 3.5-4 3.5v-1zm6-4.5c0-1.66-1.34-3-3-3v2l-4-3.5L14 5v1c2.76 0 5 2.24 5 5h-2z"/></svg>);
-    case "Your Agent":
+    case "skills.sh":
       return (<svg {...s} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>);
     default:
       return null;
@@ -478,7 +373,7 @@ function SkillPage({ skillId, theme, setTheme }) {
           flexWrap: "wrap", gap: "8px",
         }}>
           <Link to="/" style={{ color: "var(--text-phantom)", textDecoration: "none" }}>
-            IC Skills {"\u2014"} The API for building on the Internet Computer
+            IC Skills {"\u2014"} Agent-readable skills for the Internet Computer
           </Link>
           <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span>Built for the agent era</span>
@@ -519,7 +414,6 @@ export function App() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("browse");
-  const [expandedEndpoint, setExpandedEndpoint] = useState(null);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("ic-skills-theme");
@@ -616,7 +510,7 @@ export function App() {
             }}>Agent-First</span>
           </div>
           <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
-            {["browse", "how-it-works", "api"].map((tab) => (
+            {["browse", "how-it-works"].map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 padding: "6px 16px", fontSize: "12px",
                 background: activeTab === tab ? `rgba(var(--accent-rgb),0.15)` : "transparent",
@@ -682,7 +576,7 @@ export function App() {
                 fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
                 lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
               }}>
-                One API call, zero hallucinations. Structured skill files with correct canister IDs,
+                Zero hallucinations. Structured skill files with correct canister IDs,
                 tested code, known pitfalls, and verification checks.
               </p>
 
@@ -690,7 +584,6 @@ export function App() {
               <div className="hero-stats" style={{ display: "flex", gap: "32px", marginTop: "32px" }}>
                 {[
                   { val: SKILLS.length, label: "Skills" },
-                  { val: API_ENDPOINTS.length, label: "API Routes" },
                   { val: TOTAL_ENDPOINTS, label: "Operations" },
                   { val: "0", label: "Hallucinations" },
                 ].map(({ val, label }) => (
@@ -735,9 +628,7 @@ export function App() {
                 borderRadius: "8px", fontSize: "12px", color: "var(--accent-text)",
                 whiteSpace: "nowrap",
               }}>
-                fetch("dfinity.github.io/icskills/api/v1/skills/{"{"}
-                <span style={{ color: "var(--accent-blue)" }}>id</span>
-                {"}"}")
+                npx skills add dfinity/icskills
               </div>
             </div>
 
@@ -909,7 +800,7 @@ export function App() {
                 fontSize: "16px", color: "var(--text-faint)", maxWidth: "500px", margin: "0 auto",
                 lineHeight: 1.7, fontFamily: SANS_FONT,
               }}>
-                One API call. Structured instructions. Zero hallucinations.
+                Structured instructions. Zero hallucinations.
               </p>
             </div>
 
@@ -919,8 +810,8 @@ export function App() {
               marginBottom: "72px",
             }}>
               {[
-                { num: "01", title: "Agent fetches skill", code: "GET /api/v1/skills/ckbtc", colorVar: "accent", rgbVar: "accent-rgb",
-                  desc: "Agent identifies what it needs to build and pulls the right skill from the API" },
+                { num: "01", title: "Agent fetches skill", code: "npx skills add dfinity/icskills", colorVar: "accent", rgbVar: "accent-rgb",
+                  desc: "Agent identifies what it needs to build and pulls the right skill file" },
                 { num: "02", title: "Reads instructions", code: "{ pitfalls, steps, verify }", colorVar: "accent-blue", rgbVar: "blue-rgb",
                   desc: "Gets structured steps, working code, known pitfalls, and verification checks" },
                 { num: "03", title: "Builds correctly", code: "\u2713 deployed & verified", colorVar: "green", rgbVar: "green-rgb",
@@ -1120,7 +1011,7 @@ export function App() {
                   whiteSpace: "pre-wrap",
                 }}>
 <span>{`// 1. Agent decides it needs ckBTC integration\n`}</span>
-<span style={{color:"var(--accent-blue)"}}>{`const skill = await fetch(\n  "https://dfinity.github.io/icskills/api/v1/skills/ckbtc"\n);\n`}</span>
+<span style={{color:"var(--accent-blue)"}}>{`const skill = await fetch(\n  "https://dfinity.github.io/icskills/llms-full.txt"\n);\n`}</span>
 <span>{`\n// 2. Gets back structured instructions\n`}</span>
 <span style={{color:"var(--accent-text)"}}>{`const { pitfalls, steps, code_templates, verification } =\n  await skill.json();\n`}</span>
 <span>{`\n// 3. Pitfalls prevent hallucination\n`}</span>
@@ -1178,154 +1069,17 @@ export function App() {
               <p style={{
                 fontSize: "14px", color: "var(--text-faint)", margin: "0 0 24px 0",
                 fontFamily: SANS_FONT,
-              }}>Structured skill files that prevent hallucinations. One API call away.</p>
+              }}>Structured skill files that prevent hallucinations. One skill file away.</p>
               <code style={{
                 display: "inline-block", padding: "12px 24px",
                 background: "var(--bg-code)",
                 border: `1px solid rgba(var(--accent-rgb),0.3)`,
                 borderRadius: "8px", fontSize: "13px", color: "var(--accent-text)",
-              }}>dfinity.github.io/icskills/api/v1/skills</code>
+              }}>dfinity.github.io/icskills/llms-full.txt</code>
             </div>
           </div>
         )}
 
-        {/* API TAB */}
-        {activeTab === "api" && (
-          <div style={{ maxWidth: "860px" }}>
-            <div style={{ marginBottom: "48px" }}>
-              <p style={{
-                fontSize: "clamp(18px, 3vw, 26px)", fontWeight: 700, color: "var(--text-primary)",
-                letterSpacing: "-0.5px", lineHeight: 1.4, margin: "0 0 12px 0",
-              }}>
-                REST API. No auth. No keys.
-              </p>
-              <p style={{
-                fontSize: "14px", color: "var(--text-faint)", margin: 0,
-                fontFamily: SANS_FONT,
-              }}>
-                Base URL: <code style={{
-                  color: "var(--accent-text)",
-                  background: `rgba(var(--accent-rgb),0.1)`,
-                  padding: "2px 8px", borderRadius: "3px",
-                }}>https://dfinity.github.io/icskills/api/v1</code>
-              </p>
-            </div>
-
-            {/* Collapsible endpoints */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "48px" }}>
-              {API_ENDPOINTS.map((endpoint, i) => (
-                <div key={i} className="api-endpoint-card" style={{
-                  border: "1px solid var(--border-default)",
-                  borderRadius: "10px",
-                  overflow: "hidden",
-                }}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={expandedEndpoint === i}
-                    onClick={() => setExpandedEndpoint(expandedEndpoint === i ? null : i)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedEndpoint(expandedEndpoint === i ? null : i); } }}
-                    style={{
-                      padding: "14px 20px",
-                      background: expandedEndpoint === i ? "var(--bg-input)" : "var(--bg-card-subtle)",
-                      borderBottom: expandedEndpoint === i ? "1px solid var(--border-subtle)" : "none",
-                      display: "flex", alignItems: "center", gap: "12px",
-                      cursor: "pointer", transition: "background 0.15s",
-                    }}
-                  >
-                    <span style={{
-                      fontSize: "10px", fontWeight: 800, padding: "3px 10px",
-                      background: endpoint.method === "POST" ? `rgba(var(--blue-rgb),0.15)` : `rgba(var(--green-rgb),0.15)`,
-                      color: endpoint.method === "POST" ? "var(--accent-blue)" : "var(--green)",
-                      borderRadius: "4px", letterSpacing: "1px",
-                    }}>{endpoint.method}</span>
-                    <code style={{ fontSize: "14px", color: "var(--text-sub)", fontWeight: 600 }}>{endpoint.path}</code>
-                    <span className="endpoint-desc" style={{
-                      fontSize: "12px", color: "var(--text-faint)", marginLeft: "auto",
-                      fontFamily: SANS_FONT, marginRight: "8px",
-                    }}>{endpoint.desc}</span>
-                    <span style={{
-                      fontSize: "16px", color: "var(--text-ghost)",
-                      transform: expandedEndpoint === i ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s", lineHeight: 1,
-                    }}>{"\u25BE"}</span>
-                  </div>
-                  {expandedEndpoint === i && (
-                    <div style={{
-                      padding: "16px 20px",
-                      background: "var(--bg-response)",
-                    }}>
-                      <div style={{
-                        fontSize: "10px", color: "var(--text-ghost)", textTransform: "uppercase",
-                        letterSpacing: "1px", marginBottom: "8px",
-                      }}>Response</div>
-                      <pre style={{
-                        fontSize: "11px", color: "var(--text-dim)", margin: 0,
-                        whiteSpace: "pre-wrap", lineHeight: 1.6,
-                      }}>{endpoint.response}</pre>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Quick start terminal */}
-            <div style={{ marginBottom: "48px" }}>
-              <div style={{
-                fontSize: "11px", color: "var(--text-ghost)", letterSpacing: "2px",
-                textTransform: "uppercase", marginBottom: "16px",
-              }}>Quick start</div>
-
-              <div style={{
-                borderRadius: "10px", overflow: "hidden",
-                border: `1px solid rgba(var(--accent-rgb),0.12)`,
-              }}>
-                <TerminalHeader title="terminal" />
-                <pre style={{
-                  padding: "20px",
-                  background: "var(--bg-code-deep)",
-                  fontSize: "12px", lineHeight: 1.8,
-                  color: "var(--text-tertiary)", margin: 0,
-                  whiteSpace: "pre-wrap",
-                }}>
-<span style={{color:"var(--text-faint)"}}># Get a skill as JSON</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc\n\n"}
-<span style={{color:"var(--text-faint)"}}># Get raw markdown for agent context</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc/raw\n\n"}
-<span style={{color:"var(--text-faint)"}}># Search for a skill</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/search?q=token\n\n"}
-<span style={{color:"var(--text-faint)"}}># Get multiple at once</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{' -X POST dfinity.github.io/icskills/api/v1/skills/batch \\\n  -d \'{"ids":["ckbtc","icrc-ledger","wallet"]}\''}</pre>
-              </div>
-            </div>
-
-            {/* Info cards */}
-            <div className="api-info-grid" style={{
-              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px",
-            }}>
-              {[
-                { title: "No auth needed", desc: "Open API. No keys, no signup, no rate limits for normal use." },
-                { title: "JSON + Markdown", desc: "Structured JSON for programmatic use. Raw markdown for context injection." },
-                { title: "Always current", desc: "Skills update when icp-cli or canister IDs change. Versioned." },
-              ].map((note) => (
-                <div key={note.title} style={{
-                  padding: "20px",
-                  background: "var(--bg-card-subtle)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                }}>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-soft)", marginBottom: "6px" }}>
-                    {note.title}
-                  </div>
-                  <div style={{
-                    fontSize: "12px", color: "var(--text-ghost)", lineHeight: 1.5,
-                    fontFamily: SANS_FONT,
-                  }}>{note.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer */}
@@ -1340,7 +1094,7 @@ export function App() {
           display: "flex", justifyContent: "space-between",
           fontSize: "11px", color: "var(--text-phantom)",
         }}>
-          <span>IC Skills {"\u2014"} The API for building on the Internet Computer</span>
+          <span>IC Skills {"\u2014"} Agent-readable skills for the Internet Computer</span>
           <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span>Built for the agent era</span>
             <a href="https://github.com/dfinity/icskills" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-phantom)" }}>

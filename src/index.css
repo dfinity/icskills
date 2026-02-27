@@ -410,9 +410,6 @@ a:focus-visible {
     grid-template-columns: repeat(3, 1fr) !important;
   }
 
-  .api-info-grid {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 /* ── Responsive: Small tablet ── */
@@ -476,9 +473,6 @@ a:focus-visible {
     justify-content: center;
   }
 
-  .api-endpoint-card {
-    padding: 0 !important;
-  }
 }
 
 /* ── Responsive: Mobile ── */

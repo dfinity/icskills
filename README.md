@@ -140,17 +140,7 @@ The files are plain markdown. Copy the content into whatever instructions, rules
 | All skills | [`llms-full.txt`](https://dfinity.github.io/icskills/llms-full.txt) | All skills concatenated for direct context injection |
 | Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md` | Raw markdown for one skill |
 | Agent discovery | [`.well-known/agent.json`](https://dfinity.github.io/icskills/.well-known/agent.json) | Machine-readable skill manifest |
-
-## REST API (Planned)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /skills` | List all skills with metadata |
-| `GET /skills/{id}` | Full structured skill data |
-| `GET /skills/{id}/raw` | Raw SKILL.md for direct context injection |
-| `GET /skills/{id}/deps` | Dependency tree |
-| `GET /skills/search?q={query}` | Search by task description |
-| `GET /skills/{id}/pitfalls` | Just the pitfalls (guardrails only) |
+| CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
 
 ## Contributing
 
