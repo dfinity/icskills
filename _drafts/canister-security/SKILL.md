@@ -42,12 +42,7 @@ IC canisters face security challenges that don't exist in traditional web develo
    icp canister settings update backend --add-controller <backup-principal> -e ic
    ```
 
-6. **Using `fetchRootKey()` in production.** This is for local development ONLY. On mainnet, it makes your frontend trust any root key — including an attacker's. Guard it:
-   ```javascript
-   if (process.env.DFX_NETWORK !== "ic") {
-     await agent.fetchRootKey();
-   }
-   ```
+6. **Hardcoding or fetching the root key incorrectly.** Any agent (frontend, script, test harness) connecting to the IC must use the correct root key to verify response signatures. On mainnet, the root key is baked into `@icp-sdk/core`. For local development, obtain it from `icp network status --json` (field `root_key`). Never call the deprecated `fetchRootKey()` — it trusts whatever key the endpoint returns, including an attacker's. For frontends deployed to asset canisters, the root key is provided automatically via the `ic_env` cookie; use `getCanisterEnv()` from `@icp-sdk/core/agent/canister-env` to read it.
 
 7. **Exposing admin methods without guards.** Every update method is callable by anyone on the internet. Admin methods (migration, config, minting) must explicitly check the caller against an allowlist.
 
