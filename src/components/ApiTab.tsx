@@ -1,5 +1,46 @@
-import { useState } from "preact/hooks";
-import { API_ENDPOINTS, SANS_FONT } from "../data/constants";
+import { SANS_FONT } from "../data/constants";
+import { BASE_PATH, SITE_URL } from "../data/site";
+import CopyButton from "./CopyButton";
+
+const RAW_BASE = "https://raw.githubusercontent.com/dfinity/icskills/main/skills";
+
+const REAL_ENDPOINTS = [
+  {
+    label: "Single skill (markdown)",
+    url: `${SITE_URL}/skills/ckbtc.md`,
+    curl: `curl -sL ${SITE_URL}/skills/ckbtc.md`,
+    desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
+    contentType: "text/markdown",
+  },
+  {
+    label: "Single skill (GitHub raw)",
+    url: `${RAW_BASE}/ckbtc/SKILL.md`,
+    curl: `curl -sL ${RAW_BASE}/ckbtc/SKILL.md`,
+    desc: "Same content via GitHub raw URLs. Works without the site.",
+    contentType: "text/plain",
+  },
+  {
+    label: "Skill index",
+    url: `${SITE_URL}/llms.txt`,
+    curl: `curl -sL ${SITE_URL}/llms.txt`,
+    desc: "Short index with links to every skill. Follows the llms.txt convention.",
+    contentType: "text/plain",
+  },
+  {
+    label: "All skills (full)",
+    url: `${SITE_URL}/llms-full.txt`,
+    curl: `curl -sL ${SITE_URL}/llms-full.txt`,
+    desc: "Every skill concatenated into one file. For full context injection.",
+    contentType: "text/plain",
+  },
+  {
+    label: "Agent discovery",
+    url: `${SITE_URL}/.well-known/agent.json`,
+    curl: `curl -sL ${SITE_URL}/.well-known/agent.json`,
+    desc: "Machine-readable manifest. Lists all skills and endpoint URLs.",
+    contentType: "application/json",
+  },
+];
 
 function TerminalHeader({ title }: { title: string }) {
   return (
@@ -17,9 +58,7 @@ function TerminalHeader({ title }: { title: string }) {
   );
 }
 
-export default function ApiTab() {
-  const [expandedEndpoint, setExpandedEndpoint] = useState<number | null>(null);
-
+export default function AccessTab() {
   return (
     <div style={{ maxWidth: "860px" }}>
       <div style={{ marginBottom: "48px" }}>
@@ -27,74 +66,65 @@ export default function ApiTab() {
           fontSize: "clamp(18px, 3vw, 26px)", fontWeight: 700, color: "var(--text-primary)",
           letterSpacing: "-0.5px", lineHeight: 1.4, margin: "0 0 12px 0",
         }}>
-          REST API. No auth. No keys.
+          Get skills into your agent.
         </p>
         <p style={{
           fontSize: "14px", color: "var(--text-faint)", margin: 0,
           fontFamily: SANS_FONT,
         }}>
-          Base URL: <code style={{
-            color: "var(--accent-text)",
-            background: `rgba(var(--accent-rgb),0.1)`,
-            padding: "2px 8px", borderRadius: "3px",
-          }}>https://dfinity.github.io/icskills/api/v1</code>
+          No auth. No keys. Every skill is a static file you can fetch directly.
         </p>
       </div>
 
-      {/* Collapsible endpoints */}
+      {/* Real endpoints */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "48px" }}>
-        {API_ENDPOINTS.map((endpoint, i) => (
-          <div key={i} className="api-endpoint-card" style={{
+        {REAL_ENDPOINTS.map((ep) => (
+          <div key={ep.label} style={{
             border: "1px solid var(--border-default)",
             borderRadius: "10px",
             overflow: "hidden",
           }}>
-            <div
-              role="button"
-              tabIndex={0}
-              aria-expanded={expandedEndpoint === i}
-              onClick={() => setExpandedEndpoint(expandedEndpoint === i ? null : i)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedEndpoint(expandedEndpoint === i ? null : i); } }}
-              style={{
-                padding: "14px 20px",
-                background: expandedEndpoint === i ? "var(--bg-input)" : "var(--bg-card-subtle)",
-                borderBottom: expandedEndpoint === i ? "1px solid var(--border-subtle)" : "none",
-                display: "flex", alignItems: "center", gap: "12px",
-                cursor: "pointer", transition: "background 0.15s",
-              }}
-            >
+            <div style={{
+              padding: "14px 20px",
+              background: "var(--bg-card-subtle)",
+              display: "flex", alignItems: "center", gap: "12px",
+              flexWrap: "wrap",
+            }}>
               <span style={{
                 fontSize: "10px", fontWeight: 800, padding: "3px 10px",
-                background: endpoint.method === "POST" ? `rgba(var(--blue-rgb),0.15)` : `rgba(var(--green-rgb),0.15)`,
-                color: endpoint.method === "POST" ? "var(--accent-blue)" : "var(--green)",
+                background: `rgba(var(--green-rgb),0.15)`,
+                color: "var(--green)",
                 borderRadius: "4px", letterSpacing: "1px",
-              }}>{endpoint.method}</span>
-              <code style={{ fontSize: "14px", color: "var(--text-sub)", fontWeight: 600 }}>{endpoint.path}</code>
-              <span className="endpoint-desc" style={{
-                fontSize: "12px", color: "var(--text-faint)", marginLeft: "auto",
-                fontFamily: SANS_FONT, marginRight: "8px",
-              }}>{endpoint.desc}</span>
-              <span style={{
-                fontSize: "16px", color: "var(--text-ghost)",
-                transform: expandedEndpoint === i ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 0.2s", lineHeight: 1,
-              }}>{"\u25BE"}</span>
-            </div>
-            {expandedEndpoint === i && (
-              <div style={{
-                padding: "16px 20px",
-                background: "var(--bg-response)",
-              }}>
-                <div style={{
-                  fontSize: "10px", color: "var(--text-ghost)", textTransform: "uppercase",
-                  letterSpacing: "1px", marginBottom: "8px",
-                }}>Response</div>
-                <pre style={{
-                  fontSize: "11px", color: "var(--text-dim)", margin: 0,
-                  whiteSpace: "pre-wrap", lineHeight: 1.6,
-                }}>{endpoint.response}</pre>
+              }}>GET</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "2px" }}>
+                  {ep.label}
+                </div>
+                <div style={{ fontSize: "11px", color: "var(--text-faint)", fontFamily: SANS_FONT }}>
+                  {ep.desc}
+                </div>
               </div>
-            )}
+              <span style={{
+                fontSize: "9px", padding: "2px 8px",
+                background: `rgba(var(--accent-rgb),0.08)`,
+                border: `1px solid rgba(var(--accent-rgb),0.15)`,
+                borderRadius: "3px", color: "var(--accent-text)",
+                textTransform: "uppercase", letterSpacing: "1px",
+                whiteSpace: "nowrap",
+              }}>{ep.contentType}</span>
+            </div>
+            <div style={{
+              padding: "10px 20px",
+              background: "var(--bg-code)",
+              display: "flex", alignItems: "center", gap: "8px",
+            }}>
+              <code style={{
+                flex: 1, fontSize: "11px", color: "var(--accent)",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                minWidth: 0,
+              }}>{ep.curl}</code>
+              <CopyButton text={ep.curl} />
+            </div>
           </div>
         ))}
       </div>
@@ -118,14 +148,14 @@ export default function ApiTab() {
             color: "var(--text-tertiary)", margin: 0,
             whiteSpace: "pre-wrap",
           }}>
-<span style={{color:"var(--text-faint)"}}># Get a skill as JSON</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc\n\n"}
-<span style={{color:"var(--text-faint)"}}># Get raw markdown for agent context</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/ckbtc/raw\n\n"}
-<span style={{color:"var(--text-faint)"}}># Search for a skill</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{" dfinity.github.io/icskills/api/v1/skills/search?q=token\n\n"}
-<span style={{color:"var(--text-faint)"}}># Get multiple at once</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{' -X POST dfinity.github.io/icskills/api/v1/skills/batch \\\n  -d \'{"ids":["ckbtc","icrc-ledger","wallet"]}\''}</pre>
+<span style={{color:"var(--text-faint)"}}>{"# Fetch a skill and paste into your agent"}</span>{"\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${RAW_BASE}/ckbtc/SKILL.md\n\n`}
+<span style={{color:"var(--text-faint)"}}>{"# Get the skill as a served .md file"}</span>{"\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/skills/ckbtc.md\n\n`}
+<span style={{color:"var(--text-faint)"}}>{"# Get the full skill index"}</span>{"\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/llms.txt\n\n`}
+<span style={{color:"var(--text-faint)"}}>{"# All skills in one file (for full context injection)"}</span>{"\n"}
+<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/llms-full.txt`}</pre>
         </div>
       </div>
 
@@ -134,9 +164,9 @@ export default function ApiTab() {
         display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px",
       }}>
         {[
-          { title: "No auth needed", desc: "Open API. No keys, no signup, no rate limits for normal use." },
-          { title: "JSON + Markdown", desc: "Structured JSON for programmatic use. Raw markdown for context injection." },
-          { title: "Always current", desc: "Skills update when icp-cli or canister IDs change. Versioned." },
+          { title: "No auth needed", desc: "Open access. No keys, no signup. Every URL returns content directly." },
+          { title: "Plain markdown", desc: "Skills are markdown files. Paste into any agent context, rules file, or system prompt." },
+          { title: "Always current", desc: "Skills update when canister IDs or APIs change. Versioned in frontmatter." },
         ].map((note) => (
           <div key={note.title} style={{
             padding: "20px",
