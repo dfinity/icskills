@@ -298,23 +298,6 @@ async fn transfer(to: Principal, amount: u64) {
 }
 ```
 
-### Frontend — Safe Agent Configuration
-
-```javascript
-import { HttpAgent } from "@dfinity/agent";
-
-const agent = new HttpAgent({
-  host: process.env.DFX_NETWORK === "ic"
-    ? "https://icp-api.io"
-    : "http://127.0.0.1:4943",
-});
-
-// ONLY fetch root key in local development
-if (process.env.DFX_NETWORK !== "ic") {
-  await agent.fetchRootKey();
-}
-```
-
 ## Deploy & Test
 
 ### Local Development
