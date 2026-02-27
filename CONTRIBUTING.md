@@ -108,16 +108,14 @@ Concrete commands to confirm the implementation is correct.
 
 ```bash
 npm run validate     # Check frontmatter, sections, dependency graph
-npm run generate     # Regenerate public/ files (llms.txt, agent.json, etc.)
+npm run generate     # Regenerate README skills table
 ```
 
-Both commands run automatically in CI. The deploy pipeline verifies that committed files in `public/` match what `npm run generate` produces — if they're out of date, CI will reject the PR.
-
-**Commit the updated `public/` files** alongside your SKILL.md changes.
+Both commands run automatically in CI. Validate blocks deployment on errors. The deploy pipeline verifies that the README skills table matches what `npm run generate` produces — if it's out of date, CI will reject the PR.
 
 ### 4. That's it — the website auto-discovers skills
 
-The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit `app.jsx` or any other source file. The build script (`scripts/generate-skills.js`) scans all `skills/*/SKILL.md` files, parses their frontmatter, and generates the data the site uses.
+The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, `agent.json`, and other discovery files.
 
 Stats (skill count, operations, categories) all update automatically.
 
@@ -144,7 +142,7 @@ Stats (skill count, operations, categories) all update automatically.
 
 1. Edit the `SKILL.md` content
 2. Bump the `version` in the frontmatter
-3. Run `npm run validate && npm run generate` and commit the updated `public/` files
+3. Run `npm run validate && npm run generate` and commit the updated `README.md`
 4. Submit a PR with a summary of what changed
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
