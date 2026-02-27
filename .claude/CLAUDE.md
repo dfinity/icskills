@@ -82,16 +82,16 @@ scripts/generate-*.js         # Build-time generation scripts
 scripts/validate-skills.js    # Structural validation (CI)
 src/                           # Astro site source
   data/skills.ts              # Build-time skill loader
-  data/constants.ts           # Static data (API endpoints, frameworks)
+  data/constants.ts           # Static data (frameworks list)
   data/site.ts                # Site URL and base path config
   layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
   layouts/SiteLayout.astro    # Shared header/nav/footer for main pages
   components/BrowseTab.tsx    # Preact island: search + skill grid
-  components/ApiTab.tsx       # Preact island: API reference
+  components/ApiTab.tsx       # Preact island: access/endpoints reference
   components/SkillHeader.tsx  # Preact island: skill detail header
   pages/index.astro           # Browse page
   pages/how-it-works/         # How it works page (fully static)
-  pages/api/                  # API reference page
+  pages/access/               # Access reference page (real endpoints)
   pages/skills/[slug]/        # Dynamic skill pages (pre-rendered)
   pages/skills/[slug].md.ts   # Raw .md endpoint per skill
   pages/llms.txt.ts           # Skills index for agents

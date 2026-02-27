@@ -174,7 +174,7 @@ export default function BrowseTab({ skills }: Props) {
                 <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.id}/SKILL.md`}
                   target="_blank" rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  title="View on GitHub"
+                  title="View on GitHub" aria-label={`View ${skill.name} on GitHub`}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: "36px", height: "36px", borderRadius: "6px",
