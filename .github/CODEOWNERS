@@ -1,12 +1,14 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
 
+* @JoshDFN @marc0olo @raymondk
+
 # Infra & build
-/.github/                        @JoshDFN @marc0olo
-/.claude/                        @JoshDFN @marc0olo
-/scripts/                        @JoshDFN @marc0olo
-/src/                            @JoshDFN @marc0olo
-package.json                     @JoshDFN @marc0olo
+/.github/                        @JoshDFN @marc0olo @raymondk
+/.claude/                        @JoshDFN @marc0olo @raymondk
+/scripts/                        @JoshDFN @marc0olo @raymondk
+/src/                            @JoshDFN @marc0olo @raymondk
+package.json                     @JoshDFN @marc0olo @raymondk
 
 # Skill files — domain experts
 /skills/icp-cli/                 @dfinity/sdk
