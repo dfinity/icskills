@@ -9,7 +9,7 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 ```
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-id>/SKILL.md
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-name>/SKILL.md
 ```
 
 ## Skills
@@ -25,7 +25,7 @@ curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-i
 - [Multi-Canister Architecture](https://raw.githubusercontent.com/dfinity/icskills/main/skills/multi-canister/SKILL.md): Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies.
 - [SNS DAO Launch](https://raw.githubusercontent.com/dfinity/icskills/main/skills/sns-launch/SKILL.md): Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap.
 - [Stable Memory & Upgrades](https://raw.githubusercontent.com/dfinity/icskills/main/skills/stable-memory/SKILL.md): Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data.
-- [vetKD Encryption](https://raw.githubusercontent.com/dfinity/icskills/main/skills/vetkd/SKILL.md): Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns.
+- [vetKeys](https://raw.githubusercontent.com/dfinity/icskills/main/skills/vetkd/SKILL.md): Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns.
 - [Cycles Wallet Management](https://raw.githubusercontent.com/dfinity/icskills/main/skills/wallet/SKILL.md): Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management.
 
 ## Source

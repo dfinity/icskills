@@ -1,6 +1,6 @@
 ---
-id: icrc-ledger
-name: ICRC Ledger Standard
+name: icrc-ledger
+title: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11

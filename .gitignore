@@ -5,3 +5,5 @@ dist
 .idea/
 *.local
 src/skills-data.js
+.astro
+lighthouse-*

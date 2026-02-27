@@ -1,10 +1,10 @@
 ---
-id: ic-dashboard
-name: IC Dashboard APIs
+name: ic-dashboard
+title: IC Dashboard APIs
 category: Integration
 description: "Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics."
 endpoints: 12
-version: 1.0.0
+version: 1.0.1
 status: stable
 dependencies: []
 requires: []

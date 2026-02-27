@@ -14,7 +14,7 @@ const errors = [];
 
 // Validate required fields
 for (const skill of allSkills) {
-  const missing = ["id", "name", "category"].filter((f) => !skill.meta[f]);
+  const missing = ["name", "title", "category"].filter((f) => !skill.meta[f]);
   if (missing.length) {
     errors.push(
       `${skill.dir}/SKILL.md: missing required fields: ${missing.join(", ")}`
@@ -28,16 +28,16 @@ if (errors.length) {
   process.exit(1);
 }
 
-// Validate dependency graph: every dependency must reference an existing skill ID
-const allIds = new Set(allSkills.map((s) => s.meta.id));
+// Validate dependency graph: every dependency must reference an existing skill name
+const allNames = new Set(allSkills.map((s) => s.meta.name));
 for (const skill of allSkills) {
   const deps = Array.isArray(skill.meta.dependencies)
     ? skill.meta.dependencies
     : [];
   for (const dep of deps) {
-    if (!allIds.has(dep)) {
+    if (!allNames.has(dep)) {
       errors.push(
-        `${skill.dir}/SKILL.md: dependency "${dep}" does not match any skill ID`
+        `${skill.dir}/SKILL.md: dependency "${dep}" does not match any skill name`
       );
     }
   }
@@ -50,8 +50,8 @@ if (errors.length) {
 }
 
 const skills = allSkills.map((s) => ({
-  id: s.meta.id,
-  name: s.meta.name,
+  id: s.meta.name,
+  name: s.meta.title,
   category: s.meta.category,
   description: s.meta.description || "",
   endpoints: s.meta.endpoints || 0,
