@@ -11,6 +11,7 @@
       "evm-rpc",
       "https-outcalls",
       "ic-dashboard",
+      "icp-dev",
       "icrc-ledger",
       "internet-identity",
       "multi-canister",

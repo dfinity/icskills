@@ -52,6 +52,7 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 | [EVM RPC Integration](skills/evm-rpc/SKILL.md) | Integration | Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows. |
 | [HTTPS Outcalls](skills/https-outcalls/SKILL.md) | Integration | Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management. |
 | [IC Dashboard APIs](skills/ic-dashboard/SKILL.md) | Integration | Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics. |
+| [ICP Development](skills/icp-dev/SKILL.md) | Infrastructure | Master skill for Internet Computer development. Routes to specialized skills for ckBTC, authentication, multi-canister patterns, and more. Load this first when building ICP applications. |
 | [ICRC Ledger Standard](skills/icrc-ledger/SKILL.md) | Tokens | Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata. |
 | [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling. |
 | [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
