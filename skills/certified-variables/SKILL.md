@@ -4,10 +4,10 @@ name: Certified Variables
 category: Security
 description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
 endpoints: 4
-version: 1.2.1
+version: 1.3.0
 status: stable
 dependencies: []
-requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]
+requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), ic-certification (Motoko)]
 tags: [certification, query, merkle, verified, response, trust, proof]
 ---
 
@@ -21,14 +21,14 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 - `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `certified_data_set` / `data_certificate`)
-- Motoko: `CertifiedData` module (included in mo:core/mo:base), `sha2` package (`mops add sha2`) for hashing
-- Frontend: `@icp-sdk/core/agent` (includes certificate verification)
+- Motoko: `CertifiedData` module (included in mo:core/mo:base), `ic-certification` package (`mops add ic-certification`) for Merkle tree with witness support
+- Frontend: `@icp-sdk/core` (agent, principal), `@dfinity/certificate-verification`
 
 ## Canister IDs
 
-No external canister IDs required. Certification uses the IC system API directly:
-- `ic0.certified_data_set` -- called by canisters during update calls to set the certified hash
-- `ic0.data_certificate` -- called by canisters during query calls to retrieve the certificate
+No external canister IDs required. Certification uses the IC system API exposed through CDK wrappers:
+- `ic_cdk::api::certified_data_set` (Rust) / `CertifiedData.set` (Motoko) -- called during update calls to set the certified hash (max 32 bytes)
+- `ic_cdk::api::data_certificate` (Rust) / `CertifiedData.getCertificate` (Motoko) -- called during query calls to retrieve the subnet certificate
 
 The IC root public key (needed for client-side verification):
 - Mainnet: `308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100814c0e6ec71fab583b08bd81373c255c3c371b2e84863c98a4f1e08b74235d14fb5d9c0cd546d9685f913a0c0b2cc5341583bf4b4392e467db96d65b9bb4cb717112f8472e0d5a4d14505ffd7484b01291091c5f87b98883463f98091a0baaae`
@@ -49,6 +49,8 @@ The IC root public key (needed for client-side verification):
 6. **Assuming `data_certificate()` returns a value in update calls.** It returns `null`/`None` during update calls. Certificates are only available during query calls.
 
 7. **Certifying data at canister init but not on upgrades.** After a canister upgrade, the certified data is cleared. You must call `certified_data_set` in both `#[init]` and `#[post_upgrade]` (Rust) or `system func postupgrade` (Motoko) to re-establish certification.
+
+8. **Not validating certificate freshness on the client.** The certificate's state tree contains a `/time` field with the timestamp when the subnet produced it. Clients MUST check that this timestamp is recent (recommended: within 5 minutes of current time). Without this check, an attacker could replay a stale certificate with outdated data. Always verify `certificate_time` is within an acceptable delta before trusting the response.
 
 ## How Certification Works
 
@@ -126,7 +128,8 @@ fn init() {
 
 #[post_upgrade]
 fn post_upgrade() {
-    // CRITICAL: re-establish certification after upgrade
+    // Assumes data has already been deserialized from stable memory into the TREE.
+    // CRITICAL: re-establish certification after upgrade — certified_data is cleared on upgrade.
     update_certified_data();
 }
 
@@ -305,127 +308,122 @@ persistent actor {
 
 **Certified key-value store with Merkle tree (advanced):**
 
-For certifying multiple values, you need a Merkle tree. The `ic-certification` mops package provides this, or you can build a simple hash tree manually:
+For certifying multiple values with per-key witnesses, use the `ic-certification` mops package (`mops add ic-certification`). It provides a real Merkle tree (`CertTree`) that can generate proofs for individual keys:
 
 ```motoko
 import CertifiedData "mo:core/CertifiedData";
 import Blob "mo:core/Blob";
 import Text "mo:core/Text";
-import Map "mo:core/Map";
-import Array "mo:core/Array";
-// Requires: mops add sha2
-import Sha256 "mo:sha2/Sha256";
-import Nat "mo:core/Nat";
+// Requires: mops add ic-certification
+import CertTree "mo:ic-certification/CertTree";
 
 persistent actor {
 
-  // Store key-value pairs
-  let store = Map.empty<Text, Text>();
+  // CertTree.Store is stable -- persists across upgrades
+  let certStore : CertTree.Store = CertTree.newStore();
+  let ct = CertTree.Ops(certStore);
 
-  // Concatenate two Blobs (mo:core has no Blob.concat)
-  func blobConcat(a : Blob, b : Blob) : Blob {
-    Blob.fromArray(Array.concat(Blob.toArray(a), Blob.toArray(b)))
+  // Set certified data on init
+  ct.setCertifiedData();
+
+  // Set a key-value pair and update certification
+  public func set(key : Text, value : Text) : async () {
+    ct.put([Text.encodeUtf8(key)], Text.encodeUtf8(value));
+    // CRITICAL: call after every mutation to update the subnet-certified root hash
+    ct.setCertifiedData();
   };
 
-  // Compute a root hash over all entries
-  // (Simple approach: hash the concatenation of all key-value hashes, sorted)
-  func computeRootHash() : Blob {
-    let entries = Array.fromIter<(Text, Text)>(Map.entries(store));
-    if (entries.size() == 0) {
-      return Sha256.fromBlob(#sha256, Text.encodeUtf8(""));
-    };
-
-    // Hash each entry
-    let hashes = Array.map<(Text, Text), Blob>(entries, func((k, v)) {
-      Sha256.fromBlob(#sha256, Text.encodeUtf8(k # "=" # v))
-    });
-
-    // Combine all hashes into a single root hash
-    var combined : Blob = "";
-    for (h in Array.values(hashes)) {
-      combined := Sha256.fromBlob(#sha256, blobConcat(combined, h));
-    };
-    combined
+  // Delete a key and update certification
+  public func remove(key : Text) : async () {
+    ct.delete([Text.encodeUtf8(key)]);
+    ct.setCertifiedData();
   };
 
-  func updateCertification() {
-    let rootHash = computeRootHash();
-    CertifiedData.set(rootHash);
-  };
-
-  public func put(key : Text, value : Text) : async () {
-    Map.add(store, Text.compare, key, value);
-    updateCertification();
-  };
-
-  public func remove(key : Text) : async Bool {
-    let removed = Map.delete(store, Text.compare, key);
-    updateCertification();
-    removed
-  };
-
+  // Query with certificate and Merkle witness for the requested key
   public query func get(key : Text) : async {
-    value : ?Text;
+    value : ?Blob;
     certificate : ?Blob;
+    witness : Blob;
   } {
+    let path = [Text.encodeUtf8(key)];
+    // reveal() generates a Merkle proof for this specific path
+    let witness = ct.reveal(path);
     {
-      value = Map.get(store, Text.compare, key);
+      value = ct.lookup(path);
       certificate = CertifiedData.getCertificate();
+      witness = ct.encodeWitness(witness);
     }
   };
 
   // Re-establish certification after upgrade
+  // (CertTree.Store is stable, so the tree data survives, but certified_data is cleared)
   system func postupgrade() {
-    updateCertification();
+    ct.setCertifiedData();
   };
 };
 ```
 
 ### Frontend Verification (TypeScript)
 
-The `@icp-sdk/core/agent` library handles certificate verification automatically for certified query responses. For manual verification:
+Uses `@dfinity/certificate-verification` which handles the full 6-step verification:
+1. Verify certificate BLS signature against IC root key
+2. Validate certificate freshness (`/time` within `maxCertificateTimeOffsetMs`)
+3. CBOR-decode the witness into a HashTree
+4. Reconstruct the witness root hash
+5. Compare reconstructed root hash with `certified_data` from the certificate
+6. Return the verified HashTree for value lookup
 
 ```typescript
-import { Certificate, HttpAgent, lookup_path } from "@icp-sdk/core/agent";
+import { verifyCertification } from "@dfinity/certificate-verification";
+import { lookup_path, HashTree } from "@icp-sdk/core/agent";
+import { Principal } from "@icp-sdk/core/principal";
 
-async function verifyCertifiedResponse(
-  agent: HttpAgent,
+const MAX_CERT_TIME_OFFSET_MS = 5 * 60 * 1000; // 5 minutes
+
+async function getVerifiedValue(
+  rootKey: ArrayBuffer,
   canisterId: string,
-  response: { value: string | null; certificate: Uint8Array; witness: Uint8Array }
-): Promise<boolean> {
-  try {
-    // The agent verifies the certificate signature against the IC root key
-    const cert = await Certificate.create({
-      certificate: response.certificate,
-      canisterId: canisterId,
-      rootKey: agent.rootKey, // IC root public key
-    });
+  key: string,
+  response: { value: string | null; certificate: ArrayBuffer; witness: ArrayBuffer }
+): Promise<string | null> {
+  // verifyCertification performs steps 1-5:
+  //  - verifies BLS signature on the certificate
+  //  - checks certificate /time is within maxCertificateTimeOffsetMs
+  //  - CBOR-decodes the witness into a HashTree
+  //  - reconstructs root hash from the witness tree
+  //  - compares it against certified_data in the certificate
+  // Throws CertificateTimeError or CertificateVerificationError on failure.
+  const tree: HashTree = await verifyCertification({
+    canisterId: Principal.fromText(canisterId),
+    encodedCertificate: response.certificate,
+    encodedTree: response.witness,
+    rootKey,
+    maxCertificateTimeOffsetMs: MAX_CERT_TIME_OFFSET_MS,
+  });
 
-    // Look up the certified data in the certificate's state tree
-    // Path: ["canister", canisterId, "certified_data"]
-    const certifiedData = lookup_path(
-      ["canister", canisterId, "certified_data"],
-      cert.tree
-    );
+  // Step 6: Look up the specific key in the verified witness tree.
+  // The path must match how the canister inserted the key (e.g., key as UTF-8 bytes).
+  const leafData = lookup_path([new TextEncoder().encode(key)], tree);
 
-    if (!certifiedData) {
-      console.error("No certified data found in certificate");
-      return false;
-    }
-
-    // certifiedData is the 32-byte root hash set by the canister
-    // Compare it against the witness to verify the specific value
-    // (witness verification depends on your Merkle tree structure)
-
-    return true;
-  } catch (err) {
-    console.error("Certificate verification failed:", err);
-    return false;
+  if (!leafData) {
+    // Key is provably absent from the certified tree
+    return null;
   }
+
+  const verifiedValue = new TextDecoder().decode(leafData);
+
+  // Confirm the canister-returned value matches the witness-proven value
+  if (response.value !== null && response.value !== verifiedValue) {
+    throw new Error(
+      "Response value does not match witness — canister returned tampered data"
+    );
+  }
+
+  return verifiedValue;
 }
 ```
 
-For asset canisters, the `@icp-sdk/core/agent` service worker handles verification transparently -- no manual code needed.
+For asset canisters, the HTTP gateway (boundary node) verifies certification transparently using the [HTTP Gateway Protocol](https://docs.internetcomputer.org/references/http-gateway-protocol-spec) -- no client-side code needed.
 
 ## Deploy & Test
 
