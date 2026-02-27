@@ -23,7 +23,7 @@
   "endpoints": {
     "list": "https://dfinity.github.io/icskills/llms.txt",
     "full": "https://dfinity.github.io/icskills/llms-full.txt",
-    "skill": "https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md"
+    "skill": "https://raw.githubusercontent.com/dfinity/icskills/main/skills/{name}/SKILL.md"
   },
   "defaultInputModes": [
     "text/plain"

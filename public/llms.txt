@@ -9,7 +9,7 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 ```
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-id>/SKILL.md
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-name>/SKILL.md
 ```
 
 ## Skills

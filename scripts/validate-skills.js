@@ -9,8 +9,8 @@ import { join } from "path";
 import { readAllSkills, SKILLS_DIR } from "./lib/parse-skill.js";
 
 const REQUIRED_FRONTMATTER = [
-  "id",
   "name",
+  "title",
   "category",
   "description",
   "version",
@@ -55,7 +55,7 @@ function warn(skill, msg) {
 }
 
 const skills = readAllSkills();
-const allIds = new Set(skills.map((s) => s.meta.id));
+const allIds = new Set(skills.map((s) => s.meta.name));
 
 // Load JSON schema for allowed categories (read from schema if it exists)
 let schema = null;
@@ -79,14 +79,14 @@ for (const skill of skills) {
     }
   }
 
-  // id must match directory name
-  if (meta.id && meta.id !== dir) {
-    error(label, `frontmatter id "${meta.id}" does not match directory "${dir}"`);
+  // name must match directory name
+  if (meta.name && meta.name !== dir) {
+    error(label, `frontmatter name "${meta.name}" does not match directory "${dir}"`);
   }
 
-  // id format
-  if (meta.id && !/^[a-z][a-z0-9-]*$/.test(meta.id)) {
-    error(label, `id "${meta.id}" must be lowercase alphanumeric with hyphens`);
+  // name format
+  if (meta.name && !/^[a-z][a-z0-9-]*$/.test(meta.name)) {
+    error(label, `name "${meta.name}" must be lowercase alphanumeric with hyphens`);
   }
 
   // version format
@@ -112,13 +112,13 @@ for (const skill of skills) {
     error(label, `endpoints must be a positive integer, got: ${meta.endpoints}`);
   }
 
-  // dependencies must reference existing skill IDs
+  // dependencies must reference existing skill names
   const deps = Array.isArray(meta.dependencies) ? meta.dependencies : [];
   for (const dep of deps) {
     if (!allIds.has(dep)) {
-      error(label, `dependency "${dep}" does not match any skill ID`);
+      error(label, `dependency "${dep}" does not match any skill name`);
     }
-    if (dep === meta.id) {
+    if (dep === meta.name) {
       error(label, `skill cannot depend on itself`);
     }
   }
@@ -178,10 +178,10 @@ for (const skill of skills) {
 
 // --- Dependency cycle detection (simple DFS) ---
 
-function hasCycle(id, visited, stack) {
-  visited.add(id);
-  stack.add(id);
-  const skill = skills.find((s) => s.meta.id === id);
+function hasCycle(name, visited, stack) {
+  visited.add(name);
+  stack.add(name);
+  const skill = skills.find((s) => s.meta.name === name);
   if (!skill) return false;
   const deps = Array.isArray(skill.meta.dependencies)
     ? skill.meta.dependencies
@@ -191,20 +191,20 @@ function hasCycle(id, visited, stack) {
       if (hasCycle(dep, visited, stack)) return true;
     } else if (stack.has(dep)) {
       error(
-        `${id}/SKILL.md`,
-        `circular dependency detected: ${id} -> ... -> ${dep}`
+        `${name}/SKILL.md`,
+        `circular dependency detected: ${name} -> ... -> ${dep}`
       );
       return true;
     }
   }
-  stack.delete(id);
+  stack.delete(name);
   return false;
 }
 
 const visited = new Set();
 for (const skill of skills) {
-  if (!visited.has(skill.meta.id)) {
-    hasCycle(skill.meta.id, visited, new Set());
+  if (!visited.has(skill.meta.name)) {
+    hasCycle(skill.meta.name, visited, new Set());
   }
 }
 

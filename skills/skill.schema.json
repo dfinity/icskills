@@ -4,14 +4,14 @@
   "title": "IC Skill Frontmatter",
   "description": "Schema for the YAML frontmatter in SKILL.md files. Defines the metadata contract that build scripts, CI, and agent tooling rely on.",
   "type": "object",
-  "required": ["id", "name", "category", "description", "version", "endpoints", "status"],
+  "required": ["name", "title", "category", "description", "version", "endpoints", "status"],
   "properties": {
-    "id": {
+    "name": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Unique skill identifier. Lowercase, hyphenated. Must match the directory name under skills/."
+      "description": "Unique skill identifier. Lowercase, hyphenated. Must match the directory name under skills/. Aligns with the Agent Skills spec (agentskills.io)."
     },
-    "name": {
+    "title": {
       "type": "string",
       "minLength": 1,
       "description": "Human-readable display name for the skill."
@@ -59,7 +59,7 @@
       },
       "uniqueItems": true,
       "default": [],
-      "description": "Array of skill IDs this skill depends on. Each must be a valid skill ID."
+      "description": "Array of skill names this skill depends on. Each must match an existing skill's name field."
     },
     "requires": {
       "type": "array",

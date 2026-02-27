@@ -98,10 +98,10 @@ export function loadAllSkillsRaw(): SkillRaw[] {
     const filePath = join(SKILLS_DIR, dir, "SKILL.md");
     const content = readFileSync(filePath, "utf-8");
     const meta = parseFrontmatter(content);
-    if (!meta || !meta.id) continue;
+    if (!meta || !meta.name) continue;
 
     skills.push({
-      id: meta.id,
+      id: meta.name,
       rawContent: content,
     });
   }
@@ -127,11 +127,11 @@ export function loadAllSkills(): Skill[] {
     const filePath = join(SKILLS_DIR, dir, "SKILL.md");
     const content = readFileSync(filePath, "utf-8");
     const meta = parseFrontmatter(content);
-    if (!meta || !meta.id || !meta.name) continue;
+    if (!meta || !meta.name || !meta.title) continue;
 
     skills.push({
-      id: meta.id,
-      name: meta.name,
+      id: meta.name,
+      name: meta.title,
       category: meta.category || "",
       description: meta.description || "",
       endpoints: meta.endpoints || 0,

@@ -25,10 +25,10 @@ npm ci    # Install dependencies
 ### 1. Create the skill directory
 
 ```
-skills/<skill-id>/SKILL.md
+skills/<skill-name>/SKILL.md
 ```
 
-Use a short, lowercase, hyphenated ID (e.g., `ckbtc`, `https-outcalls`, `stable-memory`). The ID must match the directory name.
+Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stable-memory`). The name must match the directory name. This aligns with the [Agent Skills spec](https://agentskills.io/specification).
 
 A template is available at `skills/_template/SKILL.md.template` — copy it as your starting point.
 
@@ -40,8 +40,8 @@ Every skill file has YAML frontmatter followed by a markdown body. The frontmatt
 
 ```yaml
 ---
-id: <skill-id>
-name: "Display Name"
+name: <skill-name>
+title: "Display Name"
 category: CategoryName
 description: "One sentence. When should an agent load this skill? What does it cover?"
 endpoints: 5
@@ -59,14 +59,14 @@ See `skills/skill.schema.json` for the formal schema.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | yes | Lowercase, hyphenated identifier. Must match the directory name. |
-| `name` | yes | Human-readable display name. |
+| `name` | yes | Lowercase, hyphenated identifier. Must match the directory name. Aligns with the [Agent Skills spec](https://agentskills.io/specification). |
+| `title` | yes | Human-readable display name. |
 | `category` | yes | One of the predefined categories (see below). |
 | `description` | yes | One sentence. Describes when an agent should load this skill. |
 | `endpoints` | yes | Number of distinct canister methods or external API operations documented in the Implementation section. |
 | `version` | yes | Semantic version (`major.minor.patch`). |
 | `status` | yes | `stable` (production-ready) or `beta` (API may change). |
-| `dependencies` | recommended | Array of skill IDs this skill depends on. Use `[]` if none. |
+| `dependencies` | recommended | Array of skill names this skill depends on. Use `[]` if none. |
 | `requires` | recommended | Tool/package dependencies with version constraints (e.g., `icp-cli >= 0.1.0`). |
 | `tags` | recommended | Keywords for agent discovery. Lowercase, hyphenated. |
 

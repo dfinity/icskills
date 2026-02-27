@@ -10,13 +10,13 @@ const OUTPUT = join(ROOT, "public", "llms.txt");
 const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
 const skills = readAllSkills()
-  .filter((s) => s.meta.id && s.meta.name)
+  .filter((s) => s.meta.name && s.meta.title)
   .map((s) => ({
-    id: s.meta.id,
-    name: s.meta.name,
+    id: s.meta.name,
+    name: s.meta.title,
     description:
       s.meta.description ||
-      `Agent-readable skill file for ${s.meta.name} on the Internet Computer.`,
+      `Agent-readable skill file for ${s.meta.title} on the Internet Computer.`,
     url: `${RAW}/skills/${s.dir}/SKILL.md`,
   }));
 
@@ -31,7 +31,7 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 \`\`\`
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-id>/SKILL.md
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-name>/SKILL.md
 \`\`\`
 
 ## Skills

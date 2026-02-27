@@ -31,10 +31,10 @@ let count = 0;
 
 for (const skill of skills) {
   const { meta, dir } = skill;
-  if (!meta.name) continue;
+  if (!meta.title) continue;
 
-  const id = meta.id || dir;
-  const name = meta.name;
+  const id = meta.name || dir;
+  const name = meta.title;
   const desc =
     meta.description ||
     `Agent-readable skill file for ${name} on the Internet Computer.`;
