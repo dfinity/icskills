@@ -2,56 +2,23 @@
 // Generates llms.txt — short index of all skills with links to raw SKILL.md files
 // Run: node scripts/generate-llms.js
 
-import { readdirSync, readFileSync, writeFileSync, statSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { writeFileSync } from "fs";
+import { join } from "path";
+import { ROOT, readAllSkills } from "./lib/parse-skill.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-const SKILLS_DIR = join(ROOT, "skills");
 const OUTPUT = join(ROOT, "public", "llms.txt");
 const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
-function parseFrontmatter(content) {
-  const match = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return null;
-  const data = {};
-  for (const line of match[1].split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    let val = line.slice(idx + 1).trim();
-    if (val.startsWith("[") && val.endsWith("]")) {
-      val = val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
-    } else if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-    data[key] = val;
-  }
-  return data;
-}
-
-const dirs = readdirSync(SKILLS_DIR).filter((d) => {
-  try {
-    return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
-  } catch {
-    return false;
-  }
-}).sort();
-
-const skills = [];
-
-for (const dir of dirs) {
-  const content = readFileSync(join(SKILLS_DIR, dir, "SKILL.md"), "utf-8");
-  const meta = parseFrontmatter(content);
-  if (!meta || !meta.id || !meta.name) continue;
-  skills.push({
-    id: meta.id,
-    name: meta.name,
-    description: meta.description || `Agent-readable skill file for ${meta.name} on the Internet Computer.`,
-    url: `${RAW}/skills/${dir}/SKILL.md`,
-  });
-}
+const skills = readAllSkills()
+  .filter((s) => s.meta.name && s.meta.title)
+  .map((s) => ({
+    id: s.meta.name,
+    name: s.meta.title,
+    description:
+      s.meta.description ||
+      `Agent-readable skill file for ${s.meta.title} on the Internet Computer.`,
+    url: `${RAW}/skills/${s.dir}/SKILL.md`,
+  }));
 
 const header = `# IC Skills
 
@@ -64,14 +31,16 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 \`\`\`
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-id>/SKILL.md
+curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/<skill-name>/SKILL.md
 \`\`\`
 
 ## Skills
 
 `;
 
-const lines = skills.map((s) => `- [${s.name}](${s.url}): ${s.description}`);
+const lines = skills.map(
+  (s) => `- [${s.name}](${s.url}): ${s.description}`
+);
 
 const footer = `
 ## Source

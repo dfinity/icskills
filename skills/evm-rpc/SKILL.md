@@ -1,16 +1,17 @@
 ---
-id: evm-rpc
-name: EVM RPC Integration
+name: evm-rpc
+title: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.0
+version: 1.1.2
 status: stable
 dependencies: [https-outcalls]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC
-> version: 1.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -413,7 +414,6 @@ enum RpcService {
     BaseMainnet(L2MainnetService),
     OptimismMainnet(L2MainnetService),
     Custom(CustomRpcService),
-    Chain(u64),
     Provider(u64),
 }
 
@@ -430,8 +430,10 @@ enum EthMainnetService {
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum EthSepoliaService {
     Alchemy,
+    Ankr,
     BlockPi,
     PublicNode,
+    Sepolia,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -491,12 +493,29 @@ enum ProviderError {
     MissingRequiredProvider,
     ProviderNotFound,
     NoPermission,
+    InvalidRpcConfig(String),
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+enum RejectionCode {
+    NoError,
+    CanisterError,
+    SysTransient,
+    DestinationInvalid,
+    Unknown,
+    SysFatal,
+    CanisterReject,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum HttpOutcallError {
-    IcError { code: i32, message: String },
-    InvalidHttpJsonRpcResponse { status: u16, body: String, parsing_error: Option<String> },
+    IcError { code: RejectionCode, message: String },
+    InvalidHttpJsonRpcResponse {
+        status: u16,
+        body: String,
+        #[serde(rename = "parsingError")]
+        parsing_error: Option<String>,
+    },
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -507,11 +526,8 @@ struct JsonRpcError {
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum ValidationError {
-    HostNotAllowed(String),
-    UrlParseError(String),
     Custom(String),
-    CredentialPathNotAllowed,
-    CredentialHeaderNotAllowed,
+    InvalidHex(String),
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -547,19 +563,16 @@ struct Block {
     total_difficulty: Option<candid::Nat>,
     transactions: Vec<String>,
     #[serde(rename = "transactionsRoot")]
-    transactions_root: String,
+    transactions_root: Option<String>,
     uncles: Vec<String>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 enum SendRawTransactionStatus {
     Ok(Option<String>),
-    InsufficientFunds,
     NonceTooLow,
     NonceTooHigh,
-    InsufficientGas,
-    // NOTE: More variants may exist -- check the EVM RPC canister's latest .did file
-    // for the complete set of SendRawTransactionStatus variants.
+    InsufficientFunds,
 }
 
 // -- Get ETH balance via raw JSON-RPC --

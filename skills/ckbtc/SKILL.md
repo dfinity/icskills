@@ -1,16 +1,17 @@
 ---
-id: ckbtc
-name: ckBTC Integration
+name: ckbtc
+title: ckBTC Integration
 category: DeFi
 description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
 endpoints: 14
-version: 2.1.0
+version: 2.1.2
 status: stable
 dependencies: [icrc-ledger, wallet]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [bitcoin, btc, defi, transfer, deposit, withdrawal, utxo, minter]
 ---
 
 # Chain-Key Bitcoin (ckBTC) Integration
-> version: 2.1.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.18]
 
 ## What This Is
 

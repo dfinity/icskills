@@ -6,17 +6,17 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-llms.js && node scripts/generate-agent-json.js && node scripts/generate-sitemap.js",
-    "dev": "npm run generate && vite",
-    "build": "npm run generate && vite build && node scripts/generate-skill-pages.js",
-    "preview": "vite preview"
+    "validate": "node scripts/validate-skills.js",
+    "generate": "node scripts/generate-skills.js && node scripts/generate-llms-full.js && node scripts/generate-llms.js && node scripts/generate-agent-json.js && node scripts/generate-readme-table.js",
+    "dev": "npm run validate && astro dev",
+    "build": "npm run validate && npm run generate && astro build",
+    "preview": "astro preview"
   },
   "dependencies": {
+    "@astrojs/preact": "^4.1.3",
+    "@astrojs/sitemap": "^3.7.0",
+    "astro": "^5.18.0",
     "marked": "^17.0.3",
-    "preact": "^10.25.4"
-  },
-  "devDependencies": {
-    "@preact/preset-vite": "^2.9.4",
-    "vite": "^6.1.0"
+    "preact": "^10.28.4"
   }
 }

@@ -1,16 +1,17 @@
 ---
-id: multi-canister
-name: Multi-Canister Architecture
+name: multi-canister
+title: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.0.1
+version: 3.1.1
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi, sharding]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -21,58 +22,65 @@ Splitting an IC application across multiple canisters for scaling, separation of
 - `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
-- Understanding of async/await and error handling
+- Understanding of `async`/`await` and error handling
+
+## How It Works
+
+A caller canister makes a call to a callee canister: the method name, arguments (payload) and attached cycles are packed into a canister request message, which is delivered to the callee after the caller blocks on `await`; the callee executes the request and produces a response; this is packed into a canister response message and delivered to the caller; the caller awakes fron the `await` and continues execution (executes the canister response message). The system may produce a reject response message if e.g. the callee is not found or some resource limit was reached.
+
+Calls may be unbounded wait (caller MUST wait until the callee produces a response) or bounded wait (caller MAY get a `SYS_UNKNOWN` response instead of the actual response after the call timeout expires or if the subnet runs low on resources). Request delivery is best-effort: the system may decide to reject any request instead of delivering it. Unbounded wait response (including reject response) delivery is guaranteed: the caller will always learn the outcome of the call. Bounded wait response delivery is best-effort: the caller may receive a system-generated `SYS_UNKNOWN` reject response (unknown outcome) instead of the actual response if the call timed out or some system resource was exhausted, whether or not the request was delivered to the callee.
 
 ## When to Use Multi-Canister
 
 | Reason | Threshold |
 |---|---|
 | Storage limits | Each canister: up to hundreds of GB stable memory + 4GB heap. If your data could exceed heap limits or benefit from partitioning, split storage across canisters. |
+| Scalable compute | Canisters are single-threaded actors. Sharding load across multiple canisters, potentially across multiple subnets, can significantly improve throughput. |
 | Separation of concerns | Auth service, content service, payment service as independent units. |
 | Independent upgrades | Upgrade the payments canister without touching the user canister. |
 | Access control | Different controllers for different canisters (e.g., DAO controls one, team controls another). |
-| Scaling reads | Multiple query canisters serving the same data for throughput. |
 
 **When NOT to use:** Simple apps with <1GB data. Single-canister is simpler, faster, and avoids inter-canister call overhead. Do not over-architect.
 
 ## Mistakes That Break Your Build
 
-1. **`ic_cdk::api::msg_caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::api::msg_caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
+1. **Request and response payloads are limited to 2 MB.** Because any canister call may be required to cross subnet boundaries; and cross-subnet (or XNet) messages (the request and response corresponding to each canister call) are inducted in (packaged into) 4 MB blocks; canister request and response payloads are limited to 2 MB. A call with a request payload above 2 MB will fail synchronously; and a response with a payload above 2 MB will trap. Chunk larger payloads into 1 MB chunks (to allow for any encoding overhead) and deliver them over multiple calls (e.g. chunked uploads or byte range queries).
+
+2. **Update methods that make calls are NOT executed atomically.** When an update method makes a call, the code before the `await` is one atomic message execution (i.e. the ingress message or canister request that invoked the update method); and the code after the `await` is a separate atomic message execution (the response to the call). In particular, if the update method traps after the `await`, any mutations before the `await` have already been persisted; and any mutations after the `await` will be rolled back. Design for eventual consistency or use a saga pattern.
+
+3. **Unbounded wait calls may prevent canister upgrades, indefinitely.** Unbounded wait calls may take arbitrarily long to complete: a malicious or incorrect callee may spin indefinitely without producing a response. Canisters cannot be stopped while awaiting responses to outstanding calls. Bounded wait calls avoid this issue by making sure that calls complete in a bounded time, independent of whether the callee responded or not.
+
+4. **Use idempotent APIs. Or provide a separate endpoint to query the outcome of a non-idempotent call.** If a call to a non-idempotent API times out, there must be another way for the caller to learn the outcome of the call (e.g. by attaching a unique ID to the original call and querying for the outcome of the call with that unique ID). Without a way to learn the outcome, when the caller receives a `SYS_UNKNOWN` response it may be unable to decide whether to continue, retry the call or abort.
+
+5. **Calls across subnet boundaries are slower than calls on the same subnet.** Under light subnet load, a call to a canister on the same subnet may complete and its response may be processed by the caller within a single round. The call latency only depends on how frequently the caller and callee are scheduled (which may be multiple times per round). A cross canister call requires 2-3 rounds either way (request delivery and response delivery), plus scheduler latency.
+
+6. **Calls across subnet boundaries have relatively low bandwidth.** Cross-subnet (or XNet) messages are inducted in (packaged into) 4 MB blocks once per round, along with any ingress messages and other XNet messages. Expect multiple MBs of messages to take multiple rounds to deliver, on top of the XNet latency. (Subnet-local messages are routed within the subnet, so they don't suffer from this bandwidth limitation).
+
+7. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry.
 
     ```rust
-    // WRONG (Rust) — caller() is wrong after await:
+    // Recommended (Rust) — capture caller before await:
     #[update]
     async fn do_thing() {
-        let _ = some_canister_call().await;
-        let who = ic_cdk::api::msg_caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
-    }
-
-    // CORRECT (Rust) — capture before await:
-    #[update]
-    async fn do_thing() {
-        let original_caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
+        let original_caller = ic_cdk::api::msg_caller(); // Defensive: capture before await
         let _ = some_canister_call().await;
         let who = original_caller; // Safe
     }
     ```
 
-2. **Circular inter-canister calls deadlock.** If canister A calls canister B, and B calls A in the same call chain, it deadlocks. The IC has no deadlock detection. Design call graphs as DAGs (directed acyclic graphs).
+8. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
 
-3. **Inter-canister calls are NOT atomic.** If canister A updates its state, then calls canister B, and B traps, A's state change is already committed. You cannot roll back. Design for eventual consistency or use a saga pattern.
+9. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed according to their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
 
-4. **Not handling rejected calls.** Inter-canister calls can fail (callee trapped, out of cycles, canister stopped). In Motoko use `try/catch`. In Rust, handle the `Result` from `ic_cdk::call`. Unhandled rejections trap your canister.
+10. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
-5. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed after their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
+11. **Shared types diverging between canisters.** If canister A expects `{ id: Nat; name: Text }` and canister B sends `{ id: Nat; title: Text }`, the call silently fails or traps. Use a shared types module imported by both canisters.
 
-6. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
+12. **Canister factory without enough cycles.** Creating a canister requires cycles. The management canister charges for creation and the initial cycle balance. If you do not attach enough cycles, creation fails.
 
-7. **Shared types diverging between canisters.** If canister A expects `{ id: Nat; name: Text }` and canister B sends `{ id: Nat; title: Text }`, the call silently fails or traps. Use a shared types module imported by both canisters.
+13. **`canister_inspect_message` is not called for inter-canister calls.** It only runs for ingress messages (from external users). Do not rely on it for access control between canisters. Use explicit principal checks instead.
 
-8. **Canister factory without enough cycles.** Creating a canister requires cycles. The management canister charges for creation and the initial cycle balance. If you do not attach enough, creation fails.
-
-9. **`canister_inspect_message` does not run for inter-canister calls.** It only runs for ingress messages (from external users). Do not rely on it for access control between canisters. Use explicit principal checks instead.
-
-10. **Not setting up `#[init]` and `#[post_upgrade]` in Rust.** Without a `post_upgrade` handler, canister upgrades may behave unexpectedly. Always define both.
+14. **Not setting up `#[init]` and `#[post_upgrade]` in Rust.** Without a `post_upgrade` handler, canister upgrades may behave unexpectedly. Always define both.
 
 ## Implementation
 
@@ -564,10 +572,10 @@ fn get_user_service_id() -> Principal {
     })
 }
 
-// CRITICAL: capture caller BEFORE any await
+// Defensive: capture caller before any await
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
-    // Capture caller BEFORE the await -- caller() is wrong after await
+    // Capture caller before the await as defensive practice
     let original_caller = ic_cdk::api::msg_caller();
 
     if original_caller == Principal::anonymous() {
@@ -835,7 +843,7 @@ fn get_child_canister(owner: Principal) -> Option<Principal> {
 
 ### Ordering
 
-1. Deploy shared dependencies first (e.g., user_service before content_service).
+1. Deploy shared dependencies first (e.g., `user_service` before `content_service`).
 2. Never change Candid interfaces in a breaking way. Add new fields as `opt` types.
 3. Test upgrades locally before mainnet.
 

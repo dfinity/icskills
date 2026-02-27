@@ -17,4 +17,4 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://dfinity.github.io/icskills/sitemap.xml
+Sitemap: https://dfinity.github.io/icskills/sitemap-index.xml

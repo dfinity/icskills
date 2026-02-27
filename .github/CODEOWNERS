@@ -1,12 +1,19 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
 
-# Default — Josh reviews everything
-* @JoshDFN
+* @JoshDFN @marc0olo @raymondk
+
+# Infra & build
+/.github/                        @JoshDFN @marc0olo @raymondk
+/.claude/                        @JoshDFN @marc0olo @raymondk
+/scripts/                        @JoshDFN @marc0olo @raymondk
+/src/                            @JoshDFN @marc0olo @raymondk
+package.json                     @JoshDFN @marc0olo @raymondk
 
 # Skill files — domain experts
-/skills/asset-canister/          @raymondk
-/skills/certified-variables/     @raymondk
+/skills/icp-cli/                 @dfinity/sdk
+/skills/asset-canister/          @dfinity/sdk
+/skills/certified-variables/     @dfinity/sdk
 /skills/ckbtc/                   @gregorydemay
 /skills/evm-rpc/                 @gregorydemay
 /skills/icrc-ledger/             @gregorydemay
@@ -15,5 +22,10 @@
 /skills/sns-launch/              @bjoernek
 /skills/https-outcalls/          @derlerd-dfinity
 /skills/multi-canister/          @derlerd-dfinity
-/skills/stable-memory/            @derlerd-dfinity
+/skills/stable-memory/           @derlerd-dfinity
 /skills/vetkd/                   @andreacerulli
+/skills/oisy-wallet-signer/      @AntonioVentilii
+/skills/ic-dashboard/            @jp-dfinity
+
+# Temporary override while we clean up the file structure
+* @JoshDFN @marc0olo @raymondk

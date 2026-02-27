@@ -1,65 +1,55 @@
 #!/usr/bin/env node
-// Generates public/.well-known/agent.json from skill directories
+// Generates public/.well-known/agent.json and ai-plugin.json from skill directories
 // Run: node scripts/generate-agent-json.js
 
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+import { ROOT, readAllSkills } from "./lib/parse-skill.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-const SKILLS_DIR = join(ROOT, "skills");
 const OUTPUT_DIR = join(ROOT, "public", ".well-known");
-const OUTPUT = join(OUTPUT_DIR, "agent.json");
+const AGENT_OUTPUT = join(OUTPUT_DIR, "agent.json");
+const PLUGIN_OUTPUT = join(OUTPUT_DIR, "ai-plugin.json");
 
-function parseFrontmatter(content) {
-  const match = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return null;
-  const data = {};
-  for (const line of match[1].split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    let val = line.slice(idx + 1).trim();
-    if (val.startsWith("[") && val.endsWith("]")) {
-      val = val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
-    } else if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-    data[key] = val;
-  }
-  return data;
-}
+const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
+const SITE = "https://dfinity.github.io/icskills";
 
-const dirs = readdirSync(SKILLS_DIR).filter((d) => {
-  try {
-    return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
-  } catch {
-    return false;
-  }
-}).sort();
-
-const skillIds = [];
-
-for (const dir of dirs) {
-  const content = readFileSync(join(SKILLS_DIR, dir, "SKILL.md"), "utf-8");
-  const meta = parseFrontmatter(content);
-  if (!meta || !meta.id) continue;
-  skillIds.push(meta.id);
-}
+const skillIds = readAllSkills()
+  .filter((s) => s.meta.name)
+  .map((s) => s.meta.name);
 
 const agentJson = {
   name: "IC Skills",
-  description: "Provides agent-readable skill files for Internet Computer (ICP) development. Retrieve structured markdown with pitfalls, working code, and deploy commands for any IC capability.",
-  url: "https://dfinity.github.io/icskills",
+  description:
+    "Provides agent-readable skill files for Internet Computer (ICP) development. Retrieve structured markdown with pitfalls, working code, and deploy commands for any IC capability.",
+  url: SITE,
   version: "1.0.0",
   capabilities: {
     skills: skillIds,
+  },
+  endpoints: {
+    list: `${SITE}/llms.txt`,
+    full: `${SITE}/llms-full.txt`,
+    skill: `${RAW}/skills/{name}/SKILL.md`,
   },
   defaultInputModes: ["text/plain"],
   defaultOutputModes: ["text/plain"],
 };
 
+const aiPlugin = {
+  schema_version: "v1",
+  name_for_human: "IC Skills",
+  name_for_model: "ic_skills",
+  description_for_human: `Agent-readable skill files for Internet Computer (ICP) development. Covers ${skillIds.length} capabilities including ckBTC, ICRC ledger, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more.`,
+  description_for_model: `Retrieve structured skill files for Internet Computer (ICP) development. Each skill is a markdown document with prerequisites, pitfalls, tested code blocks, and deploy commands. Use the raw GitHub URLs to inject skills directly into context. Available skills: ${skillIds.join(", ")}.`,
+  auth: {
+    type: "none",
+  },
+  logo_url: `${SITE}/favicon.svg`,
+  contact_email: "skills@internetcomputer.org",
+  legal_info_url: `${SITE}/`,
+};
+
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(OUTPUT, JSON.stringify(agentJson, null, 2) + "\n");
-console.log(`Generated agent.json (${skillIds.length} skills)`);
+writeFileSync(AGENT_OUTPUT, JSON.stringify(agentJson, null, 2) + "\n");
+writeFileSync(PLUGIN_OUTPUT, JSON.stringify(aiPlugin, null, 2) + "\n");
+console.log(`Generated agent.json + ai-plugin.json (${skillIds.length} skills)`);

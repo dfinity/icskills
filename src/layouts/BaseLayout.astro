@@ -1,0 +1,93 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  jsonLd?: string;
+}
+
+import { SITE_URL, BASE_PATH } from "../data/site";
+
+const {
+  title,
+  description = "Structured skill files for AI agents building on the Internet Computer. ckBTC, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more. Prevents hallucinations.",
+  canonicalUrl = `${SITE_URL}/`,
+  ogTitle = "IC Skills — Skills for agents, not docs for humans",
+  ogDescription = "Agent-readable skill files for every Internet Computer capability. Zero hallucinations. Paste the raw URL into Claude, Cursor, or any agent.",
+  jsonLd,
+} = Astro.props;
+
+const site = SITE_URL;
+const ogImage = `${site}/og-image.svg`;
+
+const defaultJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${site}/#website`,
+      "url": site,
+      "name": "IC Skills",
+      "description": "Agent-readable skill files for Internet Computer development. Structured markdown files that prevent AI hallucinations when building on ICP."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "IC Skills",
+      "url": site,
+      "applicationCategory": "DeveloperApplication",
+      "description": "A library of agent-readable skill files for Internet Computer (ICP) development.",
+      "keywords": "Internet Computer, ICP, DFINITY, Motoko, Rust, canister, agent, LLM, AI coding, icp-cli",
+      "license": "https://opensource.org/licenses/MIT",
+      "codeRepository": "https://github.com/dfinity/icskills",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+  ]
+});
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta name="keywords" content="Internet Computer, ICP, DFINITY, Motoko, Rust, canister, icp-cli, AI agent, LLM documentation, ckBTC, ICRC, Internet Identity, stable memory">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="IC Skills">
+  <link rel="canonical" href={canonicalUrl}>
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content={canonicalUrl}>
+  <meta property="og:title" content={ogTitle}>
+  <meta property="og:description" content={ogDescription}>
+  <meta property="og:image" content={ogImage}>
+  <meta property="og:site_name" content="IC Skills">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={ogTitle}>
+  <meta name="twitter:description" content={ogDescription}>
+  <meta name="twitter:image" content={ogImage}>
+
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href={`${BASE_PATH}/llms.txt`}>
+  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href={`${BASE_PATH}/llms-full.txt`}>
+
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" type="image/svg+xml" href={`${BASE_PATH}/favicon.svg`}>
+
+  <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script is:inline>
+    (function(){var t=localStorage.getItem('ic-skills-theme');if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})();
+  </script>
+  <slot />
+</body>
+</html>
