@@ -7,7 +7,6 @@ metadata:
   title: ICP CLI
   category: Infrastructure
   version: 1.0.0
-  endpoints: "10"
   status: stable
   dependencies: ""
 ---

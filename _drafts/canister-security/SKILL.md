@@ -7,7 +7,6 @@ metadata:
   title: Canister Security
   category: Security
   version: 1.0.0
-  endpoints: "5"
   status: stable
   dependencies: ""
 ---
