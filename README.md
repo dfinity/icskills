@@ -1,8 +1,8 @@
 # IC Skills
 
-🌐 **https://dfinity.github.io/icskills**
+**https://dfinity.github.io/icskills**
 
-> **⚠️ Under active development** — Skill files are being reviewed and signed off by DFINITY engineers. Content may change. Feedback and PRs are welcome.
+> **Under active development** — Skill files are being reviewed and signed off by DFINITY engineers. Content may change. Feedback and PRs are welcome.
 
 **Agent-readable instructions for every IC need.**
 
@@ -140,17 +140,8 @@ The files are plain markdown. Copy the content into whatever instructions, rules
 | All skills | [`llms-full.txt`](https://dfinity.github.io/icskills/llms-full.txt) | All skills concatenated for direct context injection |
 | Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md` | Raw markdown for one skill |
 | Agent discovery | [`.well-known/agent.json`](https://dfinity.github.io/icskills/.well-known/agent.json) | Machine-readable skill manifest |
-
-## REST API (Planned)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /skills` | List all skills with metadata |
-| `GET /skills/{id}` | Full structured skill data |
-| `GET /skills/{id}/raw` | Raw SKILL.md for direct context injection |
-| `GET /skills/{id}/deps` | Dependency tree |
-| `GET /skills/search?q={query}` | Search by task description |
-| `GET /skills/{id}/pitfalls` | Just the pitfalls (guardrails only) |
+| Skill page (HTML) | [`/skills/{id}/`](https://dfinity.github.io/icskills/skills/ckbtc/) | Pre-rendered skill page with full SEO |
+| Skill page (MD) | [`/skills/{id}.md`](https://dfinity.github.io/icskills/skills/ckbtc.md) | Raw markdown served with `text/markdown` content type |
 
 ## Contributing
 
@@ -160,11 +151,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 
 ## Tech Stack
 
-- **Site**: [Preact](https://preactjs.com/) + [Vite](https://vite.dev/) — 3kb runtime, ~16kb gzipped total
+- **Site**: [Astro](https://astro.build/) — static site generator, zero JS by default. Interactive islands with [Preact](https://preactjs.com/) (~18kb gzipped total)
 - **Hosting**: GitHub Pages via Actions
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
 - **Validation**: Structural linter for frontmatter, sections, and dependency graph (`npm run validate`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
+- **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
+- **AI Agent Discovery**: `llms.txt`, `llms-full.txt`, `.well-known/agent.json`, `.well-known/ai-plugin.json`, per-skill `.md` endpoints
 
 ## License
 

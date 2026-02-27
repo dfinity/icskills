@@ -3,3 +3,5 @@ dist
 .DS_Store
 *.local
 src/skills-data.js
+.astro
+lighthouse-*

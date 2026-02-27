@@ -1,0 +1,239 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { loadAllSkills } from "../../data/skills";
+import { FRAMEWORKS, FW_LIGHT_COLORS } from "../../data/constants";
+
+const skills = loadAllSkills();
+
+// SVG icon markup for each framework — static versions of FrameworkIcon from Icons.tsx
+const FRAMEWORK_SVGS: Record<string, string> = {
+  "Claude": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>`,
+  "ChatGPT": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.14-.08 4.778-2.758a.795.795 0 0 0 .393-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.677l5.814 3.354-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.856L13.104 8.364l2.015-1.164a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zM8.307 12.863l-2.02-1.164a.08.08 0 0 1-.038-.057V6.074a4.5 4.5 0 0 1 7.376-3.454l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.098-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>`,
+  "Cursor": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0" fill="currentColor" opacity="0.15"/><path d="M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" fill="currentColor"/></svg>`,
+  "Devin": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M8 12H16M12 8V16" stroke-linecap="round"/></svg>`,
+  "Copilot": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256zm-9.422 1.258c.549 0 1-.451 1-1v-2c0-.549-.451-1-1-1-.549 0-1 .451-1 1v2c0 .549.451 1 1 1zm-5 0c.549 0 1-.451 1-1v-2c0-.549-.451-1-1-1-.549 0-1 .451-1 1v2c0 .549.451 1 1 1z"/></svg>`,
+  "Windsurf": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.55 5.067c-1.204-.002-2.181.973-2.181 2.177v4.867c0 .972-.803 1.76-1.76 1.76-.568 0-1.135-.286-1.472-.766l-4.971-7.1c-.413-.59-1.084-.941-1.81-.941-1.134 0-2.154.964-2.154 2.153v4.896c0 .972-.797 1.76-1.76 1.76-.57 0-1.136-.286-1.473-.766L.408 5.16C.282 4.98 0 5.069 0 5.288v4.245c0 .215.066.423.188.6l5.475 7.818c.323.462.8.805 1.351.93 1.377.313 2.644-.747 2.644-2.098v-4.893c0-.972.788-1.76 1.76-1.76h.003c.57 0 1.136.286 1.472.766l4.972 7.1c.414.59 1.05.94 1.81.94 1.158 0 2.151-.964 2.151-2.153v-4.895c0-.972.788-1.759 1.76-1.759h.194a.22.22 0 0 0 .22-.22V5.287a.22.22 0 0 0-.22-.22z"/></svg>`,
+  "Claude Code": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6L3 12L8 18"/><path d="M16 6L21 12L16 18"/><path d="M14 4L10 20" opacity="0.5"/></svg>`,
+  "OpenCode": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17L10 11L4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+  "OpenClaw": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.5v-2c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3v-2l4 3.5-4 3.5v-1zm6-4.5c0-1.66-1.34-3-3-3v2l-4-3.5L14 5v1c2.76 0 5 2.24 5 5h-2z"/></svg>`,
+  "Your Agent": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>`,
+};
+
+// Pre-compute framework data with CSS variable names for light-mode color swapping
+const frameworksWithVars = FRAMEWORKS.map((fw, i) => ({
+  ...fw,
+  cssVar: `--fw-color-${i}`,
+  darkColor: fw.color,
+  lightColor: FW_LIGHT_COLORS[fw.name] || fw.color,
+  svg: FRAMEWORK_SVGS[fw.name] || "",
+}));
+
+const steps = [
+  { num: "01", title: "Agent fetches skill", code: "GET /api/v1/skills/ckbtc", colorVar: "accent", rgbVar: "accent-rgb",
+    desc: "Agent identifies what it needs to build and pulls the right skill from the API" },
+  { num: "02", title: "Reads instructions", code: "{ pitfalls, steps, verify }", colorVar: "accent-blue", rgbVar: "blue-rgb",
+    desc: "Gets structured steps, working code, known pitfalls, and verification checks" },
+  { num: "03", title: "Builds correctly", code: "\u2713 deployed & verified", colorVar: "green", rgbVar: "green-rgb",
+    desc: "Executes with zero hallucinations because every detail is precise and tested" },
+];
+
+const beforeItems = [
+  "Agent guesses canister IDs",
+  "Hallucinated Motoko syntax",
+  "Outdated CLI commands",
+  "No idea about cycles or fees",
+  "Broken deploys, wasted time",
+  "Human has to fix everything",
+];
+
+const afterItems = [
+  "Exact canister IDs from skill",
+  "Tested, working code templates",
+  "Current icp-cli commands, verified",
+  "Fees and cycles handled correctly",
+  "Deploys work first try",
+  "Agent ships autonomously",
+];
+
+const anatomy = [
+  { section: "What this is", colorVar: "accent-text", rgbVar: "accent-text-rgb",
+    preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
+    tag: "1 paragraph" },
+  { section: "Prerequisites", colorVar: "accent-blue", rgbVar: "blue-rgb",
+    preview: "icp-cli >= 0.1.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
+    tag: "exact versions" },
+  { section: "\u26A0 Common Agent Mistakes", colorVar: "yellow", rgbVar: "yellow-rgb",
+    preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",
+    tag: "guardrails" },
+  { section: "Step-by-step Instructions", colorVar: "green", rgbVar: "green-rgb",
+    preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer \u2192 5. Deploy",
+    tag: "tested code" },
+  { section: "Verification", colorVar: "accent", rgbVar: "accent-rgb",
+    preview: "\u2713 icp canister call ckbtc_ledger icrc1_balance_of \u2192 returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
+    tag: "confirm it works" },
+];
+---
+
+<SiteLayout
+  title="How It Works — IC Skills"
+  description="How agent-readable skill files prevent hallucinations and enable AI agents to build on the Internet Computer correctly."
+  canonicalUrl="https://dfinity.github.io/icskills/how-it-works/"
+  activeTab="how-it-works"
+  maxWidth="960px"
+>
+  <!-- Hero -->
+  <div style="text-align:center;margin-bottom:72px;">
+    <h2 style="font-size:clamp(36px,6vw,56px);font-weight:800;color:var(--text-primary);letter-spacing:-0.05em;margin:0 0 20px 0;line-height:1.05;">
+      <span style="color:var(--text-faint);">Docs are for humans.</span><br />
+      <span style="background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Skills are for agents.</span>
+    </h2>
+    <p style="font-size:16px;color:var(--text-faint);max-width:500px;margin:0 auto;line-height:1.7;font-family:'Inter',system-ui,sans-serif;">
+      One API call. Structured instructions. Zero hallucinations.
+    </p>
+  </div>
+
+  <!-- 3-step flow -->
+  <div class="step-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:72px;">
+    {steps.map(({ num, title, code, colorVar, rgbVar, desc }) => (
+      <div class="step-card" style={`padding:32px 24px;background:rgba(var(--${rgbVar}),0.04);border-top:2px solid var(--${colorVar});position:relative;`}>
+        <div style={`font-size:48px;font-weight:900;color:var(--${colorVar});opacity:0.12;position:absolute;top:16px;right:16px;line-height:1;`}>{num}</div>
+        <div style={`font-size:11px;font-weight:700;color:var(--${colorVar});letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;`}>Step {num}</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px;margin-bottom:8px;">{title}</div>
+        <code style={`display:inline-block;padding:4px 10px;background:var(--bg-code);border-radius:4px;font-size:11px;color:var(--${colorVar});margin-bottom:12px;`}>{code}</code>
+        <p style="font-size:13px;color:var(--text-faint);line-height:1.6;margin:0;font-family:'Inter',system-ui,sans-serif;">{desc}</p>
+      </div>
+    ))}
+  </div>
+
+  <!-- Before / After comparison -->
+  <div style="margin-bottom:72px;">
+    <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">What changes</div>
+
+    <div class="comparison-grid" style="display:grid;grid-template-columns:1fr 48px 1fr;gap:0;align-items:stretch;">
+      <!-- Before -->
+      <div class="comparison-panel" style="padding:32px;background:rgba(var(--red-rgb),0.03);border:1px solid rgba(var(--red-rgb),0.1);border-radius:16px 0 0 16px;">
+        <div style="font-size:28px;font-weight:900;color:rgba(var(--red-rgb),0.2);margin-bottom:20px;letter-spacing:-1px;">Before</div>
+        {beforeItems.map((text, i) => (
+          <div style={`display:flex;align-items:center;gap:12px;padding:10px 0;${i < 5 ? `border-bottom:1px solid rgba(var(--red-rgb),0.06);` : ""}`}>
+            <span style="color:rgba(var(--red-rgb),0.4);font-size:14px;">{"\u25CC"}</span>
+            <span style="font-size:13px;color:var(--text-muted);font-family:'Inter',system-ui,sans-serif;">{text}</span>
+          </div>
+        ))}
+      </div>
+
+      <!-- Arrow -->
+      <div style="display:flex;align-items:center;justify-content:center;background:var(--bg-arrow);">
+        <div style="font-size:24px;color:var(--text-phantom);transform:scaleX(1.5);">{"\u2192"}</div>
+      </div>
+
+      <!-- After -->
+      <div class="comparison-panel" style="padding:32px;background:rgba(var(--accent-rgb),0.04);border:1px solid rgba(var(--accent-rgb),0.15);border-radius:0 16px 16px 0;">
+        <div style="font-size:28px;font-weight:900;background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;letter-spacing:-1px;">After</div>
+        {afterItems.map((text, i) => (
+          <div style={`display:flex;align-items:center;gap:12px;padding:10px 0;${i < 5 ? `border-bottom:1px solid rgba(var(--accent-rgb),0.08);` : ""}`}>
+            <span style="color:var(--accent);font-size:10px;">{"\u25C6"}</span>
+            <span style="font-size:13px;color:var(--text-secondary);font-family:'Inter',system-ui,sans-serif;">{text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill anatomy -->
+  <div style="margin-bottom:72px;">
+    <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">Anatomy of a skill</div>
+
+    <div class="anatomy-table" style="border:1px solid rgba(var(--accent-rgb),0.15);border-radius:16px;overflow:hidden;">
+      {anatomy.map((item, i, arr) => (
+        <div class="anatomy-row" style={`display:grid;grid-template-columns:minmax(100px,200px) 1fr auto;${i < arr.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : ""}align-items:center;`}>
+          <div style={`padding:20px 24px;font-size:13px;font-weight:700;color:var(--${item.colorVar});border-right:1px solid var(--border-subtle);`}>{item.section}</div>
+          <div style="padding:20px 24px;font-size:12px;color:var(--text-muted);font-family:'Inter',system-ui,sans-serif;line-height:1.5;">{item.preview}</div>
+          <div style="padding:20px 24px;text-align:right;">
+            <span style={`font-size:9px;padding:3px 10px;background:rgba(var(--${item.rgbVar}),0.08);border:1px solid rgba(var(--${item.rgbVar}),0.2);border-radius:4px;color:var(--${item.colorVar});text-transform:uppercase;letter-spacing:1px;white-space:nowrap;`}>{item.tag}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Terminal code example -->
+  <div style="margin-bottom:72px;">
+    <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">Any agent, any framework</div>
+
+    <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(var(--blue-rgb),0.15);">
+      <div style="padding:12px 20px;background:rgba(var(--accent-rgb),0.04);border-bottom:1px solid rgba(var(--accent-rgb),0.08);display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-red);"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-yellow);"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-green);"></div>
+        <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">agent.js</span>
+      </div>
+      <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;"><span>// 1. Agent decides it needs ckBTC integration
+</span><span style="color:var(--accent-blue);">const skill = await fetch(
+  "https://dfinity.github.io/icskills/api/v1/skills/ckbtc"
+);
+</span><span>
+// 2. Gets back structured instructions
+</span><span style="color:var(--accent-text);">const {"{"} pitfalls, steps, code_templates, verification {"}"} =
+  await skill.json();
+</span><span>
+// 3. Pitfalls prevent hallucination
+</span><span style="color:var(--yellow);">// Agent now knows:
+// - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai
+// - Fee is 10 satoshis (not 0)
+// - Must use subaccounts for deposits
+</span><span>
+// 4. Agent executes with tested code
+</span><span style="color:var(--green);">// → Deploys correctly on first try
+// → Runs verification checks
+// → Ships autonomously</span></pre>
+    </div>
+
+    <!-- Framework logos grid -->
+    <div class="frameworks-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:24px;">
+      {frameworksWithVars.map((fw) => (
+        <div class="framework-card" style="padding:16px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;transition:all 0.2s;">
+          <div class="fw-icon-box" style={`width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(${fw.cssVar});background:color-mix(in srgb, var(${fw.cssVar}) 6%, transparent);border:1px solid color-mix(in srgb, var(${fw.cssVar}) 15%, transparent);`}>
+            <Fragment set:html={fw.svg} />
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">{fw.name}</div>
+            <div style="font-size:11px;color:var(--text-ghost);">{fw.note}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Bottom CTA -->
+  <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid rgba(var(--accent-rgb),0.1);">
+    <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">The first chain agents can actually build on.</div>
+    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Structured skill files that prevent hallucinations. One API call away.</p>
+    <code style="display:inline-block;padding:12px 24px;background:var(--bg-code);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:8px;font-size:13px;color:var(--accent-text);">dfinity.github.io/icskills/api/v1/skills</code>
+  </div>
+</SiteLayout>
+
+<style is:global>
+  /* Framework icon colors — dark mode (default) uses fw.color */
+  :root {
+    --fw-color-0: #D97757;  /* Claude */
+    --fw-color-1: #10a37f;  /* ChatGPT */
+    --fw-color-2: #ffffff;  /* Cursor */
+    --fw-color-3: #9F7AEA;  /* Devin */
+    --fw-color-4: #0078D4;  /* Copilot */
+    --fw-color-5: #06B6D4;  /* Windsurf */
+    --fw-color-6: #D97757;  /* Claude Code */
+    --fw-color-7: #00DC82;  /* OpenCode */
+    --fw-color-8: #EF4444;  /* OpenClaw */
+    --fw-color-9: #fbbf24;  /* Your Agent */
+  }
+
+  /* Light mode overrides — swap colors that are invisible on white */
+  [data-theme="light"] {
+    --fw-color-2: #1a1a2e;  /* Cursor: white -> dark */
+    --fw-color-3: #7c3aed;  /* Devin: slightly darker purple */
+    --fw-color-5: #0891b2;  /* Windsurf: darker cyan */
+    --fw-color-7: #059669;  /* OpenCode: darker green */
+    --fw-color-8: #dc2626;  /* OpenClaw: darker red */
+    --fw-color-9: #d97706;  /* Your Agent: darker amber */
+  }
+</style>
