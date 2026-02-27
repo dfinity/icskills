@@ -1,6 +1,6 @@
 ---
-id: <skill-id>
-name: "<Display Name>"
+name: <skill-name>
+title: "<Display Name>"
 category: <CategoryName>
 description: "<One sentence. When should an agent load this skill? What does it cover?>"
 endpoints: 1

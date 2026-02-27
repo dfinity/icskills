@@ -1,10 +1,10 @@
 ---
-id: https-outcalls
-name: HTTPS Outcalls
+name: https-outcalls
+title: HTTPS Outcalls
 category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
 endpoints: 4
-version: 1.5.2
+version: 1.5.3
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]

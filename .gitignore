@@ -1,5 +1,11 @@
 node_modules
 dist
 .DS_Store
+.vscode/
+.idea/
 *.local
-src/skills-data.js
+public/.well-known/
+public/llms.txt
+public/llms-full.txt
+.astro
+lighthouse-*

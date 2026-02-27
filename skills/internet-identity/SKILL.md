@@ -1,10 +1,10 @@
 ---
-id: internet-identity
-name: Internet Identity Auth
+name: internet-identity
+title: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into your app. Enable users to sign in securely."
 endpoints: 6
-version: 1.9.1
+version: 5.0.4
 status: stable
 dependencies: [ii]
 requires: [icp-sdk/icp-cli, icp-sdk/ic-wasm, icp-sdk/auth >= 4.0.1]

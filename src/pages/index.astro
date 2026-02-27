@@ -1,0 +1,14 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import BrowseTab from "../components/BrowseTab";
+import { loadAllSkills } from "../data/skills";
+
+const skills = loadAllSkills();
+---
+
+<SiteLayout
+  title="IC Skills — Agent-Readable Documentation for Internet Computer"
+  activeTab="browse"
+>
+  <BrowseTab client:load skills={skills} />
+</SiteLayout>

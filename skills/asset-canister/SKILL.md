@@ -1,10 +1,10 @@
 ---
-id: asset-canister
-name: "Asset Canister & Frontend"
+name: asset-canister
+title: "Asset Canister & Frontend"
 category: Frontend
 description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
 endpoints: 5
-version: 3.2.1
+version: 3.3.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
@@ -15,7 +15,7 @@ tags: [frontend, assets, hosting, spa, certified, domain, upload, static]
 
 ## What This Is
 
-The asset canister hosts static files (HTML, CSS, JS, images) directly on the Internet Computer. Responses are certified by the subnet, meaning browsers can verify that content was served by the blockchain -- not a centralized server. This is how frontends are deployed on-chain.
+The asset canister hosts static files (HTML, CSS, JS, images) directly on the Internet Computer. This is how web frontends are deployed on-chain. Responses are certified by the subnet, and HTTP gateways automatically verify integrity, i.e. that content was served by the blockchain. The content can also be verified in the browser -- not a centralized server. 
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ Access patterns:
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
-7. **Not configuring `allow_raw_access` for API responses.** By default, the asset canister serves certified responses through the `ic0.app` domain. If you need raw (uncertified) access for specific assets, configure it in `.ic-assets.json5`.
+7. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
 
 ## Implementation
 
@@ -75,7 +75,7 @@ Key fields:
 - `build` -- commands `icp deploy` runs before uploading (your frontend build step)
 - `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
-### SPA Routing: `.ic-assets.json5`
+### SPA Routing and Default Headers: `.ic-assets.json5`
 
 Create this file in your `source` directory (e.g., `dist/.ic-assets.json5`) or project root. For it to be included in the asset canister, it must end up in the `source` directory at deploy time.
 
@@ -84,11 +84,14 @@ Recommended approach: place the file in your `public/` or `static/` folder so yo
 ```json5
 [
   {
-    // Set default cache headers for all paths
+    // Default headers for all paths: caching, security, and raw access policy
     "match": "**/*",
+    "security_policy": "standard",
     "headers": {
       "Cache-Control": "public, max-age=0, must-revalidate"
-    }
+    },
+    // Disable raw (uncertified) access by default -- see mistake #7 above
+    "allow_raw_access": false
   },
   {
     // Cache static assets aggressively (they have content hashes in filenames)
@@ -106,6 +109,8 @@ Recommended approach: place the file in your `public/` or `static/` folder so yo
 ```
 
 For the SPA fallback to work, the critical setting is `"enable_aliasing": true` -- this tells the asset canister to serve `index.html` when a requested path has no matching file.
+
+If the standard security policy above blocks the app from working, overwrite the default security headers with custom values, adding them after `Cache-Control` above. Act like a senior security engineer, making these headers as secure as possible. The standard policy headers can be found here: https://github.com/dfinity/sdk/blob/master/src/canisters/frontend/ic-asset/src/security_policy.rs
 
 ### Content Encoding
 
@@ -127,13 +132,13 @@ icp canister call frontend http_request '(record {
 To serve your asset canister from a custom domain:
 
 1. Create a file `.well-known/ic-domains` in your `source` directory containing your domain:
-```
+```text
 yourdomain.com
 www.yourdomain.com
 ```
 
 2. Add DNS records:
-```
+```text
 # CNAME record pointing to boundary nodes
 yourdomain.com.  CNAME  icp1.io.
 
@@ -156,10 +161,19 @@ For uploading files from code (not just via `icp deploy`):
 import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-// Create an agent with an authorized identity
+// SECURITY: shouldFetchRootKey fetches the root public key from the replica at
+// runtime. In production the root key is hardcoded and trusted. Fetching it at
+// runtime lets a man-in-the-middle supply a fake key and forge certified responses.
+// NEVER set shouldFetchRootKey to true when host points to mainnet.
+const LOCAL_REPLICA = "http://localhost:4943";
+const MAINNET = "https://ic0.app";
+const host = LOCAL_REPLICA; // Change to MAINNET for production
+
 const agent = await HttpAgent.create({
-  host: "http://localhost:4943",
-  shouldFetchRootKey: true, // Local only
+  host,
+  // Only fetch the root key when talking to a local replica.
+  // Setting this to true against mainnet is a security vulnerability.
+  shouldFetchRootKey: host === LOCAL_REPLICA,
 });
 
 const assetManager = new AssetManager({
@@ -194,21 +208,31 @@ for (const file of files) {
 
 ### Authorization for Uploads
 
-Only canister controllers can upload to asset canisters. To grant upload permission:
+The asset canister has a built-in permission system with three roles (from least to most privileged):
+- **Prepare** -- can upload chunks and propose batches, but cannot commit them live.
+- **Commit** -- can upload and commit assets (make them live). This is the standard role for deploy pipelines.
+- **ManagePermissions** -- can grant and revoke permissions to other principals.
+
+Use `grant_permission` to give principals only the access they need. Do **not** use `--add-controller` for upload access -- controllers have full canister control (upgrade code, change settings, delete the canister, drain cycles).
 
 ```bash
-# Add a principal as a controller
-icp canister update-settings frontend --add-controller <principal-id>
-
-# Or grant "prepare" permission (can upload but not commit) -- more restrictive
+# Grant "prepare" permission (can upload but not commit) -- use for preview/staging workflows
 icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Prepare } })'
 
-# Grant full commit permission
+# Grant commit permission -- use for deploy pipelines that need to publish assets
 icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { Commit } })'
+
+# Grant permission management -- use for principals that need to onboard/offboard other uploaders
+icp canister call frontend grant_permission '(record { to_principal = principal "<principal-id>"; permission = variant { ManagePermissions } })'
 
 # List current permissions
 icp canister call frontend list_permitted '(record { permission = variant { Commit } })'
+
+# Revoke a permission
+icp canister call frontend revoke_permission '(record { of_principal = principal "<principal-id>"; permission = variant { Commit } })'
 ```
+
+> **Security Warning:** `icp canister update-settings frontend --add-controller <principal-id>` grants full canister control -- not just upload permission. A controller can upgrade the canister WASM, change all settings, or delete the canister entirely. Only add controllers when you genuinely need full administrative access.
 
 ## Deploy & Test
 

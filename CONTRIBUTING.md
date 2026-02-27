@@ -25,10 +25,10 @@ npm ci    # Install dependencies
 ### 1. Create the skill directory
 
 ```
-skills/<skill-id>/SKILL.md
+skills/<skill-name>/SKILL.md
 ```
 
-Use a short, lowercase, hyphenated ID (e.g., `ckbtc`, `https-outcalls`, `stable-memory`). The ID must match the directory name.
+Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stable-memory`). The name must match the directory name. This aligns with the [Agent Skills spec](https://agentskills.io/specification).
 
 A template is available at `skills/_template/SKILL.md.template` — copy it as your starting point.
 
@@ -40,8 +40,8 @@ Every skill file has YAML frontmatter followed by a markdown body. The frontmatt
 
 ```yaml
 ---
-id: <skill-id>
-name: "Display Name"
+name: <skill-name>
+title: "Display Name"
 category: CategoryName
 description: "One sentence. When should an agent load this skill? What does it cover?"
 endpoints: 5
@@ -59,14 +59,14 @@ See `skills/skill.schema.json` for the formal schema.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | yes | Lowercase, hyphenated identifier. Must match the directory name. |
-| `name` | yes | Human-readable display name. |
+| `name` | yes | Lowercase, hyphenated identifier. Must match the directory name. Aligns with the [Agent Skills spec](https://agentskills.io/specification). |
+| `title` | yes | Human-readable display name. |
 | `category` | yes | One of the predefined categories (see below). |
 | `description` | yes | One sentence. Describes when an agent should load this skill. |
 | `endpoints` | yes | Number of distinct canister methods or external API operations documented in the Implementation section. |
 | `version` | yes | Semantic version (`major.minor.patch`). |
 | `status` | yes | `stable` (production-ready) or `beta` (API may change). |
-| `dependencies` | recommended | Array of skill IDs this skill depends on. Use `[]` if none. |
+| `dependencies` | recommended | Array of skill names this skill depends on. Use `[]` if none. |
 | `requires` | recommended | Tool/package dependencies with version constraints (e.g., `icp-cli >= 0.1.0`). |
 | `tags` | recommended | Keywords for agent discovery. Lowercase, hyphenated. |
 
@@ -108,16 +108,14 @@ Concrete commands to confirm the implementation is correct.
 
 ```bash
 npm run validate     # Check frontmatter, sections, dependency graph
-npm run generate     # Regenerate public/ files (llms.txt, agent.json, etc.)
+npm run generate     # Regenerate README skills table
 ```
 
-Both commands run automatically in CI. The deploy pipeline verifies that committed files in `public/` match what `npm run generate` produces — if they're out of date, CI will reject the PR.
-
-**Commit the updated `public/` files** alongside your SKILL.md changes.
+Both commands run automatically in CI. Validate blocks deployment on errors. The deploy pipeline verifies that the README skills table matches what `npm run generate` produces — if it's out of date, CI will reject the PR.
 
 ### 4. That's it — the website auto-discovers skills
 
-The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit `app.jsx` or any other source file. The build script (`scripts/generate-skills.js`) scans all `skills/*/SKILL.md` files, parses their frontmatter, and generates the data the site uses.
+The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, `agent.json`, and other discovery files.
 
 Stats (skill count, operations, categories) all update automatically.
 
@@ -144,7 +142,7 @@ Stats (skill count, operations, categories) all update automatically.
 
 1. Edit the `SKILL.md` content
 2. Bump the `version` in the frontmatter
-3. Run `npm run validate && npm run generate` and commit the updated `public/` files
+3. Run `npm run validate && npm run generate` and commit the updated `README.md`
 4. Submit a PR with a summary of what changed
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
