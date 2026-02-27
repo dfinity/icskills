@@ -62,7 +62,6 @@ export default function BrowseTab({ skills }: Props) {
           {[
             { val: skills.length, label: "Skills" },
             { val: TOTAL_ENDPOINTS, label: "Operations" },
-            { val: "5", label: "Endpoints" },
             { val: "0", label: "Hallucinations" },
           ].map(({ val, label }) => (
             <div key={label}>
