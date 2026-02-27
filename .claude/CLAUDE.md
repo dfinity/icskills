@@ -4,9 +4,8 @@ This repository contains agent-readable skill files for the Internet Computer. E
 
 ## Key Rules
 
-- **Never edit `src/skills-data.js`** — it is auto-generated and gitignored
 - **Never edit auto-generated files in `public/`** — `llms.txt`, `llms-full.txt`, `.well-known/agent.json`, `.well-known/ai-plugin.json` are all regenerated from SKILL.md sources. These files ARE committed to git (not gitignored) but must only be updated by running `npm run generate`. Note: `sitemap.xml` is generated at build time into `dist/` and is NOT committed.
-- **Never edit `src/app.jsx` to add or update a skill** — the website auto-discovers skills from SKILL.md frontmatter. Only edit app.jsx for site-level UI changes.
+- **Never edit Astro source files to add or update a skill** — the website auto-discovers skills from SKILL.md frontmatter at build time. Only edit `src/` files for site-level UI changes.
 - **One skill = one file** at `skills/<skill-id>/SKILL.md`. No nested directories, no images, no external dependencies within a skill.
 - Skill IDs are **lowercase, hyphenated** (e.g., `ckbtc`, `https-outcalls`, `stable-memory`) and must match the directory name.
 
@@ -38,8 +37,8 @@ Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/ski
 npm install          # Install dependencies
 npm run validate     # Validate all skills (frontmatter, sections, deps)
 npm run generate     # Regenerate all auto-generated files from SKILL.md sources
-npm run dev          # Validate + generate + start Vite dev server
-npm run build        # Validate + generate + production build
+npm run dev          # Validate + start Astro dev server
+npm run build        # Validate + generate + Astro production build
 ```
 
 ## Workflow
@@ -65,15 +64,39 @@ Both run in CI. Validate blocks deployment on errors. Generate output is checked
 
 DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure, Wallet
 
+## Tech Stack
+
+- **Framework**: [Astro](https://astro.build/) — static site generator, zero JS by default
+- **Interactive islands**: [Preact](https://preactjs.com/) — search, filters, copy buttons, theme toggle
+- **Hosting**: GitHub Pages via Actions at `https://dfinity.github.io/icskills/`
+- **Skills**: Plain markdown files in `skills/*/SKILL.md`
+
 ## Project Structure
 
 ```
-skills/*/SKILL.md           # Skill source files (the content)
-skills/skill.schema.json    # JSON Schema for frontmatter
-skills/_template/            # Skeleton for new skills
-scripts/lib/parse-skill.js  # Shared parsing utilities
-scripts/generate-*.js       # Build-time generation scripts
-scripts/validate-skills.js  # Structural validation (CI)
-src/app.jsx                 # Website (auto-discovers skills from frontmatter)
-public/                     # Auto-generated files (committed, but never edit manually)
+skills/*/SKILL.md             # Skill source files (the content)
+skills/skill.schema.json      # JSON Schema for frontmatter
+skills/_template/              # Skeleton for new skills
+scripts/lib/parse-skill.js    # Shared parsing utilities
+scripts/generate-*.js         # Build-time generation scripts
+scripts/validate-skills.js    # Structural validation (CI)
+src/                           # Astro site source
+  data/skills.ts              # Build-time skill loader
+  data/constants.ts           # Static data (API endpoints, frameworks)
+  data/site.ts                # Site URL and base path config
+  layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
+  layouts/SiteLayout.astro    # Shared header/nav/footer for main pages
+  components/BrowseTab.tsx    # Preact island: search + skill grid
+  components/ApiTab.tsx       # Preact island: API reference
+  components/SkillHeader.tsx  # Preact island: skill detail header
+  pages/index.astro           # Browse page
+  pages/how-it-works/         # How it works page (fully static)
+  pages/api/                  # API reference page
+  pages/skills/[slug]/        # Dynamic skill pages (pre-rendered)
+  pages/skills/[slug].md.ts   # Raw .md endpoint per skill
+  pages/llms.txt.ts           # Skills index for agents
+  pages/llms-full.txt.ts      # All skills concatenated
+  pages/.well-known/          # Agent discovery manifests
+public/                        # Auto-generated files (committed, but never edit manually)
+astro.config.mjs              # Astro configuration
 ```
