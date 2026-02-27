@@ -57,7 +57,7 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 | [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
 | [SNS DAO Launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap. |
 | [Stable Memory & Upgrades](skills/stable-memory/SKILL.md) | Architecture | Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data. |
-| [vetKD Encryption](skills/vetkd/SKILL.md) | Security | Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns. |
+| [vetKeys](skills/vetkd/SKILL.md) | Security | Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns. |
 <!-- SKILLS-TABLE-END -->
 
 ## Usage
