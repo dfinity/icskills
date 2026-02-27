@@ -26,3 +26,6 @@ package.json                     @JoshDFN @marc0olo @raymondk
 /skills/vetkd/                   @andreacerulli
 /skills/oisy-wallet-signer/      @AntonioVentilii
 /skills/ic-dashboard/            @jp-dfinity
+
+# Temporary override while we clean up the file structure
+* @JoshDFN @marc0olo @raymondk
