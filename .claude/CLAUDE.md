@@ -1,20 +1,20 @@
 # IC Skills — Agent Instructions for Contributors
 
-This repository contains agent-readable skill files for the Internet Computer. Each skill is a single markdown file at `skills/<skill-id>/SKILL.md`.
+This repository contains agent-readable skill files for the Internet Computer. Each skill is a single markdown file at `skills/<skill-name>/SKILL.md`.
 
 ## Key Rules
 
 - **Never edit auto-generated files in `public/`** — `llms.txt`, `llms-full.txt`, `.well-known/agent.json`, `.well-known/ai-plugin.json` are all regenerated from SKILL.md sources. These files ARE committed to git (not gitignored) but must only be updated by running `npm run generate`. Note: `sitemap.xml` is generated at build time into `dist/` and is NOT committed.
 - **Never edit Astro source files to add or update a skill** — the website auto-discovers skills from SKILL.md frontmatter at build time. Only edit `src/` files for site-level UI changes.
-- **One skill = one file** at `skills/<skill-id>/SKILL.md`. No nested directories, no images, no external dependencies within a skill.
-- Skill IDs are **lowercase, hyphenated** (e.g., `ckbtc`, `https-outcalls`, `stable-memory`) and must match the directory name.
+- **One skill = one file** at `skills/<skill-name>/SKILL.md`. No nested directories, no images, no external dependencies within a skill.
+- Skill names are **lowercase, hyphenated** (e.g., `ckbtc`, `https-outcalls`, `stable-memory`) and must match the directory name. This aligns with the [Agent Skills spec](https://agentskills.io/specification).
 
 ## Skill File Structure
 
 Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema and `skills/_template/SKILL.md.template` for a ready-to-copy skeleton.
 
 ### Required frontmatter fields
-`id`, `name`, `category`, `description`, `version`, `endpoints`, `status`
+`name`, `title`, `category`, `description`, `version`, `endpoints`, `status`
 
 ### Recommended frontmatter fields
 `dependencies`, `requires`, `tags` — validator warns if missing but does not block

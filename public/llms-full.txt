@@ -8,12 +8,12 @@ Skills: 13
 ---
 
 ---
-id: asset-canister
-name: "Asset Canister & Frontend"
+name: asset-canister
+title: "Asset Canister & Frontend"
 category: Frontend
 description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
 endpoints: 5
-version: 3.3.0
+version: 3.3.1
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
@@ -323,12 +323,12 @@ icp canister info frontend
 ---
 
 ---
-id: certified-variables
-name: Certified Variables
+name: certified-variables
+title: Certified Variables
 category: Security
 description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
 endpoints: 4
-version: 1.2.1
+version: 1.2.2
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]
@@ -815,12 +815,12 @@ curl -v https://CANISTER_ID.ic0.app/path
 ---
 
 ---
-id: ckbtc
-name: ckBTC Integration
+name: ckbtc
+title: ckBTC Integration
 category: DeFi
 description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
 endpoints: 14
-version: 2.1.1
+version: 2.1.2
 status: stable
 dependencies: [icrc-ledger, wallet]
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
@@ -1596,12 +1596,12 @@ icp canister call YOUR-CANISTER withdraw '("bc1q...destination", 50_000 : nat64)
 ---
 
 ---
-id: evm-rpc
-name: EVM RPC Integration
+name: evm-rpc
+title: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.1
+version: 1.1.2
 status: stable
 dependencies: [https-outcalls]
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
@@ -2434,12 +2434,12 @@ icp canister status backend -e ic
 ---
 
 ---
-id: https-outcalls
-name: HTTPS Outcalls
+name: https-outcalls
+title: HTTPS Outcalls
 category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
 endpoints: 4
-version: 1.5.2
+version: 1.5.3
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
@@ -2885,12 +2885,12 @@ fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
 ---
 
 ---
-id: ic-dashboard
-name: IC Dashboard APIs
+name: ic-dashboard
+title: IC Dashboard APIs
 category: Integration
 description: "Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics."
 endpoints: 12
-version: 1.0.0
+version: 1.0.1
 status: stable
 dependencies: []
 requires: []
@@ -3091,12 +3091,12 @@ curl -s "https://ic-api.internetcomputer.org/api/v3/openapi.json" | python3 -c "
 ---
 
 ---
-id: icrc-ledger
-name: ICRC Ledger Standard
+name: icrc-ledger
+title: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11
-version: 2.3.2
+version: 2.3.3
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
@@ -3616,12 +3616,12 @@ icp canister call ss2fx-dyaaa-aaaar-qacoq-cai icrc1_symbol '()' -e ic
 ---
 
 ---
-id: internet-identity
-name: Internet Identity Auth
+name: internet-identity
+title: Internet Identity Auth
 category: Auth
 description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
 endpoints: 6
-version: 5.0.2
+version: 5.0.3
 status: stable
 dependencies: [asset-canister]
 requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
@@ -3986,12 +3986,12 @@ icp identity use default  # Switch back
 ---
 
 ---
-id: multi-canister
-name: Multi-Canister Architecture
+name: multi-canister
+title: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.1.0
+version: 3.1.1
 status: stable
 dependencies: [stable-memory]
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
@@ -4967,12 +4967,12 @@ icp canister call factory getChildCanister "(principal \"$PRINCIPAL\")"
 ---
 
 ---
-id: sns-launch
-name: SNS DAO Launch
+name: sns-launch
+title: SNS DAO Launch
 category: Governance
 description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
 endpoints: 22
-version: 1.9.0
+version: 1.9.1
 status: stable
 dependencies: [icrc-ledger, multi-canister]
 requires: [icp-cli >= 0.1.0, dfx sns extension, NNS neuron with stake]
@@ -5384,12 +5384,12 @@ icp canister status BACKEND_CANISTER_ID -e ic
 ---
 
 ---
-id: stable-memory
-name: "Stable Memory & Upgrades"
+name: stable-memory
+title: "Stable Memory & Upgrades"
 category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
 endpoints: 6
-version: 2.0.1
+version: 2.0.2
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
@@ -5757,12 +5757,12 @@ If the count drops to 0 after step 3, your data is NOT in stable memory. Review 
 ---
 
 ---
-id: vetkd
-name: vetKD Encryption
+name: vetkd
+title: vetKD Encryption
 category: Security
 description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 1.0.0
+version: 1.0.1
 status: beta
 dependencies: [internet-identity]
 requires: [icp-cli >= 0.1.0]
@@ -6379,12 +6379,12 @@ icp canister call backend deriveKey '(blob "\00\01...")'
 ---
 
 ---
-id: wallet
-name: Cycles Wallet Management
+name: wallet
+title: Cycles Wallet Management
 category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
 endpoints: 7
-version: 1.4.1
+version: 1.4.2
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]

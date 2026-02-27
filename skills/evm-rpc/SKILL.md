@@ -1,10 +1,10 @@
 ---
-id: evm-rpc
-name: EVM RPC Integration
+name: evm-rpc
+title: EVM RPC Integration
 category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
 endpoints: 9
-version: 1.1.1
+version: 1.1.2
 status: stable
 dependencies: [https-outcalls]
 requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]

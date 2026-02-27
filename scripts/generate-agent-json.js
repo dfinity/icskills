@@ -14,8 +14,8 @@ const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 const SITE = "https://dfinity.github.io/icskills";
 
 const skillIds = readAllSkills()
-  .filter((s) => s.meta.id)
-  .map((s) => s.meta.id);
+  .filter((s) => s.meta.name)
+  .map((s) => s.meta.name);
 
 const agentJson = {
   name: "IC Skills",
@@ -29,7 +29,7 @@ const agentJson = {
   endpoints: {
     list: `${SITE}/llms.txt`,
     full: `${SITE}/llms-full.txt`,
-    skill: `${RAW}/skills/{id}/SKILL.md`,
+    skill: `${RAW}/skills/{name}/SKILL.md`,
   },
   defaultInputModes: ["text/plain"],
   defaultOutputModes: ["text/plain"],

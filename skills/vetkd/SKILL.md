@@ -1,10 +1,10 @@
 ---
-id: vetkd
-name: vetKD Encryption
+name: vetkd
+title: vetKD Encryption
 category: Security
 description: "Implement on-chain encryption using vetKD. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 1.0.0
+version: 1.0.1
 status: beta
 dependencies: [internet-identity]
 requires: [icp-cli >= 0.1.0]

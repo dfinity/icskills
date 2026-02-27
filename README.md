@@ -138,10 +138,10 @@ The files are plain markdown. Copy the content into whatever instructions, rules
 |----------|-----|-------------|
 | Skill index | [`llms.txt`](https://dfinity.github.io/icskills/llms.txt) | Short index with links to each skill |
 | All skills | [`llms-full.txt`](https://dfinity.github.io/icskills/llms-full.txt) | All skills concatenated for direct context injection |
-| Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{id}/SKILL.md` | Raw markdown for one skill |
+| Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{name}/SKILL.md` | Raw markdown for one skill |
 | Agent discovery | [`.well-known/agent.json`](https://dfinity.github.io/icskills/.well-known/agent.json) | Machine-readable skill manifest |
-| Skill page (HTML) | [`/skills/{id}/`](https://dfinity.github.io/icskills/skills/ckbtc/) | Pre-rendered skill page with full SEO |
-| Skill page (MD) | [`/skills/{id}.md`](https://dfinity.github.io/icskills/skills/ckbtc.md) | Raw markdown served with `text/markdown` content type |
+| Skill page (HTML) | [`/skills/{name}/`](https://dfinity.github.io/icskills/skills/ckbtc/) | Pre-rendered skill page with full SEO |
+| Skill page (MD) | [`/skills/{name}.md`](https://dfinity.github.io/icskills/skills/ckbtc.md) | Raw markdown served with `text/markdown` content type |
 | CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
 
 ## Contributing

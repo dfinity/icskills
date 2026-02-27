@@ -21,7 +21,7 @@ export const GET: APIRoute = () => {
     endpoints: {
       list: `${SITE}/llms.txt`,
       full: `${SITE}/llms-full.txt`,
-      skill: `${RAW}/skills/{id}/SKILL.md`,
+      skill: `${RAW}/skills/{name}/SKILL.md`,
     },
     defaultInputModes: ["text/plain"],
     defaultOutputModes: ["text/plain"],

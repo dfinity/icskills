@@ -1,10 +1,10 @@
 ---
-id: certified-variables
-name: Certified Variables
+name: certified-variables
+title: Certified Variables
 category: Security
 description: "Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns."
 endpoints: 4
-version: 1.2.1
+version: 1.2.2
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0, ic-certified-map (Rust), CertifiedData (Motoko)]

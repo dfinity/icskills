@@ -11,14 +11,14 @@ const START = "<!-- SKILLS-TABLE-START -->";
 const END = "<!-- SKILLS-TABLE-END -->";
 
 const skills = readAllSkills()
-  .filter((s) => s.meta.id && s.meta.name)
-  .sort((a, b) => a.meta.name.localeCompare(b.meta.name));
+  .filter((s) => s.meta.name && s.meta.title)
+  .sort((a, b) => a.meta.title.localeCompare(b.meta.title));
 
 const header = "| Skill | Category | Description |";
 const divider = "|-------|----------|-------------|";
 const rows = skills.map(
   (s) =>
-    `| [${s.meta.name}](skills/${s.meta.id}/SKILL.md) | ${s.meta.category} | ${s.meta.description.replace(/"/g, "")} |`
+    `| [${s.meta.title}](skills/${s.meta.name}/SKILL.md) | ${s.meta.category} | ${s.meta.description.replace(/"/g, "")} |`
 );
 
 const table = [START, header, divider, ...rows, END].join("\n");
