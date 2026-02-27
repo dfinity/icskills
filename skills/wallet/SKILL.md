@@ -4,13 +4,14 @@ name: Cycles Wallet Management
 category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
 endpoints: 7
-version: 1.4.0
+version: 1.4.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [cycles, wallet, topup, canister, funding, management, icp]
 ---
 
 # Cycles & Canister Management
-> version: 1.4.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).

@@ -4,13 +4,14 @@ name: ICRC Ledger Standard
 category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
 endpoints: 11
-version: 2.3.0
+version: 2.3.2
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
 ---
 
 # ICRC Ledger Standards
-> version: 2.3.0 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 ICRC-1 is the fungible token standard on Internet Computer, defining transfer, balance, and metadata interfaces. ICRC-2 extends it with approve/transferFrom (allowance) mechanics, enabling third-party spending like ERC-20 on Ethereum.
@@ -187,7 +188,7 @@ persistent actor {
 
   // ICRC-2: Approve a spender
   public shared ({ caller }) func approveSpender(spender : Principal, amount : Nat) : async Nat {
-    // caller is captured before await -- critical for security
+    // caller is captured at function entry in Motoko -- safe across await
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc2_approve({
       from_subaccount = null;

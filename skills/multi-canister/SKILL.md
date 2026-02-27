@@ -4,13 +4,14 @@ name: Multi-Canister Architecture
 category: Architecture
 description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
 endpoints: 8
-version: 3.0.1
+version: 3.0.3
 status: stable
 dependencies: [stable-memory]
+requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
+tags: [inter-canister, call, architecture, scaling, shared-state, upgrade, multi]
 ---
 
 # Multi-Canister Architecture
-> version: 3.0.1 | requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
 
 ## What This Is
 
@@ -37,20 +38,13 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Mistakes That Break Your Build
 
-1. **`ic_cdk::api::msg_caller()` changes after `await` in Rust (CRITICAL).** In Rust, `ic_cdk::api::msg_caller()` returns the **callee** principal after an `await` point, not the original caller. Always capture the caller into a variable BEFORE any `await`. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry -- it does NOT change after await.
+1. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry.
 
     ```rust
-    // WRONG (Rust) — caller() is wrong after await:
+    // Recommended (Rust) — capture caller before await:
     #[update]
     async fn do_thing() {
-        let _ = some_canister_call().await;
-        let who = ic_cdk::api::msg_caller(); // THIS IS NOW THE CALLEE, NOT THE ORIGINAL CALLER
-    }
-
-    // CORRECT (Rust) — capture before await:
-    #[update]
-    async fn do_thing() {
-        let original_caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
+        let original_caller = ic_cdk::api::msg_caller(); // Defensive: capture before await
         let _ = some_canister_call().await;
         let who = original_caller; // Safe
     }
@@ -564,10 +558,10 @@ fn get_user_service_id() -> Principal {
     })
 }
 
-// CRITICAL: capture caller BEFORE any await
+// Defensive: capture caller before any await
 #[update]
 async fn create_post(title: String, body: String) -> Result<Post, String> {
-    // Capture caller BEFORE the await -- caller() is wrong after await
+    // Capture caller before the await as defensive practice
     let original_caller = ic_cdk::api::msg_caller();
 
     if original_caller == Principal::anonymous() {

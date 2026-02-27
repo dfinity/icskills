@@ -4,13 +4,14 @@ name: "Stable Memory & Upgrades"
 category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
 endpoints: 6
-version: 2.0.0
+version: 2.0.1
 status: stable
 dependencies: []
+requires: [icp-cli >= 0.1.0]
+tags: [storage, persistence, upgrade, memory, stable-structures, heap, state]
 ---
 
 # Stable Memory & Canister Upgrades
-> version: 2.0.0 | requires: [icp-cli >= 0.1.0]
 
 ## What This Is
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.

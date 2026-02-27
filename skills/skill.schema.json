@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dfinity.github.io/icskills/skills/skill.schema.json",
+  "title": "IC Skill Frontmatter",
+  "description": "Schema for the YAML frontmatter in SKILL.md files. Defines the metadata contract that build scripts, CI, and agent tooling rely on.",
+  "type": "object",
+  "required": ["id", "name", "category", "description", "version", "endpoints", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique skill identifier. Lowercase, hyphenated. Must match the directory name under skills/."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable display name for the skill."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "DeFi",
+        "Tokens",
+        "Auth",
+        "Architecture",
+        "Integration",
+        "Governance",
+        "Frontend",
+        "Security",
+        "Infrastructure"
+      ],
+      "description": "Skill category. Must be one of the predefined categories."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One-sentence summary. Describes when an agent should load this skill and what it covers."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version (major.minor.patch). See CONTRIBUTING.md for versioning rules."
+    },
+    "endpoints": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of distinct canister methods or external API operations documented in the Implementation section."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["stable", "beta"],
+      "description": "Stability status. 'stable' = production-ready, 'beta' = API may change."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Array of skill IDs this skill depends on. Each must be a valid skill ID."
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tool/package dependencies with version constraints (e.g., 'icp-cli >= 0.1.0', 'ic-cdk >= 0.19')."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Keywords for agent discovery. Lowercase, hyphenated. Used for keyword-based skill matching."
+    }
+  },
+  "additionalProperties": false
+}
