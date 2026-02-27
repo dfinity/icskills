@@ -21,8 +21,8 @@ jobs:
       - name: Verify generated files are up to date
         run: |
           npm run generate
-          git diff --exit-code public/ || {
-            echo "::error::Generated files are out of date. Run 'npm run generate' and commit the results."
+          git diff --exit-code README.md || {
+            echo "::error::README.md skills table is out of date. Run 'npm run generate' and commit the results."
             exit 1
           }
       - name: Check version bumps for changed skills
