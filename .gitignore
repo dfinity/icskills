@@ -1,5 +1,9 @@
 node_modules
 dist
 .DS_Store
+.vscode/
+.idea/
 *.local
 src/skills-data.js
+.astro
+lighthouse-*
