@@ -320,7 +320,7 @@ import CertTree "mo:ic-certification/CertTree";
 persistent actor {
 
   // CertTree.Store is stable -- persists across upgrades
-  stable let certStore : CertTree.Store = CertTree.newStore();
+  let certStore : CertTree.Store = CertTree.newStore();
   let ct = CertTree.Ops(certStore);
 
   // Set certified data on init
