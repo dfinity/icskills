@@ -9,8 +9,9 @@
 package.json                     @JoshDFN @marc0olo
 
 # Skill files — domain experts
-/skills/asset-canister/          @raymondk
-/skills/certified-variables/     @raymondk
+/skills/icp-cli/                 @dfinity/sdk
+/skills/asset-canister/          @dfinity/sdk
+/skills/certified-variables/     @dfinity/sdk
 /skills/ckbtc/                   @gregorydemay
 /skills/evm-rpc/                 @gregorydemay
 /skills/icrc-ledger/             @gregorydemay
