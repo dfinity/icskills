@@ -142,6 +142,7 @@ The files are plain markdown. Copy the content into whatever instructions, rules
 | Agent discovery | [`.well-known/agent.json`](https://dfinity.github.io/icskills/.well-known/agent.json) | Machine-readable skill manifest |
 | Skill page (HTML) | [`/skills/{id}/`](https://dfinity.github.io/icskills/skills/ckbtc/) | Pre-rendered skill page with full SEO |
 | Skill page (MD) | [`/skills/{id}.md`](https://dfinity.github.io/icskills/skills/ckbtc.md) | Raw markdown served with `text/markdown` content type |
+| CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
 
 ## Contributing
 

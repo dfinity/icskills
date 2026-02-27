@@ -53,7 +53,7 @@ export default function BrowseTab({ skills }: Props) {
           fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
           lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
         }}>
-          One API call, zero hallucinations. Structured skill files with correct canister IDs,
+          Zero hallucinations. Structured skill files with correct canister IDs,
           tested code, known pitfalls, and verification checks.
         </p>
 
@@ -105,9 +105,7 @@ export default function BrowseTab({ skills }: Props) {
           borderRadius: "8px", fontSize: "12px", color: "var(--accent-text)",
           whiteSpace: "nowrap",
         }}>
-          fetch("dfinity.github.io/icskills/api/v1/skills/{"{"}
-          <span style={{ color: "var(--accent-blue)" }}>id</span>
-          {"}"}")
+          npx skills add dfinity/icskills
         </div>
       </div>
 

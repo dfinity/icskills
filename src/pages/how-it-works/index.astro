@@ -1,9 +1,6 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
-import { loadAllSkills } from "../../data/skills";
 import { FRAMEWORKS, FW_LIGHT_COLORS } from "../../data/constants";
-
-const skills = loadAllSkills();
 
 // SVG icon markup for each framework — static versions of FrameworkIcon from Icons.tsx
 const FRAMEWORK_SVGS: Record<string, string> = {
@@ -16,7 +13,7 @@ const FRAMEWORK_SVGS: Record<string, string> = {
   "Claude Code": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6L3 12L8 18"/><path d="M16 6L21 12L16 18"/><path d="M14 4L10 20" opacity="0.5"/></svg>`,
   "OpenCode": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17L10 11L4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
   "OpenClaw": `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.5v-2c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3v-2l4 3.5-4 3.5v-1zm6-4.5c0-1.66-1.34-3-3-3v2l-4-3.5L14 5v1c2.76 0 5 2.24 5 5h-2z"/></svg>`,
-  "Your Agent": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>`,
+  "skills.sh": `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>`,
 };
 
 // Pre-compute framework data with CSS variable names for light-mode color swapping
@@ -29,8 +26,8 @@ const frameworksWithVars = FRAMEWORKS.map((fw, i) => ({
 }));
 
 const steps = [
-  { num: "01", title: "Agent fetches skill", code: "GET /api/v1/skills/ckbtc", colorVar: "accent", rgbVar: "accent-rgb",
-    desc: "Agent identifies what it needs to build and pulls the right skill from the API" },
+  { num: "01", title: "Agent fetches skill", code: "curl llms.txt | or npx skills add", colorVar: "accent", rgbVar: "accent-rgb",
+    desc: "Agent identifies what it needs to build and pulls the right skill file" },
   { num: "02", title: "Reads instructions", code: "{ pitfalls, steps, verify }", colorVar: "accent-blue", rgbVar: "blue-rgb",
     desc: "Gets structured steps, working code, known pitfalls, and verification checks" },
   { num: "03", title: "Builds correctly", code: "\u2713 deployed & verified", colorVar: "green", rgbVar: "green-rgb",
@@ -88,7 +85,7 @@ const anatomy = [
       <span style="background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Skills are for agents.</span>
     </h2>
     <p style="font-size:16px;color:var(--text-faint);max-width:500px;margin:0 auto;line-height:1.7;font-family:'Inter',system-ui,sans-serif;">
-      One API call. Structured instructions. Zero hallucinations.
+      Structured instructions. Zero hallucinations.
     </p>
   </div>
 
@@ -165,27 +162,26 @@ const anatomy = [
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-red);"></div>
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-yellow);"></div>
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-green);"></div>
-        <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">agent.js</span>
+        <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">terminal</span>
       </div>
-      <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;"><span>// 1. Agent decides it needs ckBTC integration
-</span><span style="color:var(--accent-blue);">const skill = await fetch(
-  "https://dfinity.github.io/icskills/api/v1/skills/ckbtc"
-);
-</span><span>
-// 2. Gets back structured instructions
-</span><span style="color:var(--accent-text);">const {"{"} pitfalls, steps, code_templates, verification {"}"} =
-  await skill.json();
-</span><span>
-// 3. Pitfalls prevent hallucination
-</span><span style="color:var(--yellow);">// Agent now knows:
-// - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai
-// - Fee is 10 satoshis (not 0)
-// - Must use subaccounts for deposits
-</span><span>
-// 4. Agent executes with tested code
-</span><span style="color:var(--green);">// → Deploys correctly on first try
-// → Runs verification checks
-// → Ships autonomously</span></pre>
+      <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;">
+<span style="color:var(--text-faint);"># 1. Fetch a skill file directly</span>
+<span style="color:var(--accent-blue);">curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md</span>
+
+<span style="color:var(--text-faint);"># 2. Or browse and install via skills.sh CLI</span>
+<span style="color:var(--accent-text);">npx skills add dfinity/icskills</span>
+
+<span style="color:var(--text-faint);"># 3. Or fetch the full index for agent context</span>
+<span style="color:var(--accent-text);">curl -sL https://dfinity.github.io/icskills/llms-full.txt</span>
+
+<span style="color:var(--yellow);"># Agent now knows:</span>
+<span style="color:var(--yellow);"># - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai</span>
+<span style="color:var(--yellow);"># - Fee is 10 satoshis (not 0)</span>
+<span style="color:var(--yellow);"># - Must use subaccounts for deposits</span>
+
+<span style="color:var(--green);"># → Deploys correctly on first try</span>
+<span style="color:var(--green);"># → Runs verification checks</span>
+<span style="color:var(--green);"># → Ships autonomously</span></pre>
     </div>
 
     <!-- Framework logos grid -->
@@ -207,8 +203,8 @@ const anatomy = [
   <!-- Bottom CTA -->
   <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid rgba(var(--accent-rgb),0.1);">
     <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">The first chain agents can actually build on.</div>
-    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Structured skill files that prevent hallucinations. One API call away.</p>
-    <code style="display:inline-block;padding:12px 24px;background:var(--bg-code);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:8px;font-size:13px;color:var(--accent-text);">dfinity.github.io/icskills/api/v1/skills</code>
+    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Structured skill files that prevent hallucinations. Fetch via llms.txt, raw GitHub URLs, or the skills.sh CLI.</p>
+    <code style="display:inline-block;padding:12px 24px;background:var(--bg-code);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:8px;font-size:13px;color:var(--accent-text);">npx skills add dfinity/icskills</code>
   </div>
 </SiteLayout>
 
@@ -224,7 +220,7 @@ const anatomy = [
     --fw-color-6: #D97757;  /* Claude Code */
     --fw-color-7: #00DC82;  /* OpenCode */
     --fw-color-8: #EF4444;  /* OpenClaw */
-    --fw-color-9: #fbbf24;  /* Your Agent */
+    --fw-color-9: #fbbf24;  /* skills.sh */
   }
 
   /* Light mode overrides — swap colors that are invisible on white */
@@ -234,6 +230,6 @@ const anatomy = [
     --fw-color-5: #0891b2;  /* Windsurf: darker cyan */
     --fw-color-7: #059669;  /* OpenCode: darker green */
     --fw-color-8: #dc2626;  /* OpenClaw: darker red */
-    --fw-color-9: #d97706;  /* Your Agent: darker amber */
+    --fw-color-9: #d97706;  /* skills.sh: darker amber */
   }
 </style>
