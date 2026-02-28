@@ -31,7 +31,7 @@ A TypeScript library that enables secure communication between dApps and wallets
 - ICRC-29 — Window PostMessage transport
 - ICRC-49 — Call canister
 
-**Not yet implemented:**
+**Not implemented:**
 
 - ICRC-46 — Session-based delegation (not supported; use a delegation-capable model if you need sessions)
 
