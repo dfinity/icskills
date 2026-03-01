@@ -6,7 +6,7 @@ description: "Integrate Internet Identity authentication into your app. Enable u
 endpoints: 6
 version: 5.0.4
 status: stable
-dependencies: [ii]
+dependencies: [asset-canister]
 requires: [icp-sdk/icp-cli, icp-sdk/ic-wasm, icp-sdk/auth >= 4.0.1]
 tags: [auth, authentication, login, passkey, webauthn, openid, oidc, identity, delegation, principal]
 ---
