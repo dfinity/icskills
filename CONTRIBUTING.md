@@ -43,7 +43,7 @@ Every skill file has YAML frontmatter followed by a markdown body. The frontmatt
 name: <skill-name>
 description: "What does this skill do AND when should an agent load it? Include specific keywords."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.1.0, network access for HTTPS calls"
 metadata:
   title: "Display Name"
   category: CategoryName
