@@ -53,7 +53,7 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 | [HTTPS Outcalls](skills/https-outcalls/SKILL.md) | Integration | Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management. |
 | [IC Dashboard APIs](skills/ic-dashboard/SKILL.md) | Integration | Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics. |
 | [ICRC Ledger Standard](skills/icrc-ledger/SKILL.md) | Tokens | Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata. |
-| [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling. |
+| [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into your app. Enable users to sign in securely. |
 | [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
 | [SNS DAO Launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap. |
 | [Stable Memory & Upgrades](skills/stable-memory/SKILL.md) | Architecture | Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data. |

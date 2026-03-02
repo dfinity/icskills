@@ -2,40 +2,52 @@
 name: internet-identity
 title: Internet Identity Auth
 category: Auth
-description: "Integrate Internet Identity authentication into frontend and backend canisters. Delegation, session management, and anchor handling."
+description: "Integrate Internet Identity authentication into your app. Enable users to sign in securely."
 endpoints: 6
-version: 5.0.3
+version: 5.0.4
 status: stable
 dependencies: [asset-canister]
-requires: [icp-cli >= 0.1.0, @icp-sdk/auth >= 5.0, @icp-sdk/core >= 5.0]
-tags: [auth, login, passkey, webauthn, identity, session, delegation, principal]
+requires: [icp-sdk/icp-cli, icp-sdk/ic-wasm, icp-sdk/auth >= 4.0.1]
+tags: [auth, authentication, login, passkey, webauthn, openid, oidc, identity, delegation, principal]
 ---
 
 # Internet Identity Authentication
 
 ## What This Is
 
-Internet Identity (II) is the Internet Computer's native authentication system. Users authenticate with passkeys, WebAuthn, or hardware security keys -- no passwords, no seed phrases, no third-party identity providers. Each user gets a unique principal per dApp, preventing cross-app tracking.
+Internet Identity (II) is the Internet Computer's native authentication system. Users authenticate into II-powered apps either with passkeys stored in their devices or thorugh OpenID accounts (e.g., Google, Apple, Microsoft) -- no login or passwords required. Each user gets a unique principal per app, preventing cross-app tracking.
 
 ## Prerequisites
 
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- Node.js >= 18 (for frontend)
-- `@icp-sdk/auth` npm package (>= 5.0.0)
-- `@icp-sdk/core` npm package (>= 5.0.0)
+1. [Node.js](https://nodejs.org/en) (LTS)
+2. `@icp-sdk/icp-cli`:
+    ```sh
+    npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
+    ```
+    For Motoko:
+    ```sh
+    npm install -g ic-mops
+    ```
+    For Rust:
+    ```sh
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    rustup target add wasm32-unknown-unknown
+    ```
+    For Windows, Linux, or Docker-based development, please read the full instructions [here](https://github.com/dfinity/icp-cli/blob/1c26bb0c6f0f4b6813b682bf1b3e5fb9ae0c5cf7/docs/guides/installation.md).
+3. `@icp-sdk/auth`:
+    ```sh
+    npm install -g @icp-sdk/auth
+    ```
 
 ## Canister IDs
 
-| Environment | Canister ID | URL |
-|-------------|-------------|-----|
-| Mainnet | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://identity.ic0.app` (also `https://identity.internetcomputer.org`) |
-| Local | Assigned on deploy | `http://<local-canister-id>.localhost:4943` |
+| Canister | ID | URL | Purpose |
+|----------|------------|-----|---------|
+| Internet Identity | `rdmx6-jaaaa-aaaaa-aaadq-cai` | `https://id.ai` | Stores and manages user keys, serves the II web app over HTTPS |
 
 ## Mistakes That Break Your Build
 
-1. **Not rejecting anonymous principal.** The anonymous principal `2vxsx-fae` is sent when a user is not authenticated. If your backend does not explicitly reject it, unauthenticated users can call protected endpoints. ALWAYS check `Principal.isAnonymous(caller)` and reject.
-
-2. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID is different from mainnet). Mainnet must use `https://identity.ic0.app`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `icp deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` (note: this auto-generated env var may work differently in icp-cli than it did in the legacy tooling; verify your build tooling picks it up) or your canister_ids.json (path may differ in icp-cli projects compared to the legacy `.icp/local/canister_ids.json` location).
+1. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:4943` (this canister ID may be different from mainnet). Mainnet must use `https://id.ai`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `icp deploy internet_identity` -- read it from `process.env.CANISTER_ID_INTERNET_IDENTITY` (note: this auto-generated env var may work differently in icp-cli than it did in the legacy tooling; verify your build tooling picks it up) or your canister_ids.json (path may differ in icp-cli projects compared to the legacy `.icp/local/canister_ids.json` location).
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -53,21 +65,32 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ### icp.yaml Configuration
 
-For local development, download the II canister WASM from the [dfinity/internet-identity releases](https://github.com/dfinity/internet-identity/releases). Place the `.wasm.gz` and `.did` files in your project.
+For local development, you just need to add the `ii` property to the local network to enable Internet Identity.
+
+Here's an example icp.yaml configuration (assume that the `frontend` canister is generated using `icp new` using the `static-website` template):
 
 ```yaml
+# yaml-language-server: $schema=https://github.com/dfinity/icp-cli/raw/refs/tags/v0.1.0/docs/schemas/icp-yaml-schema.json
+
 canisters:
-  internet_identity:
-    type: custom
-    candid: deps/internet-identity/internet_identity.did
-    wasm: deps/internet-identity/internet_identity_dev.wasm.gz
-    build: ""
-    remote:
-      id:
-        ic: rdmx6-jaaaa-aaaaa-aaadq-cai
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        build:
+          # Install the dependencies
+          # Eventually you might want to use `npm ci` to lock your dependencies
+          - npm install
+          - npm run build
+        dir: dist
+
+networks:
+  - name: local
+    mode: managed
+    ii: true
 ```
 
-The `remote.id.ic` field tells `icp` to skip deploying this canister on mainnet (use the existing one). Locally, `icp` deploys the provided WASM.
+<!-- Reviewed till here -->
 
 ### Frontend: Vanilla JavaScript/TypeScript Login Flow
 
@@ -95,7 +118,7 @@ function getIdentityProviderUrl() {
       ?? "be2us-64aaa-aaaaa-qaabq-cai"; // fallback -- replace with your actual local II canister ID
     return `http://${iiCanisterId}.localhost:4943`;
   }
-  return "https://identity.ic0.app";
+  return "https://id.ai";
 }
 
 // 3. Login
@@ -148,6 +171,12 @@ if (isAuthenticated) {
 ```
 
 ### Backend: Motoko
+
+Requires installing the Mops [Motoko package manager](https://cli.mops.one/):
+
+```sh
+npm install -g ic-mops
+```
 
 ```motoko
 import Principal "mo:core/Principal";
@@ -362,5 +391,6 @@ icp identity use default  # Switch back
 
 # 6. Open II in browser for local dev
 # Visit: http://<internet_identity_canister_id>.localhost:4943
+```
 # You should see the Internet Identity login page
 ```
