@@ -1,7 +1,7 @@
 ---
 name: oisy-wallet-signer
 title: "OISY Wallet Signer"
-category: DeFi
+category: Wallet
 description: "Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing."
 endpoints: 5
 version: 1.0.0
