@@ -59,7 +59,7 @@ See `skills/skill.schema.json` for the formal schema. This format aligns with th
 | `name` | yes | Lowercase, hyphenated identifier. Must match the directory name. |
 | `description` | yes | **The most important field.** Describes when an agent should load this skill and what it covers. This is the primary triggering mechanism for agent skill selection — see guidance below. |
 | `license` | recommended | SPDX license identifier (e.g., `Apache-2.0`). |
-| `compatibility` | recommended | Tool/version requirements (e.g., `icp-cli >= 0.1.0`). |
+| `compatibility` | recommended | Environment requirements — tools, system packages, network access (e.g., `icp-cli >= 0.1.0`). Library/SDK dependencies go in `## Prerequisites`. |
 | `metadata.title` | yes | Human-readable display name. |
 | `metadata.category` | yes | One of the predefined categories (see below). |
 
@@ -88,7 +88,9 @@ The body has **no rigid structure requirements** — organize content in whateve
 Brief explanation of the technology. 2-3 sentences max.
 
 ## Prerequisites
-- Bullet list of required tools, packages, versions
+- Language-specific libraries, SDKs, and crate/package versions
+- Any non-tool requirements (funded identity, NNS neuron, etc.)
+- Note: Environment requirements (CLI tools, system packages) go in frontmatter `compatibility`, not here
 
 ## Canister IDs                        <!-- when skill uses external canisters -->
 | Environment | Canister | ID |

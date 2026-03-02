@@ -16,10 +16,12 @@ Brief explanation of the technology. 2-3 sentences max. What does it do? Why doe
 
 ## Prerequisites
 
-- List exact tools and versions needed (e.g., `icp-cli >= 0.1.0`)
+<!-- Library/SDK dependencies go here. Environment requirements (CLI tools, system packages) go in frontmatter `compatibility`. -->
+
 - For Motoko: list `mops` dependencies with versions
-- For Rust: list crate dependencies with versions
-- For JavaScript: list npm packages with versions
+- For Rust: list crate dependencies with versions (e.g., `ic-cdk >= 0.19`)
+- For JavaScript: list npm packages with versions (e.g., `@icp-sdk/auth >= 4.0.1`)
+- Any other requirements (funded identity, NNS neuron, etc.)
 
 ## Canister IDs
 
