@@ -7,8 +7,6 @@ metadata:
   title: Canister Security
   category: Security
   version: 1.0.0
-  status: stable
-  dependencies: ""
 ---
 
 # Canister Security
@@ -19,7 +17,7 @@ IC canisters face security challenges that don't exist in traditional web develo
 
 ## Prerequisites
 
-- `icp-cli` >= 0.2.0 — see [icp-cli](../icp-cli/SKILL.md) for setup
+- `icp-cli` >= 0.2.0 (install: `npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk = "0.19"`, `candid = "0.10"`
 
@@ -29,13 +27,13 @@ IC canisters face security challenges that don't exist in traditional web develo
 
 2. **Forgetting to reject the anonymous principal.** Every endpoint that requires authentication must check `caller != Principal.anonymous()`. Without this, unauthenticated requests silently succeed. This is the most common IC security bug.
 
-3. **Reading state before an async call and assuming it's unchanged after.** When your canister `await`s an inter-canister call, other messages can interleave and mutate state. This TOCTOU pattern is the #1 source of DeFi exploits on IC. For detailed async atomicity patterns and saga-based compensation, see [inter-canister-calls](../inter-canister-calls/SKILL.md).
+3. **Reading state before an async call and assuming it's unchanged after.** When your canister `await`s an inter-canister call, other messages can interleave and mutate state. This TOCTOU pattern is the #1 source of DeFi exploits on IC. Always deduct/lock state before the `await`, then compensate on failure (saga pattern).
 
 4. **Not setting a freezing threshold.** Without it, a canister silently runs out of cycles and gets deleted — all state lost permanently. Set `freezing_threshold` to at least 30 days (2,592,000 seconds):
    ```bash
    icp canister settings update backend --freezing-threshold 2592000 -e ic
    ```
-   Verify with `icp canister settings show backend -e ic` (see [icp-cli](../icp-cli/SKILL.md) for CLI details).
+   Verify with `icp canister settings show backend -e ic`.
 
 5. **Single controller with no backup.** If you lose the controller identity's PEM file, the canister becomes unupgradeable forever. Always add a backup controller or governance canister:
    ```bash
@@ -46,7 +44,7 @@ IC canisters face security challenges that don't exist in traditional web develo
 
 7. **Exposing admin methods without guards.** Every update method is callable by anyone on the internet. Admin methods (migration, config, minting) must explicitly check the caller against an allowlist.
 
-8. **Storing secrets in canister state.** Canister memory on standard application subnets is readable by node operators. Never store private keys, API secrets, or passwords. For on-chain secret management, use vetKD (see [vetkd-encryption](../vetkd-encryption/SKILL.md) when available).
+8. **Storing secrets in canister state.** Canister memory on standard application subnets is readable by node operators. Never store private keys, API secrets, or passwords. For on-chain secret management, use vetKD (threshold key derivation).
 
 ## How It Works
 
@@ -326,7 +324,7 @@ icp canister call backend admin_action '()' --identity attacker
 
 ### Mainnet Security Checklist
 
-Run these checks after every mainnet deployment (see [icp-cli](../icp-cli/SKILL.md) for CLI details):
+Run these checks after every mainnet deployment:
 
 ```bash
 # 1. Verify controllers include a backup

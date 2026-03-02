@@ -7,8 +7,6 @@ metadata:
   title: ICP CLI
   category: Infrastructure
   version: 1.0.0
-  status: stable
-  dependencies: ""
 ---
 
 # ICP CLI
@@ -51,7 +49,7 @@ The `icp` CLI (successor to `dfx`) manages the full lifecycle of Internet Comput
 
 5. **Hardcoding canister IDs.** Canister IDs are managed per environment. Managed networks (local) store IDs in `.icp/cache/mappings/<env>.ids.json` (ephemeral — deleted when network stops). Connected networks (mainnet) store IDs in `.icp/data/mappings/<env>.ids.json` (persistent). **Commit `.icp/data/` to source control** — losing it means losing track of deployed mainnet canisters.
 
-6. **Deploying to mainnet without checking cycles.** Canister creation costs ~2T cycles by default. Check balance with `icp cycles balance -e ic`. A canister that runs out of cycles freezes and eventually gets deleted — see [canister-security](../canister-security/SKILL.md) for freezing threshold configuration.
+6. **Deploying to mainnet without checking cycles.** Canister creation costs ~2T cycles by default. Check balance with `icp cycles balance -e ic`. A canister that runs out of cycles freezes and eventually gets deleted. Set `freezing_threshold` to at least 30 days (2,592,000 seconds) via `icp canister settings update <name> --freezing-threshold 2592000 -e ic`.
 
 7. **Forgetting to start the local network.** `icp deploy` without a running local network gives a confusing connection error. Run `icp network start -d` first (`-d` for background mode). Note: local networks are **project-specific** (unlike dfx which shared one network across projects).
 
@@ -196,7 +194,7 @@ icp identity list
 icp identity export my-identity
 ```
 
-**Security**: Identity keys are stored in platform-specific directories (macOS: `~/Library/Application Support/org.dfinity.icp-cli/identity/`, Linux: `~/.local/share/icp-cli/identity/`). Never commit these to version control. See [canister-security](../canister-security/SKILL.md) for controller management and backup identity patterns.
+**Security**: Identity keys are stored in platform-specific directories (macOS: `~/Library/Application Support/org.dfinity.icp-cli/identity/`, Linux: `~/.local/share/icp-cli/identity/`). Never commit these to version control. Always add a backup controller: `icp canister settings update <name> --add-controller <backup-principal> -e ic`.
 
 ### Cycles Management
 
