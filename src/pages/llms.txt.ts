@@ -10,7 +10,7 @@ export const GET: APIRoute = () => {
 
   const header = `# IC Skills
 
-> Agent-readable skill files for the Internet Computer. Structured, versioned documentation designed for AI coding assistants — not humans.
+> Agent-readable skill files for the Internet Computer. Structured documentation designed for AI coding assistants — not humans.
 
 IC Skills provides copy-paste-ready skill files that teach AI agents how to build on the Internet Computer (ICP) blockchain correctly. Each skill covers one capability (ckBTC, Internet Identity, HTTPS Outcalls, etc.) with exact code, canister IDs, and pitfalls that prevent hallucinations.
 

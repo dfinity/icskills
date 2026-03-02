@@ -1,14 +1,11 @@
 ---
 name: stable-memory
-title: "Stable Memory & Upgrades"
-category: Architecture
 description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
-endpoints: 4
-version: 2.1.0
-status: stable
-dependencies: []
-requires: [icp-cli >= 0.1.0]
-tags: [storage, persistence, upgrade, memory, stable-structures, heap, state]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: "Stable Memory & Upgrades"
+  category: Architecture
 ---
 
 # Stable Memory & Canister Upgrades

@@ -15,11 +15,8 @@ export interface Skill {
   name: string;
   category: string;
   description: string;
-  endpoints: number;
   lastUpdated: string;
-  version: string;
-  status: string;
-  dependencies: string[];
+  license: string;
   content: string;
 }
 
@@ -134,11 +131,8 @@ export function loadAllSkills(): Skill[] {
       name: meta.title,
       category: meta.category || "",
       description: meta.description || "",
-      endpoints: meta.endpoints || 0,
       lastUpdated: getLastUpdated(filePath),
-      version: meta.version || "1.0.0",
-      status: meta.status || "stable",
-      dependencies: Array.isArray(meta.dependencies) ? meta.dependencies : [],
+      license: meta.license || "",
       content: extractBody(content),
     });
   }

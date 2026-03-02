@@ -3,13 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "description": "Agent-readable skill files for the Internet Computer",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-skills.js",
-    "generate": "node scripts/generate-readme-table.js",
     "dev": "npm run validate && astro dev",
-    "build": "npm run validate && npm run generate && astro build",
+    "build": "npm run validate && astro build",
     "preview": "astro preview"
   },
   "dependencies": {
