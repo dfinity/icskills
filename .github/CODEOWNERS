@@ -24,6 +24,7 @@ package.json                     @JoshDFN @marc0olo @raymondk
 /skills/multi-canister/          @derlerd-dfinity
 /skills/stable-memory/           @derlerd-dfinity
 /skills/vetkd/                   @andreacerulli
+/skills/canister-security/       @dfinity/security
 /skills/oisy-wallet-signer/      @AntonioVentilii
 /skills/ic-dashboard/            @jp-dfinity
 
