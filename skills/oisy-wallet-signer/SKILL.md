@@ -3,12 +3,12 @@ name: oisy-wallet-signer
 title: "OISY Wallet Signer"
 category: Wallet
 description: "Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing."
-endpoints: 5
+endpoints: 12
 version: 1.0.0
 status: stable
 dependencies: [icrc-ledger]
 requires: ["@dfinity/utils >= 4.1", "@dfinity/zod-schemas >= 3", "@icp-sdk/canisters >= 3.2", "@icp-sdk/core >= 5", "zod >= 4"]
-tags: [wallet, signer, icrc-25, icrc-27, icrc-29, icrc-49, relying-party, postmessage]
+tags: [wallet, signer, oisy, icrc-1, icrc-2, icrc-21, icrc-25, icrc-27, icrc-29, icrc-49, relying-party, postmessage, transfer, approve, consent-message]
 ---
 
 # OISY Wallet Signer
