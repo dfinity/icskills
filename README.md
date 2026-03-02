@@ -28,7 +28,7 @@ Every skill typically includes:
 | Section | Purpose |
 |---------|---------|
 | **What This Is** | One paragraph. What the technology does. |
-| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.19`. |
+| **Prerequisites** | Exact library versions. `ic-cdk >= 0.19`, `@icp-sdk/auth >= 4.0.1`. |
 | **Common Pitfalls** | Numbered pitfalls that prevent hallucinations. |
 | **Implementation** | Tested, copy-paste-correct code blocks. |
 | **Deploy & Test** | Step-by-step commands for local and mainnet. |
