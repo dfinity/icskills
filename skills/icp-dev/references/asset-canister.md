@@ -4,7 +4,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Canister IDs
 
-Asset canisters are created per-project. After deployment, your canister ID is stored in `canister_ids.json`.
+Asset canisters are created per-project. After deployment, you can lookup your canister id by calling `icp canister -e <environment> <canister-name> --id-only`.
 
 | Environment | URL Pattern |
 |-------------|-------------|
@@ -34,17 +34,14 @@ Asset canisters are created per-project. After deployment, your canister ID is s
 
 ```yaml
 canisters:
-  frontend:
-    type: assets
-    source:
-      - dist
-    build:
-      - npm run build
-    dependencies:
-      - backend
-  backend:
-    type: motoko
-    main: src/backend/main.mo
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: dist
+        build:
+          - npm install
+          - npm run build
 ```
 
 ### SPA Routing: `.ic-assets.json5`

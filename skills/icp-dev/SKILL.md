@@ -19,14 +19,15 @@ A meta-skill that acts as the single entry point for all Internet Computer devel
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (`brew install icp-cli`)
+- `ic-wasm` (`brew install ic-wasm`)
 - For Motoko canisters: `mops` package manager
 - For Rust canisters: `cargo` with `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`)
 - For frontend: Node.js >= 18
 
-## Skill Directory
+## Reference Directory
 
-| Priority | Skill | Description |
+| Priority | Reference | Description |
 |----------|-------|-------------|
 | CRITICAL | [multi-canister](references/multi-canister.md) | Multi-canister design, inter-canister calls, shared state, upgrade strategies |
 | CRITICAL | [stable-memory](references/stable-memory.md) | State across upgrades, stable structures, pre/post upgrade hooks, memory-mapped data |
@@ -42,26 +43,6 @@ A meta-skill that acts as the single entry point for all Internet Computer devel
 | MEDIUM | [ic-dashboard](references/ic-dashboard.md) | Public REST APIs for canister, ledger, SNS, and metrics data |
 | LOW | [sns-launch](references/sns-launch.md) | SNS DAO launch, token economics, proposal types, decentralization swap |
 
-## Task Routing
-
-Use this table to determine which skills to load for your specific task.
-
-| Task | Load These Skills |
-|------|-------------------|
-| Build a DeFi app | [ckbtc](references/ckbtc.md), [icrc-ledger](references/icrc-ledger.md), [wallet](references/wallet.md), [internet-identity](references/internet-identity.md) |
-| Add user authentication | [internet-identity](references/internet-identity.md), [asset-canister](references/asset-canister.md) |
-| Call external APIs | [https-outcalls](references/https-outcalls.md) |
-| Bridge to Ethereum | [evm-rpc](references/evm-rpc.md), [https-outcalls](references/https-outcalls.md) |
-| Store large state | [stable-memory](references/stable-memory.md), [multi-canister](references/multi-canister.md) |
-| Launch a DAO | [sns-launch](references/sns-launch.md), [icrc-ledger](references/icrc-ledger.md), [multi-canister](references/multi-canister.md) |
-| Encrypt user data | [vetkd](references/vetkd.md), [internet-identity](references/internet-identity.md) |
-| Prove query results | [certified-variables](references/certified-variables.md) |
-| Deploy a frontend | [asset-canister](references/asset-canister.md) |
-| Monitor canisters | [ic-dashboard](references/ic-dashboard.md) |
-| Accept Bitcoin payments | [ckbtc](references/ckbtc.md), [icrc-ledger](references/icrc-ledger.md) |
-| Create a custom token | [icrc-ledger](references/icrc-ledger.md) |
-| Multi-canister architecture | [multi-canister](references/multi-canister.md), [stable-memory](references/stable-memory.md) |
-| Survive canister upgrades | [stable-memory](references/stable-memory.md) |
 
 ## Mistakes That Break Your Build
 
