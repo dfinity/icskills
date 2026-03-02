@@ -55,6 +55,7 @@ The pitfalls section is the highest-value part. Every pitfall documented is a ha
 | [ICRC Ledger Standard](skills/icrc-ledger/SKILL.md) | Tokens | Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata. |
 | [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into your app. Enable users to sign in securely. |
 | [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
+| [OISY Wallet Signer](skills/oisy-wallet-signer/SKILL.md) | Wallet | Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing. |
 | [SNS DAO Launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap. |
 | [Stable Memory & Upgrades](skills/stable-memory/SKILL.md) | Architecture | Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data. |
 | [vetKeys](skills/vetkd/SKILL.md) | Security | Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns. |
