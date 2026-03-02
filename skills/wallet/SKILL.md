@@ -1,14 +1,11 @@
 ---
 name: wallet
-title: Cycles Wallet Management
-category: Infrastructure
 description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
-endpoints: 7
-version: 1.4.2
-status: stable
-dependencies: []
-requires: [icp-cli >= 0.1.0]
-tags: [cycles, wallet, topup, canister, funding, management, icp]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: Cycles Wallet Management
+  category: Infrastructure
 ---
 
 # Cycles & Canister Management

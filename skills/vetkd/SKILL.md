@@ -1,14 +1,11 @@
 ---
 name: vetkd
-title: vetKeys
-category: Security
 description: "Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns."
-endpoints: 5
-version: 1.0.2
-status: beta
-dependencies: [internet-identity]
-requires: [icp-cli >= 0.1.0]
-tags: [encryption, decryption, key-derivation, threshold, privacy, secret]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: vetKeys
+  category: Security
 ---
 
 # vetKeys (Verifiable Encrypted Threshold Keys)

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Validates SKILL.md files for structural correctness.
-// Checks frontmatter fields, required sections, code block annotations,
-// dependency graph integrity, and canister ID format.
+// Checks frontmatter fields, required sections, and code block annotations.
 // Run: node scripts/validate-skills.js
 
 import { readFileSync } from "fs";
@@ -13,12 +12,11 @@ const REQUIRED_FRONTMATTER = [
   "title",
   "category",
   "description",
-  "version",
-  "endpoints",
-  "status",
 ];
 
-const VALID_CATEGORIES = [
+// Known categories — warn on unknown to catch typos, but don't block.
+// To add a new category: add it here, in skill.schema.json, and in src/components/Icons.tsx.
+const KNOWN_CATEGORIES = [
   "DeFi",
   "Tokens",
   "Auth",
@@ -31,16 +29,11 @@ const VALID_CATEGORIES = [
   "Wallet",
 ];
 
-const VALID_STATUSES = ["stable", "beta"];
-
-// Required sections (## heading text) — every skill must have these
-const REQUIRED_SECTIONS = [
+// Recommended sections (## heading text) — warn if missing, don't block
+const RECOMMENDED_SECTIONS = [
   "What This Is",
   "Prerequisites",
-  "Mistakes That Break Your Build",
   "Implementation",
-  "Deploy & Test",
-  "Verify It Works",
 ];
 
 const errors = [];
@@ -55,7 +48,6 @@ function warn(skill, msg) {
 }
 
 const skills = readAllSkills();
-const allIds = new Set(skills.map((s) => s.meta.name));
 
 // Load JSON schema for allowed categories (read from schema if it exists)
 let schema = null;
@@ -89,38 +81,12 @@ for (const skill of skills) {
     error(label, `name "${meta.name}" must be lowercase alphanumeric with hyphens`);
   }
 
-  // version format
-  if (meta.version && !/^\d+\.\d+\.\d+$/.test(meta.version)) {
-    error(label, `version "${meta.version}" must be semver (e.g., 1.0.0)`);
-  }
-
-  // category
-  if (meta.category && !VALID_CATEGORIES.includes(meta.category)) {
-    error(
+  // category — warn on unknown to catch typos
+  if (meta.category && !KNOWN_CATEGORIES.includes(meta.category)) {
+    warn(
       label,
-      `category "${meta.category}" not in allowed list: ${VALID_CATEGORIES.join(", ")}`
+      `unknown category "${meta.category}" — known categories: ${KNOWN_CATEGORIES.join(", ")}`
     );
-  }
-
-  // status
-  if (meta.status && !VALID_STATUSES.includes(meta.status)) {
-    error(label, `status "${meta.status}" must be "stable" or "beta"`);
-  }
-
-  // endpoints must be positive integer
-  if (meta.endpoints !== undefined && (typeof meta.endpoints !== "number" || meta.endpoints < 1)) {
-    error(label, `endpoints must be a positive integer, got: ${meta.endpoints}`);
-  }
-
-  // dependencies must reference existing skill names
-  const deps = Array.isArray(meta.dependencies) ? meta.dependencies : [];
-  for (const dep of deps) {
-    if (!allIds.has(dep)) {
-      error(label, `dependency "${dep}" does not match any skill name`);
-    }
-    if (dep === meta.name) {
-      error(label, `skill cannot depend on itself`);
-    }
   }
 
   // --- Section validation ---
@@ -132,9 +98,9 @@ for (const skill of skills) {
     if (match) headings.push(match[1].trim());
   }
 
-  for (const section of REQUIRED_SECTIONS) {
+  for (const section of RECOMMENDED_SECTIONS) {
     if (!headings.includes(section)) {
-      error(label, `missing required section: "## ${section}"`);
+      warn(label, `missing recommended section: "## ${section}"`);
     }
   }
 
@@ -155,56 +121,14 @@ for (const skill of skills) {
     insideBlock = !insideBlock;
   }
 
-  // --- Duplicate version line check ---
-
-  // The `> version:` line should no longer exist in skill bodies
-  if (/^> version:/m.test(body)) {
-    error(
-      label,
-      `body still contains "> version:" line — version should only be in frontmatter`
-    );
-  }
-
   // --- Recommended fields ---
 
-  if (!Array.isArray(meta.requires) || meta.requires.length === 0) {
-    warn(label, `missing "requires" field in frontmatter`);
+  if (!meta.license) {
+    warn(label, `missing "license" field in frontmatter`);
   }
 
-  if (!Array.isArray(meta.tags) || meta.tags.length === 0) {
-    warn(label, `missing "tags" field in frontmatter`);
-  }
-}
-
-// --- Dependency cycle detection (simple DFS) ---
-
-function hasCycle(name, visited, stack) {
-  visited.add(name);
-  stack.add(name);
-  const skill = skills.find((s) => s.meta.name === name);
-  if (!skill) return false;
-  const deps = Array.isArray(skill.meta.dependencies)
-    ? skill.meta.dependencies
-    : [];
-  for (const dep of deps) {
-    if (!visited.has(dep)) {
-      if (hasCycle(dep, visited, stack)) return true;
-    } else if (stack.has(dep)) {
-      error(
-        `${name}/SKILL.md`,
-        `circular dependency detected: ${name} -> ... -> ${dep}`
-      );
-      return true;
-    }
-  }
-  stack.delete(name);
-  return false;
-}
-
-const visited = new Set();
-for (const skill of skills) {
-  if (!visited.has(skill.meta.name)) {
-    hasCycle(skill.meta.name, visited, new Set());
+  if (!meta.compatibility) {
+    warn(label, `missing "compatibility" field in frontmatter`);
   }
 }
 
