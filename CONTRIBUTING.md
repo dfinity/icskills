@@ -67,11 +67,11 @@ See `skills/skill.schema.json` for the formal schema. This format aligns with th
 
 The `description` field is how agents decide whether to load your skill. A weak description means agents won't find your skill when they need it.
 
-**Do:** State both what the skill does AND when to use it. Include specific keywords that help agents match tasks.
+**Do:** State what the skill does, when to use it, AND when NOT to use it. Include specific keywords that help agents match tasks. The "Do NOT use for..." clause prevents overtriggering — agents loading your skill when a similar-but-wrong one matches.
 
 ```yaml
-# Good — tells agents what it does and when to activate
-description: "Integrates ckBTC (chain-key Bitcoin) on the Internet Computer. Covers deposits, withdrawals, balance checks, and transfer flows. Use when building Bitcoin-related features on ICP or when the user mentions BTC, Bitcoin, or ckBTC."
+# Good — tells agents what it does, when to activate, and when NOT to
+description: "Integrates ckBTC (chain-key Bitcoin) on the Internet Computer. Covers deposits, withdrawals, balance checks, and transfer flows. Use when building Bitcoin-related features on ICP or when the user mentions BTC, Bitcoin, or ckBTC. Do NOT use for general ICRC ledger operations without Bitcoin involvement."
 
 # Bad — too vague, agents won't know when to load this
 description: "ckBTC integration guide."
