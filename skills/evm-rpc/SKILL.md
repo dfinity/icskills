@@ -1,14 +1,11 @@
 ---
 name: evm-rpc
-title: EVM RPC Integration
-category: Integration
 description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
-endpoints: 9
-version: 1.1.2
-status: stable
-dependencies: [https-outcalls]
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
-tags: [ethereum, evm, json-rpc, cross-chain, eth, arbitrum, base, optimism]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: EVM RPC Integration
+  category: Integration
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC

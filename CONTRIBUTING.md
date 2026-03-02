@@ -41,36 +41,45 @@ Every skill file has YAML frontmatter followed by a markdown body. The frontmatt
 ```yaml
 ---
 name: <skill-name>
-title: "Display Name"
-category: CategoryName
-description: "One sentence. When should an agent load this skill? What does it cover?"
-endpoints: 5
-version: 1.0.0
-status: stable
-dependencies: [dep1, dep2]
-requires: [icp-cli >= 0.1.0, other-tool >= version]
-tags: [keyword1, keyword2, keyword3]
+description: "What does this skill do AND when should an agent load it? Include specific keywords."
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: "Display Name"
+  category: CategoryName
 ---
 ```
 
-See `skills/skill.schema.json` for the formal schema.
+See `skills/skill.schema.json` for the formal schema. This format aligns with the [Agent Skills spec](https://agentskills.io/specification).
 
 #### Frontmatter field reference
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | yes | Lowercase, hyphenated identifier. Must match the directory name. Aligns with the [Agent Skills spec](https://agentskills.io/specification). |
-| `title` | yes | Human-readable display name. |
-| `category` | yes | One of the predefined categories (see below). |
-| `description` | yes | One sentence. Describes when an agent should load this skill. |
-| `endpoints` | yes | Number of distinct canister methods or external API operations documented in the Implementation section. |
-| `version` | yes | Semantic version (`major.minor.patch`). |
-| `status` | yes | `stable` (production-ready) or `beta` (API may change). |
-| `dependencies` | recommended | Array of skill names this skill depends on. Use `[]` if none. |
-| `requires` | recommended | Tool/package dependencies with version constraints (e.g., `icp-cli >= 0.1.0`). |
-| `tags` | recommended | Keywords for agent discovery. Lowercase, hyphenated. |
+| `name` | yes | Lowercase, hyphenated identifier. Must match the directory name. |
+| `description` | yes | **The most important field.** Describes when an agent should load this skill and what it covers. This is the primary triggering mechanism for agent skill selection — see guidance below. |
+| `license` | recommended | SPDX license identifier (e.g., `Apache-2.0`). |
+| `compatibility` | recommended | Tool/version requirements (e.g., `icp-cli >= 0.1.0`). |
+| `metadata.title` | yes | Human-readable display name. |
+| `metadata.category` | yes | One of the predefined categories (see below). |
+
+#### Writing a good `description`
+
+The `description` field is how agents decide whether to load your skill. A weak description means agents won't find your skill when they need it.
+
+**Do:** State both what the skill does AND when to use it. Include specific keywords that help agents match tasks.
+
+```yaml
+# Good — tells agents what it does and when to activate
+description: "Integrates ckBTC (chain-key Bitcoin) on the Internet Computer. Covers deposits, withdrawals, balance checks, and transfer flows. Use when building Bitcoin-related features on ICP or when the user mentions BTC, Bitcoin, or ckBTC."
+
+# Bad — too vague, agents won't know when to load this
+description: "ckBTC integration guide."
+```
 
 #### Body sections
+
+The body has **no rigid structure requirements** — organize content in whatever way best serves agents for your skill's domain. That said, most skills benefit from these sections:
 
 ```markdown
 # Skill Title
@@ -81,16 +90,12 @@ Brief explanation of the technology. 2-3 sentences max.
 ## Prerequisites
 - Bullet list of required tools, packages, versions
 
-## Canister IDs                        <!-- optional: include when skill uses external canisters -->
+## Canister IDs                        <!-- when skill uses external canisters -->
 | Environment | Canister | ID |
 |-------------|----------|-----|
 | Mainnet | ... | `...` |
 
-## How It Works                        <!-- optional: for non-trivial multi-step flows -->
-### Flow Name
-1. Step one...
-
-## Mistakes That Break Your Build      <!-- HIGHEST-VALUE SECTION -->
+## Common Pitfalls                     <!-- highest-value section — name it what fits -->
 1. **Pitfall name.** Explanation of what goes wrong and why.
 
 ## Implementation
@@ -104,20 +109,21 @@ Step-by-step commands to deploy locally and on mainnet.
 Concrete commands to confirm the implementation is correct.
 ```
 
-### 3. Validate and regenerate
+Use whatever headings fit your skill. A security skill might use `## Security Pitfalls`. An architecture skill might use `## Design Mistakes`. A REST API skill might skip `## Deploy & Test` entirely. The goal is clarity, not conformity.
+
+### 3. Validate
 
 ```bash
-npm run validate     # Check frontmatter, sections, dependency graph
-npm run generate     # Regenerate README skills table
+npm run validate     # Check frontmatter and sections
 ```
 
-Both commands run automatically in CI. Validate blocks deployment on errors. The deploy pipeline verifies that the README skills table matches what `npm run generate` produces — if it's out of date, CI will reject the PR.
+This runs automatically in CI and blocks deployment on errors.
 
 ### 4. That's it — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, `agent.json`, and other discovery files.
 
-Stats (skill count, operations, categories) all update automatically.
+Stats (skill count, categories) all update automatically.
 
 ### 5. Submit a PR
 
@@ -130,20 +136,9 @@ Stats (skill count, operations, categories) all update automatically.
 
 ## Updating an Existing Skill
 
-### When to bump the version
-
-| Change | Version bump | Example |
-|--------|-------------|---------|
-| Fix a typo, clarify wording | Patch `x.x.+1` | 1.0.0 → 1.0.1 |
-| Add a new section, update code examples | Minor `x.+1.0` | 1.0.0 → 1.1.0 |
-| Rewrite for breaking API changes (e.g., mo:base → mo:core) | Major `+1.0.0` | 1.0.0 → 2.0.0 |
-
-### Steps
-
 1. Edit the `SKILL.md` content
-2. Bump the `version` in the frontmatter
-3. Run `npm run validate && npm run generate` and commit the updated `README.md`
-4. Submit a PR with a summary of what changed
+2. Run `npm run validate`
+3. Submit a PR with a summary of what changed
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
@@ -152,25 +147,16 @@ The website auto-generates from SKILL.md frontmatter — no need to edit any sou
 ## Skill Writing Guidelines
 
 - **Write for agents, not humans.** Be explicit. State exact canister IDs, exact function signatures, exact error messages.
-- **Pitfalls are the highest-value section.** Every pitfall you document is a hallucination prevented.
+- **Pitfalls are the highest-value content.** Every pitfall you document is a hallucination prevented. Name the section whatever fits your skill (`Common Pitfalls`, `Security Pitfalls`, `Design Mistakes`, etc.).
 - **Code must be copy-paste correct.** Agents will use your code blocks directly. Test everything.
 - **Annotate all code blocks** with language identifiers (` ```motoko `, ` ```rust `, ` ```bash `, etc.).
 - **Include canister IDs and URLs** for both local and mainnet environments.
 - **Keep it flat.** One file per skill. No nested directories, no images, no external dependencies.
-- **Use semver strictly.** Agents and tooling rely on version numbers to detect stale skills.
 
 ## Categories
 
-Current categories used on the site:
+Use an existing category when possible. The validator warns on unknown categories to catch typos, but new categories are not blocked.
 
-| Category | Examples |
-|----------|---------|
-| DeFi | ckBTC |
-| Tokens | ICRC Ledger |
-| Auth | Internet Identity |
-| Architecture | Multi-Canister, Stable Memory |
-| Integration | HTTPS Outcalls, EVM RPC |
-| Governance | SNS Launch |
-| Frontend | Asset Canister |
-| Security | vetKD, Certified Variables |
-| Infrastructure | Cycles Wallet |
+Current categories: **DeFi**, **Tokens**, **Auth**, **Architecture**, **Integration**, **Governance**, **Frontend**, **Security**, **Infrastructure**, **Wallet**
+
+To add a new category: update `KNOWN_CATEGORIES` in `scripts/validate-skills.js`, the description in `skills/skill.schema.json`, and the icon in `src/components/Icons.tsx`.

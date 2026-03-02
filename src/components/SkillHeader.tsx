@@ -6,14 +6,11 @@ import { BASE_PATH, SITE_URL } from "../data/site";
 interface Props {
   skillId: string;
   skillName: string;
-  version: string;
   category: string;
-  endpoints: number;
   lastUpdated: string;
-  dependencies: string[];
 }
 
-export default function SkillHeader({ skillId, skillName, version, category, endpoints, lastUpdated, dependencies }: Props) {
+export default function SkillHeader({ skillId, skillName, category, lastUpdated }: Props) {
   const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skillId}/SKILL.md`;
   const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skillId}/SKILL.md`;
   const shareUrl = `${SITE_URL}/skills/${skillId}/`;
@@ -45,20 +42,11 @@ export default function SkillHeader({ skillId, skillName, version, category, end
               <span style={{ fontSize: "14px" }}>{"\u2190"}</span>
               All Skills
             </a>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-              <span style={{
-                fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
-                fontSize: "14px", color: "var(--text-primary)",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
-              }}>{skillName}</span>
-              <span style={{
-                fontSize: "10px", padding: "2px 8px",
-                background: "rgba(var(--accent-rgb),0.1)",
-                border: "1px solid rgba(var(--accent-rgb),0.2)",
-                borderRadius: "4px", color: "var(--accent-text)",
-                flexShrink: 0, whiteSpace: "nowrap",
-              }}>v{version}</span>
-            </div>
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+              fontSize: "14px", color: "var(--text-primary)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
+            }}>{skillName}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <a href={githubUrl} target="_blank" rel="noopener noreferrer"
@@ -102,27 +90,8 @@ export default function SkillHeader({ skillId, skillName, version, category, end
             {category}
           </span>
           <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
-            {endpoints} operations
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
-          <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
             updated {lastUpdated}
           </span>
-          {dependencies.length > 0 && (
-            <>
-              <span style={{ fontSize: "11px", color: "var(--text-phantom)" }}>{"\u00B7"}</span>
-              <span style={{ fontSize: "11px", color: "var(--text-ghost)" }}>requires:</span>
-              {dependencies.map((dep) => (
-                <a key={dep} href={`${BASE_PATH}/skills/${dep}/`} style={{
-                  fontSize: "10px", padding: "2px 8px",
-                  background: "rgba(var(--blue-rgb),0.08)",
-                  border: "1px solid rgba(var(--blue-rgb),0.15)",
-                  borderRadius: "3px", color: "var(--accent-blue)",
-                  textDecoration: "none",
-                }}>{dep}</a>
-              ))}
-            </>
-          )}
         </div>
 
         {/* Agent context bar */}

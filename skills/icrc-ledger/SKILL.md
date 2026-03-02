@@ -1,14 +1,11 @@
 ---
 name: icrc-ledger
-title: ICRC Ledger Standard
-category: Tokens
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata."
-endpoints: 11
-version: 2.3.4
-status: stable
-dependencies: []
-requires: [icp-cli >= 0.1.0, mops, ic-cdk >= 0.19]
-tags: [token, icrc1, icrc2, ledger, transfer, approve, mint, balance]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: ICRC Ledger Standard
+  category: Tokens
 ---
 
 # ICRC Ledger Standards

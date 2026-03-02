@@ -1,14 +1,11 @@
 ---
 name: <skill-name>
-title: "<Display Name>"
-category: <CategoryName>
-description: "<One sentence. When should an agent load this skill? What does it cover?>"
-endpoints: 1
-version: 1.0.0
-status: stable
-dependencies: []
-requires: [icp-cli >= 0.1.0]
-tags: [<keyword1>, <keyword2>, <keyword3>]
+description: "<What does this skill do AND when should an agent load it? Include specific keywords. See CONTRIBUTING.md for guidance.>"
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: "<Display Name>"
+  category: <CategoryName>
 ---
 
 # <Skill Title>
@@ -19,8 +16,8 @@ Brief explanation of the technology. 2-3 sentences max. What does it do? Why doe
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
+- List exact tools and versions needed (e.g., `icp-cli >= 0.1.0`)
+- For Motoko: list `mops` dependencies with versions
 - For Rust: list crate dependencies with versions
 - For JavaScript: list npm packages with versions
 
@@ -36,20 +33,18 @@ Brief explanation of the technology. 2-3 sentences max. What does it do? Why doe
 
 ## How It Works
 
-<!-- Optional section. Include for skills with non-trivial flows (e.g., deposit/withdraw,
-     multi-step processes, request/response cycles). Helps agents understand the mental model
-     before generating code. Omit for simple CRUD-style skills. -->
-
-### <Flow Name>
+<!-- Optional. Include for non-trivial flows (deposit/withdraw, multi-step processes).
+     Omit for simple skills. -->
 
 1. Step one...
 2. Step two...
 3. Step three...
 
-## Mistakes That Break Your Build
+## Common Pitfalls
 
-<!-- HIGHEST-VALUE SECTION. Every pitfall documented is a hallucination prevented.
-     Number each pitfall. Bold the title. Explain what goes wrong and why. -->
+<!-- Highest-value section. Every pitfall documented is a hallucination prevented.
+     Name this section whatever fits: "Common Pitfalls", "Security Pitfalls",
+     "Design Mistakes", etc. -->
 
 1. **<Pitfall name>.** Explanation of what goes wrong and why. Include the correct approach.
 
@@ -59,88 +54,20 @@ Brief explanation of the technology. 2-3 sentences max. What does it do? Why doe
 
 ## Implementation
 
-### Motoko
-
-#### mops.toml
-
-```toml
-[package]
-name = "<project-name>"
-version = "0.1.0"
-
-[dependencies]
-core = "2.0.0"
-```
-
-#### src/backend/main.mo
-
-```motoko
-import Principal "mo:core/Principal";
-
-persistent actor {
-  // TODO: implementation
-};
-```
-
-### Rust
-
-#### Cargo.toml
-
-```toml
-[package]
-name = "<project_name>"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.19"
-candid = "0.10"
-serde = { version = "1", features = ["derive"] }
-```
-
-#### src/lib.rs
-
-```rust
-use ic_cdk::{query, update};
-use candid::Principal;
-
-// TODO: implementation
-
-ic_cdk::export_candid!();
-```
+<!-- Include working, tested code for each supported language.
+     Use subsections per language (### Motoko, ### Rust, ### JavaScript).
+     Show complete file contents — agents copy-paste directly. -->
 
 ## Deploy & Test
 
-### Local Development
-
-```bash
-# Start local replica
-icp network start -d
-
-# Deploy
-icp deploy backend
-
-# Test
-icp canister call backend <method> '(<args>)'
-```
-
-### Mainnet Deployment
-
-```bash
-icp deploy backend -e ic
-```
+<!-- Step-by-step commands for local development and mainnet deployment. -->
 
 ## Verify It Works
 
+<!-- Concrete commands with expected output so agents can confirm correctness. -->
+
 ```bash
 # 1. <Verification step>
-icp canister call backend <method> '(<args>)'
-# Expected: <expected output>
-
-# 2. <Verification step>
-icp canister call backend <method> '(<args>)'
+icp canister call <canister> <method> '(<args>)'
 # Expected: <expected output>
 ```
