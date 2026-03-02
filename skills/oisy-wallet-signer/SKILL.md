@@ -1,17 +1,17 @@
 ---
-id: oisy-wallet-signer
-name: OISY Wallet Signer
-category: Wallet
-description: Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing.
-version: 4.1.0
+name: oisy-wallet-signer
+title: "OISY Wallet Signer"
+category: DeFi
+description: "Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing."
 endpoints: 5
+version: 1.0.0
 status: stable
-dependencies: ["@dfinity/utils", "@dfinity/zod-schemas", "@icp-sdk/canisters", "@icp-sdk/core", "zod"]
+dependencies: [icrc-ledger]
+requires: ["@dfinity/utils >= 4.1", "@dfinity/zod-schemas >= 3", "@icp-sdk/canisters >= 3.2", "@icp-sdk/core >= 5", "zod >= 4"]
+tags: [wallet, signer, icrc-25, icrc-27, icrc-29, icrc-49, relying-party, postmessage]
 ---
 
 # OISY Wallet Signer
-
-> version: 4.1.0 | requires: [@dfinity/utils >= 4.1, @dfinity/zod-schemas >= 3, @icp-sdk/canisters >= 3.2, @icp-sdk/core >= 5, zod >= 4]
 
 ## What This Is
 
@@ -60,6 +60,21 @@ A TypeScript library that enables secure communication between dApps and wallets
 
 ```bash
 npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/canisters @icp-sdk/core zod
+```
+
+## How It Works
+
+### End-to-End Lifecycle
+
+```text
+1. dApp: IcrcWallet.connect({url})              → opens popup, polls icrc29_status
+2. dApp: wallet.requestPermissionsNotGranted()   → prompts user if needed
+3. dApp: wallet.accounts()                       → signer prompts, returns accounts
+4. dApp: wallet.transfer({...})                  → signer fetches ICRC-21 consent message
+                                                    → signer prompts user with consent
+                                                    → signer executes canister call
+                                                    → returns block index
+5. dApp: wallet.disconnect()                     → closes popup, cleans up
 ```
 
 ## Mistakes That Break Your Build
@@ -339,19 +354,6 @@ signer.disconnect();
 | Ask on use | `ICRC25_PERMISSION_ASK_ON_USE` | Prompts user on access (default)  |
 
 Permissions stored in `localStorage` as `oisy_signer_{origin}_{owner}` with timestamps. Default validity: 7 days.
-
-### Typical End-to-End Lifecycle
-
-```
-1. dApp: IcrcWallet.connect({url})              → opens popup, polls icrc29_status
-2. dApp: wallet.requestPermissionsNotGranted()   → prompts user if needed
-3. dApp: wallet.accounts()                       → signer prompts, returns accounts
-4. dApp: wallet.transfer({...})                  → signer fetches ICRC-21 consent message
-                                                    → signer prompts user with consent
-                                                    → signer executes canister call
-                                                    → returns block index
-5. dApp: wallet.disconnect()                     → closes popup, cleans up
-```
 
 ## Deploy & Test
 
