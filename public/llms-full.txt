@@ -3094,7 +3094,7 @@ title: ICP Development
 category: Infrastructure
 description: "Master skill for Internet Computer development. Routes to specialized skills for ckBTC, authentication, multi-canister patterns, and more. Load this first when building ICP applications."
 endpoints: 13
-version: 1.0.0
+version: 1.2.0
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
@@ -3114,49 +3114,23 @@ A meta-skill that acts as the single entry point for all Internet Computer devel
 - For Rust canisters: `cargo` with `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`)
 - For frontend: Node.js >= 18
 
-## Skill Categories by Priority
+## Skill Directory
 
-| Priority | Category | Skills | When You Need Them |
-|----------|----------|--------|--------------------|
-| CRITICAL | Architecture | [multi-canister](../multi-canister/SKILL.md), [stable-memory](../stable-memory/SKILL.md) | Every non-trivial dapp needs these patterns |
-| HIGH | Auth & Security | [internet-identity](../internet-identity/SKILL.md), [vetkd](../vetkd/SKILL.md), [certified-variables](../certified-variables/SKILL.md) | Most dapps need authentication or verified data |
-| HIGH | DeFi & Tokens | [ckbtc](../ckbtc/SKILL.md), [icrc-ledger](../icrc-ledger/SKILL.md), [wallet](../wallet/SKILL.md) | Any dapp that handles tokens or payments |
-| MEDIUM | Integration | [https-outcalls](../https-outcalls/SKILL.md), [evm-rpc](../evm-rpc/SKILL.md) | When calling external APIs or EVM chains |
-| MEDIUM | Deployment | [asset-canister](../asset-canister/SKILL.md), [ic-dashboard](../ic-dashboard/SKILL.md) | Frontend hosting and canister monitoring |
-| LOW | Governance | [sns-launch](../sns-launch/SKILL.md) | Only for DAO launches |
-
-## Quick Reference
-
-### Architecture (CRITICAL)
-
-- **[multi-canister](../multi-canister/SKILL.md)** — Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies.
-- **[stable-memory](../stable-memory/SKILL.md)** — Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data.
-
-### Auth & Security (HIGH)
-
-- **[internet-identity](../internet-identity/SKILL.md)** — Integrate Internet Identity authentication. Delegation, session management, and anchor handling.
-- **[vetkd](../vetkd/SKILL.md)** — Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control.
-- **[certified-variables](../certified-variables/SKILL.md)** — Serve verified responses from query calls. Merkle tree construction and certificate validation.
-
-### DeFi & Tokens (HIGH)
-
-- **[ckbtc](../ckbtc/SKILL.md)** — Accept, send, and manage ckBTC. Minting, transfers, balance checks, and UTXO management.
-- **[icrc-ledger](../icrc-ledger/SKILL.md)** — Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata.
-- **[wallet](../wallet/SKILL.md)** — Create, fund, and manage cycles wallets. Top-up canisters and automate cycle management.
-
-### Integration (MEDIUM)
-
-- **[https-outcalls](../https-outcalls/SKILL.md)** — Make HTTP requests from canisters to external APIs. Consensus-safe patterns and transform functions.
-- **[evm-rpc](../evm-rpc/SKILL.md)** — Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows.
-
-### Deployment (MEDIUM)
-
-- **[asset-canister](../asset-canister/SKILL.md)** — Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding.
-- **[ic-dashboard](../ic-dashboard/SKILL.md)** — Use the public REST APIs from dashboard.internetcomputer.org for canister, ledger, SNS, and metrics data.
-
-### Governance (LOW)
-
-- **[sns-launch](../sns-launch/SKILL.md)** — Configure and launch an SNS DAO. Token economics, proposal types, and decentralization swap.
+| Priority | Skill | Description |
+|----------|-------|-------------|
+| CRITICAL | [multi-canister](references/multi-canister.md) | Multi-canister design, inter-canister calls, shared state, upgrade strategies |
+| CRITICAL | [stable-memory](references/stable-memory.md) | State across upgrades, stable structures, pre/post upgrade hooks, memory-mapped data |
+| HIGH | [internet-identity](references/internet-identity.md) | Internet Identity auth, delegation, session management, anchor handling |
+| HIGH | [vetkd](references/vetkd.md) | On-chain privacy with vetKeys, key derivation, encryption/decryption, access control |
+| HIGH | [certified-variables](references/certified-variables.md) | Verified query responses, Merkle tree construction, certificate validation |
+| HIGH | [ckbtc](references/ckbtc.md) | ckBTC minting, transfers, balance checks, UTXO management |
+| HIGH | [icrc-ledger](references/icrc-ledger.md) | ICRC-1/ICRC-2 token ledgers, minting, approvals, transfers, metadata |
+| HIGH | [wallet](references/wallet.md) | Cycles wallets, canister top-up, cycle management |
+| MEDIUM | [https-outcalls](references/https-outcalls.md) | HTTP requests from canisters, consensus-safe patterns, transform functions |
+| MEDIUM | [evm-rpc](references/evm-rpc.md) | Ethereum/EVM calls from IC, JSON-RPC, transaction signing, cross-chain workflows |
+| MEDIUM | [asset-canister](references/asset-canister.md) | Frontend assets on IC, certified assets, custom domains, SPA routing |
+| MEDIUM | [ic-dashboard](references/ic-dashboard.md) | Public REST APIs for canister, ledger, SNS, and metrics data |
+| LOW | [sns-launch](references/sns-launch.md) | SNS DAO launch, token economics, proposal types, decentralization swap |
 
 ## Task Routing
 
@@ -3164,20 +3138,20 @@ Use this table to determine which skills to load for your specific task.
 
 | Task | Load These Skills |
 |------|-------------------|
-| Build a DeFi app | [ckbtc](../ckbtc/SKILL.md), [icrc-ledger](../icrc-ledger/SKILL.md), [wallet](../wallet/SKILL.md), [internet-identity](../internet-identity/SKILL.md) |
-| Add user authentication | [internet-identity](../internet-identity/SKILL.md), [asset-canister](../asset-canister/SKILL.md) |
-| Call external APIs | [https-outcalls](../https-outcalls/SKILL.md) |
-| Bridge to Ethereum | [evm-rpc](../evm-rpc/SKILL.md), [https-outcalls](../https-outcalls/SKILL.md) |
-| Store large state | [stable-memory](../stable-memory/SKILL.md), [multi-canister](../multi-canister/SKILL.md) |
-| Launch a DAO | [sns-launch](../sns-launch/SKILL.md), [icrc-ledger](../icrc-ledger/SKILL.md), [multi-canister](../multi-canister/SKILL.md) |
-| Encrypt user data | [vetkd](../vetkd/SKILL.md), [internet-identity](../internet-identity/SKILL.md) |
-| Prove query results | [certified-variables](../certified-variables/SKILL.md) |
-| Deploy a frontend | [asset-canister](../asset-canister/SKILL.md) |
-| Monitor canisters | [ic-dashboard](../ic-dashboard/SKILL.md) |
-| Accept Bitcoin payments | [ckbtc](../ckbtc/SKILL.md), [icrc-ledger](../icrc-ledger/SKILL.md) |
-| Create a custom token | [icrc-ledger](../icrc-ledger/SKILL.md) |
-| Multi-canister architecture | [multi-canister](../multi-canister/SKILL.md), [stable-memory](../stable-memory/SKILL.md) |
-| Survive canister upgrades | [stable-memory](../stable-memory/SKILL.md) |
+| Build a DeFi app | [ckbtc](references/ckbtc.md), [icrc-ledger](references/icrc-ledger.md), [wallet](references/wallet.md), [internet-identity](references/internet-identity.md) |
+| Add user authentication | [internet-identity](references/internet-identity.md), [asset-canister](references/asset-canister.md) |
+| Call external APIs | [https-outcalls](references/https-outcalls.md) |
+| Bridge to Ethereum | [evm-rpc](references/evm-rpc.md), [https-outcalls](references/https-outcalls.md) |
+| Store large state | [stable-memory](references/stable-memory.md), [multi-canister](references/multi-canister.md) |
+| Launch a DAO | [sns-launch](references/sns-launch.md), [icrc-ledger](references/icrc-ledger.md), [multi-canister](references/multi-canister.md) |
+| Encrypt user data | [vetkd](references/vetkd.md), [internet-identity](references/internet-identity.md) |
+| Prove query results | [certified-variables](references/certified-variables.md) |
+| Deploy a frontend | [asset-canister](references/asset-canister.md) |
+| Monitor canisters | [ic-dashboard](references/ic-dashboard.md) |
+| Accept Bitcoin payments | [ckbtc](references/ckbtc.md), [icrc-ledger](references/icrc-ledger.md) |
+| Create a custom token | [icrc-ledger](references/icrc-ledger.md) |
+| Multi-canister architecture | [multi-canister](references/multi-canister.md), [stable-memory](references/stable-memory.md) |
+| Survive canister upgrades | [stable-memory](references/stable-memory.md) |
 
 ## Mistakes That Break Your Build
 
@@ -3187,103 +3161,19 @@ These are universal ICP pitfalls that apply across multiple skills. Each special
 
 2. **Using `async` inter-canister calls in `init` or `pre_upgrade`.** These hooks run synchronously. Any `await` in them will trap. Move async initialization to a separate `post_deploy` or `setup` method that you call after deployment.
 
-3. **Ignoring cycle costs.** Every canister operation consumes cycles. Canisters that run out of cycles are deleted after 30 days. Always set up monitoring (see [ic-dashboard](../ic-dashboard/SKILL.md)) and fund canisters with sufficient cycles (see [wallet](../wallet/SKILL.md)).
+3. **Ignoring cycle costs.** Every canister operation consumes cycles. Canisters that run out of cycles are deleted after 30 days. Always set up monitoring (see [ic-dashboard](references/ic-dashboard.md)) and fund canisters with sufficient cycles (see [wallet](references/wallet.md)).
 
 4. **Hardcoding canister IDs.** Canister IDs differ between local and mainnet deployments. Use environment-based configuration or the canister ID resolution built into `icp-cli` instead of hardcoded principals.
 
-5. **Not testing upgrades.** Deploy, store data, upgrade, and verify data survives. Many bugs only surface during upgrades. Load [stable-memory](../stable-memory/SKILL.md) for the full upgrade safety patterns.
+5. **Not testing upgrades.** Deploy, store data, upgrade, and verify data survives. Many bugs only surface during upgrades. Load [stable-memory](references/stable-memory.md) for the full upgrade safety patterns.
 
 6. **Exceeding the 2 MB ingress message limit.** Both call arguments and return values must stay under 2 MB. For large data, use chunked upload/download patterns or store data in stable memory and return references.
 
-7. **Misunderstanding query vs. update calls.** Query calls are fast (~200ms) but not consensus-verified and cannot modify state. Update calls go through consensus (~2s) and can modify state. Use queries for reads, updates for writes. To prove query results, load [certified-variables](../certified-variables/SKILL.md).
+7. **Misunderstanding query vs. update calls.** Query calls are fast (~200ms) but not consensus-verified and cannot modify state. Update calls go through consensus (~2s) and can modify state. Use queries for reads, updates for writes. To prove query results, load [certified-variables](references/certified-variables.md).
 
 ## Implementation
 
-### Project Setup
-
-Every ICP project starts with an `icp.yaml` configuration file:
-
-```yaml
-canisters:
-  backend:
-    type: motoko
-    main: src/backend/main.mo
-  frontend:
-    type: assets
-    source: dist
-```
-
-For Rust canisters, change the type:
-
-```yaml
-canisters:
-  backend:
-    type: rust
-    candid: src/backend/backend.did
-    package: backend
-```
-
-### Motoko Starter
-
-```motoko
-import Principal "mo:core/Principal";
-import Debug "mo:core/Debug";
-
-persistent actor {
-  stable var counter : Nat = 0;
-
-  public func increment() : async Nat {
-    counter += 1;
-    counter;
-  };
-
-  public query func get() : async Nat {
-    counter;
-  };
-};
-```
-
-### Rust Starter
-
-```toml
-[package]
-name = "backend"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.19"
-candid = "0.10"
-serde = { version = "1", features = ["derive"] }
-```
-
-```rust
-use ic_cdk::{query, update};
-use std::cell::RefCell;
-
-thread_local! {
-    static COUNTER: RefCell<u64> = RefCell::new(0);
-}
-
-#[update]
-fn increment() -> u64 {
-    COUNTER.with(|c| {
-        let mut count = c.borrow_mut();
-        *count += 1;
-        *count
-    })
-}
-
-#[query]
-fn get() -> u64 {
-    COUNTER.with(|c| *c.borrow())
-}
-
-ic_cdk::export_candid!();
-```
+For project setup templates (icp.yaml, Motoko, Rust), see [starter-code](references/starter-code.md).
 
 ## Deploy & Test
 
