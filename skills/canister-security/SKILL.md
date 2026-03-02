@@ -22,7 +22,7 @@ IC canisters face security challenges that don't exist in traditional web develo
 
 1. **Relying on `canister_inspect_message` for access control.** This hook runs on a single replica without full consensus. A malicious boundary node can bypass it by forwarding the message anyway. It is also never called for inter-canister calls, query calls, or management canister calls. Always duplicate access checks inside every update method. Use `inspect_message` only as a cycle-saving optimization, never as a security boundary. See [security best practices: ingress message inspection](https://docs.internetcomputer.org/building-apps/security/iam#do-not-rely-on-ingress-message-inspection).
 
-2. **Forgetting to reject the anonymous principal.** Every endpoint that requires authentication must check that the caller is not the anonymous principal (`2vxsx-fae`). In Motoko use `Principal.isAnonymous(caller)`, in Rust compare `caller() != Principal::anonymous()`. Without this, unauthenticated callers can invoke protected methods — and if the canister uses the caller principal as an identity key (e.g., for balances), the anonymous principal becomes a shared identity anyone can use.
+2. **Forgetting to reject the anonymous principal.** Every endpoint that requires authentication must check that the caller is not the anonymous principal (`2vxsx-fae`). In Motoko use `Principal.isAnonymous(caller)`, in Rust compare `msg_caller() != Principal::anonymous()`. Without this, unauthenticated callers can invoke protected methods — and if the canister uses the caller principal as an identity key (e.g., for balances), the anonymous principal becomes a shared identity anyone can use.
 
 3. **Reading state before an async call and assuming it's unchanged after (TOCTOU).** When your canister `await`s an inter-canister call, other messages can interleave and mutate state. This is one of the most critical sources of DeFi exploits on IC. Always deduct/lock state before the `await`, then compensate on failure (saga pattern). Consider per-caller or per-resource locks to prevent duplicate concurrent operations. See [security best practices: inter-canister calls](https://docs.internetcomputer.org/building-apps/security/inter-canister-calls).
 
@@ -123,7 +123,7 @@ persistent actor {
   /// Only the owner
   public shared ({ caller }) func addAdmin(newAdmin : Principal) : async () {
     requireOwner(caller);
-    admins := Array.append(admins, [newAdmin]);
+    admins := Array.concat(admins, [newAdmin]);
   };
 };
 ```
@@ -131,6 +131,8 @@ persistent actor {
 #### Async safety (saga pattern)
 
 ```motoko
+// Requires additional import: import Error "mo:core/Error"
+
 public shared ({ caller }) func transfer(to : Principal, amount : Nat) : async () {
   // CAPTURE caller and validate BEFORE any await
   let sender = caller;
@@ -181,7 +183,8 @@ system func inspect(
 #### Access control pattern
 
 ```rust
-use ic_cdk::{caller, init, update};
+use ic_cdk::{init, update};
+use ic_cdk::api::msg_caller;
 use candid::Principal;
 use std::cell::RefCell;
 
@@ -193,7 +196,7 @@ thread_local! {
 // --- Guards ---
 
 fn require_authenticated() -> Principal {
-    let caller = caller();
+    let caller = msg_caller();
     assert_ne!(caller, Principal::anonymous(), "anonymous caller not allowed");
     caller
 }
@@ -247,18 +250,19 @@ ic_cdk::export_candid!();
 #### inspect_message (cycle drain reduction only)
 
 ```rust
-use ic_cdk::api::call::{accept_message, method_name};
+use ic_cdk::api::{accept_message, msg_caller, msg_method_name};
+use candid::Principal;
 
 /// Pre-filter to reduce cycle waste from spam.
 /// Runs on ONE node. Can be bypassed. NOT a security check.
 /// Always duplicate real access control inside each method.
 #[ic_cdk::inspect_message]
 fn inspect_message() {
-    let method = method_name();
+    let method = msg_method_name();
     match method.as_str() {
         // Admin methods: only accept from non-anonymous callers
         "admin_action" | "add_admin" => {
-            if caller() != Principal::anonymous() {
+            if msg_caller() != Principal::anonymous() {
                 accept_message();
             }
             // Silently reject anonymous — saves cycles on Candid decoding
@@ -294,19 +298,12 @@ async fn transfer(to: Principal, amount: u64) {
 }
 ```
 
-## Deploy & Test
+## Verify It Works
 
-### Local Development
-
-```bash
-icp network start -d
-icp deploy backend
-```
-
-### Test Access Control
+### Access Control
 
 ```bash
-# 1. Authenticated call should succeed (default identity is owner)
+# 1. Authenticated call should succeed
 icp canister call backend public_action '()'
 # Expected: ("ok")
 
@@ -335,29 +332,4 @@ icp canister settings show backend -e ic
 # Default: 2,592,000 seconds (30 days). Increase for high-value canisters.
 
 # 3. Verify cycles balance is healthy — well above freezing threshold reserve
-```
-
-## Verify It Works
-
-```bash
-# 1. Anonymous rejection works
-icp canister call backend public_action '()' --identity anonymous
-# Expected: Error — "anonymous caller not allowed"
-
-# 2. Authenticated call succeeds
-icp canister call backend public_action '()'
-# Expected: ("ok")
-
-# 3. Admin-only method rejects non-admin
-icp identity new test-user
-icp canister call backend admin_action '()' --identity test-user
-# Expected: Error — "caller is not an admin"
-
-# 4. Owner can add admin
-icp canister call backend add_admin '(principal "aaaaa-aa")'
-# Expected: ()
-
-# 5. Freezing threshold is configured (mainnet)
-icp canister settings show backend -e ic
-# Expected: Freezing threshold >= 2,592,000
 ```

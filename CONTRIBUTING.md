@@ -154,6 +154,7 @@ The website auto-generates from SKILL.md frontmatter — no need to edit any sou
 - **Annotate all code blocks** with language identifiers (` ```motoko `, ` ```rust `, ` ```bash `, etc.).
 - **Include canister IDs and URLs** for both local and mainnet environments.
 - **Keep it flat.** One file per skill. No nested directories, no images, no external dependencies.
+- **Don't duplicate other skills.** If another skill covers a pattern in depth (e.g., `canister-security` for access control and async safety), reference it by name in your pitfalls instead of inlining the pattern. This keeps maintenance centralized and ensures agents get the authoritative version. The `description` field is the primary mechanism agents use to discover related skills — cross-references in pitfalls serve as secondary hints.
 
 ## Categories
 
