@@ -17,8 +17,6 @@ export default function BrowseTab({ skills }: Props) {
     () => ["All", ...Array.from(new Set(skills.map((s) => s.category))).sort()],
     [skills]
   );
-  const TOTAL_ENDPOINTS = useMemo(() => skills.reduce((sum, s) => sum + s.endpoints, 0), [skills]);
-
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return skills.filter((s) => {
@@ -61,7 +59,6 @@ export default function BrowseTab({ skills }: Props) {
         <div className="hero-stats" style={{ display: "flex", gap: "32px", marginTop: "32px" }}>
           {[
             { val: skills.length, label: "Skills" },
-            { val: TOTAL_ENDPOINTS, label: "Operations" },
             { val: "0", label: "Hallucinations" },
           ].map(({ val, label }) => (
             <div key={label}>
@@ -168,7 +165,7 @@ export default function BrowseTab({ skills }: Props) {
                     {skill.name}
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-faint)", marginTop: "2px" }}>
-                    v{skill.version} {"\u00B7"} {skill.category}
+                    {skill.category}
                   </div>
                 </div>
                 <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.id}/SKILL.md`}
@@ -192,38 +189,9 @@ export default function BrowseTab({ skills }: Props) {
                 margin: "0 0 16px 0", fontFamily: SANS_FONT,
               }}>{skill.description}</p>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
-                  {skill.endpoints} operations {"\u00B7"} updated {skill.lastUpdated}
-                </div>
-                {skill.status === "beta" && (
-                  <span style={{
-                    fontSize: "9px", padding: "2px 6px",
-                    background: `rgba(var(--yellow-rgb),0.1)`,
-                    border: `1px solid rgba(var(--yellow-rgb),0.2)`,
-                    color: "var(--yellow)", borderRadius: "3px",
-                    textTransform: "uppercase", letterSpacing: "1px",
-                  }}>beta</span>
-                )}
+              <div style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
+                updated {skill.lastUpdated}
               </div>
-
-              {skill.dependencies.length > 0 && (
-                <div style={{
-                  marginTop: "12px", paddingTop: "12px",
-                  borderTop: "1px solid var(--border-subtle)",
-                  display: "flex", gap: "6px", flexWrap: "wrap",
-                }}>
-                  <span style={{ fontSize: "10px", color: "var(--text-ghost)" }}>requires:</span>
-                  {skill.dependencies.map((dep) => (
-                    <span key={dep} style={{
-                      fontSize: "10px", padding: "2px 8px",
-                      background: `rgba(var(--blue-rgb),0.08)`,
-                      border: `1px solid rgba(var(--blue-rgb),0.15)`,
-                      borderRadius: "3px", color: "var(--accent-blue)",
-                    }}>{dep}</span>
-                  ))}
-                </div>
-              )}
 
               <div
                 onClick={(e) => e.stopPropagation()}
