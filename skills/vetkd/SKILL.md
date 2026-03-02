@@ -4,7 +4,7 @@ title: vetKeys
 category: Security
 description: "Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns."
 endpoints: 5
-version: 1.0.2
+version: 1.0.3
 status: beta
 dependencies: [internet-identity]
 requires: [icp-cli >= 0.1.0]
@@ -77,6 +77,8 @@ Fees depend on the **subnet where the master key resides** (and its size), not o
 7. **Using `context` inconsistently.** If the backend uses `b"my_app_v1"` as context but the frontend verification uses `b"my_app"`, the derived keys will not match and decryption will silently fail.
 
 8. **Not attaching enough cycles to `vetkd_derive_key`.** `vetkd_derive_key` consumes cycles; `vetkd_public_key` does not. For derive_key, `key_1` costs ~26B cycles and `test_key_1` costs ~10B cycles.
+
+9. **Rolling your own IBE without proper authorization checks.** If you implement IBE manually (bypassing `KeyManager` / `EncryptedMaps`), your canister must enforce that `vetkd_derive_key` only returns the derived key to the authorized caller — e.g. the principal whose identity was used as the `input`. Without this check, any caller can request any derived key and decrypt messages meant for someone else. The provided `ic-vetkeys` / `@dfinity/vetkeys` libraries handle this correctly; prefer them over a custom implementation.
 
 ## System API (Candid)
 
