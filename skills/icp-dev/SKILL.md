@@ -8,16 +8,16 @@ version: 1.2.0
 status: stable
 dependencies: []
 requires: [icp-cli >= 0.1.0]
-tags: [icp, internet-computer, canister, dfx, motoko, rust, development, meta]
+tags: [icp, internet-computer, canister, motoko, rust, development, meta]
 ---
 
 # ICP Development
 
 ## What This Is
 
-A meta-skill that acts as the single entry point for all Internet Computer development. Instead of loading all 13 ICP skills at once, load this skill first — it categorizes every available skill by domain and priority, then tells you exactly which specialized skills to load for your specific task. Each referenced skill is a separate file you load on demand.
+A guide for developing, deploying and managing applications on the Internet Computer. It contains references across different categories to guide the LLM in code generation. Each guide can be loaded separately as needed to reduce context bloat.
 
-## Prerequisites
+## Development Prerequisites
 
 - `icp-cli` >= 0.1.0 (`brew install icp-cli`)
 - `ic-wasm` (`brew install ic-wasm`)
@@ -27,21 +27,21 @@ A meta-skill that acts as the single entry point for all Internet Computer devel
 
 ## Reference Directory
 
-| Priority | Reference | Description |
-|----------|-------|-------------|
-| CRITICAL | [multi-canister](references/multi-canister.md) | Multi-canister design, inter-canister calls, shared state, upgrade strategies |
-| CRITICAL | [stable-memory](references/stable-memory.md) | State across upgrades, stable structures, pre/post upgrade hooks, memory-mapped data |
-| HIGH | [internet-identity](references/internet-identity.md) | Internet Identity auth, delegation, session management, anchor handling |
-| HIGH | [vetkd](references/vetkd.md) | On-chain privacy with vetKeys, key derivation, encryption/decryption, access control |
-| HIGH | [certified-variables](references/certified-variables.md) | Verified query responses, Merkle tree construction, certificate validation |
-| HIGH | [ckbtc](references/ckbtc.md) | ckBTC minting, transfers, balance checks, UTXO management |
-| HIGH | [icrc-ledger](references/icrc-ledger.md) | ICRC-1/ICRC-2 token ledgers, minting, approvals, transfers, metadata |
-| HIGH | [wallet](references/wallet.md) | Cycles wallets, canister top-up, cycle management |
-| MEDIUM | [https-outcalls](references/https-outcalls.md) | HTTP requests from canisters, consensus-safe patterns, transform functions |
-| MEDIUM | [evm-rpc](references/evm-rpc.md) | Ethereum/EVM calls from IC, JSON-RPC, transaction signing, cross-chain workflows |
-| MEDIUM | [asset-canister](references/asset-canister.md) | Frontend assets on IC, certified assets, custom domains, SPA routing |
-| MEDIUM | [ic-dashboard](references/ic-dashboard.md) | Public REST APIs for canister, ledger, SNS, and metrics data |
-| LOW | [sns-launch](references/sns-launch.md) | SNS DAO launch, token economics, proposal types, decentralization swap |
+| Reference | Description |
+|-----------|-------------|
+| [asset-canister](references/asset-canister.md) | Frontend assets on IC, certified assets, custom domains, SPA routing |
+| [certified-variables](references/certified-variables.md) | Verified query responses, Merkle tree construction, certificate validation |
+| [ckbtc](references/ckbtc.md) | ckBTC minting, transfers, balance checks, UTXO management |
+| [evm-rpc](references/evm-rpc.md) | Ethereum/EVM calls from IC, JSON-RPC, transaction signing, cross-chain workflows |
+| [https-outcalls](references/https-outcalls.md) | HTTP requests from canisters, consensus-safe patterns, transform functions |
+| [ic-dashboard](references/ic-dashboard.md) | Public REST APIs for canister, ledger, SNS, and metrics data |
+| [icrc-ledger](references/icrc-ledger.md) | ICRC-1/ICRC-2 token ledgers, minting, approvals, transfers, metadata |
+| [internet-identity](references/internet-identity.md) | Internet Identity auth, delegation, session management, anchor handling |
+| [multi-canister](references/multi-canister.md) | Multi-canister design, inter-canister calls, shared state, upgrade strategies |
+| [sns-launch](references/sns-launch.md) | SNS DAO launch, token economics, proposal types, decentralization swap |
+| [stable-memory](references/stable-memory.md) | State across upgrades, stable structures, pre/post upgrade hooks, memory-mapped data |
+| [vetkd](references/vetkd.md) | On-chain privacy with vetKeys, key derivation, encryption/decryption, access control |
+| [wallet](references/wallet.md) | Cycles wallets, canister top-up, cycle management |
 
 
 ## Mistakes That Break Your Build
