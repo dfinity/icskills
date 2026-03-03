@@ -34,39 +34,24 @@ const steps = [
     desc: "Executes with zero hallucinations because every detail is precise and tested" },
 ];
 
-const beforeItems = [
-  "Agent guesses canister IDs",
-  "Hallucinated Motoko syntax",
-  "Outdated CLI commands",
-  "No idea about cycles or fees",
-  "Broken deploys, wasted time",
-  "Human has to fix everything",
-];
-
-const afterItems = [
-  "Exact canister IDs from skill",
-  "Tested, working code templates",
-  "Current icp-cli commands, verified",
-  "Fees and cycles handled correctly",
-  "Deploys work first try",
-  "Agent ships autonomously",
-];
-
 const anatomy = [
-  { section: "What this is", colorVar: "accent-text", rgbVar: "accent-text-rgb",
+  { section: "What This Is", colorVar: "accent-text", rgbVar: "accent-text-rgb",
     preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
-    tag: "1 paragraph" },
+    tag: "context" },
   { section: "Prerequisites", colorVar: "accent-blue", rgbVar: "blue-rgb",
-    preview: "icp-cli >= 0.1.0  \u00B7  Rust or Motoko  \u00B7  Requires: icrc-ledger, wallet",
+    preview: "icp-cli >= 0.1.0  \u00B7  Rust or Motoko  \u00B7  ic-cdk >= 0.19",
     tag: "exact versions" },
-  { section: "\u26A0 Common Agent Mistakes", colorVar: "yellow", rgbVar: "yellow-rgb",
+  { section: "Common Pitfalls", colorVar: "yellow", rgbVar: "yellow-rgb",
     preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",
     tag: "guardrails" },
-  { section: "Step-by-step Instructions", colorVar: "green", rgbVar: "green-rgb",
-    preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer \u2192 5. Deploy",
+  { section: "Implementation", colorVar: "green", rgbVar: "green-rgb",
+    preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer",
     tag: "tested code" },
-  { section: "Verification", colorVar: "accent", rgbVar: "accent-rgb",
-    preview: "\u2713 icp canister call ckbtc_ledger icrc1_balance_of \u2192 returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
+  { section: "Deploy & Test", colorVar: "accent", rgbVar: "accent-rgb",
+    preview: "icp canister deploy ckbtc  \u00B7  icp canister call ckbtc_ledger icrc1_balance_of",
+    tag: "step-by-step" },
+  { section: "Verify It Works", colorVar: "accent-blue", rgbVar: "blue-rgb",
+    preview: "\u2713 Balance returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
     tag: "confirm it works" },
 ];
 ---
@@ -100,40 +85,6 @@ const anatomy = [
         <p style="font-size:13px;color:var(--text-faint);line-height:1.6;margin:0;font-family:'Inter',system-ui,sans-serif;">{desc}</p>
       </div>
     ))}
-  </div>
-
-  <!-- Before / After comparison -->
-  <div style="margin-bottom:72px;">
-    <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">What changes</div>
-
-    <div class="comparison-grid" style="display:grid;grid-template-columns:1fr 48px 1fr;gap:0;align-items:stretch;">
-      <!-- Before -->
-      <div class="comparison-panel" style="padding:32px;background:rgba(var(--red-rgb),0.03);border:1px solid rgba(var(--red-rgb),0.1);border-radius:16px 0 0 16px;">
-        <div style="font-size:28px;font-weight:900;color:rgba(var(--red-rgb),0.2);margin-bottom:20px;letter-spacing:-1px;">Before</div>
-        {beforeItems.map((text, i) => (
-          <div style={`display:flex;align-items:center;gap:12px;padding:10px 0;${i < 5 ? `border-bottom:1px solid rgba(var(--red-rgb),0.06);` : ""}`}>
-            <span style="color:rgba(var(--red-rgb),0.4);font-size:14px;">{"\u25CC"}</span>
-            <span style="font-size:13px;color:var(--text-muted);font-family:'Inter',system-ui,sans-serif;">{text}</span>
-          </div>
-        ))}
-      </div>
-
-      <!-- Arrow -->
-      <div style="display:flex;align-items:center;justify-content:center;background:var(--bg-arrow);">
-        <div style="font-size:24px;color:var(--text-phantom);transform:scaleX(1.5);">{"\u2192"}</div>
-      </div>
-
-      <!-- After -->
-      <div class="comparison-panel" style="padding:32px;background:rgba(var(--accent-rgb),0.04);border:1px solid rgba(var(--accent-rgb),0.15);border-radius:0 16px 16px 0;">
-        <div style="font-size:28px;font-weight:900;background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;letter-spacing:-1px;">After</div>
-        {afterItems.map((text, i) => (
-          <div style={`display:flex;align-items:center;gap:12px;padding:10px 0;${i < 5 ? `border-bottom:1px solid rgba(var(--accent-rgb),0.08);` : ""}`}>
-            <span style="color:var(--accent);font-size:10px;">{"\u25C6"}</span>
-            <span style="font-size:13px;color:var(--text-secondary);font-family:'Inter',system-ui,sans-serif;">{text}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   </div>
 
   <!-- Skill anatomy -->

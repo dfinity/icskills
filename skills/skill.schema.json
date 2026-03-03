@@ -2,80 +2,44 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dfinity.github.io/icskills/skills/skill.schema.json",
   "title": "IC Skill Frontmatter",
-  "description": "Schema for the YAML frontmatter in SKILL.md files. Defines the metadata contract that build scripts, CI, and agent tooling rely on.",
+  "description": "Schema for the YAML frontmatter in SKILL.md files. Aligns with the Agent Skills spec (agentskills.io/specification). Top-level fields (name, description, license, compatibility) plus metadata block (title, category).",
   "type": "object",
-  "required": ["name", "title", "category", "description", "version", "endpoints", "status"],
+  "required": ["name", "description", "metadata"],
   "properties": {
     "name": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Unique skill identifier. Lowercase, hyphenated. Must match the directory name under skills/. Aligns with the Agent Skills spec (agentskills.io)."
-    },
-    "title": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Human-readable display name for the skill."
-    },
-    "category": {
-      "type": "string",
-      "enum": [
-        "DeFi",
-        "Tokens",
-        "Auth",
-        "Architecture",
-        "Integration",
-        "Governance",
-        "Frontend",
-        "Security",
-        "Infrastructure"
-      ],
-      "description": "Skill category. Must be one of the predefined categories."
+      "description": "Unique skill identifier. Lowercase, hyphenated. Must match the directory name under skills/."
     },
     "description": {
       "type": "string",
       "minLength": 10,
-      "description": "One-sentence summary. Describes when an agent should load this skill and what it covers."
+      "description": "One-sentence summary. Describes when an agent should load this skill and what it covers. This is the primary triggering mechanism for agent skill selection."
     },
-    "version": {
+    "license": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Semantic version (major.minor.patch). See CONTRIBUTING.md for versioning rules."
+      "description": "SPDX license identifier (e.g., Apache-2.0)."
     },
-    "endpoints": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Number of distinct canister methods or external API operations documented in the Implementation section."
-    },
-    "status": {
+    "compatibility": {
       "type": "string",
-      "enum": ["stable", "beta"],
-      "description": "Stability status. 'stable' = production-ready, 'beta' = API may change."
+      "description": "Tool/version requirements (e.g., 'icp-cli >= 0.1.0')."
     },
-    "dependencies": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^[a-z][a-z0-9-]*$"
+    "metadata": {
+      "type": "object",
+      "required": ["title", "category"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable display name for the skill."
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Skill category for browsing/filtering. Use an existing category when possible: DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure, Wallet."
+        }
       },
-      "uniqueItems": true,
-      "default": [],
-      "description": "Array of skill names this skill depends on. Each must match an existing skill's name field."
-    },
-    "requires": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Tool/package dependencies with version constraints (e.g., 'icp-cli >= 0.1.0', 'ic-cdk >= 0.19')."
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^[a-z][a-z0-9-]*$"
-      },
-      "uniqueItems": true,
-      "description": "Keywords for agent discovery. Lowercase, hyphenated. Used for keyword-based skill matching."
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

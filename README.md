@@ -1,12 +1,10 @@
 # IC Skills
 
-**https://dfinity.github.io/icskills**
-
 > **Under active development** — Skill files are being reviewed and signed off by DFINITY engineers. Content may change. Feedback and PRs are welcome.
 
 **Agent-readable instructions for every IC need.**
 
-Structured, versioned, agent-readable skill files for every Internet Computer capability. Your AI reads the skill. It builds correctly. No hallucinations.
+Structured, agent-readable skill files for every Internet Computer capability. Your AI reads the skill. It builds correctly. No hallucinations.
 
 ---
 
@@ -25,112 +23,44 @@ skills/stable-memory/SKILL.md
 ...
 ```
 
-Every skill follows the same structure:
+Every skill typically includes:
 
 | Section | Purpose |
 |---------|---------|
 | **What This Is** | One paragraph. What the technology does. |
-| **Prerequisites** | Exact versions. `icp-cli >= 0.1.0`, `ic-cdk >= 0.19`. |
-| **Canister IDs** *(optional)* | External canister principals for mainnet/testnet. |
-| **How It Works** *(optional)* | Flow descriptions for multi-step processes. |
-| **Mistakes That Break Your Build** | Numbered pitfalls that prevent hallucinations. |
+| **Prerequisites** | Exact library versions. `ic-cdk >= 0.19`, `@icp-sdk/auth >= 4.0.1`. |
+| **Common Pitfalls** | Numbered pitfalls that prevent hallucinations. |
 | **Implementation** | Tested, copy-paste-correct code blocks. |
 | **Deploy & Test** | Step-by-step commands for local and mainnet. |
 | **Verify It Works** | Concrete commands to confirm it works. |
 
-The pitfalls section is the highest-value part. Every pitfall documented is a hallucination prevented.
+Skills can include additional sections (Canister IDs, How It Works, etc.) and use whatever headings best fit their domain. The pitfalls section is the highest-value part — every pitfall documented is a hallucination prevented.
 
 ## Skills
 
-<!-- SKILLS-TABLE-START -->
-| Skill | Category | Description |
-|-------|----------|-------------|
-| [Asset Canister & Frontend](skills/asset-canister/SKILL.md) | Frontend | Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding. |
-| [Certified Variables](skills/certified-variables/SKILL.md) | Security | Serve verified responses from query calls. Merkle tree construction, certificate validation, and certified asset patterns. |
-| [ckBTC Integration](skills/ckbtc/SKILL.md) | DeFi | Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management. |
-| [Cycles Wallet Management](skills/wallet/SKILL.md) | Infrastructure | Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management. |
-| [EVM RPC Integration](skills/evm-rpc/SKILL.md) | Integration | Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows. |
-| [HTTPS Outcalls](skills/https-outcalls/SKILL.md) | Integration | Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management. |
-| [IC Dashboard APIs](skills/ic-dashboard/SKILL.md) | Integration | Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics. |
-| [ICRC Ledger Standard](skills/icrc-ledger/SKILL.md) | Tokens | Deploy and interact with ICRC-1/ICRC-2 token ledgers. Minting, approvals, transfers, and metadata. |
-| [Internet Identity Auth](skills/internet-identity/SKILL.md) | Auth | Integrate Internet Identity authentication into your app. Enable users to sign in securely. |
-| [Multi-Canister Architecture](skills/multi-canister/SKILL.md) | Architecture | Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies. |
-| [SNS DAO Launch](skills/sns-launch/SKILL.md) | Governance | Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap. |
-| [Stable Memory & Upgrades](skills/stable-memory/SKILL.md) | Architecture | Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data. |
-| [vetKeys](skills/vetkd/SKILL.md) | Security | Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns. |
-<!-- SKILLS-TABLE-END -->
+All skills live in [`skills/*/SKILL.md`](skills/). Each skill is a self-contained markdown file with YAML frontmatter.
 
 ## Usage
 
-### Drop into agent context
+### Install via CLI
 
-The simplest way — paste the raw skill file into your agent's system prompt or context window:
-
-```
-curl -s https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md
-```
-
-### Claude Code
-
-Fetch the raw skill and paste it into context, or use it as a custom slash command:
+Works with 40+ agents (Claude Code, Cursor, Windsurf, Copilot, and more):
 
 ```bash
-# Fetch directly in conversation
+npx skills add dfinity/icskills
+```
+
+Browse available skills, pick your agent, and install. See [skills.sh](https://skills.sh) for details.
+
+### Manual
+
+Fetch the raw skill file and place it wherever your agent reads instructions from:
+
+```bash
 curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md
 ```
 
-### OpenCode
-
-Add skills as remote instructions in `opencode.json`:
-
-```json
-{
-  "instructions": [
-    "https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md",
-    "https://raw.githubusercontent.com/dfinity/icskills/main/skills/internet-identity/SKILL.md"
-  ]
-}
-```
-
-Or copy into `.opencode/rules/` for automatic discovery:
-
-```bash
-mkdir -p .opencode/rules
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
-  > .opencode/rules/ckbtc.md
-```
-
-### OpenClaw
-
-Install as a skill or paste into your assistant's context during conversation. OpenClaw can also fetch skills directly from URLs when asked.
-
-### Cursor
-
-Add to `.cursor/rules/`:
-
-```bash
-mkdir -p .cursor/rules
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
-  > .cursor/rules/ckbtc.md
-```
-
-### Windsurf
-
-Add to `.windsurfrules` or paste into Windsurf's custom instructions.
-
-### GitHub Copilot
-
-Add to `.github/copilot-instructions.md`:
-
-```bash
-mkdir -p .github
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md \
-  >> .github/copilot-instructions.md
-```
-
-### Any Other Agent
-
-The files are plain markdown. Copy the content into whatever instructions, rules, or context file your tool supports.
+The files are plain markdown — paste into any system prompt, rules file, or context window.
 
 ## Programmatic Access
 
@@ -155,11 +85,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 - **Site**: [Astro](https://astro.build/) — static site generator, zero JS by default. Interactive islands with [Preact](https://preactjs.com/) (~18kb gzipped total)
 - **Hosting**: GitHub Pages via Actions
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
-- **Validation**: Structural linter for frontmatter, sections, and dependency graph (`npm run validate`)
+- **Validation**: Structural linter for frontmatter and code blocks (`npm run validate`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 - **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
-- **AI Agent Discovery**: `llms.txt`, `llms-full.txt`, `.well-known/agent.json`, `.well-known/ai-plugin.json`, per-skill `.md` endpoints
+- **AI Agent Discovery**: `llms.txt`, `llms-full.txt`, `.well-known/agent.json`, per-skill `.md` endpoints
 
 ## License
 
-MIT
+Apache-2.0

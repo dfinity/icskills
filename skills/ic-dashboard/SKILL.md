@@ -1,14 +1,10 @@
 ---
 name: ic-dashboard
-title: IC Dashboard APIs
-category: Integration
 description: "Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics."
-endpoints: 12
-version: 1.0.1
-status: stable
-dependencies: []
-requires: []
-tags: [dashboard, api, rest, openapi, swagger, ic-api, icrc-api, sns-api, ledger-api, metrics-api]
+license: Apache-2.0
+metadata:
+  title: IC Dashboard APIs
+  category: Integration
 ---
 
 # IC Dashboard APIs
