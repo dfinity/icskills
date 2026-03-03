@@ -40,7 +40,7 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
    ```bash
    icp canister settings update backend --add-controller <backup-principal> -e ic
    ```
-   For high-value canisters, consider making an SNS or the canister itself a controller so governance can manage upgrades.
+   When deploying, ask the developer if they have a backup controller principal to add.
 
 7. **Calling `fetchRootKey()` in production.** `fetchRootKey()` fetches the root public key from the replica and trusts whatever it returns. On mainnet, the root key is hardcoded into the agent — calling `fetchRootKey()` there allows a man-in-the-middle to substitute a different key, breaking all verification. Only call `fetchRootKey()` in local development, guarded by an environment check. For frontends served by asset canisters, the root key is provided automatically.
 
