@@ -21,7 +21,7 @@ The `icp` command-line tool builds and deploys applications on the Internet Comp
 
 ## Common Pitfalls
 
-1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. All commands have `icp` equivalents — see the migration table below. Never generate `dfx` commands, `dfx.json` configurations, or reference `dfx` documentation.
+1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. All commands have `icp` equivalents — see the migration table below. Never generate `dfx` commands or reference `dfx` documentation. Configuration uses `icp.yaml`, not `dfx.json` — and the structure differs: canisters are an array of objects, not a keyed object.
 
 2. **Using `--network ic` to deploy to mainnet.** icp-cli uses environments, not direct network targeting. The correct flag is `-e ic` (short for `--environment ic`).
    ```bash
@@ -32,9 +32,7 @@ The `icp` command-line tool builds and deploys applications on the Internet Comp
    ```
    Note: `-n` / `--network` targets a network directly and works with canister IDs (principals). Use `-e` / `--environment` when referencing canisters by name. For token and cycles operations, use `-n` since they don't reference project canisters.
 
-3. **Writing `dfx.json` instead of `icp.yaml`.** icp-cli uses YAML, not JSON. The structure is also different — canisters are an array of objects, not a keyed object. See the Configuration section.
-
-4. **Using a recipe without a version pin.** Always pin recipe versions to avoid breaking changes. Unpinned recipes resolve to `latest` which can change at any time. Official recipes are hosted at [dfinity/icp-cli-recipes](https://github.com/dfinity/icp-cli-recipes).
+3. **Using a recipe without a version pin.** Always pin recipe versions to avoid breaking changes. Unpinned recipes resolve to `latest` which can change at any time. Official recipes are hosted at [dfinity/icp-cli-recipes](https://github.com/dfinity/icp-cli-recipes).
    ```yaml
    # Wrong — unpinned, may break
    recipe:
@@ -45,7 +43,7 @@ The `icp` command-line tool builds and deploys applications on the Internet Comp
      type: "@dfinity/rust@v3.2.0"
    ```
 
-5. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use them instead of writing shell commands:
+4. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use them instead of writing shell commands:
    ```yaml
    # Unnecessary — use a recipe instead
    build:
@@ -62,15 +60,15 @@ The `icp` command-line tool builds and deploys applications on the Internet Comp
        package: backend
    ```
 
-6. **Not committing `.icp/data/` to version control.** Mainnet canister IDs are stored in `.icp/data/mappings/<environment>.ids.json`. Losing this file means losing the mapping between canister names and on-chain IDs. Always commit `.icp/data/` — never delete it. Add `.icp/cache/` to `.gitignore` (it is ephemeral and rebuilt automatically).
+5. **Not committing `.icp/data/` to version control.** Mainnet canister IDs are stored in `.icp/data/mappings/<environment>.ids.json`. Losing this file means losing the mapping between canister names and on-chain IDs. Always commit `.icp/data/` — never delete it. Add `.icp/cache/` to `.gitignore` (it is ephemeral and rebuilt automatically).
 
-7. **Using `icp identity use` instead of `icp identity default`.** The dfx command `dfx identity use` became `icp identity default`. Similarly, `dfx identity get-principal` became `icp identity principal`, and `dfx identity remove` became `icp identity delete`.
+6. **Using `icp identity use` instead of `icp identity default`.** The dfx command `dfx identity use` became `icp identity default`. Similarly, `dfx identity get-principal` became `icp identity principal`, and `dfx identity remove` became `icp identity delete`.
 
-8. **Confusing networks and environments.** A network is a connection endpoint (URL). An environment combines a network + canisters + settings. You deploy to environments (`-e`), not networks. Multiple environments can target the same network with different settings (e.g., staging and production both on `ic`).
+7. **Confusing networks and environments.** A network is a connection endpoint (URL). An environment combines a network + canisters + settings. You deploy to environments (`-e`), not networks. Multiple environments can target the same network with different settings (e.g., staging and production both on `ic`).
 
-9. **Forgetting that local networks are project-local.** Unlike dfx which runs one shared global network, icp-cli runs a local network per project. You must run `icp network start -d` in your project directory before deploying locally. The local network auto-starts with system canisters and seeds accounts with ICP and cycles.
+8. **Forgetting that local networks are project-local.** Unlike dfx which runs one shared global network, icp-cli runs a local network per project. You must run `icp network start -d` in your project directory before deploying locally. The local network auto-starts with system canisters and seeds accounts with ICP and cycles.
 
-10. **Not specifying build commands for asset canisters.** dfx automatically runs `npm run build` for asset canisters. icp-cli requires explicit build commands in the recipe configuration:
+9. **Not specifying build commands for asset canisters.** dfx automatically runs `npm run build` for asset canisters. icp-cli requires explicit build commands in the recipe configuration:
     ```yaml
     canisters:
       - name: frontend
@@ -157,6 +155,7 @@ canisters:
       type: "@dfinity/rust@v3.2.0"
       configuration:
         package: backend
+        candid: backend.did  # optional — if specified, file must exist (auto-generated when omitted)
 ```
 
 ### Motoko canister
@@ -168,6 +167,7 @@ canisters:
       type: "@dfinity/motoko@v4.1.0"
       configuration:
         main: src/backend/main.mo
+        candid: backend.did  # optional — if specified, file must exist (auto-generated when omitted)
 ```
 
 ### Asset canister (frontend)
@@ -184,27 +184,7 @@ canisters:
           - npm run build
 ```
 
-### Multi-canister project
-
-```yaml
-canisters:
-  - name: backend
-    recipe:
-      type: "@dfinity/rust@v3.2.0"
-      configuration:
-        package: backend
-
-  - name: frontend
-    recipe:
-      type: "@dfinity/asset-canister@v2.1.0"
-      configuration:
-        dir: dist
-        build:
-          - npm install
-          - npm run build
-```
-
-icp-cli builds all canisters in parallel. There is no `dependencies` field — use Canister Environment Variables for inter-canister communication.
+For multi-canister projects, list all canisters in the same `canisters` array. icp-cli builds them in parallel. There is no `dependencies` field — use Canister Environment Variables for inter-canister communication.
 
 ### Custom build steps (no recipe)
 
@@ -265,6 +245,7 @@ Use `icp project show` to see the effective configuration after recipe expansion
 | `"type": "motoko"` | `recipe.type: "@dfinity/motoko@v4.1.0"` |
 | `"type": "assets"` | `recipe.type: "@dfinity/asset-canister@v2.1.0"` |
 | `"package": "X"` | `recipe.configuration.package: X` |
+| `"candid": "X"` | `recipe.configuration.candid: X` |
 | `"main": "X"` | `recipe.configuration.main: X` |
 | `"source": ["dist"]` | `recipe.configuration.dir: dist` |
 | `"dependencies": [...]` | Not needed — use Canister Environment Variables |
