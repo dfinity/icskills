@@ -29,7 +29,7 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 3. **Using `stable` keyword in persistent actors (Motoko)** -- In mo:core `persistent actor`, all `let` and `var` declarations are automatically stable. Writing `stable let` produces warning M0218 and `stable var` is redundant. Just use `let` and `var`.
 
-4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the 4GB heap AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
+4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB for wasm32 and 6GB for wasm64. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the heap memory size AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
 
 5. **Changing record field types between upgrades (Motoko)** -- Altering the type of a persistent field (e.g., `Nat` to `Int`, or renaming a record field) will trap on upgrade and data is unrecoverable. Only ADD new optional fields. Never remove or rename existing ones.
 
@@ -132,6 +132,7 @@ ic-cdk = "0.19"
 ic-stable-structures = "0.7"
 candid = "0.10"
 serde = { version = "1", features = ["derive"] }
+ciborium = "0.2"
 ```
 
 #### Single Stable Structure (Simple Case)
@@ -139,20 +140,59 @@ serde = { version = "1", features = ["derive"] }
 ```rust
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
+    storable::{Bound, Storable},
     DefaultMemoryImpl, StableBTreeMap,
 };
 use ic_cdk::{init, post_upgrade, query, update};
-use candid::{CandidType, Deserialize};
+use candid::CandidType;
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cell::RefCell;
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
+
+// -- Implement Storable for custom types --
+// StableBTreeMap keys need Storable + Ord, values need Storable.
+// Storable defines how a type is serialized to/from bytes in stable memory.
+// Use CBOR (via ciborium) for serialization -- compact binary format, faster than candid.
+
+#[derive(CandidType, Serialize, Deserialize, Clone)]
+struct User {
+    id: u64,
+    name: String,
+    created: u64,
+}
+
+impl Storable for User {
+    // Recommended: prefer Unbounded to avoid backwards compatibility issues when adding new fields.
+    // Bounded requires a fixed max_size -- adding a field that increases the size will break existing data.
+    const BOUND: Bound = Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        let mut buf = vec![];
+        ciborium::into_writer(self, &mut buf).expect("Failed to encode User");
+        Cow::Owned(buf)
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        let mut buf = vec![];
+        ciborium::into_writer(&self, &mut buf).expect("Failed to encode User");
+        buf
+    }
+
+    fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
+        ciborium::from_reader(bytes.as_ref()).expect("Failed to decode User")
+    }
+}
+// Bound::Bounded { max_size, is_fixed_size: true } exists for fixed-size types but is NOT
+// recommended -- adding a new field later will exceed max_size and break deserialization.
 
 // Stable storage -- survives upgrades
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static USERS: RefCell<StableBTreeMap<u64, Vec<u8>, Memory>> =
+    static USERS: RefCell<StableBTreeMap<u64, User, Memory>> =
         RefCell::new(StableBTreeMap::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
         ));
@@ -163,13 +203,6 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))),
             0u64,
         ));
-}
-
-#[derive(CandidType, Deserialize, Clone)]
-struct User {
-    id: u64,
-    name: String,
-    created: u64,
 }
 
 #[init]
@@ -198,10 +231,8 @@ fn add_user(name: String) -> u64 {
         created: ic_cdk::api::time(),
     };
 
-    let serialized = candid::encode_one(&user).expect("Failed to serialize user");
-
     USERS.with(|users| {
-        users.borrow_mut().insert(id, serialized);
+        users.borrow_mut().insert(id, user);
     });
 
     id
@@ -209,17 +240,15 @@ fn add_user(name: String) -> u64 {
 
 #[query]
 fn get_user(id: u64) -> Option<User> {
-    USERS.with(|users| {
-        users.borrow().get(&id).and_then(|bytes| {
-            candid::decode_one(&bytes).ok()
-        })
-    })
+    USERS.with(|users| users.borrow().get(&id))
 }
 
 #[query]
 fn get_user_count() -> u64 {
     USERS.with(|users| users.borrow().len())
 }
+
+ic_cdk::export_candid!();
 ```
 
 #### Multiple Stable Structures with MemoryManager
@@ -272,7 +301,8 @@ Key rules for Rust stable structures:
 - `MemoryManager` partitions stable memory -- each structure gets a unique `MemoryId`
 - NEVER reuse a `MemoryId` for two different structures -- they will corrupt each other
 - `StableBTreeMap` keys must implement `Storable` + `Ord`, values must implement `Storable`
-- For complex types, serialize to `Vec<u8>` with candid or serde
+- Implement `Storable` for custom types: define `BOUND`, `to_bytes`, `into_bytes`, and `from_bytes`. Use `ciborium::into_writer`/`ciborium::from_reader` for CBOR serialization (compact, fast). Prefer `Bound::Unbounded` -- it avoids backwards compatibility breakage when adding new fields. `Bound::Bounded` exists but is not recommended because exceeding `max_size` after a schema change breaks deserialization
+- Primitive types (`u64`, `bool`, `f64`, etc.), `String`, `Vec<u8>`, and `Principal` already implement `Storable` -- no manual impl needed
 - `StableCell` for single values (counters, config)
 - `StableLog` for append-only logs (needs two memory regions: index + data)
 - `thread_local! { RefCell<StableBTreeMap<...>> }` is the correct pattern -- the RefCell wraps the stable structure, not a heap HashMap
