@@ -6,30 +6,32 @@ const RAW_BASE = "https://raw.githubusercontent.com/dfinity/icskills/main/skills
 
 const REAL_ENDPOINTS = [
   {
-    label: "Single skill (markdown)",
-    url: `${SITE_URL}/skills/ckbtc.md`,
-    curl: `curl -sL ${SITE_URL}/skills/ckbtc.md`,
+    label: "Skills discovery",
+    url: `${SITE_URL}/.well-known/skills/index.json`,
+    desc: "Discovery index listing all skills. Follows the Agent Skills Discovery RFC.",
+    contentType: "application/json",
+  },
+  {
+    label: "Single skill",
+    url: `${SITE_URL}/.well-known/skills/ckbtc/SKILL.md`,
     desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
     contentType: "text/markdown",
   },
   {
     label: "Single skill (GitHub raw)",
     url: `${RAW_BASE}/ckbtc/SKILL.md`,
-    curl: `curl -sL ${RAW_BASE}/ckbtc/SKILL.md`,
     desc: "Same content via GitHub raw URLs. Works without the site.",
     contentType: "text/plain",
   },
   {
     label: "Skill index",
     url: `${SITE_URL}/llms.txt`,
-    curl: `curl -sL ${SITE_URL}/llms.txt`,
     desc: "Short index with links to every skill. Follows the llms.txt convention.",
     contentType: "text/plain",
   },
   {
     label: "All skills (full)",
     url: `${SITE_URL}/llms-full.txt`,
-    curl: `curl -sL ${SITE_URL}/llms-full.txt`,
     desc: "Every skill concatenated into one file. For full context injection.",
     contentType: "text/plain",
   },
@@ -99,15 +101,15 @@ export default function AccessTab() {
                 flex: 1, fontSize: "11px", color: "var(--accent)",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 minWidth: 0,
-              }}>{ep.curl}</code>
-              <CopyButton text={ep.curl} />
+              }}>{ep.url}</code>
+              <CopyButton text={ep.url} />
             </div>
           </div>
         ))}
       </div>
 
       {/* Info cards */}
-      <div className="api-info-grid" style={{
+      <div className="access-info-grid" style={{
         display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px",
       }}>
         {[
