@@ -1,21 +1,22 @@
 ---
-name: oisy-wallet-signer
-title: "OISY Wallet Signer"
-category: Wallet
-description: "Guides integration with @dfinity/oisy-wallet-signer for building dApps (relying party) and wallet UIs (signer) on the Internet Computer using ICRC-21/25/27/29/49 standards. Load when the user mentions wallet signer, relying party, consent messages, token transfers via signer, or canister call signing."
-endpoints: 12
-version: 1.0.0
-status: stable
-dependencies: [icrc-ledger]
-requires: ["@dfinity/utils >= 4.1", "@dfinity/zod-schemas >= 3", "@icp-sdk/canisters >= 3.2", "@icp-sdk/core >= 5", "zod >= 4"]
-tags: [wallet, signer, oisy, icrc-1, icrc-2, icrc-21, icrc-25, icrc-27, icrc-29, icrc-49, relying-party, postmessage, transfer, approve, consent-message]
+name: wallet-integration
+description: "Integrate wallets with IC dApps using ICRC signer standards (ICRC-21/25/27/29/49). Covers the popup-based signer model, consent messages, permission lifecycle, and transaction approval flows. Implementation uses @dfinity/oisy-wallet-signer. Do NOT use for Internet Identity login, delegation-based auth (ICRC-34/46), or threshold signing (chain-key). Use when the developer mentions wallet integration, OISY, oisy-wallet-signer, wallet signer, relying party, consent messages, wallet popup, or transaction approval."
+license: Apache-2.0
+compatibility: "Node.js >= 24, npm >= 11.5"
+metadata:
+  title: Wallet Integration
+  category: Wallet
 ---
 
 # OISY Wallet Signer
 
 ## What This Is
 
-A TypeScript library that enables secure communication between dApps and wallets on the Internet Computer using JSON-RPC 2.0 over `window.postMessage`. The signer model = **explicit per-action approval**. `connect()` establishes a channel. Nothing more.
+Wallet integration on the Internet Computer uses the ICRC signer standards — a popup-based model where every action requires explicit user approval via JSON-RPC 2.0 over `window.postMessage`.
+
+This skill covers integration using `@dfinity/oisy-wallet-signer`. Other integration paths (IdentityKit, signer-js) exist but are not covered here.
+
+**The signer model = explicit per-action approval.** `connect()` establishes a channel. Nothing more.
 
 **It is not:**
 
@@ -51,8 +52,6 @@ A TypeScript library that enables secure communication between dApps and wallets
 
 ## Prerequisites
 
-- Node.js >= 24
-- npm >= 11.5.1 (< 12.0.0)
 - `@dfinity/oisy-wallet-signer` installed
 - Peer dependencies installed: `@dfinity/utils`, `@dfinity/zod-schemas`, `@icp-sdk/canisters`, `@icp-sdk/core`, `zod`
 - A non-anonymous identity on the signer side (e.g. `Ed25519KeyIdentity`)
