@@ -110,9 +110,9 @@ export default function SkillHeader({ skillId, skillName, category, lastUpdated 
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
             minWidth: 0,
           }}>
-            curl -sL {rawUrl}
+            {rawUrl}
           </code>
-          <CopyButton text={`curl -sL ${rawUrl}`} />
+          <CopyButton text={`${rawUrl}`} />
         </div>
       </div>
     </>
