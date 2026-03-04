@@ -16,7 +16,7 @@ Cycles are the computation fuel for canisters on Internet Computer. Every canist
 **Note:** icp-cli uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `icp cycles balance`, `icp cycles mint`, and `icp canister top-up` go through the cycles ledger. There is no legacy wallet concept in icp-cli. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
 ## Prerequisites
-- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
+- icp-cli >= 0.1.0 (install: `brew install icp-cli`)
 - An identity with ICP balance for converting to cycles (mainnet)
 - For local development: cycles are unlimited by default
 

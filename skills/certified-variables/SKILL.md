@@ -16,7 +16,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (install: `brew install icp-cli`)
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `certified_data_set` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `ic-certification` package (`mops add ic-certification`) for Merkle tree with witness support
 - Frontend: `@icp-sdk/core` (agent, principal), `@dfinity/certificate-verification`

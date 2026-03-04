@@ -16,7 +16,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- icp-cli >= 0.1.0 (`brew install icp-cli`)
 - Node.js >= 18 (for building frontend assets)
 - `@icp-sdk/canisters` npm package (for programmatic uploads)
 

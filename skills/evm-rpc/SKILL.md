@@ -16,7 +16,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (`brew install icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `candid`, `serde`
 - Cycles in your canister (each RPC call costs cycles)

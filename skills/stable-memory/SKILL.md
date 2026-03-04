@@ -14,7 +14,7 @@ metadata:
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
 
 ## Prerequisites
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- icp-cli >= 0.1.0 (`brew install icp-cli`)
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
