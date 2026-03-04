@@ -3,7 +3,7 @@
 // Checks frontmatter fields, required sections, and code block annotations.
 // Run: node scripts/validate-skills.js
 
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { readAllSkills, SKILLS_DIR } from "./lib/parse-skill.js";
 
@@ -129,6 +129,11 @@ for (const skill of skills) {
 
   if (!meta.compatibility) {
     warn(label, `missing "compatibility" field in frontmatter`);
+  }
+
+  // --- Evals validation ---
+  if (!existsSync(join(SKILLS_DIR, dir, "evals.json"))) {
+    warn(label, `missing evals.json — see CONTRIBUTING.md for evaluation guidance`);
   }
 }
 
