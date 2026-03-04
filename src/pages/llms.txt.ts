@@ -28,7 +28,7 @@ curl -sL ${RAW}/skills/<skill-name>/SKILL.md
 
   const lines = skills.map(
     (s) =>
-      `- [${s.name}](${RAW}/skills/${s.id}/SKILL.md): ${s.description || `Agent-readable skill file for ${s.name} on the Internet Computer.`}`
+      `- [${s.title}](${RAW}/skills/${s.name}/SKILL.md): ${s.description || `Agent-readable skill file for ${s.title} on the Internet Computer.`}`
   );
 
   const footer = `

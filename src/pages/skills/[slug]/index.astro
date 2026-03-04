@@ -12,7 +12,7 @@ marked.setOptions({ gfm: true, breaks: false });
 export function getStaticPaths() {
   const skills = loadAllSkills();
   return skills.map((skill) => ({
-    params: { slug: skill.id },
+    params: { slug: skill.name },
     props: { skill },
   }));
 }
@@ -20,27 +20,27 @@ export function getStaticPaths() {
 const { skill } = Astro.props;
 const html = marked.parse(skill.content);
 const site = SITE_URL;
-const url = `${site}/skills/${skill.id}/`;
+const url = `${site}/skills/${skill.name}/`;
 
 const jsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  headline: `${skill.name} — IC Skills`,
+  headline: `${skill.title} — IC Skills`,
   description: skill.description,
   url,
   author: { "@type": "Organization", name: "DFINITY Foundation", url: "https://dfinity.org" },
-  about: { "@type": "Thing", name: skill.name },
+  about: { "@type": "Thing", name: skill.title },
   isPartOf: { "@id": `${site}/#website` },
   proficiencyLevel: "Expert",
-  keywords: `Internet Computer, ICP, ${skill.name}, ${skill.category}, AI agent, icp-cli`,
+  keywords: `Internet Computer, ICP, ${skill.title}, ${skill.category}, AI agent, icp-cli`,
 });
 ---
 
 <BaseLayout
-  title={`${skill.name} — IC Skills`}
+  title={`${skill.title} — IC Skills`}
   description={skill.description}
   canonicalUrl={url}
-  ogTitle={`${skill.name} — IC Skills`}
+  ogTitle={`${skill.title} — IC Skills`}
   ogDescription={skill.description}
   jsonLd={jsonLd}
 >
@@ -55,8 +55,8 @@ const jsonLd = JSON.stringify({
     <!-- Interactive header (Preact island) -->
     <SkillHeader
       client:load
-      skillId={skill.id}
       skillName={skill.name}
+      skillTitle={skill.title}
       category={skill.category}
       lastUpdated={skill.lastUpdated}
     />
