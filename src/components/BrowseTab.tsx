@@ -132,11 +132,13 @@ export default function BrowseTab({ skills }: Props) {
       }}>
         {filtered.map((skill) => {
           const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.id}/SKILL.md`;
-          const fetchCmd = `curl -sL ${rawUrl}`;
           return (
-            <a
+            <div
               key={skill.id}
-              href={`${BASE_PATH}/skills/${skill.id}/`}
+              role="link"
+              tabIndex={0}
+              onClick={() => { window.location.href = `${BASE_PATH}/skills/${skill.id}/`; }}
+              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `${BASE_PATH}/skills/${skill.id}/`; }}
               className="skill-card"
               style={{
                 padding: "24px",
@@ -144,7 +146,6 @@ export default function BrowseTab({ skills }: Props) {
                 border: "1px solid var(--border-default)",
                 borderRadius: "12px",
                 cursor: "pointer",
-                textDecoration: "none",
                 color: "inherit",
                 display: "block",
               }}
@@ -213,11 +214,11 @@ export default function BrowseTab({ skills }: Props) {
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   minWidth: 0,
                 }}>
-                  {fetchCmd}
+                  {rawUrl}
                 </code>
-                <CopyButton text={fetchCmd} />
+                <CopyButton text={rawUrl} />
               </div>
-            </a>
+            </div>
           );
         })}
       </div>
