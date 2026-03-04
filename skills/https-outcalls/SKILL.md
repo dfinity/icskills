@@ -1,14 +1,11 @@
 ---
 name: https-outcalls
-title: HTTPS Outcalls
-category: Integration
 description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
-endpoints: 4
-version: 1.5.3
-status: stable
-dependencies: []
-requires: [icp-cli >= 0.1.0]
-tags: [http, api, fetch, external, request, transform, outcall]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: HTTPS Outcalls
+  category: Integration
 ---
 
 # HTTPS Outcalls
@@ -20,7 +17,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 ## Prerequisites
 
 - icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- For Motoko: `moc` compiler (included with icp-cli), `mo:core` 2.0 in mops.toml
+- For Motoko: `moc >= 0.14.10` (included with icp-cli), `mo:core` 2.0 and `ic >= 2.1.0` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 
 ## Canister IDs
@@ -37,92 +34,55 @@ You do not deploy anything extra. The management canister is built into every su
 
 1. **Forgetting the transform function.** Without a transform, the raw HTTP response often differs between replicas (different headers, different ordering in JSON fields, timestamps). Consensus fails and the call is rejected. ALWAYS provide a transform function.
 
-2. **Not attaching cycles to the call.** HTTPS outcalls are not free. The calling canister must attach cycles to cover the cost. If you attach zero cycles, the call fails immediately. Cost is approximately 49_140_000 + 5_200 * response_bytes + 10_400 * request_bytes cycles. A safe default for most API calls is 200_000_000 (200M) cycles.
+2. **Not attaching cycles to the call.** HTTPS outcalls are not free. The calling canister must attach cycles to cover the cost. If you attach zero cycles, the call fails immediately. Both Motoko and Rust have wrappers that compute and attach the required cycles automatically: in Motoko, use `await Call.httpRequest(args)` from the `ic` mops package (`import Call "mo:ic/Call"`); in Rust, use `ic_cdk::management_canister::http_request` (available since ic-cdk 0.18). Under the hood, both use the `ic0.cost_http_request` system API to calculate the exact cost from `request_size` and `max_response_bytes`.
 
 3. **Using HTTP instead of HTTPS.** The IC only supports HTTPS outcalls. Plain HTTP URLs are rejected. The target server must have a valid TLS certificate.
 
 4. **Exceeding the 2MB response limit.** The maximum response body is 2MB (2_097_152 bytes). If the external API returns more, the call fails. Use the `max_response_bytes` field to set a limit and design your queries to return small responses.
 
-5. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
+5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 21.5 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
 
-6. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. On the IC, if the external server does not respond within the timeout (~30 seconds), the call traps.
+6. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
 
-7. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
+7. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. On the IC, if the external server does not respond within the timeout (~30 seconds), the call traps.
 
-8. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
+8. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
+
+9. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
 
 ## Implementation
 
 ### Motoko
 
+The management canister types are imported via `import IC "ic:aaaaa-aa"` (compiler-provided). The `ic` mops package (`import Call "mo:ic/Call"`) provides `Call.httpRequest` which auto-computes and attaches the required cycles.
+
 ```motoko
 import Blob "mo:core/Blob";
-import Nat64 "mo:core/Nat64";
+import Nat "mo:core/Nat";
 import Text "mo:core/Text";
-import Runtime "mo:core/Runtime";
+import IC "ic:aaaaa-aa";
+import Call "mo:ic/Call";
 
 persistent actor {
 
-  // Type definitions for the management canister HTTP interface
-  type HttpRequestArgs = {
-    url : Text;
-    max_response_bytes : ?Nat64;
-    headers : [HttpHeader];
-    body : ?[Nat8];
-    method : HttpMethod;
-    transform : ?TransformRawResponseFunction;
-  };
-
-  type HttpHeader = {
-    name : Text;
-    value : Text;
-  };
-
-  type HttpMethod = {
-    #get;
-    #post;
-    #head;
-  };
-
-  type HttpResponsePayload = {
-    status : Nat;
-    headers : [HttpHeader];
-    body : [Nat8];
-  };
-
-  type TransformRawResponseFunction = {
-    function : shared query TransformArgs -> async HttpResponsePayload;
-    context : Blob;
-  };
-
-  type TransformArgs = {
-    response : HttpResponsePayload;
-    context : Blob;
-  };
-
-  // The management canister for making outcalls
-  transient let ic : actor {
-    http_request : HttpRequestArgs -> async HttpResponsePayload;
-  } = actor "aaaaa-aa";
-
-  // Transform function: strips headers and keeps only the body.
-  // This ensures all replicas see the same response for consensus.
+  // Transform function: strips headers so all replicas see the same response for consensus.
   // MUST be a `shared query` function.
-  public query func transform(args : TransformArgs) : async HttpResponsePayload {
+  public query func transform({
+    context : Blob;
+    response : IC.http_request_result;
+  }) : async IC.http_request_result {
     {
-      status = args.response.status;
-      body = args.response.body;
-      headers = []; // Strip headers -- they often contain non-deterministic values
+      response with headers = []; // Strip headers -- they often contain non-deterministic values
     };
   };
 
   // GET request: fetch a JSON API
-  public func fetchPrice() : async Text {
+  public func getIcpPriceUsd() : async Text {
     let url = "https://api.coingecko.com/api/v3/simple/price?ids=internet-computer&vs_currencies=usd";
 
-    let request : HttpRequestArgs = {
+    let request : IC.http_request_args = {
       url = url;
-      max_response_bytes = ?Nat64.fromNat(10_000); // Limit response size
+      max_response_bytes = ?(10_000 : Nat64); // Always set — omitting defaults to 2MB and charges accordingly
       headers = [
         { name = "User-Agent"; value = "ic-canister" },
       ];
@@ -130,20 +90,30 @@ persistent actor {
       method = #get;
       transform = ?{
         function = transform;
-        context = "" : Blob;
+        context = Blob.fromArray([]);
       };
+      is_replicated = null;
     };
 
-    // Attach cycles for the outcall (200M is safe for most requests)
-    // In mo:core, use `await (with cycles = N)` instead of the old Cycles.add<system>(N)
-    let response = await (with cycles = 200_000_000) ic.http_request(request);
+    // Call.httpRequest computes and attaches the required cycles automatically
+    let response = await Call.httpRequest(request);
 
-    // Decode the response body
-    let bodyBlob = Blob.fromArray(response.body);
-    let body = Text.decodeUtf8(bodyBlob);
-    switch (body) {
+    switch (Text.decodeUtf8(response.body)) {
       case (?text) { text };
-      case (null) { Runtime.trap("Response is not valid UTF-8") };
+      case (null) { "Response is not valid UTF-8" };
+    };
+  };
+
+  // POST transform: also discards the body because httpbin.org includes the
+  // sender's IP in the "origin" field, which differs across replicas.
+  public query func transformPost({
+    context : Blob;
+    response : IC.http_request_result;
+  }) : async IC.http_request_result {
+    {
+      response with
+      headers = [];
+      body = Blob.fromArray([]);
     };
   };
 
@@ -151,33 +121,31 @@ persistent actor {
   public func postData(jsonPayload : Text) : async Text {
     let url = "https://httpbin.org/post";
 
-    let bodyBytes = Blob.toArray(Text.encodeUtf8(jsonPayload));
-
-    let request : HttpRequestArgs = {
+    let request : IC.http_request_args = {
       url = url;
-      max_response_bytes = ?Nat64.fromNat(50_000);
+      max_response_bytes = ?(50_000 : Nat64);
       headers = [
         { name = "Content-Type"; value = "application/json" },
         { name = "User-Agent"; value = "ic-canister" },
         // Idempotency key: prevents duplicate processing if multiple replicas hit the endpoint
         { name = "Idempotency-Key"; value = "unique-request-id-12345" },
       ];
-      body = ?bodyBytes;
+      body = ?Text.encodeUtf8(jsonPayload);
       method = #post;
       transform = ?{
-        function = transform;
-        context = "" : Blob;
+        function = transformPost;
+        context = Blob.fromArray([]);
       };
+      is_replicated = null;
     };
 
-    // POST may cost more due to request body size
-    let response = await (with cycles = 300_000_000) ic.http_request(request);
+    // Call.httpRequest computes and attaches the required cycles automatically
+    let response = await Call.httpRequest(request);
 
-    let bodyBlob = Blob.fromArray(response.body);
-    let body = Text.decodeUtf8(bodyBlob);
-    switch (body) {
-      case (?text) { text };
-      case (null) { Runtime.trap("Response is not valid UTF-8") };
+    if (response.status == 200) {
+      "POST successful (status 200)";
+    } else {
+      "POST failed with status " # Nat.toText(response.status);
     };
   };
 };
@@ -213,7 +181,7 @@ use serde::Deserialize;
 
 /// Transform function: strips non-deterministic headers so all replicas agree.
 /// MUST be a #[query] function.
-#[query]
+#[query(hidden = true)]
 fn transform(args: TransformArgs) -> HttpRequestResult {
     HttpRequestResult {
         status: args.response.status,
@@ -249,7 +217,7 @@ async fn fetch_price() -> String {
         is_replicated: None,
     };
 
-    // ic-cdk 0.19 automatically computes and attaches the required cycles
+    // http_request calls automatically attaches the required cycles
     match http_request(&request).await {
         Ok(response) => {
             let body = String::from_utf8(response.body)
@@ -289,6 +257,17 @@ async fn get_icp_price_usd() -> String {
     }
 }
 
+/// POST transform: strips headers AND body because httpbin.org includes the
+/// sender's IP in the "origin" field, which differs across replicas.
+#[query(hidden = true)]
+fn transform_post(args: TransformArgs) -> HttpRequestResult {
+    HttpRequestResult {
+        status: args.response.status,
+        body: vec![],
+        headers: vec![],
+    }
+}
+
 /// POST request: Send JSON data to an external API
 #[update]
 async fn post_data(json_payload: String) -> String {
@@ -315,17 +294,20 @@ async fn post_data(json_payload: String) -> String {
         ],
         body: Some(json_payload.into_bytes()),
         transform: Some(TransformContext {
-            function: TransformFunc::new(canister_self(), "transform".to_string()),
+            function: TransformFunc::new(canister_self(), "transform_post".to_string()),
             context: vec![],
         }),
         is_replicated: None,
     };
 
-    // ic-cdk 0.19 automatically computes and attaches the required cycles
+    // http_request automatically attaches the required cycles
     match http_request(&request).await {
         Ok(response) => {
-            String::from_utf8(response.body)
-                .unwrap_or_else(|_| "Invalid UTF-8 in response".to_string())
+            if response.status == candid::Nat::from(200u64) {
+                "POST successful (status 200)".to_string()
+            } else {
+                format!("POST failed with status {}", response.status)
+            }
         }
         Err(err) => {
             format!("HTTP outcall failed: {:?}", err)
@@ -336,22 +318,22 @@ async fn post_data(json_payload: String) -> String {
 
 ### Cycle Cost Estimation
 
+The `ic0.cost_http_request` system API computes the exact cycle cost at runtime, so canisters do not need to hard-code the formula. Both `Call.httpRequest` from the `ic` mops package (Motoko) and `ic_cdk::management_canister::http_request` (Rust) call it internally and attach the required cycles automatically. For manual use: in Motoko, `Prim.costHttpRequest(requestSize, maxResponseBytes)` (via `import Prim "mo:⛔"`); in Rust, `ic_cdk::api::cost_http_request(request_size, max_res_bytes)`.
+
+`request_size` is the sum of byte lengths of the URL, all header names and values, the body, the transform function name, and the transform context.
+
+For reference, the underlying formula on a 13-node subnet (n = 13) is:
+
+```text
+Base cost:                      49_140_000 cycles  (= (3_000_000 + 60_000*13) * 13)
++ per request byte:              5_200 cycles      (= 400 * 13)
++ per max_response_bytes byte:  10_400 cycles      (= 800 * 13)
+
+IMPORTANT: The charge is against max_response_bytes, NOT actual response size.
+If you omit max_response_bytes, the system assumes 2MB and charges ~21.5B cycles.
 ```
-Base cost:                      49_140_000 cycles
-+ per request byte:             10_400 cycles
-+ per response byte:            5_200 cycles
-+ per request header:           variable
 
-Example: GET request, 5KB response
-  49_140_000 + (0 * 10_400) + (5_120 * 5_200) = ~75_764_000 cycles
-  Safe budget: 200_000_000 (200M)
-
-Example: POST request, 1KB body, 10KB response
-  49_140_000 + (1_024 * 10_400) + (10_240 * 5_200) = ~112_977_600 cycles
-  Safe budget: 300_000_000 (300M)
-```
-
-Always over-budget. Unused cycles are refunded to the canister.
+Unused cycles are refunded to the canister, so it is safe to over-budget.
 
 ## Deploy & Test
 

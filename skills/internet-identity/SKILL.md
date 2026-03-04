@@ -1,14 +1,11 @@
 ---
 name: internet-identity
-title: Internet Identity Auth
-category: Auth
 description: "Integrate Internet Identity authentication into your app. Enable users to sign in securely."
-endpoints: 6
-version: 5.0.4
-status: stable
-dependencies: [asset-canister]
-requires: [icp-sdk/icp-cli, icp-sdk/ic-wasm, icp-sdk/auth >= 4.0.1]
-tags: [auth, authentication, login, passkey, webauthn, openid, oidc, identity, delegation, principal]
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
+metadata:
+  title: Internet Identity Auth
+  category: Auth
 ---
 
 # Internet Identity Authentication

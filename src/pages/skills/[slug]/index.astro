@@ -28,7 +28,6 @@ const jsonLd = JSON.stringify({
   headline: `${skill.name} — IC Skills`,
   description: skill.description,
   url,
-  version: skill.version,
   author: { "@type": "Organization", name: "DFINITY Foundation", url: "https://dfinity.org" },
   about: { "@type": "Thing", name: skill.name },
   isPartOf: { "@id": `${site}/#website` },
@@ -58,11 +57,8 @@ const jsonLd = JSON.stringify({
       client:load
       skillId={skill.id}
       skillName={skill.name}
-      version={skill.version}
       category={skill.category}
-      endpoints={skill.endpoints}
       lastUpdated={skill.lastUpdated}
-      dependencies={skill.dependencies}
     />
 
     <!-- Pre-rendered markdown content (static HTML, no JS needed) -->

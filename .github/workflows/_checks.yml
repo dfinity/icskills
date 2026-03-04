@@ -10,46 +10,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
       - run: node scripts/validate-skills.js
-      - name: Verify generated files are up to date
-        run: |
-          npm run generate
-          git diff --exit-code README.md || {
-            echo "::error::README.md skills table is out of date. Run 'npm run generate' and commit the results."
-            exit 1
-          }
-      - name: Check version bumps for changed skills
-        run: |
-          if [ -n "${{ github.base_ref }}" ]; then
-            base="origin/${{ github.base_ref }}"
-          else
-            base="HEAD~1"
-          fi
-          changed=$(git diff --name-only "$base" -- 'skills/*/SKILL.md')
-          if [ -z "$changed" ]; then
-            echo "No SKILL.md files changed"
-            exit 0
-          fi
-          fail=0
-          for file in $changed; do
-            if ! git show "$base":"$file" > /dev/null 2>&1; then
-              echo "NEW: $file (no version check needed)"
-              continue
-            fi
-            old_version=$(git show "$base":"$file" | grep '^version:' | head -1 | awk '{print $2}')
-            new_version=$(grep '^version:' "$file" | head -1 | awk '{print $2}')
-            if [ "$old_version" = "$new_version" ]; then
-              echo "::error::$file was changed but version was not bumped (still $old_version). See CONTRIBUTING.md for versioning rules."
-              fail=1
-            else
-              echo "OK: $file ($old_version -> $new_version)"
-            fi
-          done
-          exit $fail

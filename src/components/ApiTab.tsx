@@ -1,5 +1,5 @@
 import { SANS_FONT } from "../data/constants";
-import { BASE_PATH, SITE_URL } from "../data/site";
+import { SITE_URL } from "../data/site";
 import CopyButton from "./CopyButton";
 
 const RAW_BASE = "https://raw.githubusercontent.com/dfinity/icskills/main/skills";
@@ -41,22 +41,6 @@ const REAL_ENDPOINTS = [
     contentType: "application/json",
   },
 ];
-
-function TerminalHeader({ title }: { title: string }) {
-  return (
-    <div style={{
-      padding: "12px 20px",
-      background: `rgba(var(--accent-rgb),0.04)`,
-      borderBottom: `1px solid rgba(var(--accent-rgb),0.08)`,
-      display: "flex", alignItems: "center", gap: "8px",
-    }}>
-      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-red)" }} />
-      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-yellow)" }} />
-      <div aria-hidden="true" style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--dot-green)" }} />
-      <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--text-faint)" }}>{title}</span>
-    </div>
-  );
-}
 
 export default function AccessTab() {
   return (
@@ -129,36 +113,6 @@ export default function AccessTab() {
         ))}
       </div>
 
-      {/* Quick start terminal */}
-      <div style={{ marginBottom: "48px" }}>
-        <div style={{
-          fontSize: "11px", color: "var(--text-ghost)", letterSpacing: "2px",
-          textTransform: "uppercase", marginBottom: "16px",
-        }}>Quick start</div>
-
-        <div style={{
-          borderRadius: "10px", overflow: "hidden",
-          border: `1px solid rgba(var(--accent-rgb),0.12)`,
-        }}>
-          <TerminalHeader title="terminal" />
-          <pre style={{
-            padding: "20px",
-            background: "var(--bg-code-deep)",
-            fontSize: "12px", lineHeight: 1.8,
-            color: "var(--text-tertiary)", margin: 0,
-            whiteSpace: "pre-wrap",
-          }}>
-<span style={{color:"var(--text-faint)"}}>{"# Fetch a skill and paste into your agent"}</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${RAW_BASE}/ckbtc/SKILL.md\n\n`}
-<span style={{color:"var(--text-faint)"}}>{"# Get the skill as a served .md file"}</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/skills/ckbtc.md\n\n`}
-<span style={{color:"var(--text-faint)"}}>{"# Get the full skill index"}</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/llms.txt\n\n`}
-<span style={{color:"var(--text-faint)"}}>{"# All skills in one file (for full context injection)"}</span>{"\n"}
-<span style={{color:"var(--accent-text)"}}>curl</span>{` -sL ${SITE_URL}/llms-full.txt`}</pre>
-        </div>
-      </div>
-
       {/* Info cards */}
       <div className="api-info-grid" style={{
         display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px",
@@ -166,7 +120,7 @@ export default function AccessTab() {
         {[
           { title: "No auth needed", desc: "Open access. No keys, no signup. Every URL returns content directly." },
           { title: "Plain markdown", desc: "Skills are markdown files. Paste into any agent context, rules file, or system prompt." },
-          { title: "Always current", desc: "Skills update when canister IDs or APIs change. Versioned in frontmatter." },
+          { title: "Always current", desc: "Skills update when canister IDs or APIs change. Git-tracked with last-updated dates." },
         ].map((note) => (
           <div key={note.title} style={{
             padding: "20px",
