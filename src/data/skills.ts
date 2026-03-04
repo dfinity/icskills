@@ -11,8 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, "..", "..", "skills");
 
 export interface Skill {
-  id: string;
   name: string;
+  title: string;
   category: string;
   description: string;
   lastUpdated: string;
@@ -69,7 +69,7 @@ function getLastUpdated(filePath: string): string {
 }
 
 export interface SkillRaw {
-  id: string;
+  name: string;
   rawContent: string;
 }
 
@@ -98,7 +98,7 @@ export function loadAllSkillsRaw(): SkillRaw[] {
     if (!meta || !meta.name) continue;
 
     skills.push({
-      id: meta.name,
+      name: meta.name,
       rawContent: content,
     });
   }
@@ -127,8 +127,8 @@ export function loadAllSkills(): Skill[] {
     if (!meta || !meta.name || !meta.title) continue;
 
     skills.push({
-      id: meta.name,
-      name: meta.title,
+      name: meta.name,
+      title: meta.title,
       category: meta.category || "",
       description: meta.description || "",
       lastUpdated: getLastUpdated(filePath),
@@ -137,6 +137,6 @@ export function loadAllSkills(): Skill[] {
     });
   }
 
-  skills.sort((a, b) => a.name.localeCompare(b.name));
+  skills.sort((a, b) => a.title.localeCompare(b.title));
   return skills;
 }

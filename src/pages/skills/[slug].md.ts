@@ -1,11 +1,11 @@
-// Generates /skills/<id>.md at build time — raw SKILL.md content for each skill
+// Generates /skills/<name>.md at build time — raw SKILL.md content for each skill
 import type { APIRoute } from "astro";
 import { loadAllSkillsRaw } from "../../data/skills";
 
 export function getStaticPaths() {
   const skills = loadAllSkillsRaw();
   return skills.map((s) => ({
-    params: { slug: s.id },
+    params: { slug: s.name },
     props: { rawContent: s.rawContent },
   }));
 }

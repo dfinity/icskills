@@ -4,16 +4,16 @@ import { CategoryIcon, GitHubIcon } from "./Icons";
 import { BASE_PATH, SITE_URL } from "../data/site";
 
 interface Props {
-  skillId: string;
   skillName: string;
+  skillTitle: string;
   category: string;
   lastUpdated: string;
 }
 
-export default function SkillHeader({ skillId, skillName, category, lastUpdated }: Props) {
-  const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skillId}/SKILL.md`;
-  const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skillId}/SKILL.md`;
-  const shareUrl = `${SITE_URL}/skills/${skillId}/`;
+export default function SkillHeader({ skillName, skillTitle, category, lastUpdated }: Props) {
+  const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skillName}/SKILL.md`;
+  const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skillName}/SKILL.md`;
+  const shareUrl = `${SITE_URL}/skills/${skillName}/`;
 
   return (
     <>
@@ -46,7 +46,7 @@ export default function SkillHeader({ skillId, skillName, category, lastUpdated 
               fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
               fontSize: "14px", color: "var(--text-primary)",
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
-            }}>{skillName}</span>
+            }}>{skillTitle}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <a href={githubUrl} target="_blank" rel="noopener noreferrer"

@@ -21,7 +21,7 @@ export default function BrowseTab({ skills }: Props) {
     const query = searchQuery.toLowerCase();
     return skills.filter((s) => {
       const matchCat = activeCategory === "All" || s.category === activeCategory;
-      const matchSearch = s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
+      const matchSearch = s.title.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
       return matchCat && matchSearch;
     });
   }, [searchQuery, activeCategory, skills]);
@@ -131,14 +131,14 @@ export default function BrowseTab({ skills }: Props) {
         gap: "16px",
       }}>
         {filtered.map((skill) => {
-          const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.id}/SKILL.md`;
+          const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.name}/SKILL.md`;
           return (
             <div
-              key={skill.id}
+              key={skill.name}
               role="link"
               tabIndex={0}
-              onClick={() => { window.location.href = `${BASE_PATH}/skills/${skill.id}/`; }}
-              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `${BASE_PATH}/skills/${skill.id}/`; }}
+              onClick={() => { window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
+              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
               className="skill-card"
               style={{
                 padding: "24px",
@@ -163,16 +163,16 @@ export default function BrowseTab({ skills }: Props) {
                     fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}>
-                    {skill.name}
+                    {skill.title}
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-faint)", marginTop: "2px" }}>
                     {skill.category}
                   </div>
                 </div>
-                <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.id}/SKILL.md`}
+                <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.name}/SKILL.md`}
                   target="_blank" rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  title="View on GitHub" aria-label={`View ${skill.name} on GitHub`}
+                  title="View on GitHub" aria-label={`View ${skill.title} on GitHub`}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: "36px", height: "36px", borderRadius: "6px",

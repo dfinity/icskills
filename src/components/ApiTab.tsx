@@ -33,13 +33,6 @@ const REAL_ENDPOINTS = [
     desc: "Every skill concatenated into one file. For full context injection.",
     contentType: "text/plain",
   },
-  {
-    label: "Agent discovery",
-    url: `${SITE_URL}/.well-known/agent.json`,
-    curl: `curl -sL ${SITE_URL}/.well-known/agent.json`,
-    desc: "Machine-readable manifest. Lists all skills and endpoint URLs.",
-    contentType: "application/json",
-  },
 ];
 
 export default function AccessTab() {
