@@ -9,6 +9,7 @@ export default function CopyButton({ text, label }: Props) {
   const [copied, setCopied] = useState(false);
   const onClick = (e: Event) => {
     e.stopPropagation();
+    e.preventDefault();
     navigator.clipboard.writeText(text).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
