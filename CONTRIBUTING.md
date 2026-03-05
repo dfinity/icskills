@@ -22,6 +22,8 @@ npm ci    # Install dependencies
 
 ## Adding a New Skill
 
+> **Skills are written for AI agents, not humans.** Every decision — structure, wording, level of detail — should optimize for machine consumption. Be explicit and literal: exact canister IDs, exact function signatures, exact error strings. Do not summarize, hand-wave, or link out when you can inline the information. An agent cannot click a link or interpret vague guidance.
+
 ### 1. Create the skill directory
 
 ```
@@ -145,7 +147,7 @@ Including a summary of eval results in your PR description is recommended but no
 
 ### 5. That's it — the website auto-discovers skills
 
-The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, `agent.json`, and other discovery files.
+The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 
 Stats (skill count, categories) all update automatically.
 
