@@ -1,0 +1,36 @@
+[
+  {
+    // Default: short cache with revalidation for HTML and other content
+    "match": "**/*",
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "X-Content-Type-Options": "nosniff"
+    },
+    "allow_raw_access": false
+  },
+  {
+    // Astro hashed static assets — safe to cache forever
+    "match": "_astro/**/*",
+    "headers": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    }
+  },
+  {
+    // Agent discovery endpoints
+    "match": ".well-known/**/*",
+    "headers": {
+      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  },
+  {
+    // Agent-readable skill indices
+    "match": "llms*.txt",
+    "headers": {
+      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Access-Control-Allow-Origin": "*"
+    }
+  }
+]

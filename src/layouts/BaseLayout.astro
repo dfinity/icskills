@@ -8,7 +8,7 @@ interface Props {
   jsonLd?: string;
 }
 
-import { SITE_URL, BASE_PATH } from "../data/site";
+import { SITE_URL } from "../data/site";
 
 const {
   title,
@@ -72,11 +72,11 @@ const defaultJsonLd = JSON.stringify({
   <meta name="twitter:description" content={ogDescription}>
   <meta name="twitter:image" content={ogImage}>
 
-  <link rel="alternate" type="text/plain" title="LLMs.txt" href={`${BASE_PATH}/llms.txt`}>
-  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href={`${BASE_PATH}/llms-full.txt`}>
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt">
+  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href="/llms-full.txt">
 
   <meta name="theme-color" content="#0a0a0f">
-  <link rel="icon" type="image/svg+xml" href={`${BASE_PATH}/favicon.svg`}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
   <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
 

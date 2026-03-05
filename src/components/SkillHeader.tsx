@@ -1,7 +1,7 @@
 import ThemeToggle from "./ThemeToggle";
 import CopyButton from "./CopyButton";
 import { CategoryIcon, GitHubIcon } from "./Icons";
-import { BASE_PATH, SITE_URL } from "../data/site";
+import { SITE_URL } from "../data/site";
 
 interface Props {
   skillName: string;
@@ -30,7 +30,7 @@ export default function SkillHeader({ skillName, skillTitle, category, lastUpdat
           minHeight: "56px", flexWrap: "wrap", padding: "8px 0",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
-            <a href={`${BASE_PATH}/`} style={{
+            <a href="/" style={{
               display: "flex", alignItems: "center", gap: "8px",
               color: "var(--text-muted)", textDecoration: "none", fontSize: "12px",
               padding: "6px 12px", borderRadius: "6px",

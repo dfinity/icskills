@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { BASE_PATH } from "../data/site";
 import "../styles/global.css";
 ---
 
@@ -16,10 +15,10 @@ import "../styles/global.css";
         The page you requested does not exist. It may have been moved or the skill ID is incorrect.
       </p>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-        <a href={`${BASE_PATH}/`} style="display:inline-block;padding:10px 24px;background:var(--accent);color:#000;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+        <a href="/" style="display:inline-block;padding:10px 24px;background:var(--accent);color:#000;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
           Browse all skills
         </a>
-        <a href={`${BASE_PATH}/llms.txt`} style="font-size:12px;color:var(--text-dim);text-decoration:none;">
+        <a href="/llms.txt" style="font-size:12px;color:var(--text-dim);text-decoration:none;">
           /llms.txt
         </a>
       </div>

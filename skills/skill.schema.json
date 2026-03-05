@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dfinity.github.io/icskills/skills/skill.schema.json",
+  "$id": "https://skills.internetcomputer.org/skills/skill.schema.json",
   "title": "IC Skill Frontmatter",
   "description": "Schema for the YAML frontmatter in SKILL.md files. Aligns with the Agent Skills spec (agentskills.io/specification). Top-level fields (name, description, license, compatibility) plus metadata block (title, category).",
   "type": "object",

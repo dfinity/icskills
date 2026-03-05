@@ -8,7 +8,7 @@ import { join } from "path";
 import { ROOT, listSkillDirs, getLastUpdated, SKILLS_DIR } from "./lib/parse-skill.js";
 
 const DIST = join(ROOT, "dist");
-const SITE = "https://dfinity.github.io/icskills";
+const SITE = "https://skills.internetcomputer.org";
 
 const dirs = listSkillDirs();
 

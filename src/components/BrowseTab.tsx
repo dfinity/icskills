@@ -1,7 +1,6 @@
 import { useState, useMemo } from "preact/hooks";
 import type { Skill } from "../data/skills";
 import { SANS_FONT } from "../data/constants";
-import { BASE_PATH } from "../data/site";
 import { CategoryIcon } from "./Icons";
 import CopyButton from "./CopyButton";
 
@@ -137,8 +136,8 @@ export default function BrowseTab({ skills }: Props) {
               key={skill.name}
               role="link"
               tabIndex={0}
-              onClick={() => { window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
-              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
+              onClick={() => { window.location.href = `/skills/${skill.name}/`; }}
+              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `/skills/${skill.name}/`; }}
               className="skill-card"
               style={{
                 padding: "24px",

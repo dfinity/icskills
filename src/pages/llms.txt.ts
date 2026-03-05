@@ -2,7 +2,7 @@
 import type { APIRoute } from "astro";
 import { loadAllSkills } from "../data/skills";
 
-const SITE = "https://dfinity.github.io/icskills";
+const SITE = "https://skills.internetcomputer.org";
 const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
 
 export const GET: APIRoute = () => {

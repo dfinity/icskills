@@ -4,8 +4,9 @@ dist
 .vscode/
 .idea/
 *.local
-public/.well-known/
+public/.well-known/skills/
 public/llms.txt
 public/llms-full.txt
 .astro
+.icp/cache/
 lighthouse-*
