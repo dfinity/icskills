@@ -1,0 +1,45 @@
+name: Deploy to Internet Computer
+
+on:
+  push:
+    branches: [feat/ic-asset-canister-deployment]
+  workflow_dispatch:
+
+concurrency:
+  group: ic-deploy
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/_checks.yml
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Install icp-cli
+        run: npm i -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
+
+      - name: Import deploy identity
+        run: |
+          echo "${{ secrets.DFX_IDENTITY_DESIGN_TEAM }}" > /tmp/deploy.pem
+          icp identity import deployer --from-pem /tmp/deploy.pem
+          rm /tmp/deploy.pem
+          icp identity default deployer
+
+      - name: Deploy to IC mainnet
+        run: icp deploy -e ic frontend
