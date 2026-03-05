@@ -36,10 +36,13 @@ jobs:
 
       - name: Import deploy identity
         run: |
-          echo "${{ secrets.DFX_IDENTITY_DESIGN_TEAM }}" > /tmp/deploy.pem
-          icp identity import deployer --from-pem /tmp/deploy.pem
-          rm /tmp/deploy.pem
+          mkdir -p ~/.local/share/icp-cli/identity/keys
+          echo $ICP_IDENTITY | base64 -d > ~/.local/share/icp-cli/identity/keys/deployer.pem
+          sed -i 's/\\r\\n/\r\n/g' ~/.local/share/icp-cli/identity/keys/deployer.pem
+          icp identity import deployer --from-pem ~/.local/share/icp-cli/identity/keys/deployer.pem --storage plaintext
           icp identity default deployer
+        env:
+          ICP_IDENTITY: ${{ secrets.DFX_IDENTITY_DESIGN_TEAM }}
 
       - name: Deploy to IC mainnet
         run: icp deploy -e ic frontend
