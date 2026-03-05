@@ -123,13 +123,35 @@ npm run validate     # Check frontmatter and sections
 
 This runs automatically in CI and blocks deployment on errors.
 
-### 4. That's it — the website auto-discovers skills
+### 4. Add evaluation cases
+
+Create `evaluations/<skill-name>.json` with test cases that verify the skill works. The eval file has two sections:
+
+- **`output_evals`** — realistic prompts with expected behaviors a judge can check
+- **`trigger_evals`** — queries that should/shouldn't activate the skill
+
+See `evaluations/icp-cli.json` for a working example. Write prompts the way a developer would actually ask — vague and incomplete, not over-specified test questions.
+
+**Running evaluations** (optional, requires `claude` CLI):
+
+```bash
+node scripts/evaluate-skills.js <skill-name>                    # All evals, with + without skill
+node scripts/evaluate-skills.js <skill-name> --eval "name"      # Single eval
+node scripts/evaluate-skills.js <skill-name> --no-baseline       # Skip without-skill run
+node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals only
+```
+
+This sends each prompt to Claude with and without the skill, then has a judge score the output. Results are saved to `evaluations/results/` (gitignored).
+
+Including a summary of eval results in your PR description is recommended but not required — running evals needs `claude` CLI access and costs API credits.
+
+### 5. That's it — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 
 Stats (skill count, categories) all update automatically.
 
-### 5. Submit a PR
+### 6. Submit a PR
 
 - One skill per PR
 - Include a brief description of what the skill covers and why it's needed

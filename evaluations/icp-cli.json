@@ -1,0 +1,70 @@
+{
+  "skill": "icp-cli",
+  "description": "Evaluation cases for the icp-cli skill. Tests whether agents produce correct icp-cli commands and configuration instead of legacy dfx equivalents.",
+
+  "output_evals": [
+    {
+      "name": "New project setup",
+      "prompt": "I want to build a dapp on ICP with a Rust backend and a React frontend. How do I set this up?",
+      "expected_behaviors": [
+        "Uses icp (not dfx) commands throughout",
+        "Configuration file is icp.yaml, NOT dfx.json",
+        "Canisters are a YAML array of objects (- name: ...), NOT a keyed map",
+        "Rust canister uses a recipe with a version pin (e.g., @dfinity/rust@v3.2.0)",
+        "Frontend/asset canister uses a recipe with a version pin",
+        "Asset canister recipe includes explicit build commands",
+        "Shows how to start the local network (icp network start -d)"
+      ]
+    },
+    {
+      "name": "Deploy to mainnet",
+      "prompt": "My canisters work locally, how do I get them on mainnet?",
+      "expected_behaviors": [
+        "Uses 'icp deploy -e ic', NOT 'dfx deploy --network ic' or '--network ic'",
+        "Mentions cycles are needed",
+        "Mentions canister IDs are stored in .icp/data/ and should be committed to git",
+        "Does NOT use --network ic flag for deployment"
+      ]
+    },
+    {
+      "name": "Migrate from dfx",
+      "prompt": "I have an older IC project that still uses dfx and dfx.json. It has a Motoko backend and a frontend. I want to switch to the new CLI. I also have canisters running on mainnet already.",
+      "expected_behaviors": [
+        "Creates icp.yaml with recipe-based canister configuration",
+        "Motoko canister uses @dfinity/motoko recipe with a version pin",
+        "Asset canister uses @dfinity/asset-canister recipe with a version pin",
+        "Explains identity migration (export from dfx, import into icp)",
+        "Explains canister ID migration via .icp/data/mappings/ic.ids.json",
+        "Uses correct icp identity commands ('icp identity default' not 'icp identity use')"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Set up a new Internet Computer project with Rust",
+      "How do I deploy my canister to the local network?",
+      "What's the icp.yaml config for a Motoko canister?",
+      "I'm getting an error with dfx deploy, can you help?",
+      "How do I start the local replica?",
+      "Migrate my dfx.json project to the new CLI",
+      "How do I create a new identity for mainnet deployment?",
+      "What recipes are available for icp-cli?",
+      "My icp deploy is failing with a build error",
+      "How do I check my canister status on mainnet?"
+    ],
+    "should_not_trigger": [
+      "Add access control to my Motoko canister",
+      "How does stable memory work in Rust canisters?",
+      "Implement ICRC-1 token transfer in my canister",
+      "Write a unit test for my Motoko actor",
+      "Set up inter-canister calls between two canisters",
+      "How do I use certified variables?",
+      "Explain the IC consensus mechanism",
+      "Add Internet Identity login to my frontend",
+      "How do I handle canister upgrades safely?",
+      "What's the best way to store large data on-chain?"
+    ]
+  }
+}
