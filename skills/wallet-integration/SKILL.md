@@ -126,6 +126,11 @@ import {
   DEFAULT_SIGNER_WINDOW_TOP_RIGHT
 } from '@dfinity/oisy-wallet-signer';
 
+import {
+  RelyingPartyResponseError,
+  RelyingPartyDisconnectedError
+} from '@dfinity/oisy-wallet-signer';
+
 import type {
   PermissionsPromptPayload,
   AccountsPromptPayload,
@@ -136,9 +141,9 @@ import type {
   RelyingPartyOptions
 } from '@dfinity/oisy-wallet-signer';
 
-// Classes and errors — from dedicated subpaths
+// Classes — from dedicated subpaths
 import {Signer} from '@dfinity/oisy-wallet-signer/signer';
-import {RelyingParty, RelyingPartyResponseError, RelyingPartyDisconnectedError} from '@dfinity/oisy-wallet-signer/relying-party';
+import {RelyingParty} from '@dfinity/oisy-wallet-signer/relying-party';
 import {IcpWallet} from '@dfinity/oisy-wallet-signer/icp-wallet';
 import {IcrcWallet} from '@dfinity/oisy-wallet-signer/icrc-wallet';
 ```
