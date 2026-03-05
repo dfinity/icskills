@@ -326,6 +326,7 @@ const environment = process.env.ICP_ENVIRONMENT || "local";
 const CANISTER_NAMES = ["backend", "other"];
 
 function getCanisterId(name) {
+  // `-i` makes the command return only the identity of the canister
   return execSync(`icp canister status ${name} -e ${environment} -i`, {
     encoding: "utf-8", stdio: "pipe",
   }).trim();
@@ -451,7 +452,7 @@ icp identity principal --identity my-identity
 
 ### Canister ID migration
 
-If you have existing mainnet canisters managed by dfx, create the mapping file:
+If you have existing mainnet canisters managed by dfx, migrate the IDs from `canister_ids.json` to icp-cli's mapping file:
 
 ```bash
 # Get IDs from dfx
@@ -466,6 +467,9 @@ cat > .icp/data/mappings/ic.ids.json << 'EOF'
   "backend": "yyyyy-yyyyy-yyyyy-yyyyy-cai"
 }
 EOF
+
+# Delete the dfx canister ID file — icp-cli uses .icp/data/mappings/ instead
+rm -f canister_ids.json
 
 # Commit to version control
 git add .icp/data/
