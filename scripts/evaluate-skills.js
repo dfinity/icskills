@@ -3,20 +3,20 @@
 /**
  * Skill evaluation runner.
  *
- * Runs output_evals and trigger_evals from a skill's evals.json.
+ * Runs output_evals and trigger_evals from evaluations/<skill-name>.json.
  * - Output evals: sends prompts to `claude` CLI with/without the skill,
  *   then uses a judge to score expected behaviors as pass/fail.
  * - Trigger evals: presents all skill descriptions to a judge and checks
  *   whether each query would correctly trigger (or not trigger) the skill.
  *
  * Usage:
- *   node scripts/run-evals.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]
+ *   node scripts/evaluate-skills.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]
  *
  * Examples:
- *   node scripts/run-evals.js icp-cli
- *   node scripts/run-evals.js icp-cli --eval "Deploy to mainnet"
- *   node scripts/run-evals.js icp-cli --no-baseline
- *   node scripts/run-evals.js icp-cli --triggers-only
+ *   node scripts/evaluate-skills.js icp-cli
+ *   node scripts/evaluate-skills.js icp-cli --eval "Deploy to mainnet"
+ *   node scripts/evaluate-skills.js icp-cli --no-baseline
+ *   node scripts/evaluate-skills.js icp-cli --triggers-only
  *
  * Requirements:
  *   - `claude` CLI installed and authenticated
@@ -35,7 +35,7 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const args = process.argv.slice(2);
 const skillName = args.find((a) => !a.startsWith("--"));
 if (!skillName) {
-  console.error("Usage: node scripts/run-evals.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]");
+  console.error("Usage: node scripts/evaluate-skills.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]");
   process.exit(1);
 }
 
@@ -49,7 +49,8 @@ const triggersOnly = args.includes("--triggers-only");
 // ---------------------------------------------------------------------------
 const skillDir = join(ROOT, "skills", skillName);
 const skillContent = readFileSync(join(skillDir, "SKILL.md"), "utf-8");
-const evals = JSON.parse(readFileSync(join(skillDir, "evals.json"), "utf-8"));
+const evalsFile = join(ROOT, "evaluations", `${skillName}.json`);
+const evals = JSON.parse(readFileSync(evalsFile, "utf-8"));
 
 let outputCases = evals.output_evals || [];
 if (evalFilter) {
@@ -326,10 +327,10 @@ if (allResults.trigger_evals) {
 }
 
 // Save full results
-const outDir = join(ROOT, "skills", skillName, "eval-results");
+const outDir = join(ROOT, "evaluations", "results");
 mkdirSync(outDir, { recursive: true });
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-const outFile = join(outDir, `run-${timestamp}.json`);
+const outFile = join(outDir, `${skillName}-${timestamp}.json`);
 writeFileSync(outFile, JSON.stringify(allResults, null, 2));
 console.log(`\nFull results saved to: ${outFile}\n`);
 

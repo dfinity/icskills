@@ -41,13 +41,14 @@ Validate runs in CI and blocks deployment on errors.
 
 ## Evaluations
 
-Each skill should have an `evals.json` file with test cases. Run evaluations with:
+Each skill should have an evaluation file at `evaluations/<skill-name>.json`. Run evaluations with:
 ```bash
-node scripts/run-evals.js <skill-name>              # All evals
-node scripts/run-evals.js <skill-name> --eval "X"   # Single eval by name
-node scripts/run-evals.js <skill-name> --no-baseline # Skip without-skill baseline
+node scripts/evaluate-skills.js <skill-name>              # All evals
+node scripts/evaluate-skills.js <skill-name> --eval "X"   # Single eval by name
+node scripts/evaluate-skills.js <skill-name> --no-baseline # Skip without-skill baseline
+node scripts/evaluate-skills.js <skill-name> --triggers-only # Trigger evals only
 ```
-Results are saved to `skills/<skill-name>/eval-results/` (gitignored). See `skills/icp-cli/evals.json` for the format.
+Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-cli.json` for the format.
 
 ## Writing Guidelines
 

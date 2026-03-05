@@ -132,8 +132,9 @@ for (const skill of skills) {
   }
 
   // --- Evals validation ---
-  if (!existsSync(join(SKILLS_DIR, dir, "evals.json"))) {
-    warn(label, `missing evals.json — see CONTRIBUTING.md for evaluation guidance`);
+  const evalsDir = join(SKILLS_DIR, "..", "evaluations");
+  if (!existsSync(join(evalsDir, `${dir}.json`))) {
+    warn(label, `missing evaluations/${dir}.json — see CONTRIBUTING.md for evaluation guidance`);
   }
 }
 

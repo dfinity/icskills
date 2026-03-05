@@ -10,4 +10,4 @@ public/llms-full.txt
 .astro
 lighthouse-*
 .eval-tmp
-skills/*/eval-results/
+evaluations/results/
