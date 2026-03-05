@@ -113,7 +113,7 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 ### Import Map
 
 ```typescript
-// Constants and types — from main entry point
+// Constants, errors, and types — from main entry point
 import {
   ICRC25_REQUEST_PERMISSIONS,
   ICRC25_PERMISSION_GRANTED,
@@ -123,10 +123,7 @@ import {
   ICRC21_CALL_CONSENT_MESSAGE,
   ICRC49_CALL_CANISTER,
   DEFAULT_SIGNER_WINDOW_CENTER,
-  DEFAULT_SIGNER_WINDOW_TOP_RIGHT
-} from '@dfinity/oisy-wallet-signer';
-
-import {
+  DEFAULT_SIGNER_WINDOW_TOP_RIGHT,
   RelyingPartyResponseError,
   RelyingPartyDisconnectedError
 } from '@dfinity/oisy-wallet-signer';
