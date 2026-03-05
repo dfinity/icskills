@@ -210,6 +210,12 @@ For multi-canister projects, list all canisters in the same `canisters` array. i
 
 ### Custom build steps (no recipe)
 
+When not using a recipe, only `name`, `build`, `sync`, `settings`, and `init_args` are valid canister-level fields. There are no `wasm`, `candid`, or `metadata` fields — handle these in the build script instead:
+
+- **WASM output**: copy the final WASM to `$ICP_WASM_OUTPUT_PATH`
+- **Candid metadata**: use `ic-wasm` to embed `candid:service` metadata
+- **Candid file**: the `.did` file is referenced only in the `ic-wasm` command, not as a YAML field
+
 ```yaml
 canisters:
   - name: backend
@@ -219,9 +225,8 @@ canisters:
           commands:
             - cargo build --target wasm32-unknown-unknown --release
             - cp target/wasm32-unknown-unknown/release/backend.wasm "$ICP_WASM_OUTPUT_PATH"
+            - ic-wasm "$ICP_WASM_OUTPUT_PATH" -o "$ICP_WASM_OUTPUT_PATH" metadata candid:service -f backend/backend.did -v public --keep-name-section
 ```
-
-`ICP_WASM_OUTPUT_PATH` is an environment variable that tells your build script where to place the final WASM file.
 
 ### Available recipes
 
