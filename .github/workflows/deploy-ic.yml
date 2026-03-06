@@ -2,7 +2,7 @@ name: Deploy to Internet Computer
 
 on:
   push:
-    branches: [feat/ic-asset-canister-deployment]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
