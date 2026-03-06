@@ -30,20 +30,10 @@ export default function BrowseTab({ skills }: Props) {
     <>
       {/* Hero */}
       <div style={{ marginBottom: "48px" }}>
-        <div style={{
-          fontSize: "11px", color: "var(--accent)", letterSpacing: "3px",
-          textTransform: "uppercase", marginBottom: "16px",
-          display: "flex", alignItems: "center", gap: "8px",
-        }}>
-          <span style={{ display: "inline-block", width: "24px", height: "1px", background: "var(--accent)" }} />
-          ICP Skills
-        </div>
         <h1 style={{
           fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 800,
           lineHeight: 1.1, margin: "0 0 16px 0",
-          letterSpacing: "-2px",
-          background: "var(--gradient-hero)",
-          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          letterSpacing: "-2px", color: "var(--text-primary)",
         }}>
           Agent-readable instructions<br />for every IC need.
         </h1>
@@ -51,22 +41,8 @@ export default function BrowseTab({ skills }: Props) {
           fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
           lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
         }}>
-          Zero hallucinations. Structured skill files with correct canister IDs,
-          tested code, known pitfalls, and verification checks.
+          The missing context layer between AI agents and the Internet Computer.
         </p>
-
-        {/* Stats */}
-        <div className="hero-stats" style={{ display: "flex", gap: "32px", marginTop: "32px" }}>
-          {[
-            { val: skills.length, label: "Skills" },
-            { val: "0", label: "Hallucinations" },
-          ].map(({ val, label }) => (
-            <div key={label}>
-              <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-1px" }}>{val}</div>
-              <div style={{ fontSize: "11px", color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "2px" }}>{label}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Search */}
@@ -90,19 +66,21 @@ export default function BrowseTab({ skills }: Props) {
               background: "var(--bg-input)",
               border: "1px solid var(--border-strong)",
               borderRadius: "8px", color: "var(--text-body)",
-              fontSize: "13px", outline: "none",
+              fontSize: "15px", outline: "none",
               fontFamily: "inherit", boxSizing: "border-box",
             }}
           />
         </div>
         <div className="endpoint-hint" style={{
           padding: "10px 16px",
-          background: `rgba(var(--accent-rgb),0.1)`,
-          border: `1px solid rgba(var(--accent-rgb),0.2)`,
-          borderRadius: "8px", fontSize: "12px", color: "var(--accent-text)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-default)",
+          borderRadius: "8px", fontSize: "13px", color: "var(--text-secondary)",
           whiteSpace: "nowrap",
+          display: "flex", alignItems: "center", gap: "8px",
         }}>
-          npx skills add dfinity/icskills
+          <code style={{ fontSize: "13px", color: "var(--text-secondary)" }}>npx skills add dfinity/icskills</code>
+          <CopyButton text="npx skills add dfinity/icskills" />
         </div>
       </div>
 
@@ -110,11 +88,11 @@ export default function BrowseTab({ skills }: Props) {
       <div style={{ display: "flex", gap: "6px", marginBottom: "32px", flexWrap: "wrap" }}>
         {categories.map((cat) => (
           <button key={cat} className="category-pill" onClick={() => setActiveCategory(cat)} style={{
-            padding: "6px 14px", fontSize: "11px",
-            background: activeCategory === cat ? `rgba(var(--accent-rgb),0.15)` : "var(--bg-card)",
-            border: `1px solid ${activeCategory === cat ? `rgba(var(--accent-rgb),0.4)` : "var(--border-default)"}`,
+            padding: "6px 14px", fontSize: "13px",
+            background: activeCategory === cat ? "var(--bg-input)" : "var(--bg-card)",
+            border: `1px solid ${activeCategory === cat ? "var(--border-strong)" : "var(--border-default)"}`,
             borderRadius: "6px",
-            color: activeCategory === cat ? "var(--accent-text)" : "var(--text-muted)",
+            color: activeCategory === cat ? "var(--text-primary)" : "var(--text-muted)",
             cursor: "pointer", letterSpacing: "0.5px",
             display: "flex", alignItems: "center", gap: "6px",
           }}>
@@ -144,7 +122,7 @@ export default function BrowseTab({ skills }: Props) {
                 padding: "24px",
                 background: "var(--bg-card)",
                 border: "1px solid var(--border-default)",
-                borderRadius: "12px",
+                borderRadius: "5px",
                 cursor: "pointer",
                 color: "inherit",
                 display: "block",
@@ -154,18 +132,18 @@ export default function BrowseTab({ skills }: Props) {
                 <span style={{
                   fontSize: "18px", width: "36px", height: "36px",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: `rgba(var(--accent-rgb),0.08)`,
-                  borderRadius: "8px", color: "var(--accent-text)",
+                  background: "var(--bg-input)",
+                  borderRadius: "8px", color: "var(--text-secondary)",
                   flexShrink: 0,
                 }}><CategoryIcon category={skill.category} /></span>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
-                    fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px",
+                    fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}>
                     {skill.title}
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-faint)", marginTop: "2px" }}>
+                  <div style={{ fontSize: "13px", color: "var(--text-faint)", marginTop: "2px" }}>
                     {skill.category}
                   </div>
                 </div>
@@ -173,44 +151,46 @@ export default function BrowseTab({ skills }: Props) {
                   target="_blank" rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   title="View on GitHub" aria-label={`View ${skill.title} on GitHub`}
+                  className="github-link"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: "36px", height: "36px", borderRadius: "6px",
                     color: "var(--text-faint)", flexShrink: 0,
-                    background: `rgba(var(--accent-rgb),0.06)`,
-                    border: `1px solid rgba(var(--accent-rgb),0.1)`,
-                    transition: "color 0.2s, border-color 0.2s",
+                    background: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
                   }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
                 </a>
               </div>
 
               <p style={{
-                fontSize: "12px", color: "var(--text-dim)", lineHeight: 1.6,
+                fontSize: "14px", color: "var(--text-dim)", lineHeight: 1.6,
                 margin: "0 0 16px 0", fontFamily: SANS_FONT,
               }}>{skill.description}</p>
 
-              <div style={{ fontSize: "11px", color: "var(--text-ghost)" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                 updated {skill.lastUpdated}
               </div>
 
               <div
+                className="card-agent-url"
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   marginTop: "12px", paddingTop: "12px",
                   borderTop: "1px solid var(--border-subtle)",
                   display: "flex", alignItems: "center", gap: "8px",
+                  cursor: "default",
                 }}>
                 <div style={{
-                  fontSize: "10px", color: "var(--text-ghost)", whiteSpace: "nowrap", flexShrink: 0,
+                  fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0,
                 }}>
                   paste in agent:
                 </div>
                 <code style={{
                   flex: 1, padding: "6px 10px",
                   background: "var(--bg-code)",
-                  border: `1px solid rgba(var(--accent-rgb),0.1)`,
-                  borderRadius: "4px", fontSize: "10px", color: "var(--accent)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "4px", fontSize: "11px", color: "var(--text-tertiary)",
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   minWidth: 0,
                 }}>

@@ -5,21 +5,21 @@ import "../styles/global.css";
 ---
 
 <BaseLayout title="404 — IC Skills">
-  <div style="min-height:100vh;background:var(--bg-page);color:var(--text-body);font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;">
+  <div style="min-height:100vh;background:var(--bg-page);color:var(--text-body);font-family:'Inter',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;">
     <!-- Grid background -->
-    <div style="position:fixed;inset:0;opacity:var(--grid-opacity);background-image:linear-gradient(rgba(var(--accent-rgb),0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--accent-rgb),0.5) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;"></div>
+    <div style="position:fixed;inset:0;opacity:var(--grid-opacity);background-image:linear-gradient(var(--border-subtle) 1px,transparent 1px),linear-gradient(90deg,var(--border-subtle) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;"></div>
 
     <div style="position:relative;z-index:10;max-width:480px;padding:32px;">
-      <div style="font-size:72px;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:-2px;">404</div>
+      <div style="font-size:72px;font-weight:800;color:var(--text-primary);margin-bottom:16px;letter-spacing:-2px;">404</div>
       <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:var(--text-body);">Skill not found</h1>
-      <p style="font-size:14px;color:var(--text-dim);line-height:1.6;margin:0 0 32px;">
+      <p style="font-size:15px;color:var(--text-dim);line-height:1.6;margin:0 0 32px;">
         The page you requested does not exist. It may have been moved or the skill ID is incorrect.
       </p>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-        <a href={`${BASE_PATH}/`} style="display:inline-block;padding:10px 24px;background:var(--accent);color:#000;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+        <a href={`${BASE_PATH}/`} style="display:inline-block;padding:10px 24px;background:var(--text-primary);color:var(--bg-page);text-decoration:none;border-radius:6px;font-size:14px;font-weight:700;">
           Browse all skills
         </a>
-        <a href={`${BASE_PATH}/llms.txt`} style="font-size:12px;color:var(--text-dim);text-decoration:none;">
+        <a href={`${BASE_PATH}/llms.txt`} style="font-size:13px;color:var(--text-muted);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--border-default);">
           /llms.txt
         </a>
       </div>
