@@ -16,6 +16,7 @@ jobs:
   deploy:
     needs: checks
     runs-on: ubuntu-latest
+    environment: IC mainnet
     permissions:
       contents: read
     steps:
