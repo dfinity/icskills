@@ -66,12 +66,12 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Skill index | [`llms.txt`](https://dfinity.github.io/icskills/llms.txt) | Short index with links to each skill |
-| All skills | [`llms-full.txt`](https://dfinity.github.io/icskills/llms-full.txt) | All skills concatenated for direct context injection |
-| Single skill | `https://raw.githubusercontent.com/dfinity/icskills/main/skills/{name}/SKILL.md` | Raw markdown for one skill |
-| Skills discovery | [`.well-known/skills/index.json`](https://dfinity.github.io/icskills/.well-known/skills/index.json) | Machine-readable skill index ([Cloudflare Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
+| Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | Short index with links to each skill |
+| All skills | [`llms-full.txt`](https://skills.internetcomputer.org/llms-full.txt) | All skills concatenated for direct context injection |
+| Single skill | [`skills/{name}/SKILL.md`](https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md) | Raw markdown from GitHub |
+| Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Cloudflare Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
 | Single skill (API) | `/.well-known/skills/{name}/SKILL.md` | Raw markdown via discovery endpoint |
-| Skill page (HTML) | [`/skills/{name}/`](https://dfinity.github.io/icskills/skills/ckbtc/) | Pre-rendered skill page with full SEO |
+| Skill page (HTML) | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page with full SEO |
 | CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
 
 ## Contributing
