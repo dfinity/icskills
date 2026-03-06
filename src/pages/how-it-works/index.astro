@@ -1,5 +1,6 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
+import CopyButton from "../../components/CopyButton";
 import { FRAMEWORKS, FW_LIGHT_COLORS } from "../../data/constants";
 
 // SVG icon markup for each framework — static versions of FrameworkIcon from Icons.tsx
@@ -26,33 +27,27 @@ const frameworksWithVars = FRAMEWORKS.map((fw, i) => ({
 }));
 
 const steps = [
-  { num: "01", title: "Agent fetches skill", code: "curl llms.txt | or npx skills add", colorVar: "accent", rgbVar: "accent-rgb",
-    desc: "Agent identifies what it needs to build and pulls the right skill file" },
-  { num: "02", title: "Reads instructions", code: "{ pitfalls, steps, verify }", colorVar: "accent-blue", rgbVar: "blue-rgb",
-    desc: "Gets structured steps, working code, known pitfalls, and verification checks" },
-  { num: "03", title: "Builds correctly", code: "\u2713 deployed & verified", colorVar: "green", rgbVar: "green-rgb",
-    desc: "Executes with zero hallucinations because every detail is precise and tested" },
+  { num: "01", title: "The problem",
+    code: "mxzaz-hqaaa... ← hallucinated",
+    desc: "AI agents guess canister IDs, use deprecated APIs, and miss ICP-specific details like subaccounts and cycle fees." },
+  { num: "02", title: "The right skill",
+    code: "curl .../skills/ckbtc/SKILL.md",
+    desc: "The agent matches the task to a skill via description, fetches it, and gets correct canister IDs, tested code, pitfalls, and verification steps." },
+  { num: "03", title: "The result",
+    code: "icp canister call icrc1_balance_of",
+    desc: "The agent builds with accurate context and verifies its own work. Working code on the first deploy." },
 ];
 
 const anatomy = [
-  { section: "What This Is", colorVar: "accent-text", rgbVar: "accent-text-rgb",
+  { section: "What This Is",
     preview: "ckBTC is chain-key Bitcoin on the Internet Computer. This skill covers accepting deposits, sending transfers, checking balances, and minting.",
     tag: "context" },
-  { section: "Prerequisites", colorVar: "accent-blue", rgbVar: "blue-rgb",
-    preview: "icp-cli >= 0.1.0  \u00B7  Rust or Motoko  \u00B7  ic-cdk >= 0.19",
+  { section: "Prerequisites",
+    preview: "ic-cdk >= 0.19  \u00B7  icrc-ledger-types >= 0.1  \u00B7  candid >= 0.10",
     tag: "exact versions" },
-  { section: "Common Pitfalls", colorVar: "yellow", rgbVar: "yellow-rgb",
+  { section: "Common Pitfalls",
     preview: "DO NOT use pre-2025 minter canister ID (it changed)  \u00B7  DO NOT forget the 10 sat fee  \u00B7  DO NOT skip subaccounts for deposits",
     tag: "guardrails" },
-  { section: "Implementation", colorVar: "green", rgbVar: "green-rgb",
-    preview: "1. Add dependencies \u2192 2. Import & configure \u2192 3. Implement deposit flow \u2192 4. Implement transfer",
-    tag: "tested code" },
-  { section: "Deploy & Test", colorVar: "accent", rgbVar: "accent-rgb",
-    preview: "icp canister deploy ckbtc  \u00B7  icp canister call ckbtc_ledger icrc1_balance_of",
-    tag: "step-by-step" },
-  { section: "Verify It Works", colorVar: "accent-blue", rgbVar: "blue-rgb",
-    preview: "\u2713 Balance returns nat  \u00B7  \u2713 Transfer returns { Ok: nat }",
-    tag: "confirm it works" },
 ];
 ---
 
@@ -61,28 +56,27 @@ const anatomy = [
   description="How agent-readable skill files prevent hallucinations and enable AI agents to build on the Internet Computer correctly."
   canonicalUrl="https://dfinity.github.io/icskills/how-it-works/"
   activeTab="how-it-works"
-  maxWidth="960px"
+  maxWidth="1200px"
 >
   <!-- Hero -->
-  <div style="text-align:center;margin-bottom:72px;">
-    <h2 style="font-size:clamp(36px,6vw,56px);font-weight:800;color:var(--text-primary);letter-spacing:-0.05em;margin:0 0 20px 0;line-height:1.05;">
-      <span style="color:var(--text-faint);">Docs are for humans.</span><br />
-      <span style="background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Skills are for agents.</span>
+  <div style="margin-bottom:48px;">
+    <h2 style="font-size:clamp(28px,5vw,48px);font-weight:800;color:var(--text-primary);letter-spacing:-2px;margin:0 0 16px 0;line-height:1.1;">
+      Docs are for humans.<br />Skills are for agents.
     </h2>
-    <p style="font-size:16px;color:var(--text-faint);max-width:500px;margin:0 auto;line-height:1.7;font-family:'Inter',system-ui,sans-serif;">
-      Structured instructions. Zero hallucinations.
+    <p style="font-size:15px;color:var(--text-tertiary);max-width:560px;margin:0;line-height:1.6;font-family:'Inter',system-ui,sans-serif;">
+      Structured instructions that prevent hallucinations. Zero guesswork.
     </p>
   </div>
 
   <!-- 3-step flow -->
   <div class="step-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:72px;">
-    {steps.map(({ num, title, code, colorVar, rgbVar, desc }) => (
-      <div class="step-card" style={`padding:32px 24px;background:rgba(var(--${rgbVar}),0.04);border-top:2px solid var(--${colorVar});position:relative;`}>
-        <div style={`font-size:48px;font-weight:900;color:var(--${colorVar});opacity:0.12;position:absolute;top:16px;right:16px;line-height:1;`}>{num}</div>
-        <div style={`font-size:11px;font-weight:700;color:var(--${colorVar});letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;`}>Step {num}</div>
+    {steps.map(({ num, title, code, desc }) => (
+      <div class="step-card" style="padding:32px 24px;background:var(--bg-card);border-top:2px solid var(--border-strong);position:relative;">
+        <div style="font-size:48px;font-weight:900;color:var(--text-primary);opacity:0.06;position:absolute;top:16px;right:16px;line-height:1;">{num}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Step {num}</div>
         <div style="font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px;margin-bottom:8px;">{title}</div>
-        <code style={`display:inline-block;padding:4px 10px;background:var(--bg-code);border-radius:4px;font-size:11px;color:var(--${colorVar});margin-bottom:12px;`}>{code}</code>
-        <p style="font-size:13px;color:var(--text-faint);line-height:1.6;margin:0;font-family:'Inter',system-ui,sans-serif;">{desc}</p>
+        <code style="display:inline-block;padding:4px 10px;background:var(--bg-code);border-radius:4px;font-size:11px;color:var(--text-secondary);margin-bottom:12px;">{code}</code>
+        <p style="font-size:14px;color:var(--text-faint);line-height:1.6;margin:0;font-family:'Inter',system-ui,sans-serif;">{desc}</p>
       </div>
     ))}
   </div>
@@ -91,25 +85,28 @@ const anatomy = [
   <div style="margin-bottom:72px;">
     <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">Anatomy of a skill</div>
 
-    <div class="anatomy-table" style="border:1px solid rgba(var(--accent-rgb),0.15);border-radius:16px;overflow:hidden;">
+    <div class="anatomy-table" style="border:1px solid var(--border-default);border-radius:16px;overflow:hidden;">
       {anatomy.map((item, i, arr) => (
         <div class="anatomy-row" style={`display:grid;grid-template-columns:minmax(100px,200px) 1fr auto;${i < arr.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : ""}align-items:center;`}>
-          <div style={`padding:20px 24px;font-size:13px;font-weight:700;color:var(--${item.colorVar});border-right:1px solid var(--border-subtle);`}>{item.section}</div>
+          <div style={`padding:20px 24px;font-size:13px;font-weight:700;color:var(--text-secondary);border-right:1px solid var(--border-subtle);`}>{item.section}</div>
           <div style="padding:20px 24px;font-size:12px;color:var(--text-muted);font-family:'Inter',system-ui,sans-serif;line-height:1.5;">{item.preview}</div>
           <div style="padding:20px 24px;text-align:right;">
-            <span style={`font-size:9px;padding:3px 10px;background:rgba(var(--${item.rgbVar}),0.08);border:1px solid rgba(var(--${item.rgbVar}),0.2);border-radius:4px;color:var(--${item.colorVar});text-transform:uppercase;letter-spacing:1px;white-space:nowrap;`}>{item.tag}</span>
+            <span style={`font-size:9px;padding:3px 10px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:4px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;`}>{item.tag}</span>
           </div>
         </div>
       ))}
     </div>
+    <p style="font-size:13px;color:var(--text-muted);margin:16px 0 0 0;font-family:'Inter',system-ui,sans-serif;line-height:1.6;">
+      Plus implementation steps, deploy instructions, and verification checks — tailored to each integration.
+    </p>
   </div>
 
   <!-- Terminal code example -->
   <div style="margin-bottom:72px;">
     <div style="font-size:11px;color:var(--text-faint);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;text-align:center;">Any agent, any framework</div>
 
-    <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(var(--blue-rgb),0.15);">
-      <div style="padding:12px 20px;background:rgba(var(--accent-rgb),0.04);border-bottom:1px solid rgba(var(--accent-rgb),0.08);display:flex;align-items:center;gap:8px;">
+    <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border-default);">
+      <div style="padding:12px 20px;background:var(--bg-card-subtle);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:8px;">
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-red);"></div>
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-yellow);"></div>
         <div style="width:10px;height:10px;border-radius:50%;background:var(--dot-green);"></div>
@@ -120,19 +117,19 @@ const anatomy = [
 <span style="color:var(--accent-blue);">curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md</span>
 
 <span style="color:var(--text-faint);"># 2. Or browse and install via skills.sh CLI</span>
-<span style="color:var(--accent-text);">npx skills add dfinity/icskills</span>
+<span style="color:var(--accent-blue);">npx skills add dfinity/icskills</span>
 
 <span style="color:var(--text-faint);"># 3. Or fetch the full index for agent context</span>
-<span style="color:var(--accent-text);">curl -sL https://dfinity.github.io/icskills/llms-full.txt</span>
+<span style="color:var(--accent-blue);">curl -sL https://dfinity.github.io/icskills/llms-full.txt</span>
 
-<span style="color:var(--yellow);"># Agent now knows:</span>
-<span style="color:var(--yellow);"># - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai</span>
-<span style="color:var(--yellow);"># - Fee is 10 satoshis (not 0)</span>
-<span style="color:var(--yellow);"># - Must use subaccounts for deposits</span>
+<span style="color:var(--text-secondary);"># Agent now knows:</span>
+<span style="color:var(--text-secondary);"># - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai</span>
+<span style="color:var(--text-secondary);"># - Fee is 10 satoshis (not 0)</span>
+<span style="color:var(--text-secondary);"># - Must use subaccounts for deposits</span>
 
-<span style="color:var(--green);"># → Deploys correctly on first try</span>
-<span style="color:var(--green);"># → Runs verification checks</span>
-<span style="color:var(--green);"># → Ships autonomously</span></pre>
+<span style="color:var(--text-secondary);"># → Deploys correctly on first try</span>
+<span style="color:var(--text-secondary);"># → Runs verification checks</span>
+<span style="color:var(--text-secondary);"># → Ships autonomously</span></pre>
     </div>
 
     <!-- Framework logos grid -->
@@ -152,10 +149,13 @@ const anatomy = [
   </div>
 
   <!-- Bottom CTA -->
-  <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid rgba(var(--accent-rgb),0.1);">
-    <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">The first chain agents can actually build on.</div>
-    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Structured skill files that prevent hallucinations. Fetch via llms.txt, raw GitHub URLs, or the skills.sh CLI.</p>
-    <code style="display:inline-block;padding:12px 24px;background:var(--bg-code);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:8px;font-size:13px;color:var(--accent-text);">npx skills add dfinity/icskills</code>
+  <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid var(--border-default);">
+    <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">Give your agent the context it needs.</div>
+    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Every IC integration, one fetch away. Works with any agent or framework.</p>
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg-code);border:1px solid var(--border-default);border-radius:8px;">
+      <code style="font-size:14px;color:var(--text-secondary);">npx skills add dfinity/icskills</code>
+      <CopyButton client:load text="npx skills add dfinity/icskills" />
+    </div>
   </div>
 </SiteLayout>
 

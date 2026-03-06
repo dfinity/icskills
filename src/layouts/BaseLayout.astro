@@ -75,14 +75,16 @@ const defaultJsonLd = JSON.stringify({
   <link rel="alternate" type="text/plain" title="LLMs.txt" href={`${BASE_PATH}/llms.txt`}>
   <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href={`${BASE_PATH}/llms-full.txt`}>
 
-  <meta name="theme-color" content="#0a0a0f">
+  <meta name="theme-color" content="#000000">
   <link rel="icon" type="image/svg+xml" href={`${BASE_PATH}/favicon.svg`}>
+  <link rel="icon" type="image/png" sizes="96x96" href={`${BASE_PATH}/favicon-96x96.png`}>
+  <link rel="apple-touch-icon" sizes="180x180" href={`${BASE_PATH}/apple-touch-icon.png`}>
 
   <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <script is:inline>
