@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dfinity.github.io/icskills/sitemap-index.xml
+Sitemap: https://skills.internetcomputer.org/sitemap-index.xml

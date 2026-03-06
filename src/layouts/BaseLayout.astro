@@ -8,7 +8,7 @@ interface Props {
   jsonLd?: string;
 }
 
-import { SITE_URL, BASE_PATH } from "../data/site";
+import { SITE_URL } from "../data/site";
 
 const {
   title,
@@ -72,13 +72,13 @@ const defaultJsonLd = JSON.stringify({
   <meta name="twitter:description" content={ogDescription}>
   <meta name="twitter:image" content={ogImage}>
 
-  <link rel="alternate" type="text/plain" title="LLMs.txt" href={`${BASE_PATH}/llms.txt`}>
-  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href={`${BASE_PATH}/llms-full.txt`}>
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt">
+  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href="/llms-full.txt">
 
   <meta name="theme-color" content="#000000">
-  <link rel="icon" type="image/svg+xml" href={`${BASE_PATH}/favicon.svg`}>
-  <link rel="icon" type="image/png" sizes="96x96" href={`${BASE_PATH}/favicon-96x96.png`}>
-  <link rel="apple-touch-icon" sizes="180x180" href={`${BASE_PATH}/apple-touch-icon.png`}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
 

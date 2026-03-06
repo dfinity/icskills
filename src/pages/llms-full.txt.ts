@@ -1,6 +1,7 @@
 // Generates /llms-full.txt at build time — all SKILL.md files concatenated
 import type { APIRoute } from "astro";
 import { loadAllSkillsRaw } from "../data/skills";
+import { SITE_URL } from "../data/site";
 
 export const GET: APIRoute = () => {
   const skills = loadAllSkillsRaw();
@@ -9,6 +10,7 @@ export const GET: APIRoute = () => {
 
 All IC Skills in a single file for direct context injection.
 Source: https://github.com/dfinity/icskills
+Website: ${SITE_URL}
 Skills: ${skills.length}
 `;
 

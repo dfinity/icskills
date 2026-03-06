@@ -1,43 +1,48 @@
+import { useState, useEffect } from "preact/hooks";
 import { SANS_FONT } from "../data/constants";
-import { SITE_URL } from "../data/site";
 import CopyButton from "./CopyButton";
 
 const RAW_BASE = "https://raw.githubusercontent.com/dfinity/icskills/main/skills";
 
-const REAL_ENDPOINTS = [
-  {
-    label: "Skills discovery",
-    url: `${SITE_URL}/.well-known/skills/index.json`,
-    desc: "Discovery index listing all skills. Follows the Agent Skills Discovery RFC.",
-    contentType: "application/json",
-  },
-  {
-    label: "Single skill",
-    url: `${SITE_URL}/.well-known/skills/ckbtc/SKILL.md`,
-    desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
-    contentType: "text/markdown",
-  },
-  {
-    label: "Single skill (GitHub raw)",
-    url: `${RAW_BASE}/ckbtc/SKILL.md`,
-    desc: "Same content via GitHub raw URLs. Works without the site.",
-    contentType: "text/plain",
-  },
-  {
-    label: "Skill index",
-    url: `${SITE_URL}/llms.txt`,
-    desc: "Short index with links to every skill. Follows the llms.txt convention.",
-    contentType: "text/plain",
-  },
-  {
-    label: "All skills (full)",
-    url: `${SITE_URL}/llms-full.txt`,
-    desc: "Every skill concatenated into one file. For full context injection.",
-    contentType: "text/plain",
-  },
-];
+function getEndpoints(origin: string) {
+  return [
+    {
+      label: "Skills discovery",
+      url: `${origin}/.well-known/skills/index.json`,
+      desc: "Discovery index listing all skills. Follows the Agent Skills Discovery RFC.",
+      contentType: "application/json",
+    },
+    {
+      label: "Single skill",
+      url: `${origin}/.well-known/skills/ckbtc/SKILL.md`,
+      desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
+      contentType: "text/markdown",
+    },
+    {
+      label: "Single skill (GitHub raw)",
+      url: `${RAW_BASE}/ckbtc/SKILL.md`,
+      desc: "Same content via GitHub raw URLs. Works without the site.",
+      contentType: "text/plain",
+    },
+    {
+      label: "Skill index",
+      url: `${origin}/llms.txt`,
+      desc: "Short index with links to every skill. Follows the llms.txt convention.",
+      contentType: "text/plain",
+    },
+    {
+      label: "All skills (full)",
+      url: `${origin}/llms-full.txt`,
+      desc: "Every skill concatenated into one file. For full context injection.",
+      contentType: "text/plain",
+    },
+  ];
+}
 
 export default function AccessTab() {
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const endpoints = getEndpoints(origin);
   return (
     <div style={{ maxWidth: "860px" }}>
       <div style={{ marginBottom: "48px" }}>
@@ -57,7 +62,7 @@ export default function AccessTab() {
 
       {/* Real endpoints */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "48px" }}>
-        {REAL_ENDPOINTS.map((ep) => (
+        {endpoints.map((ep) => (
           <div key={ep.label} className="endpoint-card" style={{
             border: "1px solid var(--border-default)",
             borderRadius: "10px",

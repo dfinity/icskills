@@ -1,9 +1,7 @@
 // Generates /llms.txt at build time — short index of all skills with links
 import type { APIRoute } from "astro";
 import { loadAllSkills } from "../data/skills";
-
-const SITE = "https://dfinity.github.io/icskills";
-const RAW = "https://raw.githubusercontent.com/dfinity/icskills/main";
+import { SITE_URL } from "../data/site";
 
 export const GET: APIRoute = () => {
   const skills = loadAllSkills();
@@ -19,7 +17,7 @@ IC Skills provides copy-paste-ready skill files that teach AI agents how to buil
 Fetch any skill file and paste it into your AI agent's context:
 
 \`\`\`
-curl -sL ${RAW}/skills/<skill-name>/SKILL.md
+curl -sL ${SITE_URL}/.well-known/skills/<skill-name>/SKILL.md
 \`\`\`
 
 ## Skills
@@ -28,10 +26,15 @@ curl -sL ${RAW}/skills/<skill-name>/SKILL.md
 
   const lines = skills.map(
     (s) =>
-      `- [${s.title}](${RAW}/skills/${s.name}/SKILL.md): ${s.description || `Agent-readable skill file for ${s.title} on the Internet Computer.`}`
+      `- [${s.title}](${SITE_URL}/.well-known/skills/${s.name}/SKILL.md): ${s.description || `Agent-readable skill file for ${s.title} on the Internet Computer.`}`
   );
 
   const footer = `
+## Skills Discovery
+
+- [Skills index (JSON)](${SITE_URL}/.well-known/skills/index.json): Machine-readable skill index ([Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc))
+- [All skills (full text)](${SITE_URL}/llms-full.txt): All skills concatenated for direct context injection
+
 ## Source
 
 - [GitHub Repository](https://github.com/dfinity/icskills): All skill files, contribution guide, and website source

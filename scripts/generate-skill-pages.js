@@ -9,7 +9,7 @@ import { join } from "path";
 import { ROOT, readAllSkills } from "./lib/parse-skill.js";
 
 const DIST = join(ROOT, "dist");
-const SITE = "https://dfinity.github.io/icskills";
+const SITE = "https://skills.internetcomputer.org";
 
 // Read the built index.html as template
 const template = readFileSync(join(DIST, "index.html"), "utf-8");

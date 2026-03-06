@@ -65,7 +65,7 @@ Known categories: DeFi, Tokens, Auth, Architecture, Integration, Governance, Fro
 
 - **Framework**: [Astro](https://astro.build/) — static site generator, zero JS by default
 - **Interactive islands**: [Preact](https://preactjs.com/) — search, filters, copy buttons, theme toggle
-- **Hosting**: GitHub Pages via Actions at `https://dfinity.github.io/icskills/`
+- **Hosting**: IC asset canister at `https://skills.internetcomputer.org/`
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
 
 ## Project Structure

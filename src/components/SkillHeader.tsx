@@ -1,7 +1,7 @@
+import { useState, useEffect } from "preact/hooks";
 import ThemeToggle from "./ThemeToggle";
 import CopyButton from "./CopyButton";
 import { CategoryIcon, GitHubIcon } from "./Icons";
-import { BASE_PATH } from "../data/site";
 
 interface Props {
   skillName: string;
@@ -11,7 +11,10 @@ interface Props {
 }
 
 export default function SkillHeader({ skillName, skillTitle, category, lastUpdated }: Props) {
-  const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skillName}/SKILL.md`;
+  const skillPath = `/.well-known/skills/${skillName}/SKILL.md`;
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const rawUrl = `${origin}${skillPath}`;
   const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skillName}/SKILL.md`;
   return (
     <>
@@ -28,7 +31,7 @@ export default function SkillHeader({ skillName, skillTitle, category, lastUpdat
           minHeight: "56px", flexWrap: "wrap", padding: "8px 0",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
-            <a href={`${BASE_PATH}/`} className="back-btn" style={{
+            <a href="/" className="back-btn" style={{
               display: "flex", alignItems: "center", gap: "8px",
               color: "var(--text-muted)", textDecoration: "none", fontSize: "13px",
               padding: "6px 12px", borderRadius: "6px",

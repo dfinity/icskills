@@ -1,7 +1,6 @@
-import { useState, useMemo } from "preact/hooks";
+import { useState, useEffect, useMemo } from "preact/hooks";
 import type { Skill } from "../data/skills";
 import { SANS_FONT } from "../data/constants";
-import { BASE_PATH } from "../data/site";
 import { CategoryIcon } from "./Icons";
 import CopyButton from "./CopyButton";
 
@@ -12,6 +11,8 @@ interface Props {
 export default function BrowseTab({ skills }: Props) {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(skills.map((s) => s.category))).sort()],
@@ -109,14 +110,14 @@ export default function BrowseTab({ skills }: Props) {
         gap: "16px",
       }}>
         {filtered.map((skill) => {
-          const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.name}/SKILL.md`;
+          const rawUrl = `${origin}/.well-known/skills/${skill.name}/SKILL.md`;
           return (
             <div
               key={skill.name}
               role="link"
               tabIndex={0}
-              onClick={() => { window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
-              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `${BASE_PATH}/skills/${skill.name}/`; }}
+              onClick={() => { window.location.href = `/skills/${skill.name}/`; }}
+              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `/skills/${skill.name}/`; }}
               className="skill-card"
               style={{
                 padding: "24px",

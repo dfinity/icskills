@@ -3,8 +3,8 @@ import preact from '@astrojs/preact';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://dfinity.github.io',
-  base: '/icskills',
+  site: process.env.SITE_URL || 'https://skills.internetcomputer.org',
+  base: '/',
   integrations: [preact(), sitemap()],
   build: {
     format: 'directory',

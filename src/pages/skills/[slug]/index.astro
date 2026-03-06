@@ -1,9 +1,8 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import SkillHeader from "../../../components/SkillHeader";
-import { GitHubIcon } from "../../../components/Icons";
 import { loadAllSkills } from "../../../data/skills";
-import { SITE_URL, BASE_PATH } from "../../../data/site";
+import { SITE_URL } from "../../../data/site";
 import { marked } from "marked";
 import "../../../styles/global.css";
 
@@ -73,7 +72,7 @@ const jsonLd = JSON.stringify({
     <!-- Footer (static) -->
     <footer style="position:relative;z-index:10;border-top:1px solid var(--border-default);padding:24px 32px;">
       <div class="footer-inner" style="max-width:860px;margin:0 auto;display:flex;justify-content:space-between;font-size:12px;color:var(--text-faint);flex-wrap:wrap;gap:8px;">
-        <a href={`${BASE_PATH}/`} style="color:var(--text-faint);text-decoration:none;">
+        <a href="/" style="color:var(--text-faint);text-decoration:none;">
           IC Skills — The missing context layer between AI agents and the Internet Computer
         </a>
         <span style="display:flex;align-items:center;gap:12px;">
