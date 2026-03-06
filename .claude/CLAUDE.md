@@ -39,6 +39,17 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate runs in CI and blocks deployment on errors.
 
+## Evaluations
+
+Each skill should have an evaluation file at `evaluations/<skill-name>.json`. Run evaluations with:
+```bash
+node scripts/evaluate-skills.js <skill-name>              # All evals
+node scripts/evaluate-skills.js <skill-name> --eval "X"   # Single eval by name
+node scripts/evaluate-skills.js <skill-name> --no-baseline # Skip without-skill baseline
+node scripts/evaluate-skills.js <skill-name> --triggers-only # Trigger evals only
+```
+Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-cli.json` for the format.
+
 ## Writing Guidelines
 
 - **Write for agents, not humans.** Be explicit with canister IDs, function signatures, and error messages.

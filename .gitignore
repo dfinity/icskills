@@ -10,3 +10,5 @@ public/llms-full.txt
 .astro
 .icp/cache/
 lighthouse-*
+.eval-tmp
+evaluations/results/

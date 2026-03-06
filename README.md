@@ -86,6 +86,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 - **Hosting**: GitHub Pages via Actions
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
 - **Validation**: Structural linter for frontmatter and code blocks (`npm run validate`)
+- **Evaluation**: Per-skill eval cases with LLM-as-judge scoring (`node scripts/evaluate-skills.js <skill>`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 - **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
 - **Skills Discovery**: `llms.txt`, `llms-full.txt`, `.well-known/skills/` ([Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc))
