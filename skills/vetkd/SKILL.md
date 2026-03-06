@@ -20,7 +20,7 @@ vetKeys (verifiably encrypted threshold keys) bring on-chain privacy to the IC v
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (`brew install icp-cli`)
 - Rust: `ic-vetkeys = "0.6"` ([crates.io](https://crates.io/crates/ic-vetkeys))
 - Motoko: Use the raw management canister approach shown below
 - Frontend: `@dfinity/vetkeys` v0.4.0 (`npm install @dfinity/vetkeys`)

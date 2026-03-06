@@ -16,7 +16,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- icp-cli >= 0.1.0 (`brew install icp-cli`)
 - For Motoko: `moc >= 0.14.10` (included with icp-cli), `mo:core` 2.0 and `ic >= 2.1.0` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 

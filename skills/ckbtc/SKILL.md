@@ -16,7 +16,7 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (install: `brew install icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
 - A funded ICP identity (for mainnet deployment cycles)

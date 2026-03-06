@@ -16,7 +16,7 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (`brew install icp-cli`)
 - `dfx` with the sns extension (`dfx extension install sns`) for prepare-canisters, validate, and propose
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet

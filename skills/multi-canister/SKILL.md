@@ -16,7 +16,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+- `icp-cli` >= 0.1.0 (`brew install icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
 - Understanding of `async`/`await` and error handling
