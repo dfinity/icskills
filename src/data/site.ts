@@ -1,1 +1,1 @@
-export const SITE_URL = "https://skills.internetcomputer.org";
+export const SITE_URL = import.meta.env.SITE.replace(/\/$/, "");

@@ -2,6 +2,7 @@
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import CopyButton from "../../components/CopyButton";
 import { FRAMEWORKS, FW_LIGHT_COLORS } from "../../data/constants";
+import { SITE_URL } from "../../data/site";
 
 // SVG icon markup for each framework — static versions of FrameworkIcon from Icons.tsx
 const FRAMEWORK_SVGS: Record<string, string> = {
@@ -54,7 +55,7 @@ const anatomy = [
 <SiteLayout
   title="How It Works — IC Skills"
   description="How agent-readable skill files prevent hallucinations and enable AI agents to build on the Internet Computer correctly."
-  canonicalUrl="https://skills.internetcomputer.org/how-it-works/"
+  canonicalUrl={`${SITE_URL}/how-it-works/`}
   activeTab="how-it-works"
   maxWidth="1200px"
 >
@@ -113,14 +114,16 @@ const anatomy = [
         <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">terminal</span>
       </div>
       <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;">
-<span style="color:var(--text-faint);"># 1. Fetch a skill file directly</span>
+<span style="color:var(--text-faint);"># 1. Discover all skills (Agent Skills Discovery RFC)</span>
+<span style="color:var(--accent-blue);">curl -sL {SITE_URL}/.well-known/skills/index.json</span>
+
+<span style="color:var(--text-faint);"># 2. Fetch a single skill file</span>
+<span style="color:var(--accent-blue);">curl -sL {SITE_URL}/.well-known/skills/ckbtc/SKILL.md</span>
+<span style="color:var(--text-faint);"># or via GitHub raw:</span>
 <span style="color:var(--accent-blue);">curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md</span>
 
-<span style="color:var(--text-faint);"># 2. Or browse and install via skills.sh CLI</span>
-<span style="color:var(--accent-blue);">npx skills add dfinity/icskills</span>
-
-<span style="color:var(--text-faint);"># 3. Or fetch the full index for agent context</span>
-<span style="color:var(--accent-blue);">curl -sL https://skills.internetcomputer.org/llms-full.txt</span>
+<span style="color:var(--text-faint);"># 3. Or fetch all skills at once for full context injection</span>
+<span style="color:var(--accent-blue);">curl -sL {SITE_URL}/llms-full.txt</span>
 
 <span style="color:var(--text-secondary);"># Agent now knows:</span>
 <span style="color:var(--text-secondary);"># - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai</span>

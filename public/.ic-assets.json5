@@ -16,9 +16,21 @@
     }
   },
   {
-    // Agent discovery endpoints
-    "match": ".well-known/**/*",
+    // Agent discovery endpoints — JSON
+    "match": ".well-known/**/*.json",
     "headers": {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  },
+  {
+    // Agent discovery endpoints — SKILL.md files
+    "match": ".well-known/**/*.md",
+    "headers": {
+      "Content-Type": "text/markdown; charset=utf-8",
       "Cache-Control": "public, max-age=300, must-revalidate",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET",
@@ -29,6 +41,7 @@
     // Agent-readable skill indices
     "match": "llms*.txt",
     "headers": {
+      "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=300, must-revalidate",
       "Access-Control-Allow-Origin": "*"
     }

@@ -1,12 +1,13 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import AccessTab from "../../components/AccessTab";
+import { SITE_URL } from "../../data/site";
 ---
 
 <SiteLayout
   title="Access — IC Skills"
   description="Get IC skills into your agent. No auth, no keys. Fetch skill files directly via curl or any HTTP client."
-  canonicalUrl="https://skills.internetcomputer.org/access/"
+  canonicalUrl={`${SITE_URL}/access/`}
   activeTab="access"
   maxWidth="1200px"
 >

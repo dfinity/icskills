@@ -1,4 +1,4 @@
-import { useState, useMemo } from "preact/hooks";
+import { useState, useEffect, useMemo } from "preact/hooks";
 import type { Skill } from "../data/skills";
 import { SANS_FONT } from "../data/constants";
 import { CategoryIcon } from "./Icons";
@@ -11,6 +11,8 @@ interface Props {
 export default function BrowseTab({ skills }: Props) {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(skills.map((s) => s.category))).sort()],
@@ -108,7 +110,7 @@ export default function BrowseTab({ skills }: Props) {
         gap: "16px",
       }}>
         {filtered.map((skill) => {
-          const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skill.name}/SKILL.md`;
+          const rawUrl = `${origin}/.well-known/skills/${skill.name}/SKILL.md`;
           return (
             <div
               key={skill.name}

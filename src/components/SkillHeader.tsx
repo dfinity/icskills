@@ -1,3 +1,4 @@
+import { useState, useEffect } from "preact/hooks";
 import ThemeToggle from "./ThemeToggle";
 import CopyButton from "./CopyButton";
 import { CategoryIcon, GitHubIcon } from "./Icons";
@@ -10,7 +11,10 @@ interface Props {
 }
 
 export default function SkillHeader({ skillName, skillTitle, category, lastUpdated }: Props) {
-  const rawUrl = `https://raw.githubusercontent.com/dfinity/icskills/main/skills/${skillName}/SKILL.md`;
+  const skillPath = `/.well-known/skills/${skillName}/SKILL.md`;
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const rawUrl = `${origin}${skillPath}`;
   const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skillName}/SKILL.md`;
   return (
     <>
