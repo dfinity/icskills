@@ -1,6 +1,6 @@
 ---
 name: ic-dashboard
-description: "Use the public REST APIs that power dashboard.internetcomputer.org. Get data for canisters, ledgers, SNS, and metrics."
+description: "Query the public REST APIs that power dashboard.internetcomputer.org. Covers canister metadata, ICRC ledger data, SNS data, ICP ledger, and network metrics with cursor-based pagination. Use when fetching canister info, token data, SNS proposals, or network stats via HTTP from off-chain code. No canister deployment or cycles needed."
 license: Apache-2.0
 metadata:
   title: IC Dashboard APIs

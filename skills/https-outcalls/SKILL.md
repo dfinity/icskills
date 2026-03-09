@@ -1,6 +1,6 @@
 ---
 name: https-outcalls
-description: "Make HTTP requests from canisters to external APIs. Consensus-safe request patterns, transform functions, and cost management."
+description: "Make HTTPS requests from canisters to external web APIs. Covers transform functions for consensus, cycle cost management, response size limits, and idempotency patterns. Use when a canister needs to call an external API, fetch data from the web, or make HTTP requests. Do NOT use for EVM/Ethereum calls — use evm-rpc instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
@@ -16,8 +16,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- For Motoko: `moc >= 0.14.10` (included with icp-cli), `mo:core` 2.0 and `ic >= 2.1.0` in mops.toml
+- For Motoko: `mo:core` 2.0 and `ic >= 2.1.0` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 
 ## Canister IDs

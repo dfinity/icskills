@@ -1,8 +1,8 @@
 ---
 name: vetkd
-description: "Implement on-chain privacy using vetKeys. Key derivation, encryption/decryption flows, and access control patterns."
+description: "Implement on-chain encryption using vetKeys (verifiable encrypted threshold key derivation). Covers key derivation, IBE encryption/decryption, transport keys, and access control. Use when adding encryption, decryption, on-chain privacy, vetKeys, or identity-based encryption to a canister. Do NOT use for authentication — use internet-identity instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.1.0, Node.js >= 24"
 metadata:
   title: vetKeys
   category: Security
@@ -20,11 +20,9 @@ vetKeys (verifiably encrypted threshold keys) bring on-chain privacy to the IC v
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - Rust: `ic-vetkeys = "0.6"` ([crates.io](https://crates.io/crates/ic-vetkeys))
 - Motoko: Use the raw management canister approach shown below
-- Frontend: `@dfinity/vetkeys` v0.4.0 (`npm install @dfinity/vetkeys`)
-- For local testing: `icp network start` creates a local test key automatically
+- Frontend: `@dfinity/vetkeys` v0.4.0
 
 ## Canister IDs
 
@@ -41,11 +39,10 @@ The management canister is not a real canister, it is a system-level API endpoin
 
 Any canister on the IC can use any available master key regardless of which subnet the canister or the key resides on; the management canister routes calls to the subnet that holds the master key.
 
-| Key name       | Environment | Purpose           | Cycles (approx.)   | Notes |
-|----------------|-------------|-------------------|--------------------|-------|
-| `dfx_test_key` | Local       | Development only  | —                  | Created automatically with `icp network start` |
-| `test_key_1`   | Mainnet     | Testing           | 10_000_000_000     | Subnet fuqsr (backed up on 2fq7c) |
-| `key_1`        | Mainnet     | Production        | 26_153_846_153     | Subnet pzp6e (backed up on uzr34) |
+| Key name       | Environment      | Purpose           | Cycles (approx.)   | Notes |
+|----------------|------------------|-------------------|--------------------|-------|
+| `test_key_1`   | Local + Mainnet  | Development & testing | 10_000_000_000 (mainnet) | Works both locally and on mainnet. Use for development and testing. |
+| `key_1`        | Mainnet          | Production        | 26_153_846_153     | Subnet pzp6e (backed up on uzr34) |
 
 Fees depend on the **subnet where the master key resides** (and its size), not on the calling canister's subnet. If the canister may be blackholed or used by other canisters, send **more cycles** than the current cost so that future subnet size increases do not cause calls to fail; unused cycles are refunded. See [vetKD API — API fees](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api#api-fees) for current USD estimates.
 
@@ -94,7 +91,7 @@ vetkd_public_key : (record {
 - `canister_id`: Optional. If omitted (`null`), the public key for the **calling canister** is returned; if provided, the key for that canister is returned.
 - `context`: Domain separator which has the same meaning as in `vetkd_derive_key`. Ensures keys are derived in a specific context and avoids collisions across apps or use cases.
 - `key_id.curve`: `bls12_381_g2` (only supported curve).
-- `key_id.name`: Master key name: `dfx_test_key` (local), `test_key_1`, or `key_1`.
+- `key_id.name`: Master key name: `test_key_1` (local + mainnet testing) or `key_1` (production).
 
 You can also derive this public key **offline** from the known mainnet master public key; see "Offline Public Key Derivation" below.
 
@@ -160,7 +157,7 @@ thread_local! {
 fn init() {
     let key_id = VetKDKeyId {
         curve: VetKDCurve::Bls12381G2,
-        name: "key_1".to_string(), // "dfx_test_key" for local, "test_key_1" for testing
+        name: "key_1".to_string(), // "test_key_1" for local + mainnet testing
     };
     MEMORY_MANAGER.with(|mm| {
         let mm = mm.borrow();
@@ -247,7 +244,7 @@ const CONTEXT: &[u8] = b"my_app_v1";
 fn key_id() -> VetKdKeyId {
     VetKdKeyId {
         curve: VetKdCurve::Bls12381G2,
-        // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
+        // Key names: "test_key_1" for local + mainnet testing, "key_1" for production
         name: "key_1".to_string(),
     }
 }
@@ -354,7 +351,7 @@ persistent actor {
 
   let context : Blob = Text.encodeUtf8("my_app_v1");
 
-  // Key names: "dfx_test_key" for local, "test_key_1" for mainnet testing, "key_1" for production
+  // Key names: "test_key_1" for local + mainnet testing, "key_1" for production
   func keyId() : VetKdKeyId {
     { curve = #bls12_381_g2; name = "key_1" }
   };
@@ -568,7 +565,7 @@ In Rust, these live in `ic_vetkeys::key_manager` and `ic_vetkeys::encrypted_maps
 ### Local Development
 
 ```bash
-# Start local replica (creates dfx_test_key automatically)
+# Start the local network (provisions test_key_1 and key_1 automatically)
 icp network start -d
 
 # Deploy your canister
