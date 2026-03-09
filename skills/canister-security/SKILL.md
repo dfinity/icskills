@@ -24,7 +24,7 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
 
 2. **Forgetting to reject the anonymous principal.** Every endpoint that requires authentication must check that the caller is not the anonymous principal (`2vxsx-fae`). In Motoko use `Principal.isAnonymous(caller)`, in Rust compare `msg_caller() != Principal::anonymous()`. Without this, unauthenticated callers can invoke protected methods — and if the canister uses the caller principal as an identity key (e.g., for balances), the anonymous principal becomes a shared identity anyone can use.
 
-3. **Reading state before an async call and assuming it's unchanged after (TOCTOU).** When your canister `await`s an inter-canister call, other messages can interleave and mutate state. This is one of the most critical sources of DeFi exploits on IC. Use per-caller locking (CallerGuard pattern) to prevent concurrent operations, and deduct/lock state before the `await` (saga pattern). See the implementation section below for the combined pattern.
+3. **Reading state before an async call and assuming it's unchanged after (TOCTOU).** When your canister `await`s an inter-canister call, other messages can interleave and mutate state. This is one of the most critical sources of DeFi exploits on IC. Use per-caller locking (CallerGuard pattern) to prevent concurrent operations. For financial operations, also consider the saga pattern (deduct before `await`, compensate on failure) — but implementing it correctly is complex due to edge cases like callback traps and call timeouts where the outcome is ambiguous.
 
 4. **Trapping in `pre_upgrade`.** If `pre_upgrade` traps (e.g., serializing too much data exceeds the instruction limit), the canister becomes permanently non-upgradeable. Avoid storing large data structures in the heap that must be serialized during upgrade. In Rust, use `ic-stable-structures` for direct stable memory access. In Motoko, the `persistent actor` declaration stores all `let` and `var` variables automatically in stable memory — no manual serialization needed.
 
@@ -61,7 +61,7 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
 1. **Update calls** go through consensus — all nodes on a subnet execute the code and must agree on the result. Standard application subnets have 13 nodes; system and fiduciary subnets have more (28+). This makes update calls tamper-proof but slower (~2s).
 2. **Query calls** run on a single replica — fast (~200ms) but the replica can return incorrect or malicious results. Replica-signed queries provide partial mitigation (the responding replica signs the response), but for full trust, use certified data or update calls for security-critical reads.
 3. **Inter-canister calls** are async messages. Between sending a request and receiving the response, your canister can process other messages. State may change under you (see TOCTOU pitfall above).
-4. **State rollback on trap.** If a message execution traps, all its state changes are rolled back. For inter-canister calls, the first execution (before `await`) and the callback (after `await`) are separate messages — a trap in the callback rolls back only the callback's changes, while the first execution's changes persist. This is why compensation logic must go in cleanup context (`finally`/`Drop`), not regular callback code.
+4. **State rollback on trap.** If a message execution traps, all its state changes are rolled back. For inter-canister calls, the first execution (before `await`) and the callback (after `await`) are separate messages — a trap in the callback rolls back only the callback's changes, while the first execution's changes persist. This is why cleanup logic (like releasing locks) must go in cleanup context (`finally`/`Drop`), not regular callback code.
 
 ## Implementation
 
@@ -69,30 +69,19 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
 
 #### Access control
 
+Uses the `shared(msg)` pattern to capture the deployer atomically — no separate `init()` call, no front-running risk.
+
 ```motoko
 import Principal "mo:core/Principal";
-import Array "mo:core/Array";
+import Set "mo:core/pure/Set";
 import Runtime "mo:core/Runtime";
 
-persistent actor {
+shared(msg) persistent actor class MyCanister() {
 
   // --- Authorization state ---
-  // persistent actor auto-persists all var/let — no `stable` keyword needed
-  var owner : Principal = Principal.fromText("aaaaa-aa"); // overwritten by init
-  var admins : [Principal] = [];
-  var initialized : Bool = false;
-
-  // --- Init (call once immediately after deploy) ---
-  // WARNING: Between deploy and init(), any authenticated caller can front-run this and become owner.
-  // Always deploy and call init() in the same script/transaction. Unlike Rust's #[init] which runs
-  // atomically during install_code, Motoko requires a separate post-deploy call.
-
-  public shared ({ caller }) func init() : async () {
-    if (initialized) { Runtime.trap("already initialized") };
-    if (Principal.isAnonymous(caller)) { Runtime.trap("anonymous caller not allowed") };
-    owner := caller;
-    initialized := true;
-  };
+  // transient: recomputed on each install/upgrade from msg.caller (the controller)
+  transient let owner = msg.caller;
+  var admins : Set.Set<Principal> = Set.empty();
 
   // --- Guards ---
 
@@ -111,11 +100,7 @@ persistent actor {
 
   func requireAdmin(caller : Principal) {
     requireAuthenticated(caller);
-    let isAdmin = Array.find<Principal>(
-      admins,
-      func(a : Principal) : Bool { a == caller },
-    );
-    if (isAdmin == null and caller != owner) {
+    if (caller != owner and not Set.contains(admins, Principal.compare, caller)) {
       Runtime.trap("caller is not an admin");
     };
   };
@@ -124,12 +109,12 @@ persistent actor {
 
   public shared ({ caller }) func addAdmin(newAdmin : Principal) : async () {
     requireOwner(caller);
-    admins := Array.append<Principal>(admins, [newAdmin]);
+    admins := Set.add(admins, Principal.compare, newAdmin);
   };
 
   public shared ({ caller }) func removeAdmin(admin : Principal) : async () {
     requireOwner(caller);
-    admins := Array.filter<Principal>(admins, func(a : Principal) : Bool { a != admin });
+    admins := Set.remove(admins, Principal.compare, admin);
   };
 
   // --- Endpoints ---
@@ -146,19 +131,18 @@ persistent actor {
 };
 ```
 
-#### Reentrancy prevention + async safety (CallerGuard + saga pattern)
+#### Reentrancy prevention (CallerGuard pattern)
 
-Per-caller locking prevents a second call from the same caller while the first is awaiting a response. The saga pattern (deduct before `await`, compensate on failure) prevents TOCTOU exploits. Both lock release and balance compensation must go in the `finally` block — putting compensation only in `catch` is not enough, because callback state changes are rolled back on trap while `finally` runs in the cleanup context where state changes persist.
+Per-caller locking prevents a second call from the same caller while the first is awaiting a response. The guard must be released in the `finally` block — if the callback traps, `catch` state changes are rolled back, but `finally` runs in cleanup context where state changes persist.
 
 ```motoko
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Error "mo:core/Error";
 import Result "mo:core/Result";
-import Runtime "mo:core/Runtime";
 
-// Inside persistent actor { ... }
-// getBalance, deductBalance, creditBalance, otherCanister are application-specific — replace with your state management.
+// Inside the persistent actor class { ... }
+// otherCanister is application-specific — replace with your canister reference.
 
   let pendingRequests = Map.empty<Principal, Bool>();
 
@@ -174,7 +158,7 @@ import Runtime "mo:core/Runtime";
     ignore Map.delete(pendingRequests, Principal.compare, principal);
   };
 
-  public shared ({ caller }) func transfer(to : Principal, amount : Nat) : async Result.Result<(), Text> {
+  public shared ({ caller }) func doSomethingAsync() : async Result.Result<Text, Text> {
     requireAuthenticated(caller);
 
     // 1. Acquire per-caller lock — rejects concurrent calls from same principal
@@ -183,28 +167,14 @@ import Runtime "mo:core/Runtime";
       case (#ok) {};
     };
 
-    // 2. Validate and DEDUCT BEFORE the await (saga: debit first)
-    let balance = getBalance(caller);
-    if (balance < amount) {
-      releaseGuard(caller);
-      return #err("insufficient balance");
-    };
-    deductBalance(caller, amount);
-
-    // 3. Make inter-canister call — track success for compensation
-    var succeeded = false;
+    // 2. Make inter-canister call
     try {
-      await otherCanister.deposit(to, amount);
-      succeeded := true;
-      #ok
+      let result = await otherCanister.someMethod();
+      #ok(result)
     } catch (e) {
-      #err("transfer failed: " # Error.message(e))
+      #err("call failed: " # Error.message(e))
     } finally {
       // Runs in cleanup context even if the callback traps — changes here persist.
-      // Without this, a trap rolls back catch-block compensation, losing user funds.
-      if (not succeeded) {
-        creditBalance(caller, amount);
-      };
       releaseGuard(caller);
     };
   };
@@ -220,12 +190,11 @@ system func inspect(
   {
     caller : Principal;
     msg : {
-      #init : () -> ();
       #adminAction : () -> ();
       #addAdmin : () -> Principal;
       #removeAdmin : () -> Principal;
       #publicAction : () -> ();
-      #transfer : () -> (Principal, Nat);
+      #doSomethingAsync : () -> ();
     }
   }
 ) : Bool {
@@ -234,7 +203,7 @@ system func inspect(
     case (#adminAction _) { not Principal.isAnonymous(caller) };
     case (#addAdmin _) { not Principal.isAnonymous(caller) };
     case (#removeAdmin _) { not Principal.isAnonymous(caller) };
-    case (#transfer _) { not Principal.isAnonymous(caller) };
+    case (#doSomethingAsync _) { not Principal.isAnonymous(caller) };
     // Public methods: accept all
     case (_) { true };
   };
@@ -321,9 +290,9 @@ fn remove_admin(admin: Principal) {
 ic_cdk::export_candid!();
 ```
 
-#### Reentrancy prevention + async safety (CallerGuard + saga pattern)
+#### Reentrancy prevention (CallerGuard pattern)
 
-`CallerGuard` uses the `Drop` trait to release the lock when the guard goes out of scope — including when the callback traps (since ic-cdk 0.5.1, local variables go out of scope during cleanup). `CompensationGuard` applies the same `Drop` pattern to balance rollback — putting compensation only in the `Err` match arm is not enough, because callback state changes are rolled back on trap. Never use `let _ = CallerGuard::new(caller)?` — this drops the guard immediately, making locking ineffective.
+`CallerGuard` uses the `Drop` trait to release the lock when the guard goes out of scope — including when the callback traps (since ic-cdk 0.5.1, local variables go out of scope during cleanup). Never use `let _ = CallerGuard::new(caller)?` — this drops the guard immediately, making locking ineffective.
 
 ```rust
 use std::cell::RefCell;
@@ -333,7 +302,7 @@ use ic_cdk::update;
 use ic_cdk::api::msg_caller;
 use ic_cdk::call::Call;
 
-// get_balance, deduct_balance, credit_balance, ledger_id are application-specific — replace with your state management.
+// other_canister_id is application-specific — replace with your canister reference.
 
 thread_local! {
     static PENDING: RefCell<BTreeSet<Principal>> = RefCell::new(BTreeSet::new());
@@ -362,67 +331,25 @@ impl Drop for CallerGuard {
     }
 }
 
-/// Reverses a balance deduction on drop unless explicitly completed.
-/// Drop runs during cleanup even if the callback traps, so compensation persists.
-struct CompensationGuard {
-    principal: Principal,
-    amount: u64,
-    completed: bool,
-}
-
-impl CompensationGuard {
-    fn new(principal: Principal, amount: u64) -> Self {
-        Self { principal, amount, completed: false }
-    }
-    /// Call after successful transfer to prevent compensation on drop.
-    fn complete(&mut self) {
-        self.completed = true;
-    }
-}
-
-impl Drop for CompensationGuard {
-    fn drop(&mut self) {
-        if !self.completed {
-            credit_balance(&self.principal, self.amount);
-        }
-    }
-}
-
 #[update]
-async fn transfer(to: Principal, amount: u64) -> Result<(), String> {
+async fn do_something_async() -> Result<String, String> {
     let caller = msg_caller();
     if caller == Principal::anonymous() {
         return Err("anonymous caller not allowed".to_string());
     }
 
-    // 1. Acquire per-caller lock — rejects concurrent calls from same principal
-    //    Drop releases lock even if callback traps
+    // Acquire per-caller lock — rejects concurrent calls from same principal.
+    // Drop releases lock even if callback traps.
     let _guard = CallerGuard::new(caller)?;
 
-    // 2. Validate and DEDUCT BEFORE the await (saga: debit first)
-    let balance = get_balance(&caller);
-    if balance < amount {
-        return Err("insufficient balance".to_string());
-    }
-    deduct_balance(&caller, amount);
-
-    // 3. Compensation guard — credits back on drop unless completed.
-    //    Drop runs during cleanup even if callback traps, so compensation persists.
-    //    Putting credit_balance only in the Err arm would be rolled back on trap.
-    let mut compensation = CompensationGuard::new(caller, amount);
-
-    // 4. Make inter-canister call
-    match Call::bounded_wait(ledger_id(), "transfer")
-        .with_args(&(to, amount))
+    // Make inter-canister call
+    let response = Call::bounded_wait(other_canister_id(), "some_method")
         .await
-    {
-        Ok(_response) => {
-            compensation.complete(); // transfer succeeded — don't compensate
-            Ok(())
-        }
-        Err(err) => Err(format!("call failed: {:?}", err)),
-        // compensation dropped here → credits back the amount
-    }
+        .map_err(|e| format!("call failed: {:?}", e))?;
+    let result: String = response.candid()
+        .map_err(|e| format!("decode failed: {:?}", e))?;
+
+    Ok(result)
     // _guard dropped here → lock released
 }
 ```
@@ -441,7 +368,7 @@ fn inspect_message() {
     let method = msg_method_name();
     match method.as_str() {
         // Admin methods: only accept from non-anonymous callers
-        "admin_action" | "add_admin" | "remove_admin" | "transfer" => {
+        "admin_action" | "add_admin" | "remove_admin" | "do_something_async" => {
             if msg_caller() != Principal::anonymous() {
                 accept_message();
             }
