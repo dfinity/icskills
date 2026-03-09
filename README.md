@@ -71,6 +71,7 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 | Single skill | [`skills/{name}/SKILL.md`](https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md) | Raw markdown from GitHub |
 | Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Cloudflare Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
 | Single skill (API) | `/.well-known/skills/{name}/SKILL.md` | Raw markdown via discovery endpoint |
+| Skill reference file | `/.well-known/skills/{name}/references/{file}.md` | Additional reference files listed in the discovery index |
 | Skill page (HTML) | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page with full SEO |
 | CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
 

@@ -10,11 +10,12 @@
  *   whether each query would correctly trigger (or not trigger) the skill.
  *
  * Usage:
- *   node scripts/evaluate-skills.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]
+ *   node scripts/evaluate-skills.js <skill-name> [--list] [--eval <N>] [--no-baseline] [--triggers-only]
  *
  * Examples:
  *   node scripts/evaluate-skills.js icp-cli
- *   node scripts/evaluate-skills.js icp-cli --eval "Deploy to mainnet"
+ *   node scripts/evaluate-skills.js icp-cli --list
+ *   node scripts/evaluate-skills.js icp-cli --eval 2
  *   node scripts/evaluate-skills.js icp-cli --no-baseline
  *   node scripts/evaluate-skills.js icp-cli --triggers-only
  *
@@ -23,7 +24,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { join } from "path";
 import { readAllSkills } from "./lib/parse-skill.js";
 
@@ -35,7 +36,7 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const args = process.argv.slice(2);
 const skillName = args.find((a) => !a.startsWith("--"));
 if (!skillName) {
-  console.error("Usage: node scripts/evaluate-skills.js <skill-name> [--eval <name>] [--no-baseline] [--triggers-only]");
+  console.error("Usage: node scripts/evaluate-skills.js <skill-name> [--list] [--eval <N>] [--no-baseline] [--triggers-only]");
   process.exit(1);
 }
 
@@ -43,6 +44,7 @@ const evalFilterIdx = args.indexOf("--eval");
 const evalFilter = evalFilterIdx !== -1 ? args[evalFilterIdx + 1] : null;
 const skipBaseline = args.includes("--no-baseline");
 const triggersOnly = args.includes("--triggers-only");
+const listEvals = args.includes("--list");
 
 // ---------------------------------------------------------------------------
 // Load skill + evals
@@ -53,12 +55,20 @@ const evalsFile = join(ROOT, "evaluations", `${skillName}.json`);
 const evals = JSON.parse(readFileSync(evalsFile, "utf-8"));
 
 let outputCases = evals.output_evals || [];
+
+if (listEvals) {
+  console.log(`Available evals for ${skillName}:`);
+  outputCases.forEach((c, i) => console.log(`  ${i + 1}. ${c.name}`));
+  process.exit(0);
+}
+
 if (evalFilter) {
-  outputCases = outputCases.filter((c) => c.name.toLowerCase().includes(evalFilter.toLowerCase()));
-  if (outputCases.length === 0 && !triggersOnly) {
-    console.error(`No eval case matching "${evalFilter}"`);
+  const idx = parseInt(evalFilter, 10);
+  if (isNaN(idx) || idx < 1 || idx > outputCases.length) {
+    console.error(`Invalid eval index "${evalFilter}". Use --list to see available evals.`);
     process.exit(1);
   }
+  outputCases = [outputCases[idx - 1]];
 }
 
 // ---------------------------------------------------------------------------
@@ -67,23 +77,18 @@ if (evalFilter) {
 
 /** Run a prompt through claude CLI and return the output text. */
 function runClaude(prompt, systemPrompt) {
-  const tmpDir = join(ROOT, ".eval-tmp");
-  mkdirSync(tmpDir, { recursive: true });
-
-  // Write prompt to temp file to avoid all shell escaping issues
-  const promptFile = join(tmpDir, "prompt.txt");
-  writeFileSync(promptFile, prompt);
-
-  let cmd = `cat '${promptFile}' | claude -p --model sonnet`;
+  // Use execFileSync with input option to avoid shell expansion issues.
+  // Shell expansion of $VAR and $(...) in skill content (e.g., $ICP_WASM_OUTPUT_PATH)
+  // would corrupt the system prompt when passed via "$(cat ...)".
+  const args = ["-p", "--model", "sonnet"];
   if (systemPrompt) {
-    const systemFile = join(tmpDir, "system-prompt.txt");
-    writeFileSync(systemFile, systemPrompt);
-    cmd += ` --system-prompt "$(cat '${systemFile}')"`;
+    args.push("--system-prompt", systemPrompt);
   }
 
   // Run from /tmp to prevent claude from picking up repo context
   try {
-    return execSync(cmd, {
+    return execFileSync("claude", args, {
+      input: prompt,
       encoding: "utf-8",
       maxBuffer: 1024 * 1024,
       timeout: 120_000,
@@ -333,8 +338,3 @@ const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outFile = join(outDir, `${skillName}-${timestamp}.json`);
 writeFileSync(outFile, JSON.stringify(allResults, null, 2));
 console.log(`\nFull results saved to: ${outFile}\n`);
-
-// Cleanup
-try {
-  execSync(`rm -rf '${join(ROOT, ".eval-tmp")}'`);
-} catch {}

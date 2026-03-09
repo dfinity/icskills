@@ -50,7 +50,7 @@ ic-wasm --version
 
 ## Common Pitfalls
 
-1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. All commands have `icp` equivalents — see the migration table below. Never generate `dfx` commands or reference `dfx` documentation. Configuration uses `icp.yaml`, not `dfx.json` — and the structure differs: canisters are an array of objects, not a keyed object.
+1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. All commands have `icp` equivalents — see `references/dfx-migration.md` for the full command mapping. Never generate `dfx` commands or reference `dfx` documentation. Configuration uses `icp.yaml`, not `dfx.json` — and the structure differs: canisters are an array of objects, not a keyed object.
 
 2. **Using `--network ic` to deploy to mainnet.** icp-cli uses environments, not direct network targeting. The correct flag is `-e ic` (short for `--environment ic`).
    ```bash
@@ -61,9 +61,9 @@ ic-wasm --version
    ```
    Note: `-n` / `--network` targets a network directly and works with canister IDs (principals). Use `-e` / `--environment` when referencing canisters by name. For token and cycles operations, use `-n` since they don't reference project canisters.
 
-3. **Using a recipe without a version pin.** Always pin recipe versions to avoid breaking changes. Unpinned recipes resolve to `latest` which can change at any time. Official recipes are hosted at [dfinity/icp-cli-recipes](https://github.com/dfinity/icp-cli-recipes).
+3. **Using a recipe without a version pin.** icp-cli rejects unpinned recipe references. Always include an explicit version. Official recipes are hosted at [dfinity/icp-cli-recipes](https://github.com/dfinity/icp-cli-recipes).
    ```yaml
-   # Wrong — unpinned, may break
+   # Wrong — rejected by icp-cli
    recipe:
      type: "@dfinity/rust"
 
@@ -112,7 +112,7 @@ ic-wasm --version
 
 10. **Expecting `output_env_file` or `.env` with canister IDs.** dfx writes canister IDs to a `.env` file (`CANISTER_ID_BACKEND=...`) via `output_env_file`. icp-cli does not generate `.env` files. Instead, it injects canister IDs as environment variables (`PUBLIC_CANISTER_ID:<name>`) directly into canisters during `icp deploy`. Frontends read these from the `ic_env` cookie set by the asset canister. Remove `output_env_file` from your config and any code that reads `CANISTER_ID_*` from `.env` — use the `ic_env` cookie instead (see Canister Environment Variables below).
 
-11. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (a Vite plugin) to generate TypeScript bindings from `.did` files at build time. The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See Binding Generation below.
+11. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (a Vite plugin) to generate TypeScript bindings from `.did` files at build time. The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for setup details.
 
 12. **Misunderstanding Candid file generation with recipes.** When using the Rust or Motoko recipe:
     - If `candid` is **specified**: the file must already exist (checked in or manually created). The recipe uses it as-is and does **not** generate one.
@@ -292,234 +292,10 @@ const backendId = canisterEnv?.["PUBLIC_CANISTER_ID:backend"];
 
 Note: variables are only updated for canisters being deployed. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
 
-### Binding Generation
+## Additional References
 
-icp-cli does not have a built-in `dfx generate` command. Use `@icp-sdk/bindgen` to generate TypeScript bindings from `.did` files.
+For detailed guides on specific topics, consult these reference files when needed:
 
-**Vite plugin** (recommended for Vite-based frontend projects):
-```js
-// vite.config.js
-import { icpBindgen } from "@icp-sdk/bindgen/plugins/vite";
-
-export default defineConfig({
-  plugins: [
-    // Add one icpBindgen() call per canister the frontend needs to access
-    icpBindgen({
-      didFile: "../backend/backend.did",
-      outDir: "./src/bindings/backend",
-    }),
-    icpBindgen({
-      didFile: "../other/other.did",
-      outDir: "./src/bindings/other",
-    }),
-  ],
-});
-```
-
-Each `icpBindgen()` instance generates a `createActor` function in its `outDir`. Add `**/src/bindings/` to `.gitignore`.
-
-**Creating actors from bindings** — connect the generated bindings with the `ic_env` cookie:
-```js
-// src/actor.js
-import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
-import { createActor } from "./bindings/backend";
-// For additional canisters: import { createActor as createOther } from "./bindings/other";
-
-const canisterEnv = safeGetCanisterEnv();
-const agentOptions = {
-  host: window.location.origin,
-  rootKey: canisterEnv?.IC_ROOT_KEY,
-};
-
-export const backend = createActor(
-  canisterEnv?.["PUBLIC_CANISTER_ID:backend"],
-  { agentOptions }
-);
-// Repeat for each canister: createOther(canisterEnv?.["PUBLIC_CANISTER_ID:other"], { agentOptions })
-```
-
-**Non-Vite frontends** — use the `@icp-sdk/bindgen` CLI to generate bindings manually:
-```bash
-npx @icp-sdk/bindgen --did ../backend/backend.did --out ./src/bindings/backend
-```
-
-**Requirements:**
-- The `.did` file must exist on disk. If using a recipe with `candid` specified, the file must be committed. If `candid` is omitted, run `icp build` first to auto-generate it.
-- `@icp-sdk/bindgen` generates code that depends on `@icp-sdk/core`. Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional — there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.
-
-### Dev Server Configuration (Vite)
-
-In development, the Vite dev server must simulate the `ic_env` cookie that the asset canister provides in production. Query the local network for the root key, canister IDs, and API URL:
-
-```js
-// vite.config.js
-import { execSync } from "child_process";
-
-const environment = process.env.ICP_ENVIRONMENT || "local";
-// List all backend canisters the frontend needs to access
-const CANISTER_NAMES = ["backend", "other"];
-
-function getCanisterId(name) {
-  // `-i` makes the command return only the identity of the canister
-  return execSync(`icp canister status ${name} -e ${environment} -i`, {
-    encoding: "utf-8", stdio: "pipe",
-  }).trim();
-}
-
-function getDevServerConfig() {
-  const networkStatus = JSON.parse(
-    execSync(`icp network status -e ${environment} --json`, {
-      encoding: "utf-8",
-    })
-  );
-  const canisterParams = CANISTER_NAMES
-    .map((name) => `PUBLIC_CANISTER_ID:${name}=${getCanisterId(name)}`)
-    .join("&");
-  return {
-    headers: {
-      "Set-Cookie": `ic_env=${encodeURIComponent(
-        `${canisterParams}&ic_root_key=${networkStatus.root_key}`
-      )}; SameSite=Lax;`,
-    },
-    proxy: {
-      "/api": { target: networkStatus.api_url, changeOrigin: true },
-    },
-  };
-}
-```
-
-Key differences from dfx:
-- The proxy target and root key come from `icp network status --json` (no hardcoded ports)
-- Canister IDs come from `icp canister status <name> -e <env> -i` (no `.env` file)
-- The `ic_env` cookie replaces dfx's `CANISTER_ID_*` environment variables
-- `ICP_ENVIRONMENT` lets the dev server target any environment (local, staging, ic)
-
-## dfx → icp Migration
-
-### Local network port change
-
-dfx serves the local network on port `4943`. icp-cli uses port `8000`. When migrating, search the project for hardcoded references to `4943` (or `localhost:4943`) and update them to `8000`. Better yet, use `icp network status --json` to get the `api_url` dynamically (see Dev Server Configuration above). Common locations to check:
-- Vite/webpack proxy configs (e.g., `vite.config.ts`)
-- README documentation
-- Test fixtures and scripts
-
-### Remove `.env` file and `output_env_file`
-
-dfx generates a `.env` file with `CANISTER_ID_*` variables via `output_env_file` in `dfx.json`. icp-cli does not use `.env` files for canister IDs — remove `output_env_file` from config and delete any dfx-generated `.env` file. Also remove dfx-specific environment variables from `.env` files (e.g., `DFX_NETWORK`, `NETWORK`).
-
-Replace code that reads `process.env.CANISTER_ID_*` with the `ic_env` cookie pattern (see Canister Environment Variables above).
-
-### Frontend package migration
-
-Since `@icp-sdk/bindgen` generates code that depends on `@icp-sdk/core`, projects with TypeScript bindings **must** upgrade from `@dfinity/*` packages. This is not optional — `dfx generate` does not exist in icp-cli, and `@icp-sdk/bindgen` is the only supported way to generate bindings.
-
-| Remove | Replace with |
-|--------|-------------|
-| `@dfinity/agent` | `@icp-sdk/core` |
-| `@dfinity/candid` | `@icp-sdk/core` |
-| `@dfinity/principal` | `@icp-sdk/core` |
-| `dfx generate` (declarations) | `@icp-sdk/bindgen` (Vite plugin or CLI) |
-| `vite-plugin-environment` | Not needed — use `ic_env` cookie |
-| `src/declarations/` (generated by dfx) | `src/bindings/` (generated by `@icp-sdk/bindgen`) |
-
-Steps:
-1. `npm uninstall @dfinity/agent @dfinity/candid @dfinity/principal vite-plugin-environment`
-2. `npm install @icp-sdk/core @icp-sdk/bindgen`
-3. Delete `src/declarations/` (dfx-generated bindings)
-4. Add `**/src/bindings/` to `.gitignore`
-5. Commit the `.did` file(s) used by bindgen
-6. Add `icpBindgen()` to `vite.config.js` (see Binding Generation above)
-7. Replace actor setup code: use `safeGetCanisterEnv` from `@icp-sdk/core` + `createActor` from generated bindings (see Creating actors from bindings above)
-8. Remove `process.env.CANISTER_ID_*` references — use the `ic_env` cookie instead
-
-### Command mapping
-
-| Task | dfx | icp |
-|------|-----|-----|
-| Create project | `dfx new my_project` | `icp new my_project` |
-| Start local network | `dfx start --background` | `icp network start -d` |
-| Stop local network | `dfx stop` | `icp network stop` |
-| Build | `dfx build` | `icp build` |
-| Deploy all | `dfx deploy` | `icp deploy` |
-| Deploy to mainnet | `dfx deploy --network ic` | `icp deploy -e ic` |
-| Call canister | `dfx canister call X method '(args)'` | `icp canister call X method '(args)'` |
-| Get canister ID | `dfx canister id X` | `icp canister status X --id-only` |
-| Canister status | `dfx canister status X` | `icp canister status X` |
-| List canisters | `dfx canister ls` | `icp canister list` |
-| Create identity | `dfx identity new my_id` | `icp identity new my_id` |
-| Set default identity | `dfx identity use my_id` | `icp identity default my_id` |
-| Show principal | `dfx identity get-principal` | `icp identity principal` |
-| Export identity | `dfx identity export my_id` | `icp identity export my_id` |
-| Delete identity | `dfx identity remove my_id` | `icp identity delete my_id` |
-| Get account ID | `dfx ledger account-id` | `icp identity account-id` |
-| Check ICP balance | `dfx ledger balance` | `icp token balance` |
-| Check cycles | `dfx wallet balance` | `icp cycles balance` |
-
-### Configuration mapping
-
-| dfx.json | icp.yaml |
-|----------|----------|
-| `"type": "rust"` | `recipe.type: "@dfinity/rust@v3.2.0"` |
-| `"type": "motoko"` | `recipe.type: "@dfinity/motoko@v4.1.0"` |
-| `"type": "assets"` | `recipe.type: "@dfinity/asset-canister@v2.1.0"` |
-| `"package": "X"` | `recipe.configuration.package: X` |
-| `"candid": "X"` | `recipe.configuration.candid: X` |
-| `"main": "X"` | `recipe.configuration.main: X` |
-| `"source": ["dist"]` | `recipe.configuration.dir: dist` |
-| `"dependencies": [...]` | Not needed — use Canister Environment Variables |
-| `"output_env_file": ".env"` | Not needed — use `ic_env` cookie |
-| `dfx generate` | `@icp-sdk/bindgen` Vite plugin |
-| `--network ic` | `-e ic` |
-
-### Identity migration
-
-```bash
-# Export from dfx, import to icp-cli
-dfx identity export my-identity > /tmp/my-identity.pem
-icp identity import my-identity --from-pem /tmp/my-identity.pem
-rm /tmp/my-identity.pem
-
-# Verify principals match
-dfx identity get-principal --identity my-identity
-icp identity principal --identity my-identity
-```
-
-### Canister ID migration
-
-If you have existing mainnet canisters managed by dfx, migrate the IDs from `canister_ids.json` to icp-cli's mapping file:
-
-```bash
-# Get IDs from dfx
-dfx canister id frontend --network ic
-dfx canister id backend --network ic
-
-# Create mapping file for icp-cli
-mkdir -p .icp/data/mappings
-cat > .icp/data/mappings/ic.ids.json << 'EOF'
-{
-  "frontend": "xxxxx-xxxxx-xxxxx-xxxxx-cai",
-  "backend": "yyyyy-yyyyy-yyyyy-yyyyy-cai"
-}
-EOF
-
-# Delete the dfx canister ID file — icp-cli uses .icp/data/mappings/ instead
-rm -f canister_ids.json
-
-# Commit to version control
-git add .icp/data/
-```
-
-## Post-Migration Verification
-
-After migrating a project from dfx to icp-cli, verify the following:
-
-1. **Deleted files**: `dfx.json` and `canister_ids.json` no longer exist
-2. **Created files**: `icp.yaml` exists. `.icp/data/mappings/ic.ids.json` exists and is committed (if project has mainnet canisters)
-3. **`.gitignore`**: contains `.icp/cache/`, does not contain `.dfx`
-4. **No stale port references**: search the codebase for `4943` — there should be zero matches
-5. **No dfx env patterns**: search for `output_env_file`, `CANISTER_ID_`, `DFX_NETWORK` — there should be zero matches in config and source files
-6. **Frontend packages** (if project has TypeScript bindings): `@dfinity/agent` is not in `package.json`, `@icp-sdk/core` and `@icp-sdk/bindgen` are. `src/declarations/` is deleted, `src/bindings/` is in `.gitignore`
-7. **Candid files**: `.did` files used by `@icp-sdk/bindgen` are committed
-8. **Build succeeds**: `icp build` completes without errors
-9. **Config is correct**: `icp project show` displays the expected expanded configuration
-10. **README**: references `icp` commands (not `dfx`), says "local network" (not "replica"), shows correct port
+- **`references/binding-generation.md`** — TypeScript binding generation with `@icp-sdk/bindgen` (Vite plugin, CLI, actor setup)
+- **`references/dev-server.md`** — Vite dev server configuration to simulate the `ic_env` cookie locally
+- **`references/dfx-migration.md`** — Complete dfx → icp migration guide (command mapping, config mapping, identity/canister ID migration, frontend package migration, post-migration verification checklist)

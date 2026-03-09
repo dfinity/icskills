@@ -1,6 +1,6 @@
 {
   "skill": "icp-cli",
-  "description": "Evaluation cases for the icp-cli skill. Tests whether agents produce correct icp-cli commands and configuration instead of legacy dfx equivalents.",
+  "description": "Evaluation cases for the icp-cli skill. Tests whether agents produce correct icp-cli commands and configuration instead of legacy dfx equivalents, avoid documented pitfalls, and know when to consult reference files.",
 
   "output_evals": [
     {
@@ -12,7 +12,7 @@
         "Canisters are a YAML array of objects (- name: ...), NOT a keyed map",
         "Rust canister uses a recipe with a version pin (e.g., @dfinity/rust@v3.2.0)",
         "Frontend/asset canister uses a recipe with a version pin",
-        "Asset canister recipe includes explicit build commands",
+        "Asset canister recipe includes explicit build commands (e.g., npm install, npm run build)",
         "Shows how to start the local network (icp network start -d)"
       ]
     },
@@ -28,14 +28,104 @@
     },
     {
       "name": "Migrate from dfx",
-      "prompt": "I have an older IC project that still uses dfx and dfx.json. It has a Motoko backend and a frontend. I want to switch to the new CLI. I also have canisters running on mainnet already.",
+      "prompt": "I have an older IC project that still uses dfx and dfx.json. It has a Motoko backend and a frontend asset canister. I also have canisters running on mainnet already. Show me the icp.yaml and the full migration steps.",
       "expected_behaviors": [
-        "Creates icp.yaml with recipe-based canister configuration",
+        "Shows icp.yaml with recipe-based canister configuration",
         "Motoko canister uses @dfinity/motoko recipe with a version pin",
         "Asset canister uses @dfinity/asset-canister recipe with a version pin",
-        "Explains identity migration (export from dfx, import into icp)",
-        "Explains canister ID migration via .icp/data/mappings/ic.ids.json",
-        "Uses correct icp identity commands ('icp identity default' not 'icp identity use')"
+        "Mentions identity migration (export from dfx, import into icp) or references dfx-migration.md",
+        "Mentions canister ID migration via .icp/data/mappings/ic.ids.json or references dfx-migration.md",
+        "Uses correct icp identity commands ('icp identity default' not 'icp identity use') or references dfx-migration.md for the command mapping"
+      ]
+    },
+    {
+      "name": "Recipe version pinning",
+      "prompt": "Here's my icp.yaml, does it look right?\n\ncanisters:\n  - name: backend\n    recipe:\n      type: \"@dfinity/rust\"\n      configuration:\n        package: backend",
+      "expected_behaviors": [
+        "Identifies that the recipe is missing a version pin",
+        "Recommends pinning to a specific version (e.g., @dfinity/rust@v3.2.0)",
+        "Explains that icp-cli rejects unpinned recipe references"
+      ]
+    },
+    {
+      "name": "Multi-canister environment variables",
+      "prompt": "I have a frontend and two backend canisters (auth and api). How does the frontend know the canister IDs of both backends?",
+      "expected_behaviors": [
+        "Explains that icp-cli injects canister IDs as PUBLIC_CANISTER_ID:<name> environment variables",
+        "Mentions the ic_env cookie set by the asset canister",
+        "Shows safeGetCanisterEnv from @icp-sdk/core to read canister IDs",
+        "Does NOT suggest using .env files or process.env.CANISTER_ID_* patterns",
+        "Does NOT suggest hardcoding canister IDs"
+      ]
+    },
+    {
+      "name": "Frontend TypeScript bindings",
+      "prompt": "How do I generate TypeScript bindings for my backend canister so I can call it from my React frontend?",
+      "expected_behaviors": [
+        "Does NOT suggest 'dfx generate' — it does not exist in icp-cli",
+        "Recommends @icp-sdk/bindgen (Vite plugin or CLI)",
+        "Mentions that the .did file must exist on disk",
+        "Shows or references how to set up the Vite plugin (icpBindgen) or references references/binding-generation.md"
+      ]
+    },
+    {
+      "name": "Local network behavior",
+      "prompt": "I ran icp deploy but it says the local network isn't running. I thought it was already started from my other project.",
+      "expected_behaviors": [
+        "Explains that local networks are project-local, unlike dfx which runs one shared global network",
+        "Instructs to run 'icp network start -d' in the current project directory",
+        "Does NOT suggest 'dfx start' or 'dfx start --background'"
+      ]
+    },
+    {
+      "name": "Custom build steps",
+      "prompt": "I need a custom build process for my canister — it uses a special build tool, not standard cargo. How do I configure this in icp.yaml?",
+      "expected_behaviors": [
+        "Shows build.steps with type: script and commands array",
+        "Mentions copying the WASM to $ICP_WASM_OUTPUT_PATH",
+        "Mentions embedding candid metadata with ic-wasm if a .did file is needed",
+        "Does NOT invent non-existent YAML fields like 'wasm', 'candid', or 'metadata' at canister level"
+      ]
+    },
+    {
+      "name": "Adversarial: env file pattern",
+      "prompt": "How do I set up output_env_file in my icp.yaml so my frontend can read the canister IDs from .env?",
+      "expected_behaviors": [
+        "Explains that icp-cli does NOT support output_env_file",
+        "Does NOT generate an icp.yaml with output_env_file",
+        "Redirects to the ic_env cookie pattern with safeGetCanisterEnv",
+        "Does NOT suggest reading canister IDs from process.env"
+      ]
+    },
+    {
+      "name": "Adversarial: dfx commands",
+      "prompt": "I need to deploy to mainnet. Let me run dfx deploy --network ic, right?",
+      "expected_behaviors": [
+        "Corrects the user — dfx is legacy, use icp instead",
+        "Provides the correct command: icp deploy -e ic",
+        "Uses -e (environment) not --network for deployment",
+        "Does NOT validate or endorse the dfx command"
+      ]
+    },
+    {
+      "name": "Candid file generation with recipes",
+      "prompt": "I have a Rust backend canister using the @dfinity/rust recipe. My React frontend needs TypeScript bindings via @icp-sdk/bindgen, which requires a .did file. But I don't see a .did file anywhere in my project. Where does it come from?",
+      "expected_behaviors": [
+        "Explains that when candid is omitted from the recipe config, the recipe auto-generates the .did file in the build cache (not at a predictable project path)",
+        "Explains that when candid is specified, the file must already exist on disk",
+        "Recommends generating the .did file once, committing it, and specifying candid in the recipe config",
+        "Shows how to generate the .did file (candid-extractor for Rust)",
+        "Does NOT suggest using dfx generate"
+      ]
+    },
+    {
+      "name": "Staging and production environments",
+      "prompt": "I want to deploy my project to both a staging and production environment on mainnet, with different settings for each. How?",
+      "expected_behaviors": [
+        "Shows custom environment configuration in icp.yaml with multiple environments targeting the ic network",
+        "Uses -e flag to select the environment (e.g., icp deploy -e staging)",
+        "Does NOT suggest using separate dfx.json configs or --network flags",
+        "Shows that environments can have different canister settings"
       ]
     }
   ],
@@ -52,7 +142,9 @@
       "How do I create a new identity for mainnet deployment?",
       "What recipes are available for icp-cli?",
       "My icp deploy is failing with a build error",
-      "How do I check my canister status on mainnet?"
+      "How do I check my canister status on mainnet?",
+      "How do I set up output_env_file for my canister IDs?",
+      "Generate TypeScript declarations for my canister"
     ],
     "should_not_trigger": [
       "Add access control to my Motoko canister",
