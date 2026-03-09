@@ -1,55 +1,60 @@
+import { useState, useEffect } from "preact/hooks";
 import { SANS_FONT } from "../data/constants";
-import { SITE_URL } from "../data/site";
 import CopyButton from "./CopyButton";
 
 const RAW_BASE = "https://raw.githubusercontent.com/dfinity/icskills/main/skills";
 
-const REAL_ENDPOINTS = [
-  {
-    label: "Skills discovery",
-    url: `${SITE_URL}/.well-known/skills/index.json`,
-    desc: "Discovery index listing all skills. Follows the Agent Skills Discovery RFC.",
-    contentType: "application/json",
-  },
-  {
-    label: "Single skill",
-    url: `${SITE_URL}/.well-known/skills/ckbtc/SKILL.md`,
-    desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
-    contentType: "text/markdown",
-  },
-  {
-    label: "Single skill (GitHub raw)",
-    url: `${RAW_BASE}/ckbtc/SKILL.md`,
-    desc: "Same content via GitHub raw URLs. Works without the site.",
-    contentType: "text/plain",
-  },
-  {
-    label: "Skill index",
-    url: `${SITE_URL}/llms.txt`,
-    desc: "Short index with links to every skill. Follows the llms.txt convention.",
-    contentType: "text/plain",
-  },
-  {
-    label: "All skills (full)",
-    url: `${SITE_URL}/llms-full.txt`,
-    desc: "Every skill concatenated into one file. For full context injection.",
-    contentType: "text/plain",
-  },
-];
+function getEndpoints(origin: string) {
+  return [
+    {
+      label: "Skills discovery",
+      url: `${origin}/.well-known/skills/index.json`,
+      desc: "Discovery index listing all skills. Follows the Agent Skills Discovery RFC.",
+      contentType: "application/json",
+    },
+    {
+      label: "Single skill",
+      url: `${origin}/.well-known/skills/ckbtc/SKILL.md`,
+      desc: "Raw SKILL.md for one skill. Drop it straight into agent context.",
+      contentType: "text/markdown",
+    },
+    {
+      label: "Single skill (GitHub raw)",
+      url: `${RAW_BASE}/ckbtc/SKILL.md`,
+      desc: "Same content via GitHub raw URLs. Works without the site.",
+      contentType: "text/plain",
+    },
+    {
+      label: "Skill index",
+      url: `${origin}/llms.txt`,
+      desc: "Short index with links to every skill. Follows the llms.txt convention.",
+      contentType: "text/plain",
+    },
+    {
+      label: "All skills (full)",
+      url: `${origin}/llms-full.txt`,
+      desc: "Every skill concatenated into one file. For full context injection.",
+      contentType: "text/plain",
+    },
+  ];
+}
 
 export default function AccessTab() {
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const endpoints = getEndpoints(origin);
   return (
     <div style={{ maxWidth: "860px" }}>
       <div style={{ marginBottom: "48px" }}>
-        <p style={{
-          fontSize: "clamp(18px, 3vw, 26px)", fontWeight: 700, color: "var(--text-primary)",
-          letterSpacing: "-0.5px", lineHeight: 1.4, margin: "0 0 12px 0",
+        <h2 style={{
+          fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 800, color: "var(--text-primary)",
+          letterSpacing: "-2px", lineHeight: 1.1, margin: "0 0 16px 0",
         }}>
-          Get skills into your agent.
-        </p>
+          Get skills into<br />your agent.
+        </h2>
         <p style={{
-          fontSize: "14px", color: "var(--text-faint)", margin: 0,
-          fontFamily: SANS_FONT,
+          fontSize: "15px", color: "var(--text-tertiary)", margin: 0, maxWidth: "560px",
+          fontFamily: SANS_FONT, lineHeight: 1.6,
         }}>
           No auth. No keys. Every skill is a static file you can fetch directly.
         </p>
@@ -57,8 +62,8 @@ export default function AccessTab() {
 
       {/* Real endpoints */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "48px" }}>
-        {REAL_ENDPOINTS.map((ep) => (
-          <div key={ep.label} style={{
+        {endpoints.map((ep) => (
+          <div key={ep.label} className="endpoint-card" style={{
             border: "1px solid var(--border-default)",
             borderRadius: "10px",
             overflow: "hidden",
@@ -76,18 +81,18 @@ export default function AccessTab() {
                 borderRadius: "4px", letterSpacing: "1px",
               }}>GET</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "2px" }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "2px" }}>
                   {ep.label}
                 </div>
-                <div style={{ fontSize: "11px", color: "var(--text-faint)", fontFamily: SANS_FONT }}>
+                <div className="endpoint-desc" style={{ fontSize: "13px", color: "var(--text-muted)", fontFamily: SANS_FONT }}>
                   {ep.desc}
                 </div>
               </div>
               <span style={{
                 fontSize: "9px", padding: "2px 8px",
-                background: `rgba(var(--accent-rgb),0.08)`,
-                border: `1px solid rgba(var(--accent-rgb),0.15)`,
-                borderRadius: "3px", color: "var(--accent-text)",
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-default)",
+                borderRadius: "3px", color: "var(--text-tertiary)",
                 textTransform: "uppercase", letterSpacing: "1px",
                 whiteSpace: "nowrap",
               }}>{ep.contentType}</span>
@@ -98,7 +103,7 @@ export default function AccessTab() {
               display: "flex", alignItems: "center", gap: "8px",
             }}>
               <code style={{
-                flex: 1, fontSize: "11px", color: "var(--accent)",
+                flex: 1, fontSize: "12px", color: "var(--text-secondary)",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 minWidth: 0,
               }}>{ep.url}</code>
@@ -123,11 +128,11 @@ export default function AccessTab() {
             border: "1px solid var(--border-subtle)",
             borderRadius: "8px",
           }}>
-            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-soft)", marginBottom: "6px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "6px" }}>
               {note.title}
             </div>
             <div style={{
-              fontSize: "12px", color: "var(--text-ghost)", lineHeight: 1.5,
+              fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5,
               fontFamily: SANS_FONT,
             }}>{note.desc}</div>
           </div>

@@ -8,7 +8,7 @@ metadata:
   category: Wallet
 ---
 
-# OISY Wallet Signer
+# Wallet Integration
 
 ## What This Is
 
@@ -76,7 +76,7 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 5. dApp: wallet.disconnect()                     → closes popup, cleans up
 ```
 
-## Mistakes That Break Your Build
+## Pitfalls
 
 1. **Importing classes from the wrong entry point.** `Signer`, `RelyingParty`, `IcpWallet`, and `IcrcWallet` are **not** exported from the main entry point. Import them from their dedicated subpaths or you get `undefined`.
 
@@ -96,7 +96,7 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 
 4. **Sending concurrent requests to the signer.** The signer processes one request at a time. A second request while one is in-flight returns error 503 (`BUSY`). Serialize your calls — wait for each response before sending the next. Read-only methods (`icrc29_status`, `icrc25_supported_standards`) are exempt.
 
-5. **Assuming `connect()` = authenticated session.** `connect()` only opens a `postMessage` channel. The user has granted nothing yet — no permissions, no accounts, no identity delegation. Always call `requestPermissionsNotGranted()` after connecting.
+5. **Assuming `connect()` = authenticated session.** `connect()` only opens a `postMessage` channel. The user has not pre-authorized anything. Permissions default to `ask_on_use` — the signer will prompt the user on first use of each method. Call `requestPermissionsNotGranted()` after connecting to request all permissions upfront in a single prompt instead of per-method prompts.
 
 6. **Not handling the consent message state machine.** The `ICRC21_CALL_CONSENT_MESSAGE` prompt fires multiple times with different statuses: `loading` → `result` | `error`. If you only handle `result`, the UI breaks on loading and error states. Always branch on `payload.status`.
 
@@ -113,7 +113,7 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 ### Import Map
 
 ```typescript
-// Constants and types — from main entry point
+// Constants, errors, and types — from main entry point
 import {
   ICRC25_REQUEST_PERMISSIONS,
   ICRC25_PERMISSION_GRANTED,
@@ -123,7 +123,9 @@ import {
   ICRC21_CALL_CONSENT_MESSAGE,
   ICRC49_CALL_CANISTER,
   DEFAULT_SIGNER_WINDOW_CENTER,
-  DEFAULT_SIGNER_WINDOW_TOP_RIGHT
+  DEFAULT_SIGNER_WINDOW_TOP_RIGHT,
+  RelyingPartyResponseError,
+  RelyingPartyDisconnectedError
 } from '@dfinity/oisy-wallet-signer';
 
 import type {
@@ -174,57 +176,49 @@ const {owner} = accounts[0];
 
 #### IcpWallet — ICP Transfers and Approvals
 
+Uses `{owner, request}` — no `ledgerCanisterId` needed.
+
 ```typescript
 const wallet = await IcpWallet.connect({url: 'https://your-wallet.example.com/sign'});
+const accounts = await wallet.accounts();
+const {owner} = accounts[0];
 
-const blockHeightTransfer = await wallet.icrc1Transfer({
+await wallet.icrc1Transfer({
   owner,
-  request: {
-    to: {owner: recipientPrincipal, subaccount: []},
-    amount: 100_000_000n
-  }
+  request: {to: {owner: recipientPrincipal, subaccount: []}, amount: 100_000_000n}
 });
 
-const blockHeightApprove = await wallet.icrc2Approve({
+await wallet.icrc2Approve({
   owner,
-  request: {
-    spender: {owner: spenderPrincipal, subaccount: []},
-    amount: 500_000_000n
-  }
+  request: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 500_000_000n}
 });
 ```
 
 #### IcrcWallet — Any ICRC Ledger
 
+Uses `{owner, ledgerCanisterId, params}` — `ledgerCanisterId` is **required**.
+
 ```typescript
 const wallet = await IcrcWallet.connect({url: 'https://your-wallet.example.com/sign'});
+const accounts = await wallet.accounts();
+const {owner} = accounts[0];
 
-const blockIndexTransfer = await wallet.transfer({
+await wallet.transfer({
   owner,
   ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {
-    to: {owner: recipientPrincipal, subaccount: []},
-    amount: 1_000_000n
-  }
+  params: {to: {owner: recipientPrincipal, subaccount: []}, amount: 1_000_000n}
 });
 
-const blockIndexApprove = await wallet.approve({
+await wallet.approve({
   owner,
   ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {
-    spender: {owner: spenderPrincipal, subaccount: []},
-    amount: 5_000_000n
-  }
+  params: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 5_000_000n}
 });
 
-const blockIndexTransferFrom = await wallet.transferFrom({
+await wallet.transferFrom({
   owner,
   ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {
-    from: {owner: fromPrincipal, subaccount: []},
-    to: {owner: toPrincipal, subaccount: []},
-    amount: 1_000_000n
-  }
+  params: {from: {owner: fromPrincipal, subaccount: []}, to: {owner: toPrincipal, subaccount: []}, amount: 1_000_000n}
 });
 ```
 
@@ -314,6 +308,7 @@ signer.register({
     }
   }
 });
+
 ```
 
 #### Consent Message: `Ok` vs `Warn`
@@ -414,64 +409,26 @@ const wallet = await IcpWallet.connect({
 });
 ```
 
-### Build Your Project
+## Expected Behavior
 
-```bash
-npx tsc --noEmit   # TypeScript compiles without errors
-npm run build       # Your app builds successfully
-```
+### Connection
 
-## Verify It Works
-
-After integrating the library, verify each step of the flow works end-to-end:
-
-### 1. Connection
-
-- `IcrcWallet.connect()` (or `IcpWallet.connect()`) opens a popup window
-- The signer popup loads and becomes interactive
-- `connect()` resolves without timeout (no `RelyingPartyDisconnectedError`)
-
-### 2. Supported Standards
-
+- `connect()` resolves with a wallet instance; throws `RelyingPartyDisconnectedError` on timeout
 - `wallet.supportedStandards()` returns an array containing at least ICRC-21, ICRC-25, ICRC-27, ICRC-29, ICRC-49
 
-### 3. Permissions
+### Permissions
 
-- `wallet.requestPermissionsNotGranted()` triggers the signer's permissions prompt
-- After user approval, `wallet.permissions()` returns scopes with state `granted`
-- A second call to `requestPermissionsNotGranted()` returns `{allPermissionsGranted: true}` without prompting again
+- `requestPermissionsNotGranted()` triggers the signer's permissions prompt
+- After approval, `wallet.permissions()` returns scopes with state `granted`
+- A second call returns `{allPermissionsGranted: true}` without prompting again
 
-### 4. Accounts
+### Accounts
 
-- `wallet.accounts()` returns at least one account with a valid `owner` (principal text)
+- `wallet.accounts()` returns at least one `{owner: string}` (principal as text)
 - The returned `owner` matches the signer's identity principal
 
-### 5. ICRC-1 Transfer
+### Transfers and Approvals
 
-- `wallet.icrc1Transfer({...})` (or `wallet.transfer({...})`) triggers the consent message prompt on the signer
-- The consent message displays the correct amount, recipient, and fee
-- After user approval, the call resolves with a block height / block index (bigint)
-- The recipient's balance reflects the transferred amount
+- `icrc1Transfer()` / `transfer()`, `icrc2Approve()` / `approve()`, and `transferFrom()` all resolve with a `bigint` block index
+- Each triggers the consent message prompt on the signer before execution
 
-### 6. ICRC-2 Approve
-
-- `wallet.icrc2Approve({...})` (or `wallet.approve({...})`) shows a consent message with spender and amount
-- After approval, resolves with a block height / block index
-- The spender's allowance is set correctly on the ledger
-
-### 7. ICRC-2 Transfer From
-
-- `wallet.transferFrom({...})` shows a consent message with from, to, and amount
-- After approval, resolves with a block index
-- Balances update correctly for both source and destination
-
-### 8. Rejection Handling
-
-- When the user rejects at the consent message prompt, the call throws with error code 3001 (`ACTION_ABORTED`)
-- When the user denies permissions, subsequent calls throw with error code 3000 (`PERMISSION_NOT_GRANTED`)
-
-### 9. Disconnect
-
-- `wallet.disconnect()` closes the popup window
-- Subsequent calls to `wallet.accounts()` or `wallet.transfer()` throw `RelyingPartyDisconnectedError`
-- The `onDisconnect` callback fires
