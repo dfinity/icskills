@@ -19,6 +19,12 @@ function getEndpoints(origin: string) {
       contentType: "text/markdown",
     },
     {
+      label: "Skill reference file",
+      url: `${origin}/.well-known/skills/icp-cli/references/dfx-migration.md`,
+      desc: "Skills can include reference files. The discovery index lists all files per skill.",
+      contentType: "text/markdown",
+    },
+    {
       label: "Single skill (GitHub raw)",
       url: `${RAW_BASE}/ckbtc/SKILL.md`,
       desc: "Same content via GitHub raw URLs. Works without the site.",

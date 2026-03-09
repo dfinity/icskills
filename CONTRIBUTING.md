@@ -130,13 +130,15 @@ Create `evaluations/<skill-name>.json` with test cases that verify the skill wor
 - **`output_evals`** — realistic prompts with expected behaviors a judge can check
 - **`trigger_evals`** — queries that should/shouldn't activate the skill
 
-See `evaluations/icp-cli.json` for a working example. Write prompts the way a developer would actually ask — vague and incomplete, not over-specified test questions.
+See `evaluations/icp-cli.json` for a working example. Write prompts the way a developer would actually ask — vague and incomplete, not over-specified test questions. Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
 
 **Running evaluations** (optional, requires `claude` CLI):
 
 ```bash
 node scripts/evaluate-skills.js <skill-name>                    # All evals, with + without skill
-node scripts/evaluate-skills.js <skill-name> --eval "name"      # Single eval
+node scripts/evaluate-skills.js <skill-name> --list              # List available evals
+node scripts/evaluate-skills.js <skill-name> --eval 2            # Single eval by index
+node scripts/evaluate-skills.js <skill-name> --eval 2 --no-baseline  # Single eval, skill only
 node scripts/evaluate-skills.js <skill-name> --no-baseline       # Skip without-skill run
 node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals only
 ```
