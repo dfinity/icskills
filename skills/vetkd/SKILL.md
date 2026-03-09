@@ -75,6 +75,8 @@ Fees depend on the **subnet where the master key resides** (and its size), not o
 
 8. **Not attaching enough cycles to `vetkd_derive_key`.** `vetkd_derive_key` consumes cycles; `vetkd_public_key` does not. For derive_key, `key_1` costs ~26B cycles and `test_key_1` costs ~10B cycles.
 
+9. **Rolling your own IBE without proper authorization checks.** If you implement IBE manually (bypassing `KeyManager` / `EncryptedMaps`), your canister must enforce that `vetkd_derive_key` only returns the derived key to the authorized caller — e.g. the principal whose identity was used as the `input`. Without this check, any caller can request any derived key and decrypt messages meant for someone else. The provided `ic-vetkeys` / `@dfinity/vetkeys` libraries handle this correctly; prefer them over a custom implementation.
+
 ## System API (Candid)
 
 The vetKD API lets canisters request vetKeys derived by the threshold protocol. Derivation is **deterministic**: the same inputs always produce the same key, so keys can be retrieved reliably. Different inputs yield different keys—canisters can derive an unlimited number of unique keys. Summary below; full spec: [vetKD API](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api) and the [IC interface specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#ic-vetkd_derive_key).
