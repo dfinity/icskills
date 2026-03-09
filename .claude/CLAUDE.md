@@ -43,10 +43,12 @@ Validate runs in CI and blocks deployment on errors.
 
 Each skill should have an evaluation file at `evaluations/<skill-name>.json`. Run evaluations with:
 ```bash
-node scripts/evaluate-skills.js <skill-name>              # All evals
-node scripts/evaluate-skills.js <skill-name> --eval "X"   # Single eval by name
-node scripts/evaluate-skills.js <skill-name> --no-baseline # Skip without-skill baseline
-node scripts/evaluate-skills.js <skill-name> --triggers-only # Trigger evals only
+node scripts/evaluate-skills.js <skill-name>                        # All evals
+node scripts/evaluate-skills.js <skill-name> --list                  # List available evals
+node scripts/evaluate-skills.js <skill-name> --eval 2                # Single eval by index
+node scripts/evaluate-skills.js <skill-name> --eval 2 --no-baseline  # Single eval, skill only
+node scripts/evaluate-skills.js <skill-name> --no-baseline           # Skip without-skill baseline
+node scripts/evaluate-skills.js <skill-name> --triggers-only         # Trigger evals only
 ```
 Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-cli.json` for the format.
 

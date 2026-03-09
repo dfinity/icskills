@@ -106,6 +106,113 @@ export function loadAllSkillsRaw(): SkillRaw[] {
   return skills;
 }
 
+/** Recursively collect all file paths relative to baseDir */
+function collectFiles(dir: string, baseDir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectFiles(fullPath, baseDir));
+    } else if (entry.isFile()) {
+      files.push(fullPath.slice(baseDir.length + 1)); // relative path
+    }
+  }
+  return files;
+}
+
+export interface SkillWithFiles {
+  name: string;
+  description: string;
+  files: string[];
+}
+
+/**
+ * Load all skills with their file listings for the discovery index.
+ * Returns name, description, and all files in the skill directory.
+ * SKILL.md is always listed first.
+ */
+export function loadAllSkillFiles(): SkillWithFiles[] {
+  const dirs = readdirSync(SKILLS_DIR)
+    .filter((d) => {
+      if (d.startsWith("_")) return false;
+      try {
+        return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+
+  const skills: SkillWithFiles[] = [];
+
+  for (const dir of dirs) {
+    const skillDir = join(SKILLS_DIR, dir);
+    const content = readFileSync(join(skillDir, "SKILL.md"), "utf-8");
+    const meta = parseFrontmatter(content);
+    if (!meta || !meta.name) continue;
+
+    const allFiles = collectFiles(skillDir, skillDir);
+    const files = [
+      "SKILL.md",
+      ...allFiles.filter((f) => f !== "SKILL.md").sort(),
+    ];
+
+    skills.push({
+      name: meta.name,
+      description: meta.description || "",
+      files,
+    });
+  }
+
+  return skills;
+}
+
+export interface SkillFileEntry {
+  name: string;
+  path: string;
+  content: string;
+}
+
+/**
+ * Load all individual files across all skills.
+ * Used by the catch-all route to serve files at /.well-known/skills/{name}/{path}.
+ */
+export function loadAllSkillFileEntries(): SkillFileEntry[] {
+  const dirs = readdirSync(SKILLS_DIR)
+    .filter((d) => {
+      if (d.startsWith("_")) return false;
+      try {
+        return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile();
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+
+  const entries: SkillFileEntry[] = [];
+
+  for (const dir of dirs) {
+    const skillDir = join(SKILLS_DIR, dir);
+    const skillMdContent = readFileSync(join(skillDir, "SKILL.md"), "utf-8");
+    const meta = parseFrontmatter(skillMdContent);
+    if (!meta || !meta.name) continue;
+
+    const allFiles = collectFiles(skillDir, skillDir);
+    for (const filePath of allFiles) {
+      // Skip SKILL.md — it's served by its own dedicated route
+      if (filePath === "SKILL.md") continue;
+      entries.push({
+        name: meta.name,
+        path: filePath,
+        content: readFileSync(join(skillDir, filePath), "utf-8"),
+      });
+    }
+  }
+
+  return entries;
+}
+
 export function loadAllSkills(): Skill[] {
   const dirs = readdirSync(SKILLS_DIR)
     .filter((d) => {
