@@ -2,7 +2,7 @@
 name: asset-canister
 description: "Deploy frontend assets to the IC. Covers certified assets, SPA routing with .ic-assets.json5, custom domains, content encoding, and programmatic uploads. Use when hosting a frontend, deploying static files, configuring custom domains, or setting up SPA routing on IC. Do NOT use for canister-level code patterns."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0, Node.js >= 24"
+compatibility: "icp-cli >= 0.1.0, Node.js >= 22"
 metadata:
   title: "Asset Canister & Frontend"
   category: Frontend

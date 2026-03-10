@@ -2,7 +2,6 @@
 name: icp-cli
 description: "Guides use of the icp command-line tool for building and deploying Internet Computer applications. Covers project configuration (icp.yaml), recipes, environments, canister lifecycle, and identity management. Use when building, deploying, or managing any IC project. Use when the user mentions icp, dfx, canister deployment, local network, or project setup. Do NOT use for canister-level programming patterns like access control, inter-canister calls, or stable memory — use domain-specific skills instead."
 license: Apache-2.0
-compatibility: "Node.js >= 24"
 metadata:
   title: ICP CLI
   category: Infrastructure
@@ -16,7 +15,7 @@ The `icp` command-line tool builds and deploys applications on the Internet Comp
 
 ## Installation
 
-**Recommended (npm)** — requires Node.js (see compatibility above):
+**Recommended (npm)** — requires [Node.js](https://nodejs.org/) >= 22:
 ```bash
 npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 ```
@@ -46,7 +45,6 @@ ic-wasm --version
 
 - For Rust canisters: `rustup target add wasm32-unknown-unknown`
 - For Motoko canisters: `npm i -g ic-mops` and `moc` version defined in `mops.toml` (templates include this; for manual projects add `[toolchain]` with `moc = "<version>"`)
-- For frontend assets: Node.js >= 24
 
 ## Common Pitfalls
 

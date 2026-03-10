@@ -2,7 +2,7 @@
 name: internet-identity
 description: "Integrate Internet Identity authentication. Covers passkey and OpenID login flows, delegation handling, and principal-per-app isolation. Use when adding login, sign-in, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0, Node.js >= 24"
+compatibility: "icp-cli >= 0.1.0, Node.js >= 22"
 metadata:
   title: Internet Identity Auth
   category: Auth
