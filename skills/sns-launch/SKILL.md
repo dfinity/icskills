@@ -1,8 +1,8 @@
 ---
 name: sns-launch
-description: "Configure and launch an SNS DAO. Token economics, proposal types, nervous system parameters, and decentralization swap."
+description: "Configure and launch an SNS DAO to decentralize a dapp. Covers token economics, governance parameters, testflight validation, NNS proposal submission, and decentralization swap. Use when launching an SNS, configuring tokenomics, or setting up DAO governance for a dapp. Do NOT use for NNS governance or general canister management."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.1.0, dfx with sns extension"
 metadata:
   title: SNS DAO Launch
   category: Governance
@@ -16,8 +16,6 @@ Service Nervous System (SNS) is the DAO framework for decentralizing individual 
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- `dfx` with the sns extension (`dfx extension install sns`) for prepare-canisters, validate, and propose
 - An NNS neuron with sufficient stake to submit proposals (mainnet)
 - Dapp canisters already deployed and working on mainnet
 - `sns_init.yaml` configuration file with all parameters defined

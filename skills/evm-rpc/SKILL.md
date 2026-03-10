@@ -1,6 +1,6 @@
 ---
 name: evm-rpc
-description: "Call Ethereum and EVM chains from IC canisters. JSON-RPC, transaction signing, and cross-chain workflows."
+description: "Call Ethereum and EVM chains from IC canisters via the EVM RPC canister. Covers JSON-RPC calls, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a canister. Do NOT use for generic HTTPS calls to non-EVM APIs — use https-outcalls instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
@@ -16,10 +16,8 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `candid`, `serde`
-- Cycles in your canister (each RPC call costs cycles)
 
 ## Canister IDs
 
@@ -84,43 +82,21 @@ Use `requestCost` to get an exact estimate before calling.
 
 ### icp.yaml Configuration
 
-#### Option A: Pull from mainnet (recommended for production)
+The EVM RPC canister is deployed as a pre-built WASM alongside your backend. On mainnet, it is already deployed at `7hfb6-caaaa-aaaar-qadga-cai` — your backend calls it by principal directly.
 
 ```yaml
 canisters:
-  evm_rpc:
-    type: pull
-    id: 7hfb6-caaaa-aaaar-qadga-cai
-  backend:
-    type: motoko
-    main: src/backend/main.mo
-    dependencies:
-      - evm_rpc
-```
-
-Then run:
-```bash
-icp deps pull
-icp deps init evm_rpc --argument '(record {})'
-icp deps deploy
-```
-
-#### Option B: Custom wasm (for local development)
-
-```yaml
-canisters:
-  evm_rpc:
-    type: custom
-    candid: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did
-    wasm: https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
-    remote:
-      id:
-        ic: 7hfb6-caaaa-aaaar-qadga-cai
-  backend:
-    type: motoko
-    main: src/backend/main.mo
-    dependencies:
-      - evm_rpc
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/backend/main.mo
+  - name: evm_rpc
+    build:
+      steps:
+        - type: pre-built
+          url: https://github.com/dfinity/evm-rpc-canister/releases/download/v2.2.0/evm_rpc.wasm.gz
+    init_args: "(record {})"
 ```
 
 ### Motoko

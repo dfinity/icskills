@@ -1,10 +1,10 @@
 ---
-name: wallet
-description: "Create, fund, and manage cycles wallets. Top-up canisters, check balances, and automate cycle management."
+name: cycles-management
+description: "Manage cycles and canister lifecycle. Covers cycle balance checks, top-ups, freezing thresholds, canister creation, and ICP-to-cycles conversion via the CMC. Use when working with cycles, canister funding, freezing threshold, frozen canister, out of cycles, top-up, canister creation, or cycle balance. Do NOT use for wallet-to-dApp integration or ICRC signer flows — use wallet-integration instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
-  title: Cycles Wallet Management
+  title: Cycles Management
   category: Infrastructure
 ---
 
@@ -16,16 +16,16 @@ Cycles are the computation fuel for canisters on Internet Computer. Every canist
 **Note:** icp-cli uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `icp cycles balance`, `icp cycles mint`, and `icp canister top-up` go through the cycles ledger. There is no legacy wallet concept in icp-cli. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
 ## Prerequisites
-- icp-cli >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
-- An identity with ICP balance for converting to cycles (mainnet)
-- For local development: cycles are unlimited by default
+
+- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
+- For Rust: `ic-cdk >= 0.19`
 
 ## Canister IDs
 
 | Service | Canister ID | Purpose |
 |---------|------------|---------|
 | Cycles Minting Canister (CMC) | `rkp4c-7iaaa-aaaaa-aaaca-cai` | Converts ICP to cycles, creates canisters |
-| NNS Ledger (ICP) | `ryjl3-tyaaa-aaaaa-aaaba-cai` | ICP token transfers |
+| Cycles Ledger | `um5iw-rqaaa-aaaaq-qaaba-cai` | Tracks cycle balances for all principals |
 | Management Canister | `aaaaa-aa` | Canister lifecycle (create, install, stop, delete, status) |
 
 The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist on a specific subnet but is handled by every subnet's execution layer.
@@ -44,8 +44,6 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 6. **Using ExperimentalCycles in mo:core** -- In mo:core 2.0, the module is renamed to `Cycles`. `import ExperimentalCycles "mo:base/ExperimentalCycles"` will fail. Use `import Cycles "mo:core/Cycles"`.
 
-7. **Not accounting for the transfer fee when converting ICP to cycles** -- Converting ICP to cycles via the CMC requires an ICP transfer to the CMC first. That transfer costs 10000 e8s fee. If you send your exact ICP balance, the transfer will fail due to insufficient funds after the fee.
-
 ## Implementation
 
 ### Motoko
@@ -54,7 +52,6 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 ```motoko
 import Cycles "mo:core/Cycles";
-import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 
@@ -89,7 +86,6 @@ persistent actor {
 #### Creating a Canister Programmatically
 
 ```motoko
-import Cycles "mo:core/Cycles";
 import Principal "mo:core/Principal";
 
 persistent actor Self {
@@ -148,23 +144,6 @@ persistent actor Self {
 
 ### Rust
 
-#### Cargo.toml Dependencies
-
-```toml
-[package]
-name = "wallet_backend"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.19"
-candid = "0.10"
-serde = { version = "1", features = ["derive"] }
-```
-
 #### Checking Balance and Accepting Cycles
 
 ```rust
@@ -190,7 +169,7 @@ fn deposit() -> Nat {
 #### Creating and Managing Canisters
 
 ```rust
-use candid::{CandidType, Deserialize, Nat, Principal};
+use candid::{Nat, Principal};
 use ic_cdk::update;
 use ic_cdk::management_canister::{
     create_canister_with_extra_cycles, canister_status, deposit_cycles, stop_canister, delete_canister,
@@ -280,7 +259,7 @@ icp canister top-up backend --amount 1000000000000
 icp canister top-up backend --amount 1000000000000 -e ic
 
 # Convert ICP to cycles and top up in one step (mainnet)
-icp cycles mint --amount 1.0 -e ic
+icp cycles mint --icp 1.0 -e ic
 icp canister top-up backend --amount 1000000000000 -e ic
 ```
 
@@ -291,7 +270,7 @@ icp canister top-up backend --amount 1000000000000 -e ic
 icp canister create my_canister
 
 # Create on mainnet with specific cycles
-icp canister create my_canister -e ic --with-cycles 2000000000000
+icp canister create my_canister -e ic --cycles 2000000000000
 
 # Add a backup controller
 icp canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
@@ -310,7 +289,7 @@ icp canister update-settings backend --freezing-threshold 7776000 -e ic
 ## Verify It Works
 
 ```bash
-# 1. Deploy a canister and check its status
+# Deploy and check status
 icp network start -d
 icp deploy backend
 icp canister status backend
@@ -319,34 +298,11 @@ icp canister status backend
 #   Balance: 3_100_000_000_000 Cycles (local default, varies)
 #   Freezing threshold: 2_592_000
 
-# 2. Check balance programmatically (if you added getBalance)
+# Check balance programmatically (if you added getBalance)
 icp canister call backend getBalance '()'
 # Expected: a large nat value, e.g. (3_100_000_000_000 : nat)
 
-# 3. Verify controllers
-icp canister info backend
-# Expected: Shows your principal as controller
-
-# 4. On mainnet: verify cycles balance is not zero
+# On mainnet: verify cycles balance is not zero
 icp canister status backend -e ic
 # If Balance shows 0, the canister will freeze. Top up immediately.
-
-# 5. Verify freezing threshold was set
-icp canister status backend
-# Look for "Freezing threshold:" -- should match what you set
-```
-
-### Monitoring Checklist for Production
-
-```bash
-# Run periodically for mainnet canisters:
-CANISTER_ID="your-canister-id-here"
-
-# Check balance
-icp canister status $CANISTER_ID -e ic
-
-# Warning thresholds:
-# < 5T cycles   -- top up soon
-# < 1T cycles   -- urgent, canister may freeze
-# 0 cycles      -- canister is frozen, data at risk of deletion
 ```

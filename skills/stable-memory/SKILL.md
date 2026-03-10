@@ -1,6 +1,6 @@
 ---
 name: stable-memory
-description: "Manage canister state across upgrades. Stable structures, pre/post upgrade hooks, and memory-mapped data."
+description: "Persist canister state across upgrades. Covers StableBTreeMap and MemoryManager in Rust, persistent actor in Motoko, and upgrade hook patterns. Use when dealing with canister upgrades, data persistence, data lost after upgrade, stable storage, StableBTreeMap, pre_upgrade traps, or heap vs stable memory. Do NOT use for inter-canister calls or access control — use multi-canister or canister-security instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
@@ -14,7 +14,7 @@ metadata:
 Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
 
 ## Prerequisites
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
+
 - For Motoko: mops with `core = "2.0.0"` in mops.toml
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 

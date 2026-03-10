@@ -1,8 +1,8 @@
 ---
 name: asset-canister
-description: "Deploy frontend assets to the IC. Certified assets, custom domains, SPA routing, and content encoding."
+description: "Deploy frontend assets to the IC. Covers certified assets, SPA routing with .ic-assets.json5, custom domains, content encoding, and programmatic uploads. Use when hosting a frontend, deploying static files, configuring custom domains, or setting up SPA routing on IC. Do NOT use for canister-level code patterns."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.1.0, Node.js >= 22"
 metadata:
   title: "Asset Canister & Frontend"
   category: Frontend
@@ -16,18 +16,16 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- icp-cli >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
-- Node.js >= 18 (for building frontend assets)
 - `@icp-sdk/canisters` npm package (for programmatic uploads)
 
 ## Canister IDs
 
-Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `canister_ids.json` (local and mainnet).
+Asset canisters are created per-project. There is no single global canister ID. After deployment, your canister ID is stored in `.icp/data/mappings/` (per environment).
 
 Access patterns:
 | Environment | URL Pattern |
 |-------------|-------------|
-| Local | `http://<canister-id>.localhost:4943` |
+| Local | `http://<canister-id>.localhost:8000` |
 | Mainnet | `https://<canister-id>.ic0.app` or `https://<canister-id>.icp0.io` |
 | Custom domain | `https://yourdomain.com` (with DNS configuration) |
 
@@ -53,24 +51,25 @@ Access patterns:
 
 ```yaml
 canisters:
-  frontend:
-    type: assets
-    source:
-      - dist
-    build:
-      - npm run build
-    dependencies:
-      - backend
-  backend:
-    type: motoko
-    main: src/backend/main.mo
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: dist
+        build:
+          - npm install
+          - npm run build
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/backend/main.mo
 ```
 
 Key fields:
-- `type: assets` -- tells `icp` this is an asset canister
-- `source` -- array of directories to upload (contents, not the directory itself)
+- `recipe.type: "@dfinity/asset-canister@..."` -- tells `icp` this is an asset canister
+- `dir` -- directory to upload (contents, not the directory itself)
 - `build` -- commands `icp deploy` runs before uploading (your frontend build step)
-- `dependencies` -- ensures backend is deployed first (so canister IDs are available)
 
 ### SPA Routing and Default Headers: `.ic-assets.json5`
 
@@ -162,7 +161,7 @@ import { HttpAgent } from "@icp-sdk/core/agent";
 // runtime. In production the root key is hardcoded and trusted. Fetching it at
 // runtime lets a man-in-the-middle supply a fake key and forge certified responses.
 // NEVER set shouldFetchRootKey to true when host points to mainnet.
-const LOCAL_REPLICA = "http://localhost:4943";
+const LOCAL_REPLICA = "http://localhost:8000";
 const MAINNET = "https://ic0.app";
 const host = LOCAL_REPLICA; // Change to MAINNET for production
 
@@ -236,7 +235,7 @@ icp canister call frontend revoke_permission '(record { of_principal = principal
 ### Local Deployment
 
 ```bash
-# Start the local replica
+# Start the local network
 icp network start -d
 
 # Build and deploy frontend + backend
@@ -295,7 +294,7 @@ icp canister call frontend http_request '(record {
 # Expected: status_code = 200 (same content as "/"), NOT 404
 
 # 5. Open in browser
-# Local:   http://<frontend-canister-id>.localhost:4943
+# Local:   http://<frontend-canister-id>.localhost:8000
 # Mainnet: https://<frontend-canister-id>.ic0.app
 
 # 6. Get canister ID

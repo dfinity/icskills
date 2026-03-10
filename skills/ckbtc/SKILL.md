@@ -1,6 +1,6 @@
 ---
 name: ckbtc
-description: "Accept, send, and manage ckBTC in your canister. Covers minting, transfers, balance checks, and UTXO management."
+description: "Accept, send, and manage ckBTC (chain-key Bitcoin). Covers BTC deposit flow via minter, ckBTC transfers, withdrawal to BTC, subaccount derivation, and UTXO management. Use when integrating Bitcoin, ckBTC, BTC deposits, or BTC withdrawals in a canister. Do NOT use for plain token transfers without BTC minting/withdrawal — use icrc-ledger instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
@@ -16,10 +16,8 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (install: `brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
-- A funded ICP identity (for mainnet deployment cycles)
 
 ## Canister IDs
 
@@ -98,25 +96,18 @@ core = "2.0.0"
 icrc2-types = "1.1.0"
 ```
 
-#### icp.yaml (local development with ckBTC)
+#### icp.yaml
 
-For local testing, pull the ckBTC canisters:
+Your backend canister calls the ckBTC ledger and minter by principal directly — no local ckBTC canister deployment needed.
 
 ```yaml
-defaults:
-  build:
-    packtool: mops sources
 canisters:
-  backend:
-    type: motoko
-    main: src/backend/main.mo
-    dependencies: []
-networks:
-  local:
-    bind: 127.0.0.1:4943
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/backend/main.mo
 ```
-
-For mainnet, your canister calls the ckBTC ledger and minter directly by principal.
 
 #### src/backend/main.mo
 

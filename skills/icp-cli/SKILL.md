@@ -13,11 +13,38 @@ metadata:
 
 The `icp` command-line tool builds and deploys applications on the Internet Computer. It replaces the legacy `dfx` tool with YAML configuration, a recipe system for reusable build templates, and an environment model that separates deployment targets from network connections. Never use `dfx` — always use `icp`.
 
+## Installation
+
+**Recommended (npm)** — requires [Node.js](https://nodejs.org/) >= 22:
+```bash
+npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
+```
+
+`ic-wasm` is required when using official recipes (`@dfinity/rust`, `@dfinity/motoko`, `@dfinity/asset-canister`) — they depend on it for optimization and metadata embedding.
+
+**Alternative methods:**
+```bash
+# Homebrew (macOS/Linux)
+brew install icp-cli
+brew install ic-wasm
+
+# Shell script (macOS/Linux/WSL)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/icp-cli/releases/latest/download/icp-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/ic-wasm/releases/latest/download/ic-wasm-installer.sh | sh
+```
+
+**Verify:**
+```bash
+icp --version
+ic-wasm --version
+```
+
+**Linux note:** On minimal installs, you may need system libraries: `sudo apt-get install -y libdbus-1-3 libssl3 ca-certificates` (Ubuntu/Debian) or `sudo dnf install -y dbus-libs openssl ca-certificates` (Fedora/RHEL).
+
 ## Prerequisites
 
 - For Rust canisters: `rustup target add wasm32-unknown-unknown`
 - For Motoko canisters: `npm i -g ic-mops` and `moc` version defined in `mops.toml` (templates include this; for manual projects add `[toolchain]` with `moc = "<version>"`)
-- For frontend assets: Node.js >= 20
 
 ## Common Pitfalls
 

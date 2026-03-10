@@ -1,6 +1,6 @@
 ---
 name: multi-canister
-description: "Design and deploy multi-canister dapps with inter-canister calls, shared state patterns, and upgrade strategies."
+description: "Design and deploy multi-canister dapps. Covers inter-canister calls, canister factory pattern, async messaging pitfalls, bounded vs unbounded wait, and 2MB payload limits. Use when splitting an app across canisters, making inter-canister or cross-canister calls, or designing canister-to-canister communication. Do NOT use for single-canister apps."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 metadata:
@@ -16,10 +16,8 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Prerequisites
 
-- `icp-cli` >= 0.1.0 (`brew install dfinity/tap/icp-cli`)
 - For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
-- Understanding of `async`/`await` and error handling
 
 ## How It Works
 
@@ -113,28 +111,17 @@ my-project/
 ### icp.yaml
 
 ```yaml
-defaults:
-  build:
-    packtool: mops sources
 canisters:
-  user_service:
-    type: motoko
-    main: src/user_service/main.mo
-  content_service:
-    type: motoko
-    main: src/content_service/main.mo
-    dependencies:
-      - user_service
-  frontend:
-    type: assets
-    source:
-      - dist
-    dependencies:
-      - user_service
-      - content_service
-networks:
-  local:
-    bind: 127.0.0.1:4943
+  - name: user_service
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/user_service/main.mo
+  - name: content_service
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/content_service/main.mo
 ```
 
 ### Motoko
@@ -358,26 +345,18 @@ members = [
 
 ```yaml
 canisters:
-  user_service:
-    type: rust
-    package: user_service
-    candid: src/user_service/user_service.did
-  content_service:
-    type: rust
-    package: content_service
-    candid: src/content_service/content_service.did
-    dependencies:
-      - user_service
-  frontend:
-    type: assets
-    source:
-      - dist
-    dependencies:
-      - user_service
-      - content_service
-networks:
-  local:
-    bind: 127.0.0.1:4943
+  - name: user_service
+    recipe:
+      type: "@dfinity/rust@v3.2.0"
+      configuration:
+        package: user_service
+        candid: src/user_service/user_service.did
+  - name: content_service
+    recipe:
+      type: "@dfinity/rust@v3.2.0"
+      configuration:
+        package: content_service
+        candid: src/content_service/content_service.did
 ```
 
 #### src/user_service/Cargo.toml

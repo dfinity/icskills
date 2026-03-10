@@ -2,7 +2,7 @@
 name: wallet-integration
 description: "Integrate wallets with IC dApps using ICRC signer standards (ICRC-21/25/27/29/49). Covers the popup-based signer model, consent messages, permission lifecycle, and transaction approval flows. Implementation uses @dfinity/oisy-wallet-signer. Do NOT use for Internet Identity login, delegation-based auth (ICRC-34/46), or threshold signing (chain-key). Use when the developer mentions wallet integration, OISY, oisy-wallet-signer, wallet signer, relying party, consent messages, wallet popup, or transaction approval."
 license: Apache-2.0
-compatibility: "Node.js >= 24, npm >= 11.5"
+compatibility: "Node.js >= 22"
 metadata:
   title: Wallet Integration
   category: Wallet
@@ -55,7 +55,7 @@ This skill covers integration using `@dfinity/oisy-wallet-signer`. Other integra
 - `@dfinity/oisy-wallet-signer` installed
 - Peer dependencies installed: `@dfinity/utils`, `@dfinity/zod-schemas`, `@icp-sdk/canisters`, `@icp-sdk/core`, `zod`
 - A non-anonymous identity on the signer side (e.g. `Ed25519KeyIdentity`)
-- For local development: a running IC replica (`dfx start`)
+- For local development: a running local network (`icp network start -d`)
 
 ```bash
 npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/canisters @icp-sdk/core zod
@@ -353,23 +353,23 @@ Permissions stored in `localStorage` as `oisy_signer_{origin}_{owner}` with time
 
 ### Local Development — Your Own Signer
 
-If you are building both the dApp and the wallet/signer, start a local IC replica and pass `host` to both sides:
+If you are building both the dApp and the wallet/signer, start a local network and pass `host` to both sides:
 
 ```bash
-dfx start --background
+icp network start -d
 ```
 
 ```typescript
 // dApp side — point to your local wallet's /sign route
 const wallet = await IcrcWallet.connect({
   url: 'http://localhost:5174/sign',
-  host: 'http://localhost:4943'
+  host: 'http://localhost:8000'
 });
 
-// Wallet/signer side — same replica host
+// Wallet/signer side — same local network host
 const signer = Signer.init({
   owner: identity,
-  host: 'http://localhost:4943'
+  host: 'http://localhost:8000'
 });
 ```
 
@@ -388,14 +388,12 @@ npm run sync:all
 npm run dev:wallet    # starts the pseudo wallet on port 5174
 ```
 
-If your local replica runs on a non-default port, update `LOCAL_REPLICA_HOST` in `demo/.env`.
-
 Then connect from your dApp:
 
 ```typescript
 const wallet = await IcpWallet.connect({
   url: 'http://localhost:5174/sign',
-  host: 'http://localhost:4943' // match your replica port
+  host: 'http://localhost:8000' // match your local network port
 });
 ```
 
