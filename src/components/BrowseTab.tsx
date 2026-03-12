@@ -36,13 +36,14 @@ export default function BrowseTab({ skills }: Props) {
           lineHeight: 1.1, margin: "0 0 16px 0",
           letterSpacing: "-2px", color: "var(--text-primary)",
         }}>
-          Agent-readable instructions<br />for every IC need.
+          ICP skills for agents that write code
         </h1>
         <p style={{
           fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
           lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
         }}>
-          The missing context layer between AI agents and the Internet Computer.
+          Build using sovereign software on an onchain open cloud that's tamperproof,
+          unstoppable, and can process digital assets and payments
         </p>
       </div>
 
