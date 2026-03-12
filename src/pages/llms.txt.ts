@@ -6,7 +6,7 @@ import { SITE_URL } from "../data/site";
 export const GET: APIRoute = () => {
   const skills = loadAllSkills();
 
-  const header = `# IC Skills
+  const header = `# Internet Computer (ICP) Skills
 
 > Agent-readable skill files for the Internet Computer. Structured documentation designed for AI coding assistants — not humans.
 

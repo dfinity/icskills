@@ -14,7 +14,7 @@ const {
   title,
   description = "Structured skill files for AI agents building on the Internet Computer. ckBTC, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more. Prevents hallucinations.",
   canonicalUrl = `${SITE_URL}/`,
-  ogTitle = "IC Skills — Skills for agents, not docs for humans",
+  ogTitle = "Internet Computer (ICP) Skills — Skills for agents, not docs for humans",
   ogDescription = "Agent-readable skill files for every Internet Computer capability. Zero hallucinations. Paste the raw URL into Claude, Cursor, or any agent.",
   jsonLd,
 } = Astro.props;
@@ -29,12 +29,12 @@ const defaultJsonLd = JSON.stringify({
       "@type": "WebSite",
       "@id": `${site}/#website`,
       "url": site,
-      "name": "IC Skills",
+      "name": "Internet Computer (ICP) Skills",
       "description": "Agent-readable skill files for Internet Computer development. Structured markdown files that prevent AI hallucinations when building on ICP."
     },
     {
       "@type": "SoftwareApplication",
-      "name": "IC Skills",
+      "name": "Internet Computer (ICP) Skills",
       "url": site,
       "applicationCategory": "DeveloperApplication",
       "description": "A library of agent-readable skill files for Internet Computer (ICP) development.",
@@ -57,7 +57,7 @@ const defaultJsonLd = JSON.stringify({
   <meta name="description" content={description}>
   <meta name="keywords" content="Internet Computer, ICP, DFINITY, Motoko, Rust, canister, icp-cli, AI agent, LLM documentation, ckBTC, ICRC, Internet Identity, stable memory">
   <meta name="robots" content="index, follow">
-  <meta name="author" content="IC Skills">
+  <meta name="author" content="Internet Computer (ICP) Skills">
   <link rel="canonical" href={canonicalUrl}>
 
   <meta property="og:type" content="website">
