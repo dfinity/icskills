@@ -6,9 +6,9 @@ import { SITE_URL } from "../data/site";
 export const GET: APIRoute = () => {
   const skills = loadAllSkillsRaw();
 
-  const header = `# IC Skills — Full Reference
+  const header = `# Internet Computer (ICP) Skills — Full Reference
 
-All IC Skills in a single file for direct context injection.
+All ICP Skills in a single file for direct context injection.
 Source: https://github.com/dfinity/icskills
 Website: ${SITE_URL}
 Skills: ${skills.length}
