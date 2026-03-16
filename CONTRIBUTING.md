@@ -28,9 +28,12 @@ npm ci    # Install dependencies
 
 ```
 skills/<skill-name>/SKILL.md
+skills/<skill-name>/references/   # optional — for large reference material
 ```
 
 Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stable-memory`). The name must match the directory name. This aligns with the [Agent Skills spec](https://agentskills.io/specification).
+
+Keep the main SKILL.md under 500 lines. Move detailed reference material (migration guides, config examples) to `references/*.md` and reference them from SKILL.md. See `skills/icp-cli/` for an example.
 
 A template is available at `skills/_template/SKILL.md.template` — copy it as your starting point.
 

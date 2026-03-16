@@ -69,6 +69,7 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 | Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
 | Single skill | `/.well-known/skills/{name}/SKILL.md` | Raw markdown for one skill |
 | Reference files | `/.well-known/skills/{name}/references/{file}.md` | Additional files listed in the discovery index |
+| Download (zip) | `/.well-known/skills/{name}/SKILL.zip` | Zip bundle for multi-file skills (SKILL.md + references) |
 | Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | All skills with descriptions and discovery links |
 | Skill page | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page for humans |
 
