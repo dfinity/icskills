@@ -28,15 +28,15 @@ const frameworksWithVars = FRAMEWORKS.map((fw, i) => ({
 }));
 
 const steps = [
-  { num: "01", title: "The problem",
-    code: "mxzaz-hqaaa... ← hallucinated",
-    desc: "AI agents guess canister IDs, use deprecated APIs, and miss ICP-specific details like subaccounts and cycle fees." },
-  { num: "02", title: "The right skill",
-    code: "curl .../skills/ckbtc/SKILL.md",
-    desc: "The agent matches the task to a skill via description, fetches it, and gets correct canister IDs, tested code, pitfalls, and verification steps." },
-  { num: "03", title: "The result",
-    code: "icp canister call icrc1_balance_of",
-    desc: "The agent builds with accurate context and verifies its own work. Working code on the first deploy." },
+  { num: "01", title: "Without skills",
+    code: '"Add ckBTC payments to my app"',
+    desc: "The agent hallucinates parameters, misses the transfer fee, and skips deposit subaccounts. The canister traps on first call." },
+  { num: "02", title: "One command",
+    code: "npx skills add dfinity/icskills",
+    desc: "Installs IC skills directly into your agent. Correct code, exact fees, and the pitfalls that break first deploys." },
+  { num: "03", title: "With skills",
+    code: "Same prompt. Working code.",
+    desc: "The agent builds with accurate context, handles edge cases, and runs its own verification checks. First deploy, no surprises." },
 ];
 
 const anatomy = [
@@ -114,25 +114,17 @@ const anatomy = [
         <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">terminal</span>
       </div>
       <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;">
-<span style="color:var(--text-faint);"># 1. Discover all skills (Agent Skills Discovery RFC)</span>
-<span style="color:var(--accent-blue);">curl -sL {SITE_URL}/.well-known/skills/index.json</span>
+<span style="color:var(--text-faint);"># Install IC skills into your agent</span>
+<span style="color:var(--accent-blue);">npx skills add dfinity/icskills</span>
 
-<span style="color:var(--text-faint);"># 2. Fetch a single skill file</span>
+<span style="color:var(--text-faint);"># Or fetch a single skill for manual context injection</span>
 <span style="color:var(--accent-blue);">curl -sL {SITE_URL}/.well-known/skills/ckbtc/SKILL.md</span>
-<span style="color:var(--text-faint);"># or via GitHub raw:</span>
-<span style="color:var(--accent-blue);">curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md</span>
-
-<span style="color:var(--text-faint);"># 3. Or fetch all skills at once for full context injection</span>
-<span style="color:var(--accent-blue);">curl -sL {SITE_URL}/llms-full.txt</span>
 
 <span style="color:var(--text-secondary);"># Agent now knows:</span>
 <span style="color:var(--text-secondary);"># - Correct canister ID: mxzaz-hqaaa-aaaar-qaada-cai</span>
 <span style="color:var(--text-secondary);"># - Fee is 10 satoshis (not 0)</span>
 <span style="color:var(--text-secondary);"># - Must use subaccounts for deposits</span>
-
-<span style="color:var(--text-secondary);"># → Deploys correctly on first try</span>
-<span style="color:var(--text-secondary);"># → Runs verification checks</span>
-<span style="color:var(--text-secondary);"># → Ships autonomously</span></pre>
+<span style="color:var(--text-secondary);"># → Deploys correctly on first try</span></pre>
     </div>
 
     <!-- Framework logos grid -->
@@ -154,7 +146,7 @@ const anatomy = [
   <!-- Bottom CTA -->
   <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid var(--border-default);">
     <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">Give your agent the context it needs.</div>
-    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Every IC integration, one fetch away. Works with any agent or framework.</p>
+    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Every IC integration, one command away. Works with any agent or framework.</p>
     <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg-code);border:1px solid var(--border-default);border-radius:8px;">
       <code style="font-size:14px;color:var(--text-secondary);">npx skills add dfinity/icskills</code>
       <CopyButton client:load text="npx skills add dfinity/icskills" />

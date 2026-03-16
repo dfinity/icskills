@@ -111,7 +111,7 @@ export default function BrowseTab({ skills }: Props) {
         gap: "16px",
       }}>
         {filtered.map((skill) => {
-          const rawUrl = `${origin}/.well-known/skills/${skill.name}/SKILL.md`;
+          const installCmd = `npx skills add dfinity/icskills --skill ${skill.name}`;
           return (
             <div
               key={skill.name}
@@ -186,7 +186,7 @@ export default function BrowseTab({ skills }: Props) {
                 <div style={{
                   fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0,
                 }}>
-                  paste in agent:
+                  install:
                 </div>
                 <code style={{
                   flex: 1, padding: "6px 10px",
@@ -196,9 +196,9 @@ export default function BrowseTab({ skills }: Props) {
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   minWidth: 0,
                 }}>
-                  {rawUrl}
+                  {installCmd}
                 </code>
-                <CopyButton text={rawUrl} />
+                <CopyButton text={installCmd} />
               </div>
             </div>
           );

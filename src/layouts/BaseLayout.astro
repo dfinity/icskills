@@ -20,7 +20,7 @@ const {
 } = Astro.props;
 
 const site = SITE_URL;
-const ogImage = `${site}/og-image.svg`;
+const ogImage = `${site}/og-image.png`;
 
 const defaultJsonLd = JSON.stringify({
   "@context": "https://schema.org",
@@ -73,7 +73,6 @@ const defaultJsonLd = JSON.stringify({
   <meta name="twitter:image" content={ogImage}>
 
   <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt">
-  <link rel="alternate" type="text/plain" title="LLMs-Full.txt" href="/llms-full.txt">
 
   <meta name="theme-color" content="#000000">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
