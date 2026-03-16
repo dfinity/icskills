@@ -149,6 +149,25 @@ export default function BrowseTab({ skills }: Props) {
                     {skill.category}
                   </div>
                 </div>
+                <a href={skill.fileCount > 1
+                    ? `/.well-known/skills/${skill.name}/SKILL.zip`
+                    : `/.well-known/skills/${skill.name}/SKILL.md`}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  title={skill.fileCount > 1 ? "Download skill (.zip)" : "Download skill (.md)"}
+                  aria-label={`Download ${skill.title}`}
+                  className="github-link"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "36px", height: "36px", borderRadius: "6px",
+                    color: "var(--text-faint)", flexShrink: 0,
+                    background: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
+                  }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 2v8M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11" />
+                  </svg>
+                </a>
                 <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.name}/SKILL.md`}
                   target="_blank" rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}

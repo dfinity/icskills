@@ -8,9 +8,10 @@ interface Props {
   skillTitle: string;
   category: string;
   lastUpdated: string;
+  fileCount: number;
 }
 
-export default function SkillHeader({ skillName, skillTitle, category, lastUpdated }: Props) {
+export default function SkillHeader({ skillName, skillTitle, category, lastUpdated, fileCount }: Props) {
   const skillPath = `/.well-known/skills/${skillName}/SKILL.md`;
   const [origin, setOrigin] = useState("");
   useEffect(() => { setOrigin(window.location.origin); }, []);
@@ -111,25 +112,55 @@ export default function SkillHeader({ skillName, skillTitle, category, lastUpdat
             </code>
             <CopyButton text={`npx skills add dfinity/icskills --skill ${skillName}`} />
           </div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: "8px",
-            padding: "12px 16px",
-            background: "var(--bg-code)",
-            border: "1px solid var(--border-default)",
-            borderRadius: "8px",
-          }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
-              raw url:
-            </span>
-            <code style={{
-              flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              minWidth: 0,
-            }}>
-              {rawUrl}
-            </code>
-            <CopyButton text={rawUrl} />
-          </div>
+          {fileCount > 1 ? (
+            <a href={`/.well-known/skills/${skillName}/SKILL.zip`} download
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "12px 16px",
+                background: "var(--bg-code)",
+                border: "1px solid var(--border-default)",
+                borderRadius: "8px",
+                textDecoration: "none",
+              }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                download:
+              </span>
+              <code style={{
+                flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                minWidth: 0,
+              }}>
+                SKILL.zip ({fileCount} files)
+              </code>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2v8M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11" />
+              </svg>
+            </a>
+          ) : (
+            <a href={skillPath} download
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "12px 16px",
+                background: "var(--bg-code)",
+                border: "1px solid var(--border-default)",
+                borderRadius: "8px",
+                textDecoration: "none",
+              }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                download:
+              </span>
+              <code style={{
+                flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                minWidth: 0,
+              }}>
+                SKILL.md
+              </code>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2v8M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11" />
+              </svg>
+            </a>
+          )}
         </div>
       </div>
     </>

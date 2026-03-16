@@ -18,6 +18,7 @@ export interface Skill {
   lastUpdated: string;
   license: string;
   content: string;
+  fileCount: number;
 }
 
 function parseFrontmatter(content: string): Record<string, any> | null {
@@ -228,7 +229,8 @@ export function loadAllSkills(): Skill[] {
   const skills: Skill[] = [];
 
   for (const dir of dirs) {
-    const filePath = join(SKILLS_DIR, dir, "SKILL.md");
+    const skillDir = join(SKILLS_DIR, dir);
+    const filePath = join(skillDir, "SKILL.md");
     const content = readFileSync(filePath, "utf-8");
     const meta = parseFrontmatter(content);
     if (!meta || !meta.name || !meta.title) continue;
@@ -241,6 +243,7 @@ export function loadAllSkills(): Skill[] {
       lastUpdated: getLastUpdated(filePath),
       license: meta.license || "",
       content: extractBody(content),
+      fileCount: collectFiles(skillDir, skillDir).length,
     });
   }
 
