@@ -46,12 +46,6 @@ xml += `  <url>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
-    <loc>${SITE}/llms-full.txt</loc>
-    <lastmod>${latestDate}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
 </urlset>
 `;
 

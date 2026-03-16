@@ -75,7 +75,7 @@ export interface SkillRaw {
 
 /**
  * Load all skills with their raw SKILL.md content (including frontmatter).
- * Used by llms-full.txt to concatenate all skill files.
+ * Used by the discovery RFC endpoint to serve individual SKILL.md files.
  */
 export function loadAllSkillsRaw(): SkillRaw[] {
   const dirs = readdirSync(SKILLS_DIR)

@@ -9,7 +9,7 @@ interface Props {
   canonicalUrl?: string;
   ogTitle?: string;
   ogDescription?: string;
-  activeTab: "browse" | "how-it-works" | "access";
+  activeTab: "browse" | "how-it-works" | "get-started";
   maxWidth?: string;
 }
 
@@ -26,7 +26,7 @@ const {
 const tabs = [
   { id: "browse", label: "browse", href: "/" },
   { id: "how-it-works", label: "how it works", href: "/how-it-works/" },
-  { id: "access", label: "access", href: "/access/" },
+  { id: "get-started", label: "get started", href: "/get-started/" },
 ] as const;
 ---
 

@@ -87,25 +87,49 @@ export default function SkillHeader({ skillName, skillTitle, category, lastUpdat
           </span>
         </div>
 
-        {/* Agent context bar */}
+        {/* Install bar */}
         <div style={{
-          display: "flex", alignItems: "center", gap: "8px",
-          marginBottom: "32px", padding: "12px 16px",
-          background: "var(--bg-code)",
-          border: "1px solid var(--border-default)",
-          borderRadius: "8px",
+          display: "flex", flexDirection: "column", gap: "6px",
+          marginBottom: "32px",
         }}>
-          <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            paste in agent:
-          </span>
-          <code style={{
-            flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            minWidth: 0,
+          <div style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "12px 16px",
+            background: "var(--bg-code)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "8px",
           }}>
-            {rawUrl}
-          </code>
-          <CopyButton text={`${rawUrl}`} />
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+              install:
+            </span>
+            <code style={{
+              flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              minWidth: 0,
+            }}>
+              {`npx skills add dfinity/icskills --skill ${skillName}`}
+            </code>
+            <CopyButton text={`npx skills add dfinity/icskills --skill ${skillName}`} />
+          </div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "12px 16px",
+            background: "var(--bg-code)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "8px",
+          }}>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+              raw url:
+            </span>
+            <code style={{
+              flex: 1, fontSize: "12px", color: "var(--text-tertiary)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              minWidth: 0,
+            }}>
+              {rawUrl}
+            </code>
+            <CopyButton text={rawUrl} />
+          </div>
         </div>
       </div>
     </>

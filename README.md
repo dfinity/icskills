@@ -44,7 +44,7 @@ All skills live in [`skills/*/SKILL.md`](skills/). Each skill is a self-containe
 
 ### Install via CLI
 
-Works with 40+ agents (Claude Code, Cursor, Windsurf, Copilot, and more):
+Works with any agent that supports skills (Claude Code, Cursor, Windsurf, Copilot, and more):
 
 ```bash
 npx skills add dfinity/icskills
@@ -54,10 +54,10 @@ Browse available skills, pick your agent, and install. See [skills.sh](https://s
 
 ### Manual
 
-Fetch the raw skill file and place it wherever your agent reads instructions from:
+Fetch a single skill and place it wherever your agent reads instructions from:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md
+curl -sL https://skills.internetcomputer.org/.well-known/skills/ckbtc/SKILL.md
 ```
 
 The files are plain markdown — paste into any system prompt, rules file, or context window.
@@ -66,14 +66,11 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | Short index with links to each skill |
-| All skills | [`llms-full.txt`](https://skills.internetcomputer.org/llms-full.txt) | All skills concatenated for direct context injection |
-| Single skill | [`skills/{name}/SKILL.md`](https://raw.githubusercontent.com/dfinity/icskills/main/skills/ckbtc/SKILL.md) | Raw markdown from GitHub |
-| Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Cloudflare Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
-| Single skill (API) | `/.well-known/skills/{name}/SKILL.md` | Raw markdown via discovery endpoint |
-| Skill reference file | `/.well-known/skills/{name}/references/{file}.md` | Additional reference files listed in the discovery index |
-| Skill page (HTML) | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page with full SEO |
-| CLI | `npx skills add dfinity/icskills` | Browse and install skills via [skills.sh](https://skills.sh) |
+| Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
+| Single skill | `/.well-known/skills/{name}/SKILL.md` | Raw markdown for one skill |
+| Reference files | `/.well-known/skills/{name}/references/{file}.md` | Additional files listed in the discovery index |
+| Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | All skills with descriptions and discovery links |
+| Skill page | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page for humans |
 
 ## Contributing
 
@@ -84,13 +81,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 ## Tech Stack
 
 - **Site**: [Astro](https://astro.build/) — static site generator, zero JS by default. Interactive islands with [Preact](https://preactjs.com/) (~18kb gzipped total)
-- **Hosting**: GitHub Pages via Actions
+- **Hosting**: IC asset canister at [`skills.internetcomputer.org`](https://skills.internetcomputer.org)
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
 - **Validation**: Structural linter for frontmatter and code blocks (`npm run validate`)
 - **Evaluation**: Per-skill eval cases with LLM-as-judge scoring (`node scripts/evaluate-skills.js <skill>`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 - **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
-- **Skills Discovery**: `llms.txt`, `llms-full.txt`, `.well-known/skills/` ([Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc))
+- **Skills Discovery**: `llms.txt`, `.well-known/skills/` ([Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc))
 
 ## License
 

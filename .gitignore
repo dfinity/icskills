@@ -6,7 +6,6 @@ dist
 *.local
 public/.well-known/skills/
 public/llms.txt
-public/llms-full.txt
 .astro
 .icp/cache/
 lighthouse-*
