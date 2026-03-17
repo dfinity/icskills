@@ -3,6 +3,9 @@ name: canhelp
 description: Display a human-readable summary of a canister's interface given its mainnet canister ID or name. Like --help but for canisters.
 allowed-tools: Bash(./scripts/resolve-canister-id.sh *), Bash(./scripts/fetch-candid.sh *), Read, Grep, Glob
 argument-hint: <canister-id-or-name>
+metadata:
+   title: Canister Help
+   category: Infrastructure
 ---
 
 Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid interface.
@@ -10,7 +13,7 @@ Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid inte
 ## Steps
 
 1. Resolve the canister ID by running the resolve script from the skill's base directory:
-   ```
+   ```bash
    ./scripts/resolve-canister-id.sh $ARGUMENTS
    ```
    If `$ARGUMENTS` is already a valid principal, the script echoes it back.
@@ -19,7 +22,7 @@ Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid inte
    - If there are multiple results, present the list to the user and ask them to pick one before continuing.
 
 2. Fetch the Candid interface using the resolved canister ID:
-   ```
+   ```bash
    ./scripts/fetch-candid.sh <resolved-canister-id>
    ```
    The script outputs the path to the downloaded `.did` file.
