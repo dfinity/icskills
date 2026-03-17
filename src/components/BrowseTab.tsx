@@ -215,7 +215,8 @@ export default function BrowseTab({ skills }: Props) {
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   minWidth: 0,
                 }}>
-                  {installCmd}
+                  <span className="install-cmd-full">{installCmd}</span>
+                  <span className="install-cmd-short" style={{ display: "none" }}>--skill {skill.name}</span>
                 </code>
                 <CopyButton text={installCmd} />
               </div>

@@ -444,6 +444,11 @@ a:focus-visible {
     padding: 0 16px !important;
   }
 
+  .nav-tabs-row a {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+  }
+
   main {
     padding: 20px 16px 48px !important;
   }
@@ -484,8 +489,12 @@ a:focus-visible {
     padding: 16px !important;
   }
 
-  .skill-card .card-agent-url {
+  .install-cmd-full {
     display: none !important;
+  }
+
+  .install-cmd-short {
+    display: inline !important;
   }
 
   .step-grid {
@@ -531,7 +540,7 @@ a:focus-visible {
   }
 
   .endpoint-hint {
-    display: none !important;
+    flex: 1 1 100% !important;
   }
 
   .endpoint-desc {
