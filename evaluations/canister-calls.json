@@ -1,0 +1,131 @@
+{
+  "skill": "canister-calls",
+  "description": "Evaluation cases for the canister-calls skill. Tests whether agents can discover canister interfaces via Candid, use curated workflows for well-known canisters, avoid common pitfalls (wrong IDs, missing fees, incomplete flows), and fall back to generic Candid discovery for unknown canisters.",
+
+  "output_evals": [
+    {
+      "name": "Discover unknown canister API",
+      "prompt": "I found this canister on mainnet: rdmx6-jaaaa-aaaaa-aaadq-cai. I want to call it from my Rust canister but I have no idea what methods it exposes. How do I figure out its API?",
+      "expected_behaviors": [
+        "Suggests fetching the Candid interface via icp canister metadata or equivalent",
+        "Explains how to read the returned .did file (method names, types, query vs update)",
+        "Does NOT hallucinate method names for this canister",
+        "Mentions generating typed Rust bindings from the .did (ic-cdk-bindgen)"
+      ]
+    },
+    {
+      "name": "ICRC-1 token transfer",
+      "prompt": "I need my Motoko canister to send 1 ICP to another principal. Show me the code.",
+      "expected_behaviors": [
+        "Uses the ICP ledger canister ID ryjl3-tyaaa-aaaaa-aaaba-cai",
+        "Uses icrc1_transfer (not the legacy transfer method)",
+        "Fee is 10000 e8s (not 10000 ICP)",
+        "Amount is in e8s (100_000_000 for 1 ICP)",
+        "Account format is { owner: Principal; subaccount: ?Blob }, not AccountIdentifier",
+        "Handles the TransferError variant (not just Ok)"
+      ]
+    },
+    {
+      "name": "ckBTC deposit flow",
+      "prompt": "I'm building a Rust canister that accepts BTC deposits from users. Walk me through the full flow.",
+      "expected_behaviors": [
+        "Uses the correct minter canister ID mqygn-kiaaa-aaaar-qaadq-cai (not the ledger ID)",
+        "Shows the complete flow: get_btc_address -> user sends BTC -> update_balance",
+        "Explicitly mentions that update_balance must be called (minter does not auto-detect deposits)",
+        "Derives per-user subaccounts from the caller's principal (32 bytes, padded)",
+        "Sets owner to the canister's own principal (not the user's principal)"
+      ]
+    },
+    {
+      "name": "ckBTC withdrawal",
+      "prompt": "My canister holds ckBTC for users in subaccounts. A user wants to withdraw 0.001 BTC to their Bitcoin address. How do I implement this in Motoko?",
+      "expected_behaviors": [
+        "Uses the two-step flow: icrc2_approve on ledger, then retrieve_btc_with_approval on minter",
+        "Approve amount includes the fee (amount + 10 satoshis)",
+        "Spender in the approve call is the minter canister",
+        "Mentions the minimum withdrawal amount (50,000 satoshis)",
+        "Handles error variants from both the approve and retrieve calls"
+      ]
+    },
+    {
+      "name": "EVM RPC call with cycles",
+      "prompt": "I want to read the ETH balance of a wallet address from my Motoko canister using the EVM RPC canister. Show me how.",
+      "expected_behaviors": [
+        "Uses the EVM RPC canister ID 7hfb6-caaaa-aaaar-qadga-cai",
+        "Attaches cycles using 'await (with cycles = ...)' syntax (not Cycles.add)",
+        "Handles both #Consistent and #Inconsistent result variants",
+        "Uses #EthMainnet variant for Ethereum L1",
+        "Does NOT forget the null config parameter"
+      ]
+    },
+    {
+      "name": "Adversarial: wrong canister ID",
+      "prompt": "I want to check a user's ckBTC balance. I'll call icrc1_balance_of on mqygn-kiaaa-aaaar-qaadq-cai, right?",
+      "expected_behaviors": [
+        "Corrects the canister ID — mqygn is the minter, not the ledger",
+        "Provides the correct ledger canister ID: mxzaz-hqaaa-aaaar-qaada-cai",
+        "Explains the difference between the minter and ledger canisters"
+      ]
+    },
+    {
+      "name": "Adversarial: missing update_balance",
+      "prompt": "I set up ckBTC deposits. I call get_btc_address, the user sends BTC, and then I show their ckBTC balance. But it always shows 0. What's wrong?",
+      "expected_behaviors": [
+        "Identifies the missing update_balance call as the root cause",
+        "Explains that the minter does not auto-detect BTC deposits",
+        "Shows how to call update_balance with the correct owner and subaccount"
+      ]
+    },
+    {
+      "name": "ICRC-2 approve and transferFrom",
+      "prompt": "I'm building a marketplace canister in Rust. When a buyer purchases an item, my canister needs to transfer ICP from the buyer to the seller. How do I do this without the buyer calling my canister with the tokens directly?",
+      "expected_behaviors": [
+        "Explains the ICRC-2 approve/transferFrom flow",
+        "Buyer calls icrc2_approve on the ledger to authorize the marketplace canister",
+        "Marketplace calls icrc2_transfer_from to move tokens from buyer to seller",
+        "Uses correct ICP ledger canister ID",
+        "Mentions that approve must happen before transferFrom",
+        "Handles InsufficientAllowance error variant"
+      ]
+    },
+    {
+      "name": "Call canister from frontend",
+      "prompt": "I have a canister deployed on mainnet and I want to call its methods from my TypeScript frontend. How do I generate the bindings and set up the actor?",
+      "expected_behaviors": [
+        "Recommends @icp-sdk/bindgen for generating TypeScript bindings",
+        "Mentions @icp-sdk/core for the runtime actor",
+        "Does NOT suggest dfx generate"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I call a canister I found on the dashboard?",
+      "Send ICP tokens from my canister to another principal",
+      "I want to accept BTC deposits in my dapp using ckBTC",
+      "Read an ERC-20 balance from my IC canister",
+      "What's the Candid interface of this canister?",
+      "How do I do icrc2_approve and transferFrom?",
+      "My ckBTC balance shows 0 after sending BTC to the deposit address",
+      "Call the EVM RPC canister from Motoko",
+      "I need to interact with a canister but I don't know its API",
+      "Transfer ckETH from my canister",
+      "How do I generate TypeScript bindings for a canister?",
+      "Withdraw ckBTC back to a Bitcoin address"
+    ],
+    "should_not_trigger": [
+      "Make an HTTP request to an external API from my canister",
+      "How do I deploy my canister to mainnet?",
+      "Add access control to my canister methods",
+      "How does stable memory work for canister upgrades?",
+      "Set up Internet Identity login for my frontend",
+      "How do I handle inter-canister call failures safely?",
+      "Configure my icp.yaml for a Rust canister",
+      "What's the best way to store large files on IC?",
+      "How do I set up a custom domain for my frontend?",
+      "Monitor my canister's cycle balance"
+    ]
+  }
+}
