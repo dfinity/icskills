@@ -28,7 +28,9 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Mistakes That Break Your Build
 
-1. **Using the wrong II URL for the environment.** Local development must point to `http://<local-ii-canister-id>.localhost:8000` (this canister ID may be different from mainnet). Mainnet must use `https://id.ai`. Hardcoding one breaks the other. The local II canister ID is assigned dynamically when you run `icp deploy internet_identity` -- read it from the `ic_env` cookie using `safeGetCanisterEnv` from `@icp-sdk/core/agent/canister-env` (see the icp-cli skill for details on canister environment variables).
+1. **Using the wrong II URL for the environment.** Local development must point to `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8000`. Mainnet must use `https://id.ai`. Internet Identity has a well-known canister ID (`rdmx6-jaaaa-aaaaa-aaadq-cai`) that is the same on mainnet and local replicas -- hardcode it rather than doing a dynamic lookup.
+
+2. **`fetch` Illegal Invocation in bundled builds.** Always pass `fetch: window.fetch.bind(window)` to `HttpAgent.create()`. Without explicit binding, bundlers (Vite, webpack) extract `fetch` from `window` and call it without the correct `this` context, causing "Illegal invocation" at runtime.
 
 3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
@@ -85,20 +87,13 @@ import { HttpAgent, Actor } from "@icp-sdk/core/agent";
 const authClient = await AuthClient.create();
 
 // 2. Determine II URL based on environment
-// The local II canister gets a different canister ID each time you deploy it.
-// Pass it via an environment variable at build time (e.g., Vite: import.meta.env.VITE_II_CANISTER_ID).
+// Internet Identity has a well-known canister ID (rdmx6-jaaaa-aaaaa-aaadq-cai) that is
+// the same on mainnet and local replicas (icp-cli pulls the mainnet II wasm).
 function getIdentityProviderUrl() {
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
   if (isLocal) {
-    // icp-cli injects canister IDs via the ic_env cookie (set by the asset canister).
-    // Read it at runtime using @icp-sdk/core:
-    //   import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
-    //   const canisterEnv = safeGetCanisterEnv();
-    //   const iiCanisterId = canisterEnv?.["PUBLIC_CANISTER_ID:internet_identity"];
-    const iiCanisterId = canisterEnv?.["PUBLIC_CANISTER_ID:internet_identity"]
-      ?? "be2us-64aaa-aaaaa-qaabq-cai"; // fallback -- replace with your actual local II canister ID
-    return `http://${iiCanisterId}.localhost:8000`;
+    return "http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8000";
   }
   return "https://id.ai";
 }
@@ -132,6 +127,7 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   const agent = await HttpAgent.create({
     identity,
     host: isLocal ? "http://localhost:8000" : "https://icp-api.io",
+    fetch: window.fetch.bind(window), // required -- prevents "Illegal invocation" in bundled builds
     ...(isLocal && { shouldFetchRootKey: true, verifyQuerySignatures: false }),
   });
 
