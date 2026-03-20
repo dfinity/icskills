@@ -9,8 +9,8 @@ interface Props {
   canonicalUrl?: string;
   ogTitle?: string;
   ogDescription?: string;
+  jsonLd?: string;
   activeTab: "browse" | "how-it-works" | "get-started";
-  maxWidth?: string;
 }
 
 const {
@@ -19,8 +19,8 @@ const {
   canonicalUrl,
   ogTitle,
   ogDescription,
+  jsonLd,
   activeTab,
-  maxWidth = "1200px",
 } = Astro.props;
 
 const tabs = [
@@ -30,7 +30,7 @@ const tabs = [
 ] as const;
 ---
 
-<BaseLayout title={title} description={description} canonicalUrl={canonicalUrl} ogTitle={ogTitle} ogDescription={ogDescription}>
+<BaseLayout title={title} description={description} canonicalUrl={canonicalUrl} ogTitle={ogTitle} ogDescription={ogDescription} jsonLd={jsonLd}>
   <div style="min-height:100vh;background:var(--bg-page);color:var(--text-body);font-family:'Inter',system-ui,sans-serif;position:relative;overflow:hidden;">
     <!-- Grid background -->
     <div style="position:fixed;inset:0;opacity:var(--grid-opacity);background-image:linear-gradient(var(--border-subtle) 1px,transparent 1px),linear-gradient(90deg,var(--border-subtle) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;"></div>
@@ -68,7 +68,7 @@ const tabs = [
 
     <!-- Main content -->
     <main style={`position:relative;z-index:10;padding:32px 32px 0;`}>
-      <div style={`max-width:${maxWidth};margin:0 auto;`}>
+      <div style="max-width:1200px;margin:0 auto;">
       <slot />
       </div>
     </main>
