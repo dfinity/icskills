@@ -10,7 +10,7 @@ interface Props {
 
 export default function BrowseTab({ skills }: Props) {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
   useEffect(() => { setOrigin(window.location.origin); }, []);
 
@@ -19,13 +19,13 @@ export default function BrowseTab({ skills }: Props) {
     [skills]
   );
   const filtered = useMemo(() => {
-    const query = searchQuery.toLowerCase();
     return skills.filter((s) => {
-      const matchCat = activeCategory === "All" || s.category === activeCategory;
-      const matchSearch = s.title.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
-      return matchCat && matchSearch;
+      return activeCategory === "All" || s.category === activeCategory;
     });
-  }, [searchQuery, activeCategory, skills]);
+  }, [activeCategory, skills]);
+
+  const siteOrigin = origin || "https://skills.internetcomputer.org";
+  const prompt = `Fetch ${siteOrigin}/llms.txt and follow its instructions when building on ICP`;
 
   return (
     <>
@@ -36,53 +36,44 @@ export default function BrowseTab({ skills }: Props) {
           lineHeight: 1.1, margin: "0 0 16px 0",
           letterSpacing: "-2px", color: "var(--text-primary)",
         }}>
-          ICP skills for agents that write code
+          ICP skills for agents that write code.
         </h1>
         <p style={{
           fontSize: "15px", color: "var(--text-tertiary)", maxWidth: "560px",
-          lineHeight: 1.6, margin: 0, fontFamily: SANS_FONT,
+          lineHeight: 1.6, margin: "0 0 20px 0", fontFamily: SANS_FONT,
         }}>
           Build using sovereign software on an onchain open cloud that's tamperproof,
           unstoppable, and can process digital assets and payments
         </p>
-      </div>
-
-      {/* Search */}
-      <div style={{
-        display: "flex", gap: "12px", marginBottom: "24px",
-        flexWrap: "wrap", alignItems: "center",
-      }}>
-        <div style={{ position: "relative", flex: "1 1 300px" }}>
-          <span style={{
-            position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)",
-            color: "var(--text-faint)", fontSize: "14px",
-          }}>{"\u2315"}</span>
-          <input
-            type="text"
-            placeholder="Search skills..."
-            aria-label="Search skills"
-            value={searchQuery}
-            onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
-            style={{
-              width: "100%", padding: "12px 16px 12px 38px",
-              background: "var(--bg-input)",
-              border: "1px solid var(--border-strong)",
-              borderRadius: "8px", color: "var(--text-body)",
-              fontSize: "15px", outline: "none",
-              fontFamily: "inherit", boxSizing: "border-box",
-            }}
-          />
-        </div>
-        <div className="endpoint-hint" style={{
-          padding: "10px 16px",
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-default)",
-          borderRadius: "8px", fontSize: "13px", color: "var(--text-secondary)",
-          whiteSpace: "nowrap",
-          display: "flex", alignItems: "center", gap: "8px",
-        }}>
-          <code style={{ fontSize: "13px", color: "var(--text-secondary)" }}>npx skills add dfinity/icskills</code>
-          <CopyButton text="npx skills add dfinity/icskills" />
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={() => {
+            navigator.clipboard.writeText(prompt).catch(() => {});
+            setCopied(true);
+            setTimeout(() => setCopied(false), 3000);
+          }} className="copy-prompt-btn" style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "10px 20px", borderRadius: "8px",
+            background: copied ? "rgba(var(--green-rgb),0.1)" : "var(--bg-input)",
+            border: `1px solid ${copied ? "rgba(var(--green-rgb),0.2)" : "var(--border-strong)"}`,
+            color: copied ? "var(--green)" : "var(--text-primary)",
+            cursor: "pointer", fontSize: "14px", fontWeight: 600,
+            fontFamily: SANS_FONT,
+            transition: "all 0.15s ease",
+          }}>
+            {copied ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+            )}
+            <span style={{ display: "grid" }}>
+              <span style={{ gridArea: "1/1", visibility: copied ? "visible" : "hidden" }}>Now paste into your agent</span>
+              <span style={{ gridArea: "1/1", visibility: copied ? "hidden" : "visible" }}>Give your agent ICP skills</span>
+            </span>
+          </button>
+          <a href="/get-started/" style={{
+            fontSize: "14px", color: "var(--text-muted)",
+            textDecoration: "none", fontFamily: SANS_FONT,
+          }}>Get Started →</a>
         </div>
       </div>
 
@@ -111,7 +102,6 @@ export default function BrowseTab({ skills }: Props) {
         gap: "16px",
       }}>
         {filtered.map((skill) => {
-          const installCmd = `npx skills add dfinity/icskills --skill ${skill.name}`;
           return (
             <div
               key={skill.name}
@@ -128,6 +118,7 @@ export default function BrowseTab({ skills }: Props) {
                 cursor: "pointer",
                 color: "inherit",
                 display: "block",
+                overflow: "hidden",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
@@ -187,39 +178,16 @@ export default function BrowseTab({ skills }: Props) {
               <p style={{
                 fontSize: "14px", color: "var(--text-dim)", lineHeight: 1.6,
                 margin: "0 0 16px 0", fontFamily: SANS_FONT,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
               }}>{skill.description}</p>
 
               <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                 updated {skill.lastUpdated}
               </div>
 
-              <div
-                className="card-agent-url"
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  marginTop: "12px", paddingTop: "12px",
-                  borderTop: "1px solid var(--border-subtle)",
-                  display: "flex", alignItems: "center", gap: "8px",
-                  cursor: "default",
-                }}>
-                <div style={{
-                  fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", flexShrink: 0,
-                }}>
-                  install:
-                </div>
-                <code style={{
-                  flex: 1, padding: "6px 10px",
-                  background: "var(--bg-code)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "4px", fontSize: "11px", color: "var(--text-tertiary)",
-                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}>
-                  <span className="install-cmd-full">{installCmd}</span>
-                  <span className="install-cmd-short" style={{ display: "none" }}>--skill {skill.name}</span>
-                </code>
-                <CopyButton text={installCmd} />
-              </div>
             </div>
           );
         })}

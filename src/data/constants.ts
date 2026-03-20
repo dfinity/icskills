@@ -12,7 +12,7 @@ export const FRAMEWORKS = [
   { name: "Claude Code", note: "SKILL.md files", color: "#D97757" },
   { name: "OpenCode", note: "Remote instructions", color: "#00DC82" },
   { name: "OpenClaw", note: "Skills marketplace", color: "#EF4444" },
-  { name: "skills.sh", note: "npx skills add", color: "#fbbf24" },
+  { name: "skills.sh", note: "Skills registry", color: "#fbbf24" },
 ];
 
 export const FW_LIGHT_COLORS: Record<string, string> = {

@@ -27,13 +27,15 @@ const frameworksWithVars = FRAMEWORKS.map((fw, i) => ({
   svg: FRAMEWORK_SVGS[fw.name] || "",
 }));
 
+const agentPrompt = `Fetch ${SITE_URL}/llms.txt and follow its instructions when building on ICP`;
+
 const steps = [
   { num: "01", title: "Without skills",
     code: '"Add ckBTC payments to my app"',
     desc: "The agent hallucinates parameters, misses the transfer fee, and skips deposit subaccounts. The canister traps on first call." },
-  { num: "02", title: "One command",
-    code: "npx skills add dfinity/icskills",
-    desc: "Installs IC skills directly into your agent. Correct code, exact fees, and the pitfalls that break first deploys." },
+  { num: "02", title: "One prompt",
+    code: agentPrompt,
+    desc: "Paste into your coding agent. It discovers the skills index, fetches what it needs, and builds with accurate context." },
   { num: "03", title: "With skills",
     code: "Same prompt. Working code.",
     desc: "The agent builds with accurate context, handles edge cases, and runs its own verification checks. First deploy, no surprises." },
@@ -57,7 +59,6 @@ const anatomy = [
   description="How agent-readable skill files prevent hallucinations and enable AI agents to build on the Internet Computer correctly."
   canonicalUrl={`${SITE_URL}/how-it-works/`}
   activeTab="how-it-works"
-  maxWidth="1200px"
 >
   <!-- Hero -->
   <div style="margin-bottom:48px;">
@@ -76,7 +77,7 @@ const anatomy = [
         <div style="font-size:48px;font-weight:900;color:var(--text-primary);opacity:0.06;position:absolute;top:16px;right:16px;line-height:1;">{num}</div>
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Step {num}</div>
         <div style="font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px;margin-bottom:8px;">{title}</div>
-        <code style="display:inline-block;padding:4px 10px;background:var(--bg-code);border-radius:4px;font-size:11px;color:var(--text-secondary);margin-bottom:12px;">{code}</code>
+        <code style="display:block;padding:8px 10px;background:var(--bg-code);border-radius:4px;font-size:11px;color:var(--text-secondary);margin-bottom:12px;overflow-wrap:break-word;">{code}</code>
         <p style="font-size:14px;color:var(--text-faint);line-height:1.6;margin:0;font-family:'Inter',system-ui,sans-serif;">{desc}</p>
       </div>
     ))}
@@ -114,10 +115,10 @@ const anatomy = [
         <span style="margin-left:8px;font-size:11px;color:var(--text-faint);">terminal</span>
       </div>
       <pre style="padding:24px;background:var(--bg-code-deep);font-size:12px;line-height:1.8;color:var(--text-tertiary);overflow:auto;margin:0;white-space:pre-wrap;">
-<span style="color:var(--text-faint);"># Install IC skills into your agent</span>
-<span style="color:var(--accent-blue);">npx skills add dfinity/icskills</span>
+<span style="color:var(--text-faint);"># Paste this into your coding agent:</span>
+<span style="color:var(--accent-blue);">{agentPrompt}</span>
 
-<span style="color:var(--text-faint);"># Or fetch a single skill for manual context injection</span>
+<span style="color:var(--text-faint);"># Or fetch a single skill directly:</span>
 <span style="color:var(--accent-blue);">curl -sL {SITE_URL}/.well-known/skills/ckbtc/SKILL.md</span>
 
 <span style="color:var(--text-secondary);"># Agent now knows:</span>
@@ -146,10 +147,10 @@ const anatomy = [
   <!-- Bottom CTA -->
   <div style="text-align:center;padding:clamp(24px,6vw,48px) clamp(16px,4vw,32px);background:var(--gradient-cta);border-radius:16px;border:1px solid var(--border-default);">
     <div style="font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;">Give your agent the context it needs.</div>
-    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Every IC integration, one command away. Works with any agent or framework.</p>
-    <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg-code);border:1px solid var(--border-default);border-radius:8px;">
-      <code style="font-size:14px;color:var(--text-secondary);">npx skills add dfinity/icskills</code>
-      <CopyButton client:load text="npx skills add dfinity/icskills" />
+    <p style="font-size:14px;color:var(--text-faint);margin:0 0 24px 0;font-family:'Inter',system-ui,sans-serif;">Every IC integration, one prompt away. Works with any agent or framework.</p>
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg-code);border:1px solid var(--border-default);border-radius:8px;max-width:100%;text-align:left;">
+      <code style="font-size:13px;color:var(--text-secondary);line-height:1.5;overflow-wrap:break-word;word-break:break-all;">{agentPrompt}</code>
+      <CopyButton client:load text={agentPrompt} />
     </div>
   </div>
 </SiteLayout>
