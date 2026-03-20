@@ -1,14 +1,11 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
 
-* @JoshDFN @marc0olo @raymondk
+* @dfinity/sdk
 
 # Infra & build
-/.github/                        @JoshDFN @marc0olo @raymondk
-/.claude/                        @JoshDFN @marc0olo @raymondk
-/scripts/                        @JoshDFN @marc0olo @raymondk
-/src/                            @JoshDFN @marc0olo @raymondk
-package.json                     @JoshDFN @marc0olo @raymondk
+/.github/                        @dfinity/sdk
+/.claude/                        @dfinity/sdk
 
 # Skill files — domain experts
 /skills/icp-cli/                 @dfinity/sdk
@@ -29,4 +26,4 @@ package.json                     @JoshDFN @marc0olo @raymondk
 /skills/ic-dashboard/            @jp-dfinity
 
 # Temporary override while we clean up the file structure
-* @JoshDFN @marc0olo @raymondk
+* @dfinity/sdk
