@@ -16,7 +16,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- `@icp-sdk/canisters` npm package (for programmatic uploads)
+- `@icp-sdk/canisters` (>= 3.5.0), `@icp-sdk/core` (>= 5.0.0) — for programmatic uploads
 
 ## Canister IDs
 
@@ -31,11 +31,11 @@ Access patterns:
 
 ## Mistakes That Break Your Build
 
-1. **Wrong `source` path in icp.yaml.** The `source` array must point to the directory containing your build output. If you use Vite, that is `"dist"`. If you use Next.js export, it is `"out"`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
+1. **Wrong `dir` path in icp.yaml.** The `configuration.dir` field must point to the directory containing your build output. If you use Vite, that is `dist`. If you use Next.js export, it is `out`. If the path does not exist at deploy time, `icp deploy` fails silently or deploys an empty canister.
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Forgetting to build before deploy.** `icp deploy` runs the `build` command from icp.yaml, but if it is empty or misconfigured, the `source` directory will be stale or empty.
+3. **Missing or misconfigured `build` in the recipe.** If `configuration.build` is specified, `icp deploy` runs those commands automatically before uploading the `dir` contents. If `build` is omitted, you must run your build command (e.g., `npm run build`) manually before deploying — otherwise the `dir` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
@@ -43,7 +43,9 @@ Access patterns:
 
 6. **Exceeding canister storage limits.** The asset canister uses stable memory, which can hold well over 4GB. However, individual assets are limited by the 2MB ingress message size (the asset manager in `@icp-sdk/canisters` handles chunking automatically for uploads >1.9MB). The practical concern is total cycle cost for storage -- large media files (videos, datasets) become expensive. Use a dedicated storage solution for large files.
 
-7. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
+7. **Pinning the asset canister Wasm version below `0.30.2`.** The `ic_env` cookie (used by `safeGetCanisterEnv()` from `@icp-sdk/core` to read canister IDs and the root key at runtime) is only served by asset canister Wasm versions >= `0.30.2`. The Wasm version is set via `configuration.version` in the recipe, independently of the recipe version itself. If you pin an older Wasm version, the cookie is silently missing and frontend code relying on `ic_env` will fail. Either omit `configuration.version` (latest is used) or pin to `0.30.2` or later.
+
+8. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
 
 ## Implementation
 
@@ -59,11 +61,6 @@ canisters:
         build:
           - npm install
           - npm run build
-  - name: backend
-    recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: src/backend/main.mo
 ```
 
 Key fields:
@@ -73,7 +70,7 @@ Key fields:
 
 ### SPA Routing and Default Headers: `.ic-assets.json5`
 
-Create this file in your `source` directory (e.g., `dist/.ic-assets.json5`) or project root. For it to be included in the asset canister, it must end up in the `source` directory at deploy time.
+Create this file in your `dir` directory (e.g., `dist/.ic-assets.json5`) or project root. For it to be included in the asset canister, it must end up in the `dir` directory at deploy time.
 
 Recommended approach: place the file in your `public/` or `static/` folder so your build tool copies it into `dist/` automatically.
 
@@ -127,7 +124,7 @@ icp canister call frontend http_request '(record {
 
 To serve your asset canister from a custom domain:
 
-1. Create a file `.well-known/ic-domains` in your `source` directory containing your domain:
+1. Create a file `.well-known/ic-domains` in your `dir` directory containing your domain:
 ```text
 yourdomain.com
 www.yourdomain.com
@@ -145,9 +142,20 @@ _acme-challenge.yourdomain.com.  CNAME  _acme-challenge.<your-canister-id>.icp2.
 _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
 ```
 
-3. Deploy your canister so the `.well-known/ic-domains` file is available, then register the custom domain with the boundary nodes. Registration is automatic -- the boundary nodes periodically check for the `.well-known/ic-domains` file and the DNS records. No NNS proposal is needed.
+3. Deploy your canister so the `.well-known/ic-domains` file is available.
 
-4. Wait for the boundary nodes to pick up the registration and provision the TLS certificate. This typically takes a few minutes. You can verify by visiting `https://yourdomain.com` once DNS has propagated.
+4. Validate that DNS records and canister ownership are correct:
+```bash
+curl -sL -X GET https://icp0.io/custom-domains/v1/yourdomain.com/validate | jq
+# Expected: { "status": "success", "message": "Domain is eligible for registration: DNS records are valid and canister ownership is verified", ... }
+```
+
+5. Register the domain with the boundary nodes (required — registration is NOT automatic):
+```bash
+curl -sL -X POST https://icp0.io/custom-domains/v1/yourdomain.com | jq
+```
+
+6. Wait for the boundary nodes to provision the TLS certificate. This typically takes a few minutes. Verify by visiting `https://yourdomain.com` once DNS has propagated.
 
 ### Programmatic Uploads with @icp-sdk/canisters
 
@@ -156,50 +164,57 @@ For uploading files from code (not just via `icp deploy`):
 ```javascript
 import { AssetManager } from "@icp-sdk/canisters/assets"; // Asset management utility
 import { HttpAgent } from "@icp-sdk/core/agent";
+import { readFileSync, readdirSync } from "fs";
 
 // SECURITY: shouldFetchRootKey fetches the root public key from the replica at
 // runtime. In production the root key is hardcoded and trusted. Fetching it at
 // runtime lets a man-in-the-middle supply a fake key and forge certified responses.
 // NEVER set shouldFetchRootKey to true when host points to mainnet.
+// NOTE: This script runs in Node.js where the ic_env cookie is not available.
+// For browser frontends, use rootKey from safeGetCanisterEnv() instead (see
+// the internet-identity skill or icp-cli/references/binding-generation.md).
 const LOCAL_REPLICA = "http://localhost:8000";
 const MAINNET = "https://ic0.app";
 const host = LOCAL_REPLICA; // Change to MAINNET for production
 
-const agent = await HttpAgent.create({
-  host,
-  // Only fetch the root key when talking to a local replica.
-  // Setting this to true against mainnet is a security vulnerability.
-  shouldFetchRootKey: host === LOCAL_REPLICA,
-});
+async function manageAssets() {
+  const agent = await HttpAgent.create({
+    host,
+    // Only fetch the root key when talking to a local replica.
+    // Setting this to true against mainnet is a security vulnerability.
+    shouldFetchRootKey: host === LOCAL_REPLICA,
+  });
 
-const assetManager = new AssetManager({
-  canisterId: "your-asset-canister-id",
-  agent,
-});
+  const assetManager = new AssetManager({
+    canisterId: "your-asset-canister-id",
+    agent,
+  });
 
-// Upload a single file
-// Files >1.9MB are automatically chunked (16 parallel chunks)
-const key = await assetManager.store(fileBuffer, {
-  fileName: "photo.jpg",
-  contentType: "image/jpeg",
-  path: "/uploads",
-});
-console.log("Uploaded to:", key); // "/uploads/photo.jpg"
+  // Upload a single file
+  // Files >1.9MB are automatically chunked (16 parallel chunks)
+  const key = await assetManager.store(fileBuffer, {
+    fileName: "photo.jpg",
+    contentType: "image/jpeg",
+    path: "/uploads",
+  });
+  console.log("Uploaded to:", key); // "/uploads/photo.jpg"
 
-// List all assets
-const assets = await assetManager.list();
-console.log(assets); // [{ key: "/index.html", content_type: "text/html", ... }, ...]
+  // List all assets
+  const assets = await assetManager.list();
+  console.log(assets); // [{ key: "/index.html", content_type: "text/html", ... }, ...]
 
-// Delete an asset
-await assetManager.delete("/uploads/old-photo.jpg");
+  // Delete an asset
+  await assetManager.delete("/uploads/old-photo.jpg");
 
-// Batch upload a directory
-import { readFileSync, readdirSync } from "fs";
-const files = readdirSync("./dist");
-for (const file of files) {
-  const content = readFileSync(`./dist/${file}`);
-  await assetManager.store(content, { fileName: file, path: "/" });
+  // Batch upload a directory
+  const files = readdirSync("./dist");
+  for (const file of files) {
+    const content = readFileSync(`./dist/${file}`);
+    await assetManager.store(content, { fileName: file, path: "/" });
+  }
 }
+
+manageAssets();
 ```
 
 ### Authorization for Uploads

@@ -1,0 +1,66 @@
+{
+  "skill": "asset-canister",
+  "description": "Evaluation cases for the asset-canister skill. Tests whether agents produce correct asset canister configuration, avoid top-level await in programmatic upload code, and handle SPA routing.",
+
+  "output_evals": [
+    {
+      "name": "Programmatic asset upload",
+      "prompt": "Show me a Node.js script to create an HttpAgent and AssetManager, then upload a single file to my asset canister on the local replica. Keep it minimal — no icp.yaml, no deploy steps.",
+      "expected_behaviors": [
+        "Uses HttpAgent.create() with shouldFetchRootKey for local development",
+        "Creates an AssetManager with the agent and a canisterId",
+        "Shows assetManager.store() for uploading a file",
+        "Warns about shouldFetchRootKey being unsafe on mainnet"
+      ]
+    },
+    {
+      "name": "SPA routing configuration",
+      "prompt": "My single-page app returns 404 when I refresh on a deep route like /dashboard/settings. How do I fix this on the IC?",
+      "expected_behaviors": [
+        "Shows .ic-assets.json5 configuration with a fallback rule",
+        "The fallback redirects to /index.html for SPA routing",
+        "Mentions the match pattern for catching unmatched routes",
+        "Does NOT suggest server-side redirect rules or nginx config"
+      ]
+    },
+    {
+      "name": "Asset canister recipe setup",
+      "prompt": "Show me the icp.yaml configuration for a frontend asset canister with a Vite build step. Just the YAML and the deploy command, no .ic-assets.json5 or programmatic upload code.",
+      "expected_behaviors": [
+        "Shows icp.yaml with @dfinity/asset-canister recipe and version pin",
+        "Includes build commands (npm install, npm run build)",
+        "Specifies the output directory (e.g., dir: dist)",
+        "Uses icp deploy commands, NOT dfx deploy"
+      ]
+    },
+    {
+      "name": "Security: shouldFetchRootKey in Node.js scripts",
+      "prompt": "I'm writing a Node.js script to upload files to my asset canister using HttpAgent and AssetManager. What should I set for shouldFetchRootKey and host in local vs production? Just the relevant code snippet.",
+      "expected_behaviors": [
+        "Sets shouldFetchRootKey to true ONLY for local development",
+        "Explicitly warns that shouldFetchRootKey on mainnet is a security vulnerability",
+        "Uses different host values for local (localhost:8000) vs mainnet (ic0.app or icp-api.io)"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I deploy a frontend on the IC?",
+      "Set up an asset canister for my React app",
+      "My SPA routing doesn't work on the IC",
+      "How do I upload files to an asset canister programmatically?",
+      "Configure .ic-assets.json5 for my project",
+      "How does the asset canister handle content encoding?"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login",
+      "How do I make inter-canister calls?",
+      "Set up stable memory in Motoko",
+      "Connect a wallet to my dapp",
+      "How do I create an ICRC-1 token?",
+      "Deploy a Rust backend canister"
+    ]
+  }
+}
