@@ -133,7 +133,26 @@ Create `evaluations/<skill-name>.json` with test cases that verify the skill wor
 - **`output_evals`** — realistic prompts with expected behaviors a judge can check
 - **`trigger_evals`** — queries that should/shouldn't activate the skill
 
-See `evaluations/icp-cli.json` for a working example. Write prompts the way a developer would actually ask — vague and incomplete, not over-specified test questions. Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
+See `evaluations/icp-cli.json` for a working example. Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
+
+#### Writing eval prompts
+
+Eval prompts run through the `claude` CLI with a 120-second timeout. Open-ended prompts cause the model to generate long responses (full tutorials, backend code, deploy steps) that exceed this limit. Focus each prompt on one thing:
+
+- **Scope the response explicitly** — say what you want ("just the function", "just the YAML snippet") and what to exclude ("no backend code, no deploy steps")
+- **Ask for one thing** — "What URL should I use for the local identityProvider?" runs faster than "How do I set up II locally?"
+- **Match expected behaviors to the prompt** — don't expect the model to volunteer information the prompt doesn't ask for. If you ask about local URLs, don't fail the eval for missing the mainnet URL
+- **Test before committing** — run the eval and verify it completes within the timeout
+
+```
+# Bad — open-ended, will generate full tutorial and likely timeout
+"Show me how to add Internet Identity login to my Vite frontend app."
+
+# Good — scoped, excludes irrelevant content
+"Show me just the JavaScript module that initializes AuthClient and checks
+if the user is already authenticated. Keep it minimal — no backend code,
+no icp.yaml, no deploy steps."
+```
 
 **Running evaluations** (optional, requires `claude` CLI):
 
