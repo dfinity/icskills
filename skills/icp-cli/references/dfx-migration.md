@@ -28,7 +28,7 @@ Since `@icp-sdk/bindgen` generates code that depends on `@icp-sdk/core`, project
 
 Steps:
 1. `npm uninstall @dfinity/agent @dfinity/candid @dfinity/principal vite-plugin-environment`
-2. `npm install @icp-sdk/core @icp-sdk/bindgen`
+2. `npm install @icp-sdk/core@^5.0.0 @icp-sdk/bindgen@^0.2.0`
 3. Delete `src/declarations/` (dfx-generated bindings)
 4. Add `**/src/bindings/` to `.gitignore`
 5. Commit the `.did` file(s) used by bindgen
