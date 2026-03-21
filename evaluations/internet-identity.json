@@ -1,0 +1,84 @@
+{
+  "skill": "internet-identity",
+  "description": "Evaluation cases for the internet-identity skill. Tests whether agents produce correct II auth integration code, avoid top-level await, and handle local vs mainnet environments correctly.",
+
+  "output_evals": [
+    {
+      "name": "No top-level await in frontend code",
+      "prompt": "Show me just the JavaScript module that initializes AuthClient and checks if the user is already authenticated on page load. I'm using Vite with default settings. Keep it minimal — no backend code, no icp.yaml, no deploy steps.",
+      "expected_behaviors": [
+        "All await calls are inside async functions — no bare top-level await at module scope",
+        "Does NOT recommend changing build.target to 'esnext' or 'es2022' in Vite config",
+        "Uses AuthClient from '@icp-sdk/auth/client' (submodule import, not root '@icp-sdk/auth')",
+        "Shows an initialization pattern like async function init() or equivalent lifecycle hook"
+      ]
+    },
+    {
+      "name": "Local II URL",
+      "prompt": "My Internet Identity login works on mainnet but fails locally — the popup never opens. What URL should I use for the local identityProvider? Just the URL and a one-line explanation.",
+      "expected_behaviors": [
+        "Local URL uses the well-known II canister ID: http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8000",
+        "Does NOT suggest dynamic lookup via ic_env cookie, environment variables, or dfx commands for the II canister ID — it is a well-known, hardcoded ID"
+      ]
+    },
+    {
+      "name": "icp.yaml configuration for II",
+      "prompt": "What do I need to add to my icp.yaml to enable Internet Identity on the local network? Just show the relevant YAML snippet.",
+      "expected_behaviors": [
+        "Shows icp.yaml with networks config including ii: true",
+        "Uses 'icp' tooling references, NOT 'dfx'",
+        "Does NOT suggest deploying II as a named canister — ii: true handles it automatically"
+      ]
+    },
+    {
+      "name": "Authenticated actor creation",
+      "prompt": "I already have AuthClient set up and login working. Show me just the function that takes an identity and creates an authenticated actor for my backend canister. Keep it minimal — just the function, no AuthClient setup.",
+      "expected_behaviors": [
+        "Gets the identity from authClient.getIdentity()",
+        "Creates an HttpAgent with the identity",
+        "Creates an actor using Actor.createActor with the agent",
+        "All await calls are inside async functions — no bare top-level await",
+        "Uses rootKey from ic_env cookie (safeGetCanisterEnv) or host: window.location.origin — does NOT use shouldFetchRootKey or hardcoded host branching"
+      ]
+    },
+    {
+      "name": "Debugging anonymous principal after login",
+      "prompt": "After II login, my backend says 'Anonymous principal not allowed' and the console shows principal 2vxsx-fae. What does that mean and what should I check? Keep it brief.",
+      "expected_behaviors": [
+        "Identifies 2vxsx-fae as the anonymous principal",
+        "Explains that authentication silently failed or the identity was not properly extracted",
+        "Suggests checking that authClient.getIdentity() is called after login and passed to HttpAgent"
+      ]
+    },
+    {
+      "name": "Adversarial: build target suggestion",
+      "prompt": "I'm getting 'Top-level await is not available in the configured target environment' when building my Vite frontend with II auth. How do I fix this?",
+      "expected_behaviors": [
+        "Does NOT recommend build.target: 'esnext' as the fix",
+        "Recommends wrapping await calls inside async functions",
+        "Explains that top-level await requires ES2022+ and Vite defaults to es2020",
+        "Shows a concrete example of wrapping the auth initialization in an async function"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Add login to my ICP frontend app",
+      "How do I integrate Internet Identity?",
+      "I need passkey authentication for my dapp",
+      "Set up sign-in with Internet Identity",
+      "How does delegation work with II?",
+      "Add auth to my canister frontend"
+    ],
+    "should_not_trigger": [
+      "Connect a wallet to my dapp",
+      "How do I deploy my canister?",
+      "Implement ICRC-1 token transfers",
+      "Set up inter-canister calls",
+      "How does stable memory work?",
+      "Add a frontend to my canister"
+    ]
+  }
+}
