@@ -133,10 +133,10 @@ www.yourdomain.com
 2. Add DNS records:
 ```text
 # CNAME record pointing to boundary nodes
-yourdomain.com.  CNAME  icp1.io.
+yourdomain.com.  CNAME  yourdomain.com.icp1.io.
 
 # ACME challenge record for TLS certificate provisioning
-_acme-challenge.yourdomain.com.  CNAME  _acme-challenge.<your-canister-id>.icp2.io.
+_acme-challenge.yourdomain.com.  CNAME  _acme-challenge.yourdomain.com.icp2.io.
 
 # Canister ID TXT record for verification
 _canister-id.yourdomain.com.  TXT  "<your-canister-id>"
