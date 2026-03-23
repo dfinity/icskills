@@ -9,10 +9,10 @@ export const GET: APIRoute = () => {
 
 ## How to use
 
-Before writing any ICP code, fetch the skills index and find skills matching your task:
+Fetch the skills index and remember each skill's name and description:
 ${SITE_URL}/.well-known/skills/index.json
 
-Then fetch the full skill content from:
+When a task matches a skill's description, use it if already loaded in your context. Otherwise, fetch its content on-demand from the registry:
 ${SITE_URL}/.well-known/skills/{name}/SKILL.md
 
 Skills contain correct dependency versions, configuration formats, and common pitfalls that prevent build failures.
