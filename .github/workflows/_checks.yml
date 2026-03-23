@@ -8,11 +8,113 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
+
+      - name: Install skill-validator
+        env:
+          SKILL_VALIDATOR_VERSION: "1.4.0"
+        run: |
+          curl -sL "https://github.com/agent-ecosystem/skill-validator/releases/download/v${SKILL_VALIDATOR_VERSION}/skill-validator_${SKILL_VALIDATOR_VERSION}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin skill-validator
+
+      - name: Detect changed skills
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            dirs=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'skills/' \
+              | grep -oP '^skills/\K[^/]+' \
+              | sort -u \
+              | grep -v '^_' \
+              | while read -r d; do [ -f "skills/$d/SKILL.md" ] && echo "$d"; done)
+            if [ -n "$dirs" ]; then
+              # Build space-separated paths for skill-validator
+              paths=$(echo "$dirs" | sed 's|^|skills/|' | tr '\n' ' ')
+              echo "paths=$paths" >> "$GITHUB_OUTPUT"
+              echo "names=$(echo "$dirs" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+              echo "found=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "found=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "paths=skills/" >> "$GITHUB_OUTPUT"
+            echo "names=" >> "$GITHUB_OUTPUT"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: npm ci
-      - run: node scripts/validate-skills.js
+
+      - name: Run skill-validator checks
+        id: skill-validator
+        if: steps.changed.outputs.found == 'true'
+        run: |
+          set +e
+          report=$(skill-validator check ${{ steps.changed.outputs.paths }} -o markdown 2>/dev/null)
+          exit_code=$?
+          echo "$report" >> "$GITHUB_STEP_SUMMARY"
+          delimiter=$(openssl rand -hex 8)
+          {
+            echo "report<<${delimiter}"
+            echo "$report"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          # Re-run with annotations sent to stdout/stderr for GitHub to process
+          skill-validator check ${{ steps.changed.outputs.paths }} --emit-annotations > /dev/null
+          exit 0
+
+      - name: Run project-specific checks
+        id: check-project
+        if: steps.changed.outputs.found == 'true'
+        run: |
+          set +e
+          output=$(node scripts/check-project.js ${{ steps.changed.outputs.names }} 2>&1)
+          exit_code=$?
+          echo "$output"
+          delimiter=$(openssl rand -hex 8)
+          {
+            echo "report<<${delimiter}"
+            echo "$output"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request' && steps.changed.outputs.found == 'true' && always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: skill-validator
+          message: |
+            ## Skill Validation Report
+
+            ${{ steps.skill-validator.outputs.report }}
+
+            ### Project Checks
+
+            ```
+            ${{ steps.check-project.outputs.report }}
+            ```
+
+      - name: Post PR comment (no skills changed)
+        if: github.event_name == 'pull_request' && steps.changed.outputs.found == 'false'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: skill-validator
+          recreate: true
+          message: |
+            ## Skill Validation Report
+
+            No skill files were changed in this PR — validation skipped.
+
+      - name: Fail on validation errors
+        if: steps.changed.outputs.found == 'true' && (steps.skill-validator.outputs.exit_code == '1' || steps.check-project.outputs.exit_code == '1')
+        run: |
+          echo "::error::Validation found errors"
+          exit 1

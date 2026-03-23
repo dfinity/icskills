@@ -11,4 +11,5 @@ public/llms.txt
 lighthouse-*
 .eval-tmp
 evaluations/results/
+.score_cache
 _drafts
