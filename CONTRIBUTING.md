@@ -14,8 +14,12 @@ If you're not sure whether something is wrong, open an issue. We'd rather invest
 ## Setup
 
 ```bash
-node -v   # Requires Node.js >= 20
+node -v   # Requires Node.js >= 22
 npm ci    # Install dependencies
+
+# Install skill-validator (required for npm run validate)
+brew tap agent-ecosystem/homebrew-tap && brew install skill-validator
+# or: go install github.com/agent-ecosystem/skill-validator/cmd/skill-validator@latest
 ```
 
 ---
@@ -121,12 +125,22 @@ Use whatever headings fit your skill. A security skill might use `## Security Pi
 ### 3. Validate
 
 ```bash
-npm run validate     # Check frontmatter and sections
+npm run validate     # Runs skill-validator + evals file check
 ```
 
-This runs automatically in CI and blocks deployment on errors.
+This runs automatically in CI and blocks deployment on errors. Under the hood it runs [`skill-validator check`](https://github.com/agent-ecosystem/skill-validator) (structure, links, content analysis, contamination detection) plus a project-specific check for evaluation files.
 
-### 4. Add evaluation cases
+### 4. Run LLM quality scoring (recommended)
+
+Before submitting a PR, run LLM scoring locally to check your skill's quality:
+
+```bash
+skill-validator score evaluate --provider claude-cli skills/<skill-name>
+```
+
+This uses the locally authenticated `claude` CLI — no API key needed. Low novelty scores indicate the skill may restate common knowledge rather than providing genuinely new information. See the [skill-validator docs](https://github.com/agent-ecosystem/skill-validator#score-evaluate) for interpreting scores.
+
+### 5. Add evaluation cases
 
 Create `evaluations/<skill-name>.json` with test cases that verify the skill works. The eval file has two sections:
 
@@ -150,16 +164,17 @@ This sends each prompt to Claude with and without the skill, then has a judge sc
 
 Including a summary of eval results in your PR description is recommended but not required — running evals needs `claude` CLI access and costs API credits.
 
-### 5. That's it — the website auto-discovers skills
+### 6. That's it — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 
 Stats (skill count, categories) all update automatically.
 
-### 6. Submit a PR
+### 7. Submit a PR
 
 - One skill per PR
 - Include a brief description of what the skill covers and why it's needed
+- Include LLM scoring output in your PR description if you ran it locally (see step 4)
 - Make sure the SKILL.md is tested — code examples should compile and deploy
 - **All PRs require approval from a repo admin before merge.** No skill additions or updates go live without review.
 
@@ -169,7 +184,8 @@ Stats (skill count, categories) all update automatically.
 
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
-3. Submit a PR with a summary of what changed
+3. Optionally run LLM scoring (see step 4 above)
+4. Submit a PR with a summary of what changed
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
@@ -191,4 +207,4 @@ Use an existing category when possible. The validator warns on unknown categorie
 
 Current categories: **DeFi**, **Tokens**, **Auth**, **Architecture**, **Integration**, **Governance**, **Frontend**, **Security**, **Infrastructure**, **Wallet**
 
-To add a new category: update `KNOWN_CATEGORIES` in `scripts/validate-skills.js`, the description in `skills/skill.schema.json`, and the icon in `src/components/Icons.tsx`.
+To add a new category: update the enum in `skills/skill.schema.json` and the icon in `src/components/Icons.tsx`.
