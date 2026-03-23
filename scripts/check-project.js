@@ -22,7 +22,11 @@ const KNOWN_CATEGORIES = [
 ];
 
 const evalsDir = join(SKILLS_DIR, "..", "evaluations");
-const dirs = listSkillDirs();
+const filterArgs = process.argv.slice(2);
+const allDirs = listSkillDirs();
+const dirs = filterArgs.length > 0
+  ? allDirs.filter((d) => filterArgs.includes(d))
+  : allDirs;
 const errors = [];
 const warnings = [];
 
