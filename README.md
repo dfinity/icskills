@@ -84,7 +84,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 - **Site**: [Astro](https://astro.build/) — static site generator, zero JS by default. Interactive islands with [Preact](https://preactjs.com/) (~18kb gzipped total)
 - **Hosting**: IC asset canister at [`skills.internetcomputer.org`](https://skills.internetcomputer.org)
 - **Skills**: Plain markdown files in `skills/*/SKILL.md`
-- **Validation**: Structural linter for frontmatter and code blocks (`npm run validate`)
+- **Validation**: [`skill-validator`](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks (`npm run validate`)
 - **Evaluation**: Per-skill eval cases with LLM-as-judge scoring (`node scripts/evaluate-skills.js <skill>`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 - **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
