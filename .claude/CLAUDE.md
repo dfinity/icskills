@@ -26,7 +26,7 @@ No rigid structure — organize content to best serve agents. The validator warn
 
 ```bash
 npm install          # Install dependencies
-npm run validate     # Validate all skills (frontmatter, sections)
+npm run validate     # Runs skill-validator check + project-specific checks
 npm run dev          # Validate + start Astro dev server
 npm run build        # Validate + Astro production build
 ```
@@ -37,7 +37,15 @@ After modifying any SKILL.md file, ALWAYS run:
 ```bash
 npm run validate     # Fix all errors before committing. Warnings are acceptable.
 ```
-Validate runs in CI and blocks deployment on errors.
+Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
+
+## LLM Quality Scoring
+
+Before submitting a PR, run LLM scoring locally to check skill quality:
+```bash
+skill-validator score evaluate --provider claude-cli skills/<skill-name>
+```
+Uses the locally authenticated `claude` CLI — no API key needed. Low novelty scores indicate the skill may restate common knowledge. Results are cached in `.score_cache/` (gitignored).
 
 ## Evaluations
 
@@ -77,7 +85,7 @@ skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
 skills/_template/              # Skeleton for new skills
 scripts/lib/parse-skill.js    # Shared parsing utilities
-scripts/validate-skills.js    # Structural validation (CI)
+scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
 src/                           # Astro site source
   data/skills.ts              # Build-time skill loader
   data/constants.ts           # Static data (frameworks list)
