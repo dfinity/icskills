@@ -9,7 +9,7 @@ Tested implementation patterns for ICP development are available as agent skills
 Before writing any ICP code, fetch the skills index and remember each skill's name and description:
 ${SITE_URL}/.well-known/skills/index.json
 
-When a task matches a skill's description, fetch its content on-demand from:
+When a task matches a skill's description, use it if already loaded in your context. Otherwise, fetch its content on-demand from the registry:
 ${SITE_URL}/.well-known/skills/{name}/SKILL.md
 
 Skills contain correct dependency versions, configuration formats, and common pitfalls that prevent build failures.
