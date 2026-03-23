@@ -1,0 +1,66 @@
+{
+  "skill": "wallet-integration",
+  "description": "Evaluation cases for the wallet-integration skill. Tests whether agents produce correct ICRC signer protocol code, avoid top-level await, and use the right wallet classes.",
+
+  "output_evals": [
+    {
+      "name": "No top-level await in wallet code",
+      "prompt": "Show me just the JavaScript code to connect an ICRC wallet and make a single token transfer. I'm using Vite with default settings. Keep it minimal — no signer-side code, no deploy steps.",
+      "expected_behaviors": [
+        "All await calls are inside async functions — no bare top-level await at module scope",
+        "Uses IcrcWallet or IcpWallet connect pattern",
+        "Shows wallet.transfer or wallet.icrc1Transfer inside an async function",
+        "Does NOT recommend changing build.target to 'esnext' or 'es2022' in Vite config"
+      ]
+    },
+    {
+      "name": "IcpWallet vs IcrcWallet selection",
+      "prompt": "I want to send ICP tokens from my frontend using a wallet. Which class should I use? Just the class name, import path, and a one-line explanation of when to use each.",
+      "expected_behaviors": [
+        "Recommends IcpWallet for ICP ledger operations",
+        "Explains that IcpWallet does not require ledgerCanisterId (defaults to ICP ledger)",
+        "Explains that IcrcWallet is for any ICRC ledger and requires ledgerCanisterId",
+        "Shows the correct import from 'oisy-wallet-signer'"
+      ]
+    },
+    {
+      "name": "Error handling pattern",
+      "prompt": "How do I handle errors when the user rejects a wallet transaction? Just show the try/catch pattern with the relevant error types.",
+      "expected_behaviors": [
+        "Shows try/catch around wallet operations",
+        "Mentions RelyingPartyResponseError with error codes (3000, 3001, 4000)",
+        "Mentions RelyingPartyDisconnectedError for popup closure"
+      ]
+    },
+    {
+      "name": "Signer implementation",
+      "prompt": "Show me the minimal code to initialize a Signer and register all four required prompts (permissions, accounts, consent message, call canister). Just the signer-side setup, no dApp/relying-party code.",
+      "expected_behaviors": [
+        "Uses Signer.init() with owner identity and host",
+        "Shows signer.register() for each prompt type",
+        "Registers ICRC25_REQUEST_PERMISSIONS and ICRC27_ACCOUNTS prompts",
+        "Registers ICRC21_CALL_CONSENT_MESSAGE and ICRC49_CALL_CANISTER prompts"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Connect a wallet to my ICP dapp",
+      "How do I implement ICRC wallet signing?",
+      "I need to integrate Oisy wallet into my frontend",
+      "How does the ICRC signer protocol work?",
+      "Add wallet connect to my dapp",
+      "Implement the relying party side of wallet integration"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login to my app",
+      "How do I deploy my canister?",
+      "Set up stable memory in Rust",
+      "How do I make inter-canister calls?",
+      "Create an ICRC-1 token ledger",
+      "How do I use passkeys for authentication?"
+    ]
+  }
+}
