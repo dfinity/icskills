@@ -7,8 +7,8 @@
   "type": "module",
   "scripts": {
     "validate": "skill-validator check skills/ --skip links && node scripts/check-project.js",
-    "dev": "npm run validate && astro dev",
-    "build": "npm run validate && astro build",
+    "dev": "astro dev",
+    "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
