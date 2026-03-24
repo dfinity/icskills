@@ -9,9 +9,16 @@ concurrency:
   group: ic-deploy
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   checks:
     uses: ./.github/workflows/_checks.yml
+    permissions:
+      contents: read
+      pull-requests: write
 
   deploy:
     needs: checks
