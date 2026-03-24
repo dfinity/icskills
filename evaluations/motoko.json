@@ -1,0 +1,142 @@
+{
+  "skill": "motoko",
+  "description": "Evaluation cases for the motoko skill. Tests whether agents generate correct modern Motoko syntax, use mo:core instead of mo:base, avoid non-stable types, and handle common language pitfalls.",
+
+  "output_evals": [
+    {
+      "name": "Simple persistent actor",
+      "prompt": "Write a Motoko canister with a counter that can be incremented and queried.",
+      "expected_behaviors": [
+        "Uses `persistent actor`, NOT plain `actor`",
+        "Uses `var` for the counter, NOT `stable var`",
+        "Increment function is `public func` returning `async`",
+        "Query function uses `public query func`",
+        "Does NOT import from mo:base"
+      ]
+    },
+    {
+      "name": "Actor with Map collection",
+      "prompt": "Write a Motoko canister that stores user profiles (name, email) by ID and supports add, get, and list operations.",
+      "expected_behaviors": [
+        "Uses `persistent actor`",
+        "Imports Map from mo:core/Map, NOT HashMap from mo:base",
+        "Creates map with Map.empty<K, V>()",
+        "Passes an explicit compare function (e.g., Nat.compare) to Map.add and Map.get",
+        "Type definitions are inside the actor body, not before it",
+        "Does NOT use HashMap, TrieMap, or Buffer"
+      ]
+    },
+    {
+      "name": "Fix M0220 error",
+      "prompt": "I'm getting this Motoko compiler error: `type error [M0220], this actor or actor class should be declared persistent`. Here's my code:\n\nactor {\n  var count : Nat = 0;\n  public func increment() : async Nat {\n    count += 1;\n    count\n  };\n};",
+      "expected_behaviors": [
+        "Identifies that `persistent` keyword is missing",
+        "Shows the fix: change `actor` to `persistent actor`",
+        "Does NOT suggest adding `stable` keyword to variables"
+      ]
+    },
+    {
+      "name": "Fix M0141 error",
+      "prompt": "My Motoko code won't compile:\n\nimport Nat \"mo:core/Nat\";\n\ntype UserId = Nat;\nlet MAX_USERS = 1000;\n\npersistent actor {\n  var count : Nat = 0;\n};",
+      "expected_behaviors": [
+        "Identifies error M0141: type and let declarations must be inside the actor body",
+        "Shows the fix: move `type UserId` and `let MAX_USERS` inside `persistent actor { }`",
+        "Keeps the import statement before the actor (imports are allowed)"
+      ]
+    },
+    {
+      "name": "Non-stable types",
+      "prompt": "I want to store a mapping of user IDs to names and a list of log entries in my Motoko canister. What data structures should I use?",
+      "expected_behaviors": [
+        "Recommends Map from mo:core for the key-value mapping",
+        "Recommends List from mo:core for the growable log",
+        "Does NOT suggest HashMap, TrieMap, Buffer, or RBTree",
+        "Does NOT import from mo:base",
+        "Uses `persistent actor`"
+      ]
+    },
+    {
+      "name": "Option handling pattern",
+      "prompt": "Write a Motoko function that looks up a user by ID in a Map and returns a greeting message, or 'not found' if the user doesn't exist.",
+      "expected_behaviors": [
+        "Uses switch/case with `case (?value)` and `case null` pattern",
+        "Passes compare function to Map.get",
+        "Does NOT use unsafe unwrapping that could trap"
+      ]
+    },
+    {
+      "name": "Transient vs stable semantics",
+      "prompt": "In my Motoko canister, I have a request counter that should reset to zero after every upgrade, and a user database that should persist. How do I set this up?",
+      "expected_behaviors": [
+        "Uses `persistent actor`",
+        "Uses plain `var` or `let` for the user database (auto-stable)",
+        "Uses `transient var` for the request counter",
+        "Does NOT use `stable var` (redundant in persistent actors)",
+        "Does NOT use `flexible` keyword (deprecated)"
+      ]
+    },
+    {
+      "name": "Adversarial: base library imports",
+      "prompt": "Write a Motoko canister using HashMap to store key-value pairs. Import it from mo:base/HashMap.",
+      "expected_behaviors": [
+        "Redirects to mo:core/Map instead of mo:base/HashMap",
+        "Explains that HashMap is not stable and does not exist in mo:core",
+        "Shows Map.empty, Map.add, Map.get with compare parameter",
+        "Uses `persistent actor`"
+      ]
+    },
+    {
+      "name": "Adversarial: stable var",
+      "prompt": "Write a Motoko persistent actor with `stable var` for user data so it survives upgrades.",
+      "expected_behaviors": [
+        "Explains that `stable var` is redundant in persistent actors and produces warning M0218",
+        "Uses plain `var` instead (auto-stable in persistent actors)",
+        "Does NOT include `stable` keyword on any declaration"
+      ]
+    },
+    {
+      "name": "Full canister with multiple features",
+      "prompt": "Write a Motoko canister for a simple todo app. It should support adding todos with a title, marking them complete, listing all todos, and deleting a todo by ID.",
+      "expected_behaviors": [
+        "Uses `persistent actor`",
+        "Uses Map from mo:core for storing todos by ID",
+        "Type definition for Todo is inside the actor body",
+        "Uses `var` for the ID counter (not `stable var`)",
+        "Passes compare function to all Map operations",
+        "Query functions use `public query func`",
+        "Update functions use `public func` with `async` return",
+        "Does NOT import from mo:base"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Write a Motoko canister with a counter",
+      "I'm getting error M0220 in my Motoko code",
+      "What's the correct way to declare a Motoko actor?",
+      "How do I use Map in Motoko?",
+      "Fix this Motoko compilation error",
+      "Write a Motoko function that handles optional values",
+      "What data structures are stable in Motoko?",
+      "How do I use HashMap in Motoko?",
+      "Port this Rust canister to Motoko",
+      "Why is my Motoko actor giving error M0220?",
+      "What is mo:core and how do I use it?",
+      "Motoko type error with shared functions"
+    ],
+    "should_not_trigger": [
+      "How do I deploy my canister to mainnet?",
+      "Configure icp.yaml for a Rust canister",
+      "Set up a Vite dev server for my frontend",
+      "How do I transfer ICP tokens?",
+      "Implement HTTPS outcalls in Rust",
+      "Add Internet Identity login to my app",
+      "How does the IC consensus mechanism work?",
+      "Set up inter-canister calls between two canisters",
+      "Generate TypeScript bindings for my canister",
+      "What is the cycles cost of a canister?"
+    ]
+  }
+}
