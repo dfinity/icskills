@@ -21,7 +21,7 @@ jobs:
 
       - name: Install skill-validator
         env:
-          SKILL_VALIDATOR_VERSION: "1.4.0"
+          SKILL_VALIDATOR_VERSION: "1.5.1"
         run: |
           curl -sL "https://github.com/agent-ecosystem/skill-validator/releases/download/v${SKILL_VALIDATOR_VERSION}/skill-validator_${SKILL_VALIDATOR_VERSION}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin skill-validator
 
@@ -56,7 +56,8 @@ jobs:
         if: steps.changed.outputs.found == 'true'
         run: |
           set +e
-          report=$(skill-validator check ${{ steps.changed.outputs.paths }} -o markdown 2>/dev/null)
+          # TODO: re-enable link checks once https://github.com/agent-ecosystem/skill-validator/issues/45 is resolved
+          report=$(skill-validator check ${{ steps.changed.outputs.paths }} --skip links -o markdown 2>/dev/null)
           exit_code=$?
           echo "$report" >> "$GITHUB_STEP_SUMMARY"
           delimiter=$(openssl rand -hex 8)
@@ -67,7 +68,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           # Re-run with annotations sent to stdout/stderr for GitHub to process
-          skill-validator check ${{ steps.changed.outputs.paths }} --emit-annotations > /dev/null
+          skill-validator check ${{ steps.changed.outputs.paths }} --skip links --emit-annotations > /dev/null
           exit 0
 
       - name: Run project-specific checks
