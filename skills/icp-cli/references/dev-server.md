@@ -1,6 +1,17 @@
 # Dev Server Configuration (Vite)
 
-In development, the Vite dev server must simulate the `ic_env` cookie that the asset canister provides in production. Query the local network for the root key, canister IDs, and API URL:
+In development, the Vite dev server must simulate the `ic_env` cookie that the asset canister provides in production.
+
+## Prerequisites
+
+The dev server configuration queries the local network for backend canister IDs and the root key. Before running `vite dev`:
+
+1. Start the local network: `icp network start -d`
+2. Deploy the backend: `icp deploy backend`
+
+Without a running network and deployed backend canisters, `getDevServerConfig()` will fail because `icp network status` and `icp canister status` have nothing to query. The frontend canister does not need to be deployed for local development — Vite serves it directly.
+
+## Configuration
 
 ```js
 // vite.config.js
@@ -38,6 +49,25 @@ function getDevServerConfig() {
   };
 }
 ```
+
+## Mode guard
+
+Only invoke `getDevServerConfig()` when running the dev server, not during production builds. The `command` parameter is `"serve"` for `vite dev` and `"build"` for `vite build`:
+
+```js
+export default defineConfig(({ command }) => ({
+  plugins: [
+    react(),
+    icpBindgen({
+      didFile: "../../src/backend/backend.did",
+      outDir: "./src/bindings",
+    }),
+  ],
+  ...(command === "serve" ? { server: getDevServerConfig() } : {}),
+}));
+```
+
+Without this guard, `vite build` will execute `icp network status` and `icp canister status` at import time, producing confusing errors or warnings even though the dev server config is irrelevant for production builds.
 
 ## Key differences from dfx
 

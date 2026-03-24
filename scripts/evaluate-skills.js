@@ -75,8 +75,15 @@ if (evalFilter) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Run a prompt through claude CLI and return the output text. */
-function runClaude(prompt, systemPrompt) {
+/**
+ * Run a prompt through claude CLI and return the output text.
+ * @param {string} prompt - The user prompt
+ * @param {string|null} systemPrompt - Optional system prompt (skill content)
+ * @param {object} [options] - Optional settings
+ * @param {string} [options.cwd] - Working directory (defaults to /tmp)
+ * @param {boolean} [options.allowRead] - Allow the Read tool so the agent can fetch reference files
+ */
+function runClaude(prompt, systemPrompt, options = {}) {
   // Use execFileSync with input option to avoid shell expansion issues.
   // Shell expansion of $VAR and $(...) in skill content (e.g., $ICP_WASM_OUTPUT_PATH)
   // would corrupt the system prompt when passed via "$(cat ...)".
@@ -84,15 +91,18 @@ function runClaude(prompt, systemPrompt) {
   if (systemPrompt) {
     args.push("--system-prompt", systemPrompt);
   }
+  if (options.allowRead) {
+    args.push("--allowedTools", "Read");
+  }
 
-  // Run from /tmp to prevent claude from picking up repo context
+  const cwd = options.cwd || "/tmp";
   try {
     return execFileSync("claude", args, {
       input: prompt,
       encoding: "utf-8",
       maxBuffer: 1024 * 1024,
       timeout: 120_000,
-      cwd: "/tmp",
+      cwd,
     }).trim();
   } catch (e) {
     return `[ERROR] ${e.message}`;
@@ -221,11 +231,15 @@ if (!triggersOnly && outputCases.length > 0) {
   for (const evalCase of outputCases) {
     console.log(`━━━ ${evalCase.name} ━━━\n`);
 
-    // Run WITH skill
+    // Run WITH skill — from the skill directory with Read access so the
+    // agent can fetch reference files on demand, matching real usage.
     console.log("  Running WITH skill...");
-    const withOutput = runClaude(evalCase.prompt, skillContent);
+    const withOutput = runClaude(evalCase.prompt, skillContent, {
+      cwd: skillDir,
+      allowRead: true,
+    });
 
-    // Run WITHOUT skill (baseline)
+    // Run WITHOUT skill (baseline) — no tools, no skill context
     let withoutOutput = null;
     if (!skipBaseline) {
       console.log("  Running WITHOUT skill...");
