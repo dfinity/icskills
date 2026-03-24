@@ -27,8 +27,8 @@ No rigid structure — organize content to best serve agents. The validator warn
 ```bash
 npm install          # Install dependencies
 npm run validate     # Runs skill-validator check + project-specific checks
-npm run dev          # Validate + start Astro dev server
-npm run build        # Validate + Astro production build
+npm run dev          # Start Astro dev server
+npm run build        # Astro production build
 ```
 
 ## Workflow
