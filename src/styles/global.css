@@ -126,11 +126,16 @@
 }
 
 /* ── Base ── */
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--bg-page);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 ::selection {
@@ -489,14 +494,6 @@ a:focus-visible {
     padding: 16px !important;
   }
 
-  .install-cmd-full {
-    display: none !important;
-  }
-
-  .install-cmd-short {
-    display: inline !important;
-  }
-
   .step-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
@@ -537,10 +534,6 @@ a:focus-visible {
 
   .frameworks-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-
-  .endpoint-hint {
-    flex: 1 1 100% !important;
   }
 
   .endpoint-desc {
