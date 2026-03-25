@@ -115,7 +115,7 @@ ic-wasm --version
 
 10. **Expecting `output_env_file` or `.env` with canister IDs.** dfx writes canister IDs to a `.env` file (`CANISTER_ID_BACKEND=...`) via `output_env_file`. icp-cli does not generate `.env` files. Instead, it injects canister IDs as environment variables (`PUBLIC_CANISTER_ID:<name>`) directly into canisters during `icp deploy`. Frontends read these from the `ic_env` cookie set by the asset canister. Remove `output_env_file` from your config and any code that reads `CANISTER_ID_*` from `.env` — use the `ic_env` cookie instead (see Canister Environment Variables below).
 
-11. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (a Vite plugin) to generate TypeScript bindings from `.did` files at build time. The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for setup details.
+11. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (>= 0.3.0) with `@icp-sdk/core` (>= 5.0.0 — there is no 0.x or 1.x release) to generate TypeScript bindings from `.did` files at build time. Use `outDir: "./src/bindings"` so imports are clean (e.g., `./bindings/backend`). The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for the full Vite plugin setup.
 
 12. **Misunderstanding Candid file generation with recipes.** When using the Rust or Motoko recipe:
     - If `candid` is **specified**: the file must already exist (checked in or manually created). The recipe uses it as-is and does **not** generate one.
@@ -262,14 +262,14 @@ canisters:
 
 ### Available recipes
 
-| Recipe | Purpose |
-|--------|---------|
-| `@dfinity/rust` | Rust canisters with Cargo |
-| `@dfinity/motoko` | Motoko canisters |
-| `@dfinity/asset-canister` | Asset canisters for static files |
-| `@dfinity/prebuilt` | Pre-compiled WASM files |
+| Recipe | Type string | Required config | Optional config |
+|--------|------------|-----------------|-----------------|
+| Rust | `@dfinity/rust@v3.2.0` | `package` | `candid`, `locked`, `shrink`, `compress` |
+| Motoko | `@dfinity/motoko@v4.1.0` | `main` | `candid`, `args`, `shrink`, `compress` |
+| Asset | `@dfinity/asset-canister@v2.1.0` | `dir` | `build`, `version` |
+| Prebuilt | `@dfinity/prebuilt@v1.0.0` | `wasm` | `sha256`, `candid`, `shrink`, `compress` |
 
-Use `icp project show` to see the effective configuration after recipe expansion.
+Verify latest recipe versions at [dfinity/icp-cli-recipes releases](https://github.com/dfinity/icp-cli-recipes/releases). Use `icp project show` to see the effective configuration after recipe expansion.
 
 ### Canister Environment Variables
 
@@ -300,5 +300,5 @@ Note: variables are only updated for canisters being deployed. When adding a new
 For detailed guides on specific topics, consult these reference files when needed:
 
 - **`references/binding-generation.md`** — TypeScript binding generation with `@icp-sdk/bindgen` (Vite plugin, CLI, actor setup)
-- **`references/dev-server.md`** — Vite dev server configuration to simulate the `ic_env` cookie locally
+- **`references/dev-server.md`** — Vite dev server configuration to simulate the `ic_env` cookie locally. Important: wrap `getDevServerConfig()` in a `command === "serve"` guard so it only runs during `vite dev`, not `vite build`.
 - **`references/dfx-migration.md`** — Complete dfx → icp migration guide (command mapping, config mapping, identity/canister ID migration, frontend package migration, post-migration verification checklist)
