@@ -1,0 +1,73 @@
+{
+  "skill": "icrc-ledger",
+  "description": "Evaluation cases for the icrc-ledger skill. Tests whether agents produce correct ICRC-1/ICRC-2 code with proper types, fee handling, error handling, and deployment config.",
+
+  "output_evals": [
+    {
+      "name": "ICRC-1 transfer in Motoko",
+      "prompt": "Write a Motoko function that transfers ICP tokens from the calling canister to a given principal. Just the function, no actor boilerplate, no deploy steps.",
+      "expected_behaviors": [
+        "Uses Account type with owner and subaccount fields (not a bare Principal) for the 'to' argument",
+        "Sets created_at_time for deduplication",
+        "Handles the Result return type — matches on #Ok and at least #Err(#InsufficientFunds) or propagates the error",
+        "Handles #Err(#BadFee) explicitly rather than silently dropping it",
+        "Uses the correct ICP ledger canister ID ryjl3-tyaaa-aaaaa-aaaba-cai"
+      ]
+    },
+    {
+      "name": "ICRC-2 approve and transferFrom in Rust",
+      "prompt": "Show me the Rust functions for an ICRC-2 approve-then-transferFrom flow. Just the two endpoint functions with proper error handling, no Cargo.toml or deploy steps.",
+      "expected_behaviors": [
+        "Two separate functions: one for approve, one for transfer_from",
+        "Uses types from icrc-ledger-types crate (ApproveArgs, TransferFromArgs)",
+        "Sets created_at_time for deduplication",
+        "Handles InsufficientAllowance error variant in the transfer_from function",
+        "Handles BadFee error variant rather than silently dropping it"
+      ]
+    },
+    {
+      "name": "Burn fee semantics",
+      "prompt": "My canister transfers ICP tokens to a recipient principal passed as an argument. It works for most recipients but fails with BadFee expected 0 for one specific principal. The fee I'm passing is 10000 which is correct for ICP. What's going on? Just explain the cause and fix, no full code.",
+      "expected_behaviors": [
+        "Identifies that the recipient is likely the minting account, making the transfer a burn",
+        "Explains that burns (transfers to minting account) require fee = null or fee = 0, not the regular transfer fee",
+        "Does NOT suggest the fee value 10000 is wrong for regular ICP transfers"
+      ]
+    },
+    {
+      "name": "Deploy an ICRC-1 ledger",
+      "prompt": "Show me the icp.yaml config and init args file to deploy an ICRC-1 ledger canister with ICRC-2 enabled. I want to fund two accounts at genesis. Just the config files, no code.",
+      "expected_behaviors": [
+        "Uses build.steps with type: pre-built and a URL (not recipe type: custom)",
+        "Uses init_args with path and format fields (not init_arg_file)",
+        "minting_account uses a different principal than the ones in initial_balances",
+        "initial_balances contains two entries with different principals",
+        "Includes feature_flags with icrc2 = true"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I transfer ICP tokens from my canister?",
+      "What are the ICRC-1 ledger canister IDs for ICP, ckBTC, and ckETH?",
+      "Implement ICRC-2 approve and transferFrom",
+      "Deploy an ICRC-1 ledger",
+      "Check a user's token balance on IC",
+      "What fee should I use for ICP transfers?",
+      "How does the ICRC-1 Account type work?",
+      "I need to do a token allowance flow like ERC-20"
+    ],
+    "should_not_trigger": [
+      "How do I mint ckBTC from a BTC deposit?",
+      "Set up Internet Identity login",
+      "Deploy my canister to mainnet",
+      "Add access control to my canister",
+      "How do I make inter-canister calls?",
+      "Connect a wallet to my frontend",
+      "How does stable memory work?",
+      "What's the icp.yaml config for a Rust canister?"
+    ]
+  }
+}
