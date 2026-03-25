@@ -60,6 +60,8 @@ node scripts/evaluate-skills.js <skill-name> --triggers-only         # Trigger e
 ```
 Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-cli.json` for the format.
 
+**Eval prompt guidelines:** Keep prompts focused to avoid the 120s timeout. Scope the response ("just the function, no deploy steps"), ask for one thing, and match expected behaviors to what the prompt actually asks. See CONTRIBUTING.md for details and examples.
+
 ## Writing Guidelines
 
 - **Write for agents, not humans.** Be explicit with canister IDs, function signatures, and error messages.

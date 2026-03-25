@@ -73,6 +73,19 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 | Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | All skills with descriptions and discovery links |
 | Skill page | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page for humans |
 
+## Evaluations
+
+Each skill can have an evaluation file at `evaluations/<skill-name>.json` that tests whether agents produce correct output with the skill loaded. Evals compare agent output with and without the skill, using an LLM judge to score expected behaviors.
+
+```bash
+node scripts/evaluate-skills.js <skill-name>                    # All evals
+node scripts/evaluate-skills.js <skill-name> --eval 2            # Single eval
+node scripts/evaluate-skills.js <skill-name> --no-baseline       # Skip without-skill baseline
+node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals only
+```
+
+Results are saved to `evaluations/results/` (gitignored). See [CONTRIBUTING.md](CONTRIBUTING.md#4-add-evaluation-cases) for how to write eval cases and prompts.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
