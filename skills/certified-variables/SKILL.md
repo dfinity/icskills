@@ -18,7 +18,7 @@ Query responses on the Internet Computer come from a single replica and are NOT 
 
 - Rust: `ic-certified-map` crate (for Merkle tree), `ic-cdk` (for `certified_data_set` / `data_certificate`)
 - Motoko: `CertifiedData` module (included in mo:core/mo:base), `ic-certification` package (`mops add ic-certification`) for Merkle tree with witness support
-- Frontend: `@icp-sdk/core` (agent, principal), `@dfinity/certificate-verification`
+- Frontend: `@icp-sdk/core` (>= 5.0.0) (agent, principal), `@dfinity/certificate-verification` (>= 3.1.0)
 
 ## Canister IDs
 
