@@ -158,6 +158,16 @@
       ]
     },
     {
+      "name": "Adversarial: mixing fields across config styles",
+      "prompt": "Here's my icp.yaml for a Rust backend. Is this correct?\n\ncanisters:\n  - name: backend\n    candid: backend/backend.did\n    init_arg_file: ./args.candid\n    recipe:\n      type: \"@dfinity/rust@v3.2.0\"\n      configuration:\n        package: backend",
+      "expected_behaviors": [
+        "Identifies that candid is not a valid canister-level field when using a recipe — it belongs inside recipe.configuration",
+        "Identifies that init_arg_file is not a valid field at all — the correct form is init_args with a path property (e.g., init_args: { path: ./args.candid, format: candid })",
+        "Shows the corrected icp.yaml with candid moved inside recipe.configuration and init_arg_file replaced with init_args",
+        "Does NOT validate or endorse the original config as correct"
+      ]
+    },
+    {
       "name": "Dev server configuration",
       "prompt": "I have a React frontend and a backend canister deployed locally. How do I set up the Vite dev server to talk to my local canisters?",
       "expected_behaviors": [
