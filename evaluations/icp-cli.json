@@ -63,9 +63,11 @@
       "prompt": "How do I generate TypeScript bindings for my backend canister so I can call it from my React frontend?",
       "expected_behaviors": [
         "Does NOT suggest 'dfx generate' — it does not exist in icp-cli",
-        "Recommends @icp-sdk/bindgen (Vite plugin or CLI)",
-        "Mentions that the .did file must exist on disk",
-        "Shows or references how to set up the Vite plugin (icpBindgen) or references references/binding-generation.md"
+        "Recommends @icp-sdk/bindgen with a version constraint (>= 0.3.0) or references references/binding-generation.md which contains the version",
+        "Mentions @icp-sdk/core with a version constraint (>= 5.0.0) or explicitly warns that there is no 0.x/1.x release",
+        "Shows npm install commands for both packages (@icp-sdk/core and @icp-sdk/bindgen)",
+        "Mentions that the .did file must exist on disk before the frontend builds",
+        "Shows a Vite plugin setup using icpBindgen from @icp-sdk/bindgen, or references references/binding-generation.md for the full setup"
       ]
     },
     {
@@ -127,6 +129,45 @@
         "Does NOT suggest using separate dfx.json configs or --network flags",
         "Shows that environments can have different canister settings"
       ]
+    },
+    {
+      "name": "Motoko project setup",
+      "prompt": "I want to create a new ICP project with a Motoko backend canister. Walk me through the setup.",
+      "expected_behaviors": [
+        "Uses icp (not dfx) commands throughout",
+        "Configuration file is icp.yaml, NOT dfx.json",
+        "Motoko canister uses @dfinity/motoko recipe with a version pin",
+        "Mentions installing ic-mops (npm i -g ic-mops)",
+        "Shows a mops.toml file with a [toolchain] section specifying a concrete moc version (e.g., moc = \"1.3.0\")",
+        "Does NOT leave the moc version as a placeholder like <version>"
+      ]
+    },
+    {
+      "name": "Full-stack Motoko hello-world with React frontend",
+      "prompt": "Build me a hello-world ICP dapp with a Motoko backend and a React frontend. The frontend should call a greet function on the backend. Show me the full project setup including icp.yaml, TypeScript bindings, and dev server config.",
+      "expected_behaviors": [
+        "icp.yaml has Motoko backend with @dfinity/motoko recipe (version-pinned) and asset canister for frontend (version-pinned)",
+        "Shows mops.toml with [toolchain] section and a concrete moc version",
+        "Shows how to generate the .did file and specifies candid in the recipe config so bindgen can find it",
+        "Uses @icp-sdk/bindgen (>= 0.3.0) Vite plugin with correct didFile path pointing to the committed .did file",
+        "Uses @icp-sdk/core (>= 5.0.0) — does NOT use a 0.x or 1.x version",
+        "Uses ./src/bindings as outDir (not per-canister subdirectories) so imports are clean (e.g., ./bindings/backend)",
+        "Dev server config only runs getDevServerConfig() during vite dev (command === 'serve'), not during vite build",
+        "Mentions starting the local network and deploying backend before running vite dev",
+        "Does NOT use dfx commands, dfx.json, .env files, or process.env for canister IDs"
+      ]
+    },
+    {
+      "name": "Dev server configuration",
+      "prompt": "I have a React frontend and a backend canister deployed locally. How do I set up the Vite dev server to talk to my local canisters?",
+      "expected_behaviors": [
+        "Shows or references the getDevServerConfig() pattern from references/dev-server.md",
+        "States prerequisites: local network must be running (icp network start -d) and backend must be deployed (icp deploy backend) before vite dev works",
+        "Wraps getDevServerConfig() in a mode guard so it only runs during vite dev (command === 'serve'), not during vite build",
+        "Uses icp network status and icp canister status commands (not dfx or hardcoded ports)",
+        "Mentions the ic_env cookie for passing canister IDs and root key to the frontend",
+        "Does NOT suggest using .env files or process.env for canister IDs"
+      ]
     }
   ],
 
@@ -144,7 +185,10 @@
       "My icp deploy is failing with a build error",
       "How do I check my canister status on mainnet?",
       "How do I set up output_env_file for my canister IDs?",
-      "Generate TypeScript declarations for my canister"
+      "Generate TypeScript declarations for my canister",
+      "Set up a Motoko canister with mops",
+      "Configure Vite dev server for local IC development",
+      "Build a hello-world dapp with Motoko and React"
     ],
     "should_not_trigger": [
       "Add access control to my Motoko canister",

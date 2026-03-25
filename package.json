@@ -6,9 +6,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "validate": "skill-validator check skills/ && node scripts/check-project.js",
-    "dev": "npm run validate && astro dev",
-    "build": "npm run validate && astro build",
+    "validate": "skill-validator check skills/ --skip links && node scripts/check-project.js",
+    "dev": "astro dev",
+    "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {

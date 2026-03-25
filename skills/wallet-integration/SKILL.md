@@ -52,10 +52,9 @@ This skill covers integration using `@dfinity/oisy-wallet-signer`. Other integra
 
 ## Prerequisites
 
-- `@dfinity/oisy-wallet-signer` installed
-- Peer dependencies installed: `@dfinity/utils`, `@dfinity/zod-schemas`, `@icp-sdk/canisters`, `@icp-sdk/core`, `zod`
+- `@dfinity/oisy-wallet-signer` (>= 4.1.0)
+- Peer dependencies: `@dfinity/utils` (>= 4.2.0), `@dfinity/zod-schemas` (>= 3.2.0), `@icp-sdk/canisters` (>= 3.5.0), `@icp-sdk/core` (>= 5.0.0), `zod`
 - A non-anonymous identity on the signer side (e.g. `Ed25519KeyIdentity`)
-- For local development: a running local network (`icp network start -d`)
 
 ```bash
 npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/canisters @icp-sdk/core zod
@@ -157,21 +156,28 @@ import {IcrcWallet} from '@dfinity/oisy-wallet-signer/icrc-wallet';
 
 #### Connect, Permissions, Accounts
 
+All wallet operations are async. Wrap them in functions — do not use top-level `await`, which fails with Vite's default `es2020` build target.
+
 ```typescript
-const wallet = await IcrcWallet.connect({
-  url: 'https://your-wallet.example.com/sign', // URL of the wallet implementing the signer
-  host: 'https://icp-api.io',
-  windowOptions: {width: 576, height: 625, position: 'center'},
-  connectionOptions: {timeoutInMilliseconds: 120_000},
-  onDisconnect: () => {
-    /* wallet popup closed */
-  }
-});
+// Wrapping in an async function avoids top-level await, which requires
+// build.target >= es2022. This works with any bundler target.
+async function connectWallet() {
+  const wallet = await IcrcWallet.connect({
+    url: 'https://your-wallet.example.com/sign', // URL of the wallet implementing the signer
+    host: 'https://icp-api.io',
+    windowOptions: {width: 576, height: 625, position: 'center'},
+    connectionOptions: {timeoutInMilliseconds: 120_000},
+    onDisconnect: () => {
+      /* wallet popup closed */
+    }
+  });
 
-const {allPermissionsGranted} = await wallet.requestPermissionsNotGranted();
+  const {allPermissionsGranted} = await wallet.requestPermissionsNotGranted();
 
-const accounts = await wallet.accounts();
-const {owner} = accounts[0];
+  const accounts = await wallet.accounts();
+  const {owner} = accounts[0];
+  return {wallet, owner};
+}
 ```
 
 #### IcpWallet — ICP Transfers and Approvals
@@ -179,19 +185,21 @@ const {owner} = accounts[0];
 Uses `{owner, request}` — no `ledgerCanisterId` needed.
 
 ```typescript
-const wallet = await IcpWallet.connect({url: 'https://your-wallet.example.com/sign'});
-const accounts = await wallet.accounts();
-const {owner} = accounts[0];
+async function icpWalletTransfers() {
+  const wallet = await IcpWallet.connect({url: 'https://your-wallet.example.com/sign'});
+  const accounts = await wallet.accounts();
+  const {owner} = accounts[0];
 
-await wallet.icrc1Transfer({
-  owner,
-  request: {to: {owner: recipientPrincipal, subaccount: []}, amount: 100_000_000n}
-});
+  await wallet.icrc1Transfer({
+    owner,
+    request: {to: {owner: recipientPrincipal, subaccount: []}, amount: 100_000_000n}
+  });
 
-await wallet.icrc2Approve({
-  owner,
-  request: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 500_000_000n}
-});
+  await wallet.icrc2Approve({
+    owner,
+    request: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 500_000_000n}
+  });
+}
 ```
 
 #### IcrcWallet — Any ICRC Ledger
@@ -199,53 +207,59 @@ await wallet.icrc2Approve({
 Uses `{owner, ledgerCanisterId, params}` — `ledgerCanisterId` is **required**.
 
 ```typescript
-const wallet = await IcrcWallet.connect({url: 'https://your-wallet.example.com/sign'});
-const accounts = await wallet.accounts();
-const {owner} = accounts[0];
+async function icrcWalletTransfers() {
+  const wallet = await IcrcWallet.connect({url: 'https://your-wallet.example.com/sign'});
+  const accounts = await wallet.accounts();
+  const {owner} = accounts[0];
 
-await wallet.transfer({
-  owner,
-  ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {to: {owner: recipientPrincipal, subaccount: []}, amount: 1_000_000n}
-});
+  await wallet.transfer({
+    owner,
+    ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
+    params: {to: {owner: recipientPrincipal, subaccount: []}, amount: 1_000_000n}
+  });
 
-await wallet.approve({
-  owner,
-  ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 5_000_000n}
-});
+  await wallet.approve({
+    owner,
+    ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
+    params: {spender: {owner: spenderPrincipal, subaccount: []}, amount: 5_000_000n}
+  });
 
-await wallet.transferFrom({
-  owner,
-  ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
-  params: {from: {owner: fromPrincipal, subaccount: []}, to: {owner: toPrincipal, subaccount: []}, amount: 1_000_000n}
-});
+  await wallet.transferFrom({
+    owner,
+    ledgerCanisterId: 'mxzaz-hqaaa-aaaar-qaada-cai',
+    params: {from: {owner: fromPrincipal, subaccount: []}, to: {owner: toPrincipal, subaccount: []}, amount: 1_000_000n}
+  });
+}
 ```
 
 #### Query Methods and Disconnect
 
 ```typescript
-const standards = await wallet.supportedStandards();
-const currentPermissions = await wallet.permissions();
+async function queryAndDisconnect(wallet: IcrcWallet) {
+  const standards = await wallet.supportedStandards();
+  const currentPermissions = await wallet.permissions();
 
-await wallet.disconnect();
+  await wallet.disconnect();
+}
 ```
 
 #### Error Handling (dApp Side)
 
 ```typescript
-try {
-  await wallet.transfer({...});
-} catch (err) {
-  if (err instanceof RelyingPartyResponseError) {
-    switch (err.code) {
-      case 3000: /* PERMISSION_NOT_GRANTED */ break;
-      case 3001: /* ACTION_ABORTED — user rejected */ break;
-      case 4000: /* NETWORK_ERROR */ break;
+async function safeTransfer(wallet: IcrcWallet) {
+  try {
+    await wallet.transfer({...});
+  } catch (err) {
+    if (err instanceof RelyingPartyResponseError) {
+      switch (err.code) {
+        case 3000: /* PERMISSION_NOT_GRANTED */ break;
+        case 3001: /* ACTION_ABORTED — user rejected */ break;
+        case 4000: /* NETWORK_ERROR */ break;
+      }
     }
-  }
-  if (err instanceof RelyingPartyDisconnectedError) {
-    /* popup closed unexpectedly */
+    if (err instanceof RelyingPartyDisconnectedError) {
+      /* popup closed unexpectedly */
+    }
   }
 }
 ```
@@ -361,10 +375,13 @@ icp network start -d
 
 ```typescript
 // dApp side — point to your local wallet's /sign route
-const wallet = await IcrcWallet.connect({
-  url: 'http://localhost:5174/sign',
-  host: 'http://localhost:8000'
-});
+async function connectLocalWallet() {
+  const wallet = await IcrcWallet.connect({
+    url: 'http://localhost:5174/sign',
+    host: 'http://localhost:8000'
+  });
+  return wallet;
+}
 
 // Wallet/signer side — same local network host
 const signer = Signer.init({
@@ -391,10 +408,13 @@ npm run dev:wallet    # starts the pseudo wallet on port 5174
 Then connect from your dApp:
 
 ```typescript
-const wallet = await IcpWallet.connect({
-  url: 'http://localhost:5174/sign',
-  host: 'http://localhost:8000' // match your local network port
-});
+async function connectPseudoWallet() {
+  const wallet = await IcpWallet.connect({
+    url: 'http://localhost:5174/sign',
+    host: 'http://localhost:8000' // match your local network port
+  });
+  return wallet;
+}
 ```
 
 ### Mainnet
@@ -402,9 +422,12 @@ const wallet = await IcpWallet.connect({
 On mainnet, point to the wallet's production signer URL and omit `host` (defaults to `https://icp-api.io`):
 
 ```typescript
-const wallet = await IcpWallet.connect({
-  url: 'https://your-wallet.example.com/sign'
-});
+async function connectMainnetWallet() {
+  const wallet = await IcpWallet.connect({
+    url: 'https://your-wallet.example.com/sign'
+  });
+  return wallet;
+}
 ```
 
 ## Expected Behavior

@@ -44,7 +44,12 @@ ic-wasm --version
 ## Prerequisites
 
 - For Rust canisters: `rustup target add wasm32-unknown-unknown`
-- For Motoko canisters: `npm i -g ic-mops` and `moc` version defined in `mops.toml` (templates include this; for manual projects add `[toolchain]` with `moc = "<version>"`)
+- For Motoko canisters: `npm i -g ic-mops` and a `mops.toml` at the project root with the Motoko compiler version:
+  ```toml
+  [toolchain]
+  moc = "1.3.0"
+  ```
+  The `@dfinity/motoko` recipe uses this to resolve the compiler. Without `mops.toml`, the recipe fails because `moc` is not found. Templates include `mops.toml` automatically; for manual projects, create it before running `icp build`.
 
 ## Common Pitfalls
 
