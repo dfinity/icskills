@@ -1,0 +1,103 @@
+{
+  "skill": "custom-domains",
+  "description": "Evaluation cases for the custom-domains skill. Tests whether agents produce correct DNS records, use the right registration API endpoints, and warn about common pitfalls like provider SSL interference and stale ACME records.",
+
+  "output_evals": [
+    {
+      "name": "DNS record configuration",
+      "prompt": "What DNS records do I need to set up to serve my canister ryjl3-tyaaa-aaaaa-aaaba-cai under app.example.com on the IC? Just the DNS records, no code or deploy steps.",
+      "expected_behaviors": [
+        "Shows a CNAME record for app.example.com pointing to app.example.com.icp1.io",
+        "Shows a TXT record for _canister-id.app.example.com with the canister ID ryjl3-tyaaa-aaaaa-aaaba-cai",
+        "Shows a CNAME record for _acme-challenge.app.example.com pointing to _acme-challenge.app.example.com.icp2.io",
+        "Does NOT hallucinate incorrect subdomains or record types"
+      ]
+    },
+    {
+      "name": "Domain registration API",
+      "prompt": "I've set up my DNS records and deployed my canister with the ic-domains file. What curl commands do I run to register my custom domain app.example.com? Just the commands.",
+      "expected_behaviors": [
+        "Uses the validate endpoint: GET https://icp0.io/custom-domains/v1/app.example.com/validate",
+        "Uses the registration endpoint: POST https://icp0.io/custom-domains/v1/app.example.com",
+        "Uses the status check endpoint: GET https://icp0.io/custom-domains/v1/app.example.com",
+        "Does NOT invent non-existent API endpoints or parameters"
+      ]
+    },
+    {
+      "name": "ic-domains file setup",
+      "prompt": "I have a Vite-based IC frontend project created with dfx new. Where exactly do I put the ic-domains file and what should it contain for mydomain.com? Just the file placement and content.",
+      "expected_behaviors": [
+        "Places .well-known/ic-domains inside the public/ directory, not src/",
+        "Lists the domain in the ic-domains file (mydomain.com)",
+        "Mentions .ic-assets.json5 with match .well-known and ignore false",
+        "Does NOT place the file in src/ where Vite would try to compile it"
+      ]
+    },
+    {
+      "name": "Cloudflare SSL pitfall",
+      "prompt": "I'm using Cloudflare as my DNS provider for my IC custom domain. The registration keeps failing. What's likely wrong? Keep it brief.",
+      "expected_behaviors": [
+        "Identifies Cloudflare's Universal SSL as the likely culprit",
+        "Advises disabling Cloudflare's SSL/TLS certificate features",
+        "Explains that provider SSL interferes with the IC's ACME challenge"
+      ]
+    },
+    {
+      "name": "Apex domain limitation",
+      "prompt": "I want to use example.com (no subdomain) as my custom domain on the IC, but my DNS provider won't let me set a CNAME on the apex. What are my options? Keep it brief.",
+      "expected_behaviors": [
+        "Explains that many providers don't allow CNAME on apex domains",
+        "Suggests using ANAME or ALIAS record types (CNAME flattening)",
+        "Suggests using a subdomain like www.example.com as an alternative"
+      ]
+    },
+    {
+      "name": "HttpAgent host configuration",
+      "prompt": "My IC frontend works fine on icp0.io but API calls fail when I access it through my custom domain. What's wrong? Just the fix.",
+      "expected_behaviors": [
+        "Identifies that HttpAgent cannot auto-detect the IC API host on custom domains",
+        "Shows setting host to https://icp-api.io for mainnet",
+        "Shows HttpAgent.create({ host }) or equivalent configuration"
+      ]
+    },
+    {
+      "name": "Domain update flow",
+      "prompt": "I want to point my existing custom domain to a different canister. What do I need to do? Just the steps.",
+      "expected_behaviors": [
+        "Updates the _canister-id TXT record to the new canister ID",
+        "Uses PATCH https://icp0.io/custom-domains/v1/DOMAIN to notify the service",
+        "Does NOT say to delete and re-register the domain"
+      ]
+    },
+    {
+      "name": "Domain removal flow",
+      "prompt": "How do I remove a custom domain registration from the IC? Just the steps.",
+      "expected_behaviors": [
+        "Removes the _canister-id TXT and _acme-challenge CNAME DNS records",
+        "Uses DELETE https://icp0.io/custom-domains/v1/DOMAIN to notify the service",
+        "Does NOT suggest only removing DNS records without calling the API"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I set up a custom domain for my IC canister?",
+      "My custom domain registration is failing",
+      "What DNS records do I need for an IC custom domain?",
+      "How do I update my custom domain to point to a different canister?",
+      "How do I remove a custom domain from the IC?",
+      "The ACME challenge for my IC domain keeps failing",
+      "How do I validate my custom domain configuration?"
+    ],
+    "should_not_trigger": [
+      "How do I deploy a frontend on the IC?",
+      "Set up Internet Identity for my app",
+      "How do I make inter-canister calls?",
+      "Configure .ic-assets.json5 for SPA routing",
+      "How do I transfer ICP tokens?",
+      "Deploy a Rust backend canister"
+    ]
+  }
+}
