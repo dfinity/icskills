@@ -117,7 +117,28 @@ ic-wasm --version
 
 11. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (>= 0.3.0) with `@icp-sdk/core` (>= 5.0.0 — there is no 0.x or 1.x release) to generate TypeScript bindings from `.did` files at build time. Use `outDir: "./src/bindings"` so imports are clean (e.g., `./bindings/backend`). The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for the full Vite plugin setup.
 
-12. **Misunderstanding Candid file generation with recipes.** When using the Rust or Motoko recipe:
+12. **Mixing canister-level fields across config styles.** When using a recipe, the only valid canister-level fields are `name`, `recipe`, `sync`, `settings`, and `init_args`. Fields like `candid`, `build`, or `wasm` are **not** valid at canister level alongside a recipe — recipe-specific options go inside `recipe.configuration`. When using bare `build` (no recipe), valid canister-level fields are `name`, `build`, `sync`, `settings`, and `init_args`. The field `init_arg_file` does not exist — use `init_args.path` instead (e.g., `init_args: { path: ./args.bin, format: bin }`). For the authoritative field reference, consult the [icp-cli configuration reference](https://cli.internetcomputer.org/0.2/reference/configuration.md).
+    ```yaml
+    # Wrong — candid is not a canister-level field when using a recipe
+    canisters:
+      - name: backend
+        candid: backend/backend.did
+        recipe:
+          type: "@dfinity/rust@v3.2.0"
+          configuration:
+            package: backend
+
+    # Correct — candid goes inside recipe.configuration
+    canisters:
+      - name: backend
+        recipe:
+          type: "@dfinity/rust@v3.2.0"
+          configuration:
+            package: backend
+            candid: backend/backend.did
+    ```
+
+13. **Misunderstanding Candid file generation with recipes.** When using the Rust or Motoko recipe:
     - If `candid` is **specified**: the file must already exist (checked in or manually created). The recipe uses it as-is and does **not** generate one.
     - If `candid` is **omitted**: the recipe auto-generates the `.did` file from the compiled WASM (via `candid-extractor` for Rust, `moc` for Motoko). The generated file is placed in the build cache, not at a predictable project path.
 
@@ -296,6 +317,8 @@ const backendId = canisterEnv?.["PUBLIC_CANISTER_ID:backend"];
 Note: variables are only updated for canisters being deployed. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
 
 ## Additional References
+
+For the complete CLI and configuration schema, consult the [icp-cli documentation index](https://cli.internetcomputer.org/llms.txt).
 
 For detailed guides on specific topics, consult these reference files when needed:
 
