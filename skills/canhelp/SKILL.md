@@ -16,11 +16,11 @@ Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid inte
 
 1. Resolve the canister ID by running the resolve script from the skill's base directory:
    ```bash
-   ./scripts/resolve-canister-id.sh $ARGUMENTS
+   ./scripts/resolve-canister-id.sh "$ARGUMENTS"
    ```
    If `$ARGUMENTS` is already a valid principal, the script echoes it back.
    Otherwise, it queries the IC Dashboard API and outputs matches as `<canister-id>  <name>` (one per line).
-   - If there is a single result, use it directly.
+   - If there is a single result, clearly display the resolved canister ID and use it directly.
    - If there are multiple results, present the list to the user and ask them to pick one before continuing.
 
 2. Fetch the Candid interface using the resolved canister ID:
@@ -50,4 +50,5 @@ Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid inte
 - Sort methods alphabetically within each group
 - For complex nested types, show the top-level structure and note nesting
 - If the candid is very large (>100 methods), show a summary count and list only the most important-looking methods, offering to show the full list on request
+- If the fetch succeeds, but the Candid interface is empty,explain that the canister is not exposing its Candid interface in the wasm metadata
 - If the fetch fails, suggest the user verify the canister ID and that `icp` is installed
