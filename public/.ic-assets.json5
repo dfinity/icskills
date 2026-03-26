@@ -38,6 +38,13 @@
     }
   },
   {
+    // Matomo analytics
+    "match": "matomo.js",
+    "headers": {
+      "Cache-Control": "public, max-age=300"
+    }
+  },
+  {
     // Agent-readable skill indices
     "match": "llms*.txt",
     "headers": {
