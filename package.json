@@ -16,7 +16,7 @@
     "@astrojs/sitemap": "^3.7.0",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
-    "astro": "^5.18.0",
+    "astro": "^5.18.1",
     "marked": "^17.0.3",
     "preact": "^10.28.4"
   }
