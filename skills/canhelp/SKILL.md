@@ -1,6 +1,8 @@
 ---
 name: canhelp
 description: Display a human-readable summary of a canister's interface given its mainnet canister ID or name. Like --help but for canisters.
+license: Apache-2.0
+compatibility: "icp-cli >= 0.1.0"
 allowed-tools: Bash(./scripts/resolve-canister-id.sh *), Bash(./scripts/fetch-candid.sh *), Read, Grep, Glob
 argument-hint: <canister-id-or-name>
 metadata:
