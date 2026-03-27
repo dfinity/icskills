@@ -2,7 +2,7 @@
 name: certified-variables
 description: "Serve cryptographically verified responses from query calls using Merkle trees and subnet BLS signatures. Covers certified data API, RbTree/CertTree construction, witness generation, and frontend certificate validation. Use when query responses need verification, certified data, or response authenticity proofs."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: Certified Variables
   category: Security

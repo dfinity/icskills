@@ -2,7 +2,7 @@
 name: multi-canister
 description: "Design and deploy multi-canister dapps. Covers inter-canister calls, canister factory pattern, async messaging pitfalls, bounded vs unbounded wait, and 2MB payload limits. Use when splitting an app across canisters, making inter-canister or cross-canister calls, or designing canister-to-canister communication. Do NOT use for single-canister apps."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: Multi-Canister Architecture
   category: Architecture

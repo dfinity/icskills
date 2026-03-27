@@ -2,7 +2,7 @@
 name: icrc-ledger
 description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers (ICP, ckBTC, ckETH). Covers transfers, balances, approve/transferFrom allowances, fee handling, and ledger deployment. Use when working with ICP transfers, token transfers, balances, ICRC-1, ICRC-2, approve, allowance, or any fungible token on IC. Do NOT use for ckBTC minting or BTC deposit/withdrawal flows — use ckbtc instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: ICRC Ledger Standard
   category: Tokens
