@@ -2,7 +2,7 @@
 name: evm-rpc
 description: "Call Ethereum and EVM chains from IC canisters via the EVM RPC canister. Covers JSON-RPC calls, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a canister. Do NOT use for generic HTTPS calls to non-EVM APIs — use https-outcalls instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: EVM RPC Integration
   category: Integration

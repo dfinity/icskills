@@ -2,7 +2,7 @@
 name: ckbtc
 description: "Accept, send, and manage ckBTC (chain-key Bitcoin). Covers BTC deposit flow via minter, ckBTC transfers, withdrawal to BTC, subaccount derivation, and UTXO management. Use when integrating Bitcoin, ckBTC, BTC deposits, or BTC withdrawals in a canister. Do NOT use for plain token transfers without BTC minting/withdrawal — use icrc-ledger instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: ckBTC Integration
   category: DeFi

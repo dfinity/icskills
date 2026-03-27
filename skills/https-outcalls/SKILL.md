@@ -2,7 +2,7 @@
 name: https-outcalls
 description: "Make HTTPS requests from canisters to external web APIs. Covers transform functions for consensus, cycle cost management, response size limits, and idempotency patterns. Use when a canister needs to call an external API, fetch data from the web, or make HTTP requests. Do NOT use for EVM/Ethereum calls — use evm-rpc instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: HTTPS Outcalls
   category: Integration

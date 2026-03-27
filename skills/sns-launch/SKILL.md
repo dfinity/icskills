@@ -2,7 +2,7 @@
 name: sns-launch
 description: "Configure and launch an SNS DAO to decentralize a dapp. Covers token economics, governance parameters, testflight validation, NNS proposal submission, and decentralization swap. Use when launching an SNS, configuring tokenomics, or setting up DAO governance for a dapp. Do NOT use for NNS governance or general canister management."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0, dfx with sns extension"
+compatibility: "icp-cli >= 0.2.2, dfx with sns extension"
 metadata:
   title: SNS DAO Launch
   category: Governance

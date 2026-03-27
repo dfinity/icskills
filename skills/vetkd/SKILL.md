@@ -2,7 +2,7 @@
 name: vetkd
 description: "Implement on-chain encryption using vetKeys (verifiable encrypted threshold key derivation). Covers key derivation, IBE encryption/decryption, transport keys, and access control. Use when adding encryption, decryption, on-chain privacy, vetKeys, or identity-based encryption to a canister. Do NOT use for authentication — use internet-identity instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: vetKeys
   category: Security
