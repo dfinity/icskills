@@ -5,10 +5,10 @@
   "output_evals": [
     {
       "name": "Lookup by canister ID",
-      "prompt": "What can canister ryjl3-tyaaa-aaaaa-aaaba-cai do?",
+      "prompt": "What can canister f54if-eqaaa-aaaaq-aacea-cai do?",
       "expected_behaviors": [
         "Runs resolve-canister-id.sh with the provided principal",
-        "Runs fetch-candid.sh with the resolved canister ID",
+        "Runs fetch-candid.sh with the canister ID",
         "Reads the downloaded .did file",
         "Groups methods into Query and Update sections",
         "Sorts methods alphabetically within each group",
@@ -17,7 +17,7 @@
     },
     {
       "name": "Lookup by human-readable name",
-      "prompt": "Show me the interface for the NNS governance canister",
+      "prompt": "Show me the interface for the Neutrinite Governance canister",
       "expected_behaviors": [
         "Runs resolve-canister-id.sh with the name (not a hardcoded canister ID)",
         "Displays the resolved canister ID before proceeding",
@@ -36,20 +36,8 @@
       ]
     },
     {
-      "name": "Large interface summarization",
-      "prompt": "Show me what the NNS governance canister can do",
-      "expected_behaviors": [
-        "Resolves 'NNS governance' to a canister ID",
-        "Fetches and reads the Candid interface",
-        "Groups methods by query vs update",
-        "Sorts methods alphabetically within each group",
-        "Shows method signatures with argument types and return types",
-        "Lists key types like Neuron, ProposalInfo, ManageNeuronRequest"
-      ]
-    },
-    {
       "name": "Output format structure",
-      "prompt": "Tell me about canister rrkah-fqaaa-aaaaa-aaaaq-cai",
+      "prompt": "Tell me about canister eqsml-lyaaa-aaaaq-aacdq-cai",
       "expected_behaviors": [
         "Starts the summary with 'Canister <canister-id>'",
         "Has a Query methods section",
@@ -60,11 +48,11 @@
       ]
     },
     {
-      "name": "Empty Candid interface",
-      "prompt": "What methods does canister uf6dk-hyaaa-aaaaq-qaaaq-cai expose?",
+      "name": "Missing Candid metadata",
+      "prompt": "What methods does canister r2pvs-tyaaa-aaaar-ajcwq-cai expose?",
       "expected_behaviors": [
         "Runs fetch-candid.sh with the canister ID",
-        "If the Candid interface is empty, explains that the canister is not exposing its Candid interface in the wasm metadata",
+        "Explains that the canister does not expose its Candid interface in the wasm metadata",
         "Does NOT fabricate or hallucinate methods"
       ]
     },
@@ -72,8 +60,8 @@
       "name": "Adversarial: local canister",
       "prompt": "Show me the interface for my local canister bkyz2-fmaaa-aaaaa-qaaaq-cai",
       "expected_behaviors": [
-        "Attempts to resolve and fetch the canister",
-        "If the fetch fails, suggests verifying the canister ID and that icp is installed",
+        "Recognizes that this is a local canister or that the skill is mainnet-only",
+        "Suggests reading the local .did file from the project directory instead",
         "Does NOT hallucinate a Candid interface"
       ]
     },
