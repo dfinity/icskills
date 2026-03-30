@@ -1,0 +1,116 @@
+{
+  "skill": "canhelp",
+  "description": "Evaluation cases for the canhelp skill. Tests whether agents correctly resolve canister names/IDs, fetch Candid interfaces, and present structured summaries grouped by query vs update methods.",
+
+  "output_evals": [
+    {
+      "name": "Lookup by canister ID",
+      "prompt": "What can canister ryjl3-tyaaa-aaaaa-aaaba-cai do?",
+      "expected_behaviors": [
+        "Runs resolve-canister-id.sh with the provided principal",
+        "Runs fetch-candid.sh with the resolved canister ID",
+        "Reads the downloaded .did file",
+        "Groups methods into Query and Update sections",
+        "Sorts methods alphabetically within each group",
+        "Lists key custom types (records, variants) defined in the interface"
+      ]
+    },
+    {
+      "name": "Lookup by human-readable name",
+      "prompt": "Show me the interface for the NNS governance canister",
+      "expected_behaviors": [
+        "Runs resolve-canister-id.sh with the name (not a hardcoded canister ID)",
+        "Displays the resolved canister ID before proceeding",
+        "Runs fetch-candid.sh with the resolved ID",
+        "Presents a structured summary with Query and Update method groups"
+      ]
+    },
+    {
+      "name": "Ambiguous name with multiple results",
+      "prompt": "What does the SNS canister do?",
+      "expected_behaviors": [
+        "Runs resolve-canister-id.sh with the name",
+        "When multiple results are returned, presents the list to the user",
+        "Asks the user to pick one before continuing",
+        "Does NOT arbitrarily pick one and proceed without asking"
+      ]
+    },
+    {
+      "name": "Large interface summarization",
+      "prompt": "Show me what the NNS governance canister can do",
+      "expected_behaviors": [
+        "Resolves 'NNS governance' to a canister ID",
+        "Fetches and reads the Candid interface",
+        "Groups methods by query vs update",
+        "Sorts methods alphabetically within each group",
+        "Shows method signatures with argument types and return types",
+        "Lists key types like Neuron, ProposalInfo, ManageNeuronRequest"
+      ]
+    },
+    {
+      "name": "Output format structure",
+      "prompt": "Tell me about canister rrkah-fqaaa-aaaaa-aaaaq-cai",
+      "expected_behaviors": [
+        "Starts the summary with 'Canister <canister-id>'",
+        "Has a Query methods section",
+        "Has an Update methods section",
+        "Has a Types section listing custom record/variant types",
+        "Method signatures include argument names/types and return types",
+        "Includes brief one-line descriptions where inferable from method names"
+      ]
+    },
+    {
+      "name": "Empty Candid interface",
+      "prompt": "What methods does canister uf6dk-hyaaa-aaaaq-qaaaq-cai expose?",
+      "expected_behaviors": [
+        "Runs fetch-candid.sh with the canister ID",
+        "If the Candid interface is empty, explains that the canister is not exposing its Candid interface in the wasm metadata",
+        "Does NOT fabricate or hallucinate methods"
+      ]
+    },
+    {
+      "name": "Adversarial: local canister",
+      "prompt": "Show me the interface for my local canister bkyz2-fmaaa-aaaaa-qaaaq-cai",
+      "expected_behaviors": [
+        "Attempts to resolve and fetch the canister",
+        "If the fetch fails, suggests verifying the canister ID and that icp is installed",
+        "Does NOT hallucinate a Candid interface"
+      ]
+    },
+    {
+      "name": "Adversarial: invalid input",
+      "prompt": "Show me the canister interface for notavalidid",
+      "expected_behaviors": [
+        "Runs resolve-canister-id.sh with the input",
+        "If no results are found, clearly communicates the failure",
+        "Does NOT fabricate a canister ID or interface"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "What can canister ryjl3-tyaaa-aaaaa-aaaba-cai do?",
+      "Show me the interface for the NNS ledger",
+      "What methods does the ICP ledger canister expose?",
+      "canhelp ckBTC minter",
+      "Describe the API of canister rrkah-fqaaa-aaaaa-aaaaq-cai",
+      "What's the Candid interface for the cycles minting canister?",
+      "How do I call the Internet Identity canister? What methods are available?",
+      "List the methods on the SNS governance canister"
+    ],
+    "should_not_trigger": [
+      "Deploy my canister to mainnet",
+      "How do I write a Candid interface file?",
+      "Set up a new ICP project with Rust",
+      "How does inter-canister communication work?",
+      "Explain how the NNS governance works",
+      "Write a Motoko function that transfers ICP",
+      "How do I upgrade my canister without losing state?",
+      "What is the Internet Computer?",
+      "Add ICRC-1 support to my token canister",
+      "How do I test my canister locally?"
+    ]
+  }
+}
