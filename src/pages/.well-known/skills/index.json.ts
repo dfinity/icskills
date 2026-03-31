@@ -2,6 +2,7 @@
 // Implements the Cloudflare Agent Skills Discovery RFC (v0.1)
 // https://github.com/cloudflare/agent-skills-discovery-rfc
 import type { APIRoute } from "astro";
+import { SITE_URL } from "../../../data/site";
 import { loadAllSkillFiles } from "../../../data/skills";
 
 export const GET: APIRoute = () => {
@@ -11,6 +12,7 @@ export const GET: APIRoute = () => {
     skills: skills.map((s) => ({
       name: s.name,
       description: s.description,
+      url: `${SITE_URL}/.well-known/skills/${s.name}/SKILL.md`,
       files: s.files,
     })),
   };

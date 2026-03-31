@@ -107,11 +107,12 @@ export function loadAllSkillsRaw(): SkillRaw[] {
   return skills;
 }
 
-/** Recursively collect all file paths relative to baseDir */
+/** Recursively collect all file paths relative to baseDir, skipping dotfiles/dirs */
 function collectFiles(dir: string, baseDir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files: string[] = [];
   for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...collectFiles(fullPath, baseDir));
