@@ -26,7 +26,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { execFileSync } from "child_process";
 import { join } from "path";
-import { readAllSkills } from "./lib/parse-skill.js";
+import { readAllSkills, parseFrontmatter } from "./lib/parse-skill.js";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
@@ -51,6 +51,8 @@ const listEvals = args.includes("--list");
 // ---------------------------------------------------------------------------
 const skillDir = join(ROOT, "skills", skillName);
 const skillContent = readFileSync(join(skillDir, "SKILL.md"), "utf-8");
+const skillMeta = parseFrontmatter(skillContent);
+const skillAllowedTools = skillMeta?.["allowed-tools"] || "Read";
 const evalsFile = join(ROOT, "evaluations", `${skillName}.json`);
 const evals = JSON.parse(readFileSync(evalsFile, "utf-8"));
 
@@ -76,44 +78,105 @@ if (evalFilter) {
 // ---------------------------------------------------------------------------
 
 /**
- * Run a prompt through claude CLI and return the output text.
+ * Run a prompt through claude CLI and return the output text (and optionally tool calls).
  * @param {string} prompt - The user prompt
  * @param {string|null} systemPrompt - Optional system prompt (skill content)
  * @param {object} [options] - Optional settings
  * @param {string} [options.cwd] - Working directory (defaults to /tmp)
- * @param {boolean} [options.allowRead] - Allow the Read tool so the agent can fetch reference files
+ * @param {string} [options.allowedTools] - Comma-separated tool patterns to allow (e.g. from allowed-tools frontmatter)
+ * @param {boolean} [options.captureToolCalls] - If true, use stream-json to capture tool calls
+ * @returns {string|{text: string, toolCalls: string[]}} - Plain text or object with tool calls
  */
 function runClaude(prompt, systemPrompt, options = {}) {
   // Use execFileSync with input option to avoid shell expansion issues.
   // Shell expansion of $VAR and $(...) in skill content (e.g., $ICP_WASM_OUTPUT_PATH)
   // would corrupt the system prompt when passed via "$(cat ...)".
+  const useStreamJson = options.captureToolCalls;
   const args = ["-p", "--model", "sonnet"];
+  if (useStreamJson) {
+    args.push("--output-format", "stream-json", "--verbose");
+  }
   if (systemPrompt) {
     args.push("--system-prompt", systemPrompt);
   }
-  if (options.allowRead) {
-    args.push("--allowedTools", "Read");
+  if (options.allowedTools) {
+    args.push("--allowedTools", options.allowedTools);
   }
 
   const cwd = options.cwd || "/tmp";
+  let raw;
   try {
-    return execFileSync("claude", args, {
+    raw = execFileSync("claude", args, {
       input: prompt,
       encoding: "utf-8",
-      maxBuffer: 1024 * 1024,
+      maxBuffer: 5 * 1024 * 1024,
       timeout: 120_000,
       cwd,
     }).trim();
   } catch (e) {
-    return `[ERROR] ${e.message}`;
+    const errText = `[ERROR] ${e.message}`;
+    return useStreamJson ? { text: errText, toolCalls: [] } : errText;
   }
+
+  if (!useStreamJson) return raw;
+
+  // Parse stream-json lines to extract tool calls and final result
+  const toolCalls = [];
+  let resultText = "";
+  for (const line of raw.split("\n")) {
+    let msg;
+    try { msg = JSON.parse(line); } catch { continue; }
+
+    if (msg.type === "assistant" && msg.message?.content) {
+      for (const block of msg.message.content) {
+        if (block.type === "tool_use") {
+          const input = block.input || {};
+          const summary = block.name === "Bash"
+            ? `Bash: ${input.command || ""}`
+            : block.name === "Read"
+              ? `Read: ${input.file_path || ""}`
+              : `${block.name}: ${JSON.stringify(input).slice(0, 200)}`;
+          toolCalls.push(summary);
+        }
+      }
+    }
+    if (msg.type === "result") {
+      resultText = msg.result || "";
+    }
+  }
+
+  return { text: resultText, toolCalls };
 }
 
-/** Ask claude to judge an output against expected behaviors. */
+/**
+ * Ask claude to judge an output against expected behaviors.
+ * @param {object} evalCase - The eval case with prompt and expected_behaviors
+ * @param {string|{text: string, toolCalls: string[]}} output - Plain text or structured output
+ * @param {string} label - Label for logging
+ */
 function judge(evalCase, output, label) {
   const behaviors = evalCase.expected_behaviors
     .map((b, i) => `${i + 1}. ${b}`)
     .join("\n");
+
+  // Build the output section, including tool calls if available
+  const isStructured = typeof output === "object" && output.toolCalls;
+  let outputSection;
+  if (isStructured && output.toolCalls.length > 0) {
+    const toolList = output.toolCalls.map((t, i) => `${i + 1}. ${t}`).join("\n");
+    outputSection = `<tool_calls>
+The assistant made the following tool calls during execution:
+${toolList}
+</tool_calls>
+
+<output>
+${output.text}
+</output>`;
+  } else {
+    outputSection = `<output>
+${isStructured ? output.text : output}
+</output>`;
+  }
 
   const judgePrompt = `You are an evaluation judge. A coding assistant was given this task:
 
@@ -121,11 +184,7 @@ function judge(evalCase, output, label) {
 ${evalCase.prompt}
 </task>
 
-The assistant produced this output:
-
-<output>
-${output}
-</output>
+${outputSection}
 
 Score each expected behavior as PASS or FAIL. Be strict — the behavior must be clearly present, not just vaguely implied. Return ONLY a JSON array of objects with "behavior", "pass" (boolean), and "reason" (one sentence).
 
@@ -231,13 +290,22 @@ if (!triggersOnly && outputCases.length > 0) {
   for (const evalCase of outputCases) {
     console.log(`━━━ ${evalCase.name} ━━━\n`);
 
-    // Run WITH skill — from the skill directory with Read access so the
-    // agent can fetch reference files on demand, matching real usage.
+    // Run WITH skill — from the skill directory with tools declared in the
+    // skill's allowed-tools frontmatter, matching real usage. Use stream-json
+    // to capture tool calls so the judge can verify script execution.
     console.log("  Running WITH skill...");
     const withOutput = runClaude(evalCase.prompt, skillContent, {
       cwd: skillDir,
-      allowRead: true,
+      allowedTools: skillAllowedTools,
+      captureToolCalls: true,
     });
+
+    if (withOutput.toolCalls?.length > 0) {
+      console.log(`  Tool calls: ${withOutput.toolCalls.length}`);
+      for (const tc of withOutput.toolCalls) {
+        console.log(`    → ${tc}`);
+      }
+    }
 
     // Run WITHOUT skill (baseline) — no tools, no skill context
     let withoutOutput = null;
@@ -277,9 +345,13 @@ if (!triggersOnly && outputCases.length > 0) {
       }
     }
 
+    // Store text output (not the full structured object) in results
+    const withOutputText = typeof withOutput === "object" ? withOutput.text : withOutput;
+    const withToolCalls = typeof withOutput === "object" ? withOutput.toolCalls : [];
+
     allResults.output_evals.push({
       name: evalCase.name,
-      with_skill: { output: withOutput, judgment: withJudgment },
+      with_skill: { output: withOutputText, tool_calls: withToolCalls, judgment: withJudgment },
       without_skill: withoutOutput
         ? { output: withoutOutput, judgment: withoutJudgment }
         : null,
