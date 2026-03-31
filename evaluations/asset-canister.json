@@ -60,7 +60,9 @@
       "Set up stable memory in Motoko",
       "Connect a wallet to my dapp",
       "How do I create an ICRC-1 token?",
-      "Deploy a Rust backend canister"
+      "Deploy a Rust backend canister",
+      "How do I set up a custom domain on the IC?",
+      "Configure DNS for my IC canister"
     ]
   }
 }
