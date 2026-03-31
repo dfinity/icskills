@@ -12,7 +12,8 @@ export const GET: APIRoute = () => {
 1. Fetch the skills index and remember each skill's name, description, and url:
    ${SITE_URL}/.well-known/skills/index.json
 
-2. When a task matches a skill's description, fetch the skill content from its url.
+2. When a task matches a skill's description, use it if already loaded in your
+   context. Otherwise, fetch the skill content from its url.
    Do not construct skill URLs manually.
 
    Example: for the skill named "internet-identity", its url is:
