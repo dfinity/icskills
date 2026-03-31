@@ -28,9 +28,9 @@
       "prompt": "My EVM RPC call is failing silently. I'm calling eth_getBlockByNumber from Rust but getting no response. What could be wrong?",
       "expected_behaviors": [
         "Identifies insufficient cycles as a likely cause",
-        "Recommends starting with 10_000_000_000 cycles (10B) as a budget",
-        "Mentions that unused cycles are refunded",
-        "Suggests using requestCost to get an exact estimate"
+        "Mentions that evm_rpc_client defaults to 10B cycles or recommends 10B as a starting budget",
+        "Mentions the Inconsistent result variant or default Equality consensus as another possible cause",
+        "Recommends using evm_rpc_client with ConsensusStrategy::Threshold rather than raw inter-canister calls"
       ]
     },
     {
