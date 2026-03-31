@@ -36,15 +36,13 @@ Custom domains work at the boundary node level — they map a domain to any cani
 
 5. **Forgetting the `.well-known/ic-domains` file.** The canister must serve `/.well-known/ic-domains` listing your custom domain. Without it, domain ownership verification fails during registration.
 
-6. **Not deploying `.well-known` because it's a hidden directory.** By default, `icp` / `dfx` ignores directories starting with `.`. You need a `.ic-assets.json5` file with `{ "match": ".well-known", "ignore": false }` so the directory gets included in the deployment.
+6. **Stale `_acme-challenge` TXT records from your DNS provider.** Previous ACME challenges by your provider may leave TXT records on `_acme-challenge.CUSTOM_DOMAIN` that don't appear in your dashboard. These conflict with the IC's ACME flow. Disable all TLS offerings from your provider to clear them. Verify with `dig TXT _acme-challenge.CUSTOM_DOMAIN`.
 
-7. **Stale `_acme-challenge` TXT records from your DNS provider.** Previous ACME challenges by your provider may leave TXT records on `_acme-challenge.CUSTOM_DOMAIN` that don't appear in your dashboard. These conflict with the IC's ACME flow. Disable all TLS offerings from your provider to clear them. Verify with `dig TXT _acme-challenge.CUSTOM_DOMAIN`.
+7. **Not explicitly registering the domain.** DNS configuration alone is not enough. You must call `POST /custom-domains/v1/CUSTOM_DOMAIN` to start registration. It is not automatic.
 
-8. **Not explicitly registering the domain.** DNS configuration alone is not enough. You must call `POST /custom-domains/v1/CUSTOM_DOMAIN` to start registration. It is not automatic.
+8. **Not setting `host` in HttpAgent on custom domains.** When serving from a custom domain, the `HttpAgent` cannot automatically infer the IC API host like it can on `icp0.io`. You must set `host: "https://icp-api.io"` explicitly for mainnet.
 
-9. **Not setting `host` in HttpAgent on custom domains.** When serving from a custom domain, the `HttpAgent` cannot automatically infer the IC API host like it can on `icp0.io`. You must set `host: "https://icp-api.io"` explicitly for mainnet.
-
-10. **Forgetting alternative origins for Internet Identity.** II principals depend on the origin domain. Switching from a canister URL to a custom domain changes principals. Configure `.well-known/ii-alternative-origins` to keep the same principals. See the `internet-identity` skill.
+9. **Forgetting alternative origins for Internet Identity.** II principals depend on the origin domain. Switching from a canister URL to a custom domain changes principals. Configure `.well-known/ii-alternative-origins` to keep the same principals. See the `internet-identity` skill.
 
 ## Implementation
 
@@ -67,54 +65,22 @@ For apex domains without CNAME support, use your provider's ANAME or ALIAS recor
 
 ### Step 2: Create the `ic-domains` File
 
-Create `.well-known/ic-domains` in your canister's served directory. List each custom domain on its own line:
+Your canister must serve `/.well-known/ic-domains` over HTTP. Create this file listing each custom domain on its own line:
 
 ```text
 app.example.com
 www.example.com
 ```
 
-**For Vite-based projects** (created with `dfx new` or `icp init`), place `.well-known/` inside `public/` so it gets copied to `dist/` unchanged:
+**Asset canister users:** place `.well-known/` inside your `public/` directory (Vite projects) or alongside your source files, and ensure `.ic-assets.json5` includes `{ "match": ".well-known", "ignore": false }` so the hidden directory gets deployed. See the `asset-canister` skill for details on file placement.
 
-```
-src/project_frontend/
-├── public/
-│   ├── .ic-assets.json5
-│   └── .well-known/
-│       └── ic-domains
-```
+**Custom `http_request` canisters:** serve the file contents at `/.well-known/ic-domains` directly from your HTTP request handler.
 
-**For projects where the asset canister serves directly from source:**
+### Step 3: Deploy
 
-```
-src/project_frontend/
-├── src/
-│   └── .well-known/
-│       └── ic-domains
-```
+Deploy your canister so that `/.well-known/ic-domains` is accessible at `https://<canister-id>.icp0.io/.well-known/ic-domains`.
 
-### Step 3: Configure `.ic-assets.json5`
-
-Place alongside the `.well-known` directory to ensure it gets deployed:
-
-```json5
-[
-  {
-    "match": ".well-known",
-    "ignore": false
-  }
-]
-```
-
-If you already have a `.ic-assets.json5`, add this entry to the existing array.
-
-### Step 4: Deploy
-
-```bash
-icp deploy frontend
-```
-
-### Step 5: Validate
+### Step 4: Validate
 
 Check DNS records and canister configuration before registering:
 
@@ -144,10 +110,10 @@ If validation fails, common errors and fixes:
 | Missing DNS TXT record | Add the `_canister-id` TXT record with your canister ID |
 | Invalid DNS TXT record | Ensure the TXT value is a valid canister ID |
 | More than one DNS TXT record | Remove duplicate `_canister-id` TXT records, keep one |
-| Failed to retrieve known domains | Ensure `.well-known/ic-domains` is deployed (check `.ic-assets.json5`) |
+| Failed to retrieve known domains | Ensure `.well-known/ic-domains` is deployed and served by the canister |
 | Domain missing from list | Add the domain to the `ic-domains` file and redeploy |
 
-### Step 6: Register
+### Step 5: Register
 
 ```bash
 curl -sL -X POST "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
@@ -166,7 +132,7 @@ Success response:
 }
 ```
 
-### Step 7: Wait for Certificate Provisioning
+### Step 6: Wait for Certificate Provisioning
 
 Poll until `registration_status` is `registered`:
 
@@ -225,8 +191,7 @@ const agent = await HttpAgent.create({ host });
 ## Deploy & Test
 
 ```bash
-# 1. Deploy canister with ic-domains file
-icp deploy frontend
+# 1. Deploy your canister with the ic-domains file served at /.well-known/ic-domains
 
 # 2. Validate DNS + canister config
 curl -sL -X GET "https://icp0.io/custom-domains/v1/yourdomain.com/validate" | jq

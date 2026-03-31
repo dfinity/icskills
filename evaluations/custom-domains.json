@@ -25,12 +25,12 @@
     },
     {
       "name": "ic-domains file setup",
-      "prompt": "I have a Vite-based IC frontend project created with dfx new. Where exactly do I put the ic-domains file and what should it contain for mydomain.com? Just the file placement and content.",
+      "prompt": "What file does my canister need to serve for custom domain verification, and what should it contain for mydomain.com? Keep it brief.",
       "expected_behaviors": [
-        "Places .well-known/ic-domains inside the public/ directory, not src/",
-        "Lists the domain in the ic-domains file (mydomain.com)",
-        "Mentions .ic-assets.json5 with match .well-known and ignore false",
-        "Does NOT place the file in src/ where Vite would try to compile it"
+        "Identifies the file as .well-known/ic-domains",
+        "States the canister must serve /.well-known/ic-domains",
+        "Lists the domain in the file (mydomain.com)",
+        "Does NOT assume a specific canister type or framework"
       ]
     },
     {
@@ -46,7 +46,7 @@
       "name": "Apex domain limitation",
       "prompt": "I want to use example.com (no subdomain) as my custom domain on the IC, but my DNS provider won't let me set a CNAME on the apex. What are my options? Keep it brief.",
       "expected_behaviors": [
-        "Explains that many providers don't allow CNAME on apex domains",
+        "Provides solutions for the CNAME-on-apex limitation",
         "Suggests using ANAME or ALIAS record types (CNAME flattening)",
         "Suggests using a subdomain like www.example.com as an alternative"
       ]
