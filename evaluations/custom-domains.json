@@ -97,7 +97,9 @@
       "How do I make inter-canister calls?",
       "Configure .ic-assets.json5 for SPA routing",
       "How do I transfer ICP tokens?",
-      "Deploy a Rust backend canister"
+      "Deploy a Rust backend canister",
+      "Configure .ic-assets.json5 for my project",
+      "How do I upload files to an asset canister programmatically?"
     ]
   }
 }

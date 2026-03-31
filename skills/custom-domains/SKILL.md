@@ -14,11 +14,13 @@ metadata:
 
 By default, canisters are accessible at `<canister-id>.icp0.io`. The custom domains service lets you serve any canister under your own domain (e.g., `yourdomain.com`). You configure DNS, deploy a domain ownership file to your canister, and register via a REST API. The HTTP gateways then handle TLS certificate provisioning, renewal, and routing automatically.
 
+Custom domains work at the boundary node level — they map a domain to any canister ID via DNS. This works with any canister that can serve `/.well-known/ic-domains` over HTTP, not just asset canisters. That includes asset canisters, Juno satellites, and custom canisters implementing `http_request`.
+
 ## Prerequisites
 
 - A registered domain from any registrar (e.g., Namecheap, GoDaddy, Cloudflare)
 - Access to edit DNS records for that domain
-- A deployed canister (typically an asset canister serving a frontend)
+- A deployed canister that serves `/.well-known/ic-domains` over HTTP (asset canisters, Juno satellites, or any canister implementing `http_request`)
 - `curl` for the registration API calls
 - `jq` (optional, for formatting JSON responses)
 
