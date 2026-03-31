@@ -1,6 +1,6 @@
 ---
 name: evm-rpc
-description: "Call Ethereum and EVM chains from IC canisters via the EVM RPC canister. Covers JSON-RPC calls, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a canister. Do NOT use for generic HTTPS calls to non-EVM APIs — use https-outcalls instead."
+description: "Call Ethereum and EVM chains from IC canisters (Rust) via the EVM RPC canister using the evm_rpc_client crate. Covers typed API calls, raw JSON-RPC, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a Rust canister. Do NOT use for generic HTTPS calls to non-EVM APIs — use https-outcalls instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -16,8 +16,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk`, `candid`, `serde`
+- `evm_rpc_client` crate (provides typed client API and re-exports `evm_rpc_types`)
 
 ## Canister IDs
 
@@ -25,16 +24,18 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 |---|---|---|
 | EVM RPC (mainnet) | `7hfb6-caaaa-aaaar-qadga-cai` | 34-node fiduciary |
 
+Candid interface: `https://github.com/dfinity/evm-rpc-canister/releases/latest/download/evm_rpc.did` — or use the `canhelp` skill to fetch it directly from the mainnet canister.
+
 ## Supported Chains
 
-| Chain | RpcServices Variant | Chain ID |
-|---|---|---|
-| Ethereum Mainnet | `#EthMainnet` | 1 |
-| Ethereum Sepolia | `#EthSepolia` | 11155111 |
-| Arbitrum One | `#ArbitrumOne` | 42161 |
-| Base Mainnet | `#BaseMainnet` | 8453 |
-| Optimism Mainnet | `#OptimismMainnet` | 10 |
-| Custom EVM chain | `#Custom` | any |
+| Chain | Chain ID | Candid | Rust |
+|---|---|---|---|
+| Ethereum Mainnet | 1 | `variant { EthMainnet }` | `RpcServices::EthMainnet` |
+| Ethereum Sepolia | 11155111 | `variant { EthSepolia }` | `RpcServices::EthSepolia` |
+| Arbitrum One | 42161 | `variant { ArbitrumOne }` | `RpcServices::ArbitrumOne` |
+| Base Mainnet | 8453 | `variant { BaseMainnet }` | `RpcServices::BaseMainnet` |
+| Optimism Mainnet | 10 | `variant { OptimismMainnet }` | `RpcServices::OptimismMainnet` |
+| Custom EVM chain | any | `variant { Custom }` | `RpcServices::Custom` |
 
 ## RPC Providers
 
@@ -62,275 +63,58 @@ Where `nodes` = 34 (fiduciary subnet), `rpc_count` = number of providers queried
 
 Use `requestCost` to get an exact estimate before calling.
 
-## Mistakes That Break Your Build
+## Pitfalls
 
-1. **Not sending enough cycles.** Every EVM RPC call requires cycles attached. If you send too few, the call fails silently or traps. Start with 10B cycles and adjust down after verifying.
+1. **Not sending enough cycles.** Every EVM RPC call requires cycles attached. The `evm_rpc_client` defaults to 10B cycles per call, but if you override with `.with_cycles()`, sending too few causes silent failures or traps.
 
-2. **Ignoring the `Inconsistent` result variant.** Multi-provider calls return `#Consistent(result)` or `#Inconsistent(results)`. If providers disagree, you get `Inconsistent`. Always handle both arms or your canister traps on provider disagreement.
+2. **Using default `Equality` consensus.** The default consensus strategy requires all providers to return identical responses. This fails for queries like `eth_getBlockByNumber(Latest)` where providers are often 1-2 blocks apart. Use `ConsensusStrategy::Threshold { total: Some(3), min: 2 }` (2-of-3 agreement) for most use cases.
 
-3. **Using wrong chain variant.** `#EthMainnet` is for Ethereum L1. For Arbitrum use `#ArbitrumOne`, for Base use `#BaseMainnet`. Using the wrong variant queries the wrong chain.
+3. **Ignoring the `Inconsistent` result variant.** Even with threshold consensus, providers can still disagree beyond the threshold. Multi-provider calls return `MultiRpcResult::Consistent(result)` or `MultiRpcResult::Inconsistent(results)`. Always handle both arms or your canister traps on provider disagreement.
 
-4. **Forgetting `null` for optional config.** The second argument to every RPC method is an optional config record. Pass `null` for defaults. Omitting it causes a Candid type mismatch.
+4. **Using wrong chain variant.** `RpcServices::EthMainnet` is for Ethereum L1. For Arbitrum use `RpcServices::ArbitrumOne`, for Base use `RpcServices::BaseMainnet`. Using the wrong variant queries the wrong chain.
 
-5. **Response size limits.** Large responses (e.g., `eth_getLogs` with broad filters) can exceed the max response size. Set `max_response_bytes` appropriately or the call fails.
+5. **Response size limits.** Large responses (e.g., `eth_getLogs` with broad filters) can exceed the max response size. Use `.with_response_size_estimate()` on the client builder or the call fails.
 
 6. **Calling `eth_sendRawTransaction` without signing first.** The EVM RPC canister does not sign transactions. You must sign the transaction yourself (using threshold ECDSA via the IC management canister) and pass the raw signed bytes.
 
-7. **Using `Cycles.add` instead of `await (with cycles = ...)` in mo:core.** In mo:core 2.0, `Cycles.add` does not exist. Attach cycles using `await (with cycles = AMOUNT) canister.method(args)`. This is the only way to attach cycles in mo:core.
+7. **Defining EVM RPC Candid types manually.** Use the `evm_rpc_client` crate which provides a typed client API and re-exports all Candid types from `evm_rpc_types`. Manual type definitions drift from the canister's actual interface and cause `IC0503` decode traps at runtime.
 
 ## Implementation
 
 ### icp.yaml Configuration
 
-The EVM RPC canister is deployed as a pre-built WASM alongside your backend. On mainnet, it is already deployed at `7hfb6-caaaa-aaaar-qadga-cai` — your backend calls it by principal directly.
+The `evm_rpc` canister definition is only needed for local development — the local replica doesn't have the EVM RPC canister pre-installed, so you deploy your own copy from the pre-built WASM. On mainnet, the DFINITY-maintained canister is already deployed at `7hfb6-caaaa-aaaar-qadga-cai` — do NOT deploy your own instance. Use environments to control which canisters are deployed where:
 
 ```yaml
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/motoko@v4.1.0"
+      type: "@dfinity/rust@v3.2.0"
       configuration:
-        main: src/backend/main.mo
+        package: backend
   - name: evm_rpc
     build:
       steps:
         - type: pre-built
-          url: https://github.com/dfinity/evm-rpc-canister/releases/download/v2.2.0/evm_rpc.wasm.gz
+          url: https://github.com/dfinity/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz
     init_args: "(record {})"
-```
 
-### Motoko
-
-#### mops.toml
-
-```toml
-[package]
-name = "evm-rpc-app"
-version = "0.1.0"
-
-[dependencies]
-core = "2.0.0"
-```
-
-#### src/backend/main.mo — Get ETH Balance
-
-```motoko
-import EvmRpc "canister:evm_rpc";
-import Runtime "mo:core/Runtime";
-import Text "mo:core/Text";
-
-persistent actor {
-
-  // Get ETH balance for an address on Ethereum mainnet
-  public func getEthBalance(address : Text) : async Text {
-    let services = #EthMainnet(null); // Use all default providers
-    let config = null;
-
-    // eth_call with balance check via raw JSON-RPC
-    let json = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"" # address # "\",\"latest\"],\"id\":1}";
-    let maxResponseBytes : Nat64 = 1000;
-
-    // Get exact cost first
-    let cyclesResult = await EvmRpc.requestCost(#EthMainnet(#PublicNode), json, maxResponseBytes);
-    let cost = switch (cyclesResult) {
-      case (#Ok(c)) { c };
-      case (#Err(err)) { Runtime.trap("requestCost failed: " # debug_show err) };
-    };
-
-    let result = await (with cycles = cost) EvmRpc.request(
-      #EthMainnet(#PublicNode),
-      json,
-      maxResponseBytes
-    );
-
-    switch (result) {
-      case (#Ok(response)) { response };
-      case (#Err(err)) { Runtime.trap("RPC error: " # debug_show err) };
-    }
-  };
-
-  // Get latest block using the typed API
-  public func getLatestBlock() : async ?EvmRpc.Block {
-    let services = #EthMainnet(null);
-    let config = null;
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.eth_getBlockByNumber(
-      services,
-      config,
-      #Latest
-    );
-
-    switch (result) {
-      case (#Consistent(#Ok(block))) { ?block };
-      case (#Consistent(#Err(error))) {
-        Runtime.trap("Error: " # debug_show error);
-      };
-      case (#Inconsistent(_results)) {
-        Runtime.trap("Providers returned inconsistent results");
-      };
-    }
-  };
-
-  // Read ERC-20 token balance (e.g., USDC on Ethereum)
-  // Function selector for balanceOf(address): 0x70a08231
-  // Pad address to 32 bytes (remove 0x prefix, left-pad with zeros)
-  public func getErc20Balance(tokenContract : Text, walletAddress : Text) : async ?Text {
-    let services = #EthMainnet(null);
-    let config = null;
-
-    // Encode: balanceOf(address) = 0x70a08231 + address padded to 32 bytes
-    // walletAddress should be like "0xABC..." — strip 0x and left-pad to 64 hex chars
-    let calldata = "0x70a08231000000000000000000000000" # stripHexPrefix(walletAddress);
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.eth_call(
-      services,
-      config,
-      {
-        block = null;
-        transaction = {
-          to = ?tokenContract;
-          input = ?calldata;
-          // All optional fields set to null
-          accessList = null;
-          blobVersionedHashes = null;
-          blobs = null;
-          chainId = null;
-          from = null;
-          gas = null;
-          gasPrice = null;
-          maxFeePerBlobGas = null;
-          maxFeePerGas = null;
-          maxPriorityFeePerGas = null;
-          nonce = null;
-          type_ = null;
-          value = null;
-        };
-      }
-    );
-
-    switch (result) {
-      case (#Consistent(#Ok(response))) { ?response };
-      case (#Consistent(#Err(error))) {
-        Runtime.trap("eth_call error: " # debug_show error);
-      };
-      case (#Inconsistent(_)) {
-        Runtime.trap("Inconsistent results from providers");
-      };
-    }
-  };
-
-  // Helper: strip "0x" prefix from hex string
-  func stripHexPrefix(hex : Text) : Text {
-    let chars = hex.chars();
-    switch (chars.next(), chars.next()) {
-      case (?"0", ?"x") {
-        var rest = "";
-        for (c in chars) { rest #= Text.fromChar(c) };
-        rest
-      };
-      case _ { hex };
-    }
-  };
-
-  // Send a signed raw transaction
-  public func sendRawTransaction(signedTxHex : Text) : async ?EvmRpc.SendRawTransactionStatus {
-    let services = #EthMainnet(null);
-    let config = null;
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.eth_sendRawTransaction(
-      services,
-      config,
-      signedTxHex
-    );
-
-    switch (result) {
-      case (#Consistent(#Ok(status))) { ?status };
-      case (#Consistent(#Err(error))) {
-        Runtime.trap("sendRawTransaction error: " # debug_show error);
-      };
-      case (#Inconsistent(_)) {
-        Runtime.trap("Inconsistent results");
-      };
-    }
-  };
-
-  // Get transaction receipt
-  public func getTransactionReceipt(txHash : Text) : async ?EvmRpc.TransactionReceipt {
-    let services = #EthMainnet(null);
-    let config = null;
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.eth_getTransactionReceipt(
-      services,
-      config,
-      txHash
-    );
-
-    switch (result) {
-      case (#Consistent(#Ok(receipt))) { receipt };
-      case (#Consistent(#Err(error))) {
-        Runtime.trap("Error: " # debug_show error);
-      };
-      case (#Inconsistent(_)) {
-        Runtime.trap("Inconsistent results");
-      };
-    }
-  };
-
-  // Using a specific provider (instead of multi-provider consensus)
-  public func getBalanceViaPublicNode(address : Text) : async Text {
-    let json = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"" # address # "\",\"latest\"],\"id\":1}";
-    let maxResponseBytes : Nat64 = 1000;
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.request(
-      #EthMainnet(#PublicNode),  // Single specific provider
-      json,
-      maxResponseBytes
-    );
-
-    switch (result) {
-      case (#Ok(response)) { response };
-      case (#Err(err)) { Runtime.trap("Error: " # debug_show err) };
-    }
-  };
-
-  // Querying a different chain (Arbitrum)
-  public func getArbitrumBlock() : async ?EvmRpc.Block {
-    let result = await (with cycles = 10_000_000_000) EvmRpc.eth_getBlockByNumber(
-      #ArbitrumOne(null), // Arbitrum One
-      null,
-      #Latest
-    );
-
-    switch (result) {
-      case (#Consistent(#Ok(block))) { ?block };
-      case (#Consistent(#Err(error))) {
-        Runtime.trap("Error: " # debug_show error);
-      };
-      case (#Inconsistent(_)) {
-        Runtime.trap("Inconsistent results");
-      };
-    }
-  };
-
-  // Using a custom RPC endpoint
-  public func getBalanceCustomRpc(address : Text, rpcUrl : Text) : async Text {
-    let json = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"" # address # "\",\"latest\"],\"id\":1}";
-
-    let result = await (with cycles = 10_000_000_000) EvmRpc.request(
-      #Custom({ url = rpcUrl; headers = null }),
-      json,
-      1000
-    );
-
-    switch (result) {
-      case (#Ok(response)) { response };
-      case (#Err(err)) { Runtime.trap("Error: " # debug_show err) };
-    }
-  };
-};
+environments:
+  - name: local
+    network: local
+    canisters: [backend, evm_rpc]
+  - name: ic
+    network: ic
+    canisters: [backend]
+    settings:
+      backend:
+        environment_variables:
+          PUBLIC_CANISTER_ID:evm_rpc: "7hfb6-caaaa-aaaar-qadga-cai"
 ```
 
 ### Rust
+
+The `evm_rpc_client` crate provides a typed client API for calling the EVM RPC canister. It handles cycle attachment, argument encoding, and response decoding. All Candid types are re-exported from `evm_rpc_types`. For projects using the Alloy ecosystem, enable the `alloy` Cargo feature to use Alloy-native request/response types.
 
 #### Cargo.toml
 
@@ -344,357 +128,151 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.19"
+evm_rpc_client = "0.4"
+evm_rpc_types = "3"
+ic-canister-runtime = "0.2"
+ic-cdk = "0.20"
 candid = "0.10"
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
 
 #### src/lib.rs
 
 ```rust
-use candid::{CandidType, Deserialize, Principal};
-use ic_cdk::call::Call;
+use candid::Principal;
+use evm_rpc_client::{CandidResponseConverter, EvmRpcClient, NoRetry};
+use evm_rpc_types::{
+    Block, BlockTag, CallArgs, ConsensusStrategy,
+    Hex, Hex20, Hex32, MultiRpcResult, RpcServices, SendRawTransactionStatus,
+};
+use ic_canister_runtime::IcRuntime;
 use ic_cdk::update;
+use std::str::FromStr;
 
-const EVM_RPC_CANISTER: &str = "7hfb6-caaaa-aaaar-qadga-cai";
+// Resolve the EVM RPC canister ID from environment variable injected by icp-cli.
+// Locally: auto-injected with the locally deployed evm_rpc canister ID.
+// Mainnet: set explicitly in icp.yaml to the well-known canister ID.
+fn client() -> EvmRpcClient<IcRuntime, CandidResponseConverter, NoRetry> {
+    let canister_id = Principal::from_text(
+        ic_cdk::api::env_var_value("PUBLIC_CANISTER_ID:evm_rpc"),
+    )
+    .expect("Invalid principal in PUBLIC_CANISTER_ID:evm_rpc");
 
-fn evm_rpc_id() -> Principal {
-    Principal::from_text(EVM_RPC_CANISTER).unwrap()
-}
-
-// -- Types matching the EVM RPC canister Candid interface --
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum RpcServices {
-    EthMainnet(Option<Vec<EthMainnetService>>),
-    EthSepolia(Option<Vec<EthSepoliaService>>),
-    ArbitrumOne(Option<Vec<L2MainnetService>>),
-    BaseMainnet(Option<Vec<L2MainnetService>>),
-    OptimismMainnet(Option<Vec<L2MainnetService>>),
-    Custom {
-        #[serde(rename = "chainId")]
-        chain_id: u64,
-        services: Vec<CustomRpcService>,
-    },
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum RpcService {
-    EthMainnet(EthMainnetService),
-    EthSepolia(EthSepoliaService),
-    ArbitrumOne(L2MainnetService),
-    BaseMainnet(L2MainnetService),
-    OptimismMainnet(L2MainnetService),
-    Custom(CustomRpcService),
-    Provider(u64),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum EthMainnetService {
-    Alchemy,
-    Ankr,
-    BlockPi,
-    Cloudflare,
-    Llama,
-    PublicNode,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum EthSepoliaService {
-    Alchemy,
-    Ankr,
-    BlockPi,
-    PublicNode,
-    Sepolia,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum L2MainnetService {
-    Alchemy,
-    Ankr,
-    BlockPi,
-    Llama,
-    PublicNode,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-struct HttpHeader {
-    name: String,
-    value: String,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-struct CustomRpcService {
-    url: String,
-    headers: Option<Vec<HttpHeader>>,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum BlockTag {
-    Latest,
-    Safe,
-    Finalized,
-    Earliest,
-    Pending,
-    Number(candid::Nat),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum MultiResult<T> {
-    Consistent(RpcResult<T>),
-    Inconsistent(Vec<(RpcService, RpcResult<T>)>),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum RpcResult<T> {
-    Ok(T),
-    Err(RpcError),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum RpcError {
-    ProviderError(ProviderError),
-    HttpOutcallError(HttpOutcallError),
-    JsonRpcError(JsonRpcError),
-    ValidationError(ValidationError),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum ProviderError {
-    TooFewCycles { expected: candid::Nat, received: candid::Nat },
-    MissingRequiredProvider,
-    ProviderNotFound,
-    NoPermission,
-    InvalidRpcConfig(String),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum RejectionCode {
-    NoError,
-    CanisterError,
-    SysTransient,
-    DestinationInvalid,
-    Unknown,
-    SysFatal,
-    CanisterReject,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum HttpOutcallError {
-    IcError { code: RejectionCode, message: String },
-    InvalidHttpJsonRpcResponse {
-        status: u16,
-        body: String,
-        #[serde(rename = "parsingError")]
-        parsing_error: Option<String>,
-    },
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-struct JsonRpcError {
-    code: i64,
-    message: String,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum ValidationError {
-    Custom(String),
-    InvalidHex(String),
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-struct Block {
-    #[serde(rename = "baseFeePerGas")]
-    base_fee_per_gas: Option<candid::Nat>,
-    number: candid::Nat,
-    difficulty: Option<candid::Nat>,
-    #[serde(rename = "extraData")]
-    extra_data: String,
-    #[serde(rename = "gasLimit")]
-    gas_limit: candid::Nat,
-    #[serde(rename = "gasUsed")]
-    gas_used: candid::Nat,
-    hash: String,
-    #[serde(rename = "logsBloom")]
-    logs_bloom: String,
-    miner: String,
-    #[serde(rename = "mixHash")]
-    mix_hash: String,
-    nonce: candid::Nat,
-    #[serde(rename = "parentHash")]
-    parent_hash: String,
-    #[serde(rename = "receiptsRoot")]
-    receipts_root: String,
-    #[serde(rename = "sha3Uncles")]
-    sha3_uncles: String,
-    size: candid::Nat,
-    #[serde(rename = "stateRoot")]
-    state_root: String,
-    timestamp: candid::Nat,
-    #[serde(rename = "totalDifficulty")]
-    total_difficulty: Option<candid::Nat>,
-    transactions: Vec<String>,
-    #[serde(rename = "transactionsRoot")]
-    transactions_root: Option<String>,
-    uncles: Vec<String>,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-enum SendRawTransactionStatus {
-    Ok(Option<String>),
-    NonceTooLow,
-    NonceTooHigh,
-    InsufficientFunds,
+    EvmRpcClient::builder(IcRuntime::new(), canister_id)
+        .with_rpc_sources(RpcServices::EthMainnet(None))
+        .with_consensus_strategy(ConsensusStrategy::Threshold {
+            total: Some(3),
+            min: 2,
+        })
+        .build()
 }
 
 // -- Get ETH balance via raw JSON-RPC --
+// Returns hex-encoded wei (e.g., "0xde0b6b3a7640000" = 1 ETH).
+// Parse hex to u128, divide by 10^18 to get ETH.
 
 #[update]
 async fn get_eth_balance(address: String) -> String {
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","method":"eth_getBalance","params":["{}","latest"],"id":1}}"#,
-        address
-    );
-    let max_response_bytes: u64 = 1000;
-    let cycles: u128 = 10_000_000_000;
+    let json = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [address, "latest"],
+        "id": 1
+    });
 
-    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
-        .with_args(&(
-            RpcService::EthMainnet(EthMainnetService::PublicNode),
-            json,
-            max_response_bytes,
-        ))
-        .with_cycles(cycles)
+    client()
+        .multi_request(json)
+        .send()
         .await
-        .expect("Failed to call EVM RPC canister")
-        .candid_tuple()
-        .expect("Failed to decode response");
-
-    match result {
-        Ok(response) => response,
-        Err(err) => ic_cdk::trap(&format!("RPC error: {:?}", err)),
-    }
+        .expect_consistent()
+        .unwrap_or_else(|err| ic_cdk::trap(&format!("RPC error: {:?}", err)))
 }
 
 // -- Get latest block via typed API --
 
 #[update]
 async fn get_latest_block() -> Block {
-    let cycles: u128 = 10_000_000_000;
-
-    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
-        .with_args(&(
-            RpcServices::EthMainnet(None),
-            None::<()>,  // config
-            BlockTag::Latest,
-        ))
-        .with_cycles(cycles)
-        .await
-        .expect("Failed to call eth_getBlockByNumber")
-        .candid_tuple()
-        .expect("Failed to decode response");
+    let result = client()
+        .get_block_by_number(BlockTag::Latest)
+        .send()
+        .await;
 
     match result {
-        MultiResult::Consistent(RpcResult::Ok(block)) => block,
-        MultiResult::Consistent(RpcResult::Err(err)) => {
+        MultiRpcResult::Consistent(Ok(block)) => block,
+        MultiRpcResult::Consistent(Err(err)) => {
             ic_cdk::trap(&format!("RPC error: {:?}", err))
         }
-        MultiResult::Inconsistent(_) => {
+        MultiRpcResult::Inconsistent(_) => {
             ic_cdk::trap("Providers returned inconsistent results")
         }
     }
 }
 
-// -- Read ERC-20 balance --
+// -- Read ERC-20 balance via eth_call --
+// Returns hex-encoded uint256. Divide by 10^decimals (e.g., 6 for USDC, 18 for DAI).
+// Function selector for balanceOf(address): 0x70a08231
+// Pad address to 32 bytes (remove 0x prefix, left-pad with zeros)
 
 #[update]
 async fn get_erc20_balance(token_contract: String, wallet_address: String) -> String {
-    // balanceOf(address) selector: 0x70a08231
-    // Pad the address to 32 bytes (strip 0x, left-pad with zeros)
     let addr = wallet_address.trim_start_matches("0x");
     let calldata = format!("0x70a08231{:0>64}", addr);
 
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","method":"eth_call","params":[{{"to":"{}","data":"{}"}},"latest"],"id":1}}"#,
-        token_contract, calldata
-    );
-    let cycles: u128 = 10_000_000_000;
+    let args = CallArgs {
+        transaction: evm_rpc_types::TransactionRequest {
+            to: Some(Hex20::from_str(&token_contract).unwrap()),
+            input: Some(Hex::from_str(&calldata).unwrap()),
+            ..Default::default()
+        },
+        block: None,
+    };
 
-    let (result,): (Result<String, RpcError>,) = Call::unbounded_wait(evm_rpc_id(), "request")
-        .with_args(&(
-            RpcService::EthMainnet(EthMainnetService::PublicNode),
-            json,
-            2048_u64,
-        ))
-        .with_cycles(cycles)
+    let result = client()
+        .call(args)
+        .send()
         .await
-        .expect("Failed to call EVM RPC canister")
-        .candid_tuple()
-        .expect("Failed to decode response");
+        .expect_consistent()
+        .unwrap_or_else(|err| ic_cdk::trap(&format!("eth_call error: {:?}", err)));
 
-    match result {
-        Ok(response) => response,
-        Err(err) => ic_cdk::trap(&format!("RPC error: {:?}", err)),
-    }
+    result.to_string()
 }
 
-// -- Send signed raw transaction --
+// -- Send a signed raw transaction --
 
 #[update]
 async fn send_raw_transaction(signed_tx_hex: String) -> SendRawTransactionStatus {
-    let cycles: u128 = 10_000_000_000;
-
-    let (result,): (MultiResult<SendRawTransactionStatus>,) = Call::unbounded_wait(evm_rpc_id(), "eth_sendRawTransaction")
-        .with_args(&(
-            RpcServices::EthMainnet(None),
-            None::<()>,
-            signed_tx_hex,
-        ))
-        .with_cycles(cycles)
+    client()
+        .send_raw_transaction(Hex::from_str(&signed_tx_hex).unwrap())
+        .send()
         .await
-        .expect("Failed to call eth_sendRawTransaction")
-        .candid_tuple()
-        .expect("Failed to decode response");
-
-    match result {
-        MultiResult::Consistent(RpcResult::Ok(status)) => status,
-        MultiResult::Consistent(RpcResult::Err(err)) => {
-            ic_cdk::trap(&format!("RPC error: {:?}", err))
-        }
-        MultiResult::Inconsistent(_) => {
-            ic_cdk::trap("Providers returned inconsistent results")
-        }
-    }
+        .expect_consistent()
+        .unwrap_or_else(|err| ic_cdk::trap(&format!("RPC error: {:?}", err)))
 }
 
-// -- Query Arbitrum (different chain example) --
+// -- Get transaction receipt --
+
+#[update]
+async fn get_transaction_receipt(tx_hash: String) -> evm_rpc_types::TransactionReceipt {
+    client()
+        .get_transaction_receipt(Hex32::from_str(&tx_hash).unwrap())
+        .send()
+        .await
+        .expect_consistent()
+        .unwrap_or_else(|err| ic_cdk::trap(&format!("RPC error: {:?}", err)))
+        .unwrap_or_else(|| ic_cdk::trap("Transaction receipt not found"))
+}
+
+// -- Override chain per request (e.g., Arbitrum instead of the client default) --
 
 #[update]
 async fn get_arbitrum_block() -> Block {
-    let cycles: u128 = 10_000_000_000;
-
-    let (result,): (MultiResult<Block>,) = Call::unbounded_wait(evm_rpc_id(), "eth_getBlockByNumber")
-        .with_args(&(
-            RpcServices::ArbitrumOne(None),
-            None::<()>,
-            BlockTag::Latest,
-        ))
-        .with_cycles(cycles)
+    client()
+        .get_block_by_number(BlockTag::Latest)
+        .with_rpc_sources(RpcServices::ArbitrumOne(None))
+        .send()
         .await
-        .expect("Failed to call eth_getBlockByNumber")
-        .candid_tuple()
-        .expect("Failed to decode response");
-
-    match result {
-        MultiResult::Consistent(RpcResult::Ok(block)) => block,
-        MultiResult::Consistent(RpcResult::Err(err)) => {
-            ic_cdk::trap(&format!("RPC error: {:?}", err))
-        }
-        MultiResult::Inconsistent(_) => {
-            ic_cdk::trap("Inconsistent results")
-        }
-    }
+        .expect_consistent()
+        .unwrap_or_else(|err| ic_cdk::trap(&format!("RPC error: {:?}", err)))
 }
 
 ic_cdk::export_candid!();
@@ -702,27 +280,13 @@ ic_cdk::export_candid!();
 
 ## Deploy & Test
 
-### Local Development
-
 ```bash
-# Start local replica
+# Local: deploys both backend and evm_rpc (as defined in the local environment)
 icp network start -d
+icp deploy -e local
 
-# Pull the EVM RPC canister
-icp deps pull
-icp deps init evm_rpc --argument '(record {})'
-icp deps deploy
-
-# Deploy your backend
-icp deploy backend
-```
-
-### Deploy to Mainnet
-
-```bash
-# On mainnet, the EVM RPC canister is already deployed.
-# Your canister calls it directly by principal.
-icp deploy backend -e ic
+# Mainnet: deploys only backend (evm_rpc is excluded from the ic environment)
+icp deploy -e ic
 ```
 
 ### Test via icp CLI
@@ -761,47 +325,4 @@ icp canister call evm_rpc requestCost '(
   "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"latest\"],\"id\":1}",
   1000
 )'
-```
-
-## Verify It Works
-
-### Check ETH Balance
-
-```bash
-icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")'
-# Expected: JSON string like '{"jsonrpc":"2.0","id":1,"result":"0x..."}'
-# The result is the balance in wei (hex encoded)
-```
-
-### Check Latest Block
-
-```bash
-icp canister call backend get_latest_block
-# Expected: record { number = ...; hash = "0x..."; timestamp = ...; ... }
-```
-
-### Check ERC-20 Balance (USDC)
-
-```bash
-# USDC contract on Ethereum: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-icp canister call backend get_erc20_balance '(
-  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-)'
-# Expected: JSON with hex-encoded uint256 balance
-```
-
-### Verify Cycle Refunds
-
-Check your canister cycle balance before and after an RPC call:
-
-```bash
-# Before
-icp canister status backend -e ic
-
-# Make a call
-icp canister call backend get_eth_balance '("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")' -e ic
-
-# After — unused cycles from the 10B budget are refunded
-icp canister status backend -e ic
 ```
