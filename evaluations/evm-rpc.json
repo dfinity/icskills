@@ -1,0 +1,68 @@
+{
+  "skill": "evm-rpc",
+  "description": "Evaluation cases for the evm-rpc skill. Tests whether agents produce correct EVM RPC canister integration code in Rust with proper cycle handling, multi-provider consensus, and use of the evm_rpc_client crate.",
+
+  "output_evals": [
+    {
+      "name": "Rust — get block by number",
+      "prompt": "Write a Rust canister function that gets the latest Ethereum block via the EVM RPC canister. Just the function and Cargo.toml dependencies, no deploy steps.",
+      "expected_behaviors": [
+        "Uses evm_rpc_client crate — does NOT define Candid types manually",
+        "Calls client.get_block_by_number(BlockTag::Latest)",
+        "Handles both Consistent and Inconsistent result arms from MultiRpcResult",
+        "Lists evm_rpc_client and evm_rpc_types in Cargo.toml dependencies"
+      ]
+    },
+    {
+      "name": "Consensus strategy",
+      "prompt": "I'm calling eth_getBlockByNumber with BlockTag::Latest via the EVM RPC canister in Rust, but I keep getting 'Providers returned inconsistent results'. What's wrong?",
+      "expected_behaviors": [
+        "Identifies the default Equality consensus strategy as the cause",
+        "Explains that providers often return different latest blocks because they are 1-2 blocks apart",
+        "Recommends using ConsensusStrategy::Threshold with 2-of-3 agreement",
+        "Does NOT suggest the issue is insufficient cycles or wrong chain variant"
+      ]
+    },
+    {
+      "name": "Cycle cost awareness",
+      "prompt": "My EVM RPC call is failing silently. I'm calling eth_getBlockByNumber from Rust but getting no response. What could be wrong?",
+      "expected_behaviors": [
+        "Identifies insufficient cycles as a likely cause",
+        "Mentions that evm_rpc_client defaults to 10B cycles or recommends 10B as a starting budget",
+        "Mentions the Inconsistent result variant or default Equality consensus as another possible cause",
+        "Recommends using evm_rpc_client with ConsensusStrategy::Threshold rather than raw inter-canister calls"
+      ]
+    },
+    {
+      "name": "Rust — multi-provider consensus",
+      "prompt": "Write a Rust function that gets a transaction receipt from Ethereum, using 3 providers with 2-of-3 consensus. Just the function.",
+      "expected_behaviors": [
+        "Configures ConsensusStrategy::Threshold with total: Some(3) and min: 2",
+        "Uses evm_rpc_client — does NOT manually construct Call::unbounded_wait",
+        "Calls client.get_transaction_receipt(hash)",
+        "Handles the Option in the return type (receipt may not exist)"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I call Ethereum from my IC canister?",
+      "Read an ERC-20 token balance from a canister",
+      "Send a signed ETH transaction from my IC backend",
+      "Get the latest Ethereum block from a canister",
+      "How do I use the EVM RPC canister?",
+      "Call Arbitrum from my Rust canister on ICP",
+      "How many cycles does an EVM RPC call cost?"
+    ],
+    "should_not_trigger": [
+      "How do I make HTTPS outcalls to a REST API?",
+      "How do I transfer ICP tokens?",
+      "How do I mint ckBTC from a BTC deposit?",
+      "Deploy my canister to mainnet",
+      "How do I sign an Ethereum transaction with threshold ECDSA?",
+      "How do I call another IC canister?"
+    ]
+  }
+}
