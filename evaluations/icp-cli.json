@@ -168,6 +168,25 @@
       ]
     },
     {
+      "name": "Adversarial: createActor with old @dfinity/agent pattern",
+      "prompt": "I migrated my project from dfx to icp-cli. My frontend builds fine but all canister calls return empty data or access denied. Here's my actor setup:\n\nimport { HttpAgent } from '@icp-sdk/core';\nimport { createActor } from './bindings/backend';\nconst agent = new HttpAgent({ identity, host });\nconst backend = createActor(canisterId, { agent });",
+      "expected_behaviors": [
+        "Identifies that passing { agent } to @icp-sdk/bindgen's createActor silently creates an anonymous identity",
+        "Explains the correct pattern uses { agentOptions } instead of { agent }",
+        "Does NOT suggest the issue is a wrong canister ID or missing cycles"
+      ]
+    },
+    {
+      "name": "Candid opt T representation in bindgen",
+      "prompt": "My backend has a Motoko function `getNickname : () -> (opt text) query`. In my React frontend I'm checking `if (result.length > 0) { name = result[0]; }` but it crashes with 'Cannot read properties of null'. What's wrong?",
+      "expected_behaviors": [
+        "Identifies that @icp-sdk/bindgen's wrapper converts opt T to T | null, not [] | [T]",
+        "Shows the correct check: result !== null instead of result.length > 0",
+        "The corrected code uses result directly as the value (name = result), NOT result[0] — the wrapper unwraps the array",
+        "Does NOT suggest the issue is a backend error or missing canister deployment"
+      ]
+    },
+    {
       "name": "Dev server configuration",
       "prompt": "I have a React frontend and a backend canister deployed locally. How do I set up the Vite dev server to talk to my local canisters?",
       "expected_behaviors": [
