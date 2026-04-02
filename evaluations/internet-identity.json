@@ -59,6 +59,15 @@
         "Explains that top-level await requires ES2022+ and Vite defaults to es2020",
         "Shows a concrete example of wrapping the auth initialization in an async function"
       ]
+    },
+    {
+      "name": "Different principal after login on icp0.io vs ic0.app",
+      "prompt": "A user reports getting a different principal when accessing my app via icp0.io compared to ic0.app. Should I add derivationOrigin to fix this?",
+      "expected_behaviors": [
+        "Explains that icp0.io and ic0.app produce the same principal — II auto-rewrites icp0.io to ic0.app during delegation",
+        "Advises NOT to add derivationOrigin or ii-alternative-origins for this",
+        "Suggests the different principal is likely caused by a different passkey or device"
+      ]
     }
   ],
 
