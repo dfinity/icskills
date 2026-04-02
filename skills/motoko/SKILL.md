@@ -46,6 +46,7 @@ core = "2.3.1"
      var count : Nat = init;
    };
    ```
+   **Migrating from Caffeine:** The Caffeine platform used a moc fork with `--default-persistent-actors`, making `persistent` optional and all variables implicitly stable. On standard moc, add `persistent` to every actor and use `transient var` for variables that should reset on upgrade (see pitfall #3).
 
 2. **Putting type declarations before the actor.** Only `import` statements are allowed before `persistent actor`. All type definitions, `let`, and `var` declarations must go inside the actor body. Violation produces error M0141.
    ```motoko

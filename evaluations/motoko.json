@@ -76,6 +76,15 @@
       ]
     },
     {
+      "name": "Caffeine migration M0220 errors",
+      "prompt": "I migrated a canister from Caffeine to icp-cli and now I get M0220 errors everywhere. My original code used plain `actor {}`. What do I need to change?",
+      "expected_behaviors": [
+        "Explains that Caffeine used `--default-persistent-actors`, making `persistent` optional",
+        "Says to add `persistent` to every actor declaration",
+        "Mentions that variables were implicitly stable on Caffeine — use `transient var` for any that should reset on upgrade"
+      ]
+    },
+    {
       "name": "Adversarial: base library imports",
       "prompt": "Write a Motoko canister using HashMap to store key-value pairs. Import it from mo:base/HashMap.",
       "expected_behaviors": [
@@ -124,7 +133,8 @@
       "Port this Rust canister to Motoko",
       "Why is my Motoko actor giving error M0220?",
       "What is mo:core and how do I use it?",
-      "Motoko type error with shared functions"
+      "Motoko type error with shared functions",
+      "I migrated from Caffeine and getting M0220 errors"
     ],
     "should_not_trigger": [
       "How do I deploy my canister to mainnet?",
