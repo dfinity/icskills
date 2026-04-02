@@ -14,13 +14,14 @@ metadata:
 
 WebMCP (Web Model Context Protocol) is a W3C browser standard (Chrome 146+) that lets websites register callable tools for AI agents via `navigator.modelContext`. The Internet Computer is uniquely suited for WebMCP: Candid interfaces already define structured tool schemas, certified queries provide verifiable responses, and Internet Identity enables scoped agent authentication via delegation chains.
 
-The IC WebMCP stack generates tool manifests from `.did` files, serves them from asset canisters, and bridges `navigator.modelContext` to canister calls via `@dfinity/agent`. A polyfill extends this to non-Chrome browsers and server-side agent frameworks (Claude, OpenAI, LangChain).
+The IC WebMCP stack generates tool manifests from `.did` files, serves them from asset canisters, and bridges `navigator.modelContext` to canister calls via `@icp-sdk/core`. A polyfill extends this to non-Chrome browsers and server-side agent frameworks (Claude, OpenAI, LangChain).
 
 ## Prerequisites
 
 - Rust: `ic-webmcp-codegen` crate (CLI tool) for manifest generation
 - TypeScript: `@dfinity/webmcp` package for browser/agent integration
-- `@dfinity/agent` >= 1.0.0, `@dfinity/candid` >= 1.0.0, `@dfinity/principal` >= 1.0.0
+- `@icp-sdk/core` >= 5.0.0 (provides agent, candid, identity, principal modules)
+- `@icp-sdk/auth` for Internet Identity login flows
 - Chrome 146+ for native `navigator.modelContext` (polyfill available for other environments)
 
 ## Canister IDs
@@ -37,11 +38,11 @@ No fixed canister IDs. WebMCP is a protocol layer applied to YOUR canister. The 
 
 4. **Passing empty `targets` to `createScopedDelegation`.** An empty targets array produces an unrestricted delegation valid for ALL IC canisters, not just yours. Always pass at least your canister ID. Use `getDelegationTargets(canisterId, manifest.authentication)` to build the correct list.
 
-5. **Omitting methods from `expose_methods` but listing them in other config sections.** If `expose_methods` is set in `dfx.json`, only those methods appear in the manifest. Methods listed in `require_auth`, `certified_queries`, or `descriptions` but NOT in `expose_methods` are silently dropped.
+5. **Omitting methods from `expose_methods` but listing them in other config sections.** If `expose_methods` is set, only those methods appear in the manifest. Methods listed in `require_auth`, `certified_queries`, or `descriptions` but NOT in `expose_methods` are silently dropped.
 
 6. **Sending parameters without an IDL factory.** Without `setIdlFactory()`, the bridge can only call zero-argument methods. For methods with parameters, the bridge throws: `"requires an idlFactory to encode parameters"`. Always provide the generated IDL factory for full tool execution.
 
-7. **Assuming `certified: true` means full BLS verification.** The `certified` flag in the manifest indicates the query supports certified responses. `@dfinity/agent` verifies node signatures automatically (`verifyQuerySignatures: true` by default), but this is node-level verification. For full BLS threshold certificate verification of canister-managed certified data, use `readCertifiedData()` with `readState()`.
+7. **Assuming `certified: true` means full BLS verification.** The `certified` flag in the manifest indicates the query supports certified responses. `@icp-sdk/core/agent` verifies node signatures automatically (`verifyQuerySignatures: true` by default), but this is node-level verification. For full BLS threshold certificate verification of canister-managed certified data, use `readCertifiedData()` with `readState()`.
 
 8. **Loading `@dfinity/webmcp` from a CDN without integrity checking.** The generated `webmcp.js` imports `@dfinity/webmcp`. In production, this must come from your own bundled copy, not a third-party CDN. CDN imports without Subresource Integrity (SRI) are a supply chain attack vector.
 
@@ -49,10 +50,12 @@ No fixed canister IDs. WebMCP is a protocol layer applied to YOUR canister. The 
 
 10. **Ignoring recursive Candid types.** Types like `type Value = variant { Array: vec Value }` (common in ICRC-3) are handled by the codegen, which emits `{ "description": "Recursive type: Value" }` at the recursion point. Agents should treat these as opaque — they cannot be fully validated by JSON Schema alone.
 
+11. **Using deprecated `@dfinity/*` packages.** The `@dfinity/agent`, `@dfinity/candid`, `@dfinity/identity`, and `@dfinity/principal` packages are deprecated. Use `@icp-sdk/core` with subpath imports instead (e.g., `@icp-sdk/core/agent`). Use `@icp-sdk/auth` instead of `@dfinity/auth-client`.
+
 ## Pipeline Overview
 
 ```
-dfx.json (with webmcp section)
+icp.yaml or dfx.json (with webmcp section)
   + backend.did
        │
        ▼
@@ -68,10 +71,12 @@ Asset canister serves manifest + script with CORS headers
 Browser loads webmcp.js → @dfinity/webmcp → navigator.modelContext
        │
        ▼
-AI agent discovers tools → calls execute() → @dfinity/agent → canister
+AI agent discovers tools → calls execute() → @icp-sdk/core/agent → canister
 ```
 
-## Step 1: Add `webmcp` to dfx.json
+## Step 1: Configure WebMCP
+
+The codegen currently reads a `webmcp` section from `dfx.json`. If your project uses `icp.yaml`, add a `dfx.json` alongside it for the WebMCP config (native `icp.yaml` support is planned).
 
 ```json
 {
@@ -96,11 +101,6 @@ AI agent discovers tools → calls execute() → @dfinity/agent → canister
           "add_to_cart.quantity": "Number of items to add (default 1)"
         }
       }
-    },
-    "frontend": {
-      "type": "assets",
-      "source": ["assets"],
-      "dependencies": ["backend"]
     }
   }
 }
@@ -184,7 +184,7 @@ std::fs::write("assets/.ic-assets.json5", ic_assets_config()).unwrap();
 
 ```typescript
 import { ICWebMCP } from '@dfinity/webmcp';
-import { AuthClient } from '@dfinity/auth-client';
+import { AuthClient } from '@icp-sdk/auth';
 
 const authClient = await AuthClient.create();
 
@@ -271,6 +271,9 @@ webmcp.setIdentity(agentIdentity);
 ## Verification
 
 ```bash
+# Deploy with icp-cli
+icp deploy
+
 # Check manifest is served correctly
 curl -s https://<canister-id>.icp0.io/.well-known/webmcp.json | jq .schema_version
 # Expected: "1.0"

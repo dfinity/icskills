@@ -19,7 +19,8 @@
       "expected_behaviors": [
         "Adds the method to require_auth in dfx.json webmcp config",
         "Configures onAuthRequired callback in ICWebMCP constructor",
-        "Uses AuthClient or Internet Identity for the login flow",
+        "Uses @icp-sdk/auth AuthClient or Internet Identity for the login flow",
+        "Does NOT import from deprecated @dfinity/auth-client",
         "Creates a scoped delegation via createAgentDelegation with non-empty targets",
         "Does NOT create an unrestricted delegation with empty targets array"
       ]
