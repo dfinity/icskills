@@ -39,6 +39,8 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
+7. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
+
 ## Using II during local development
 
 ### icp.yaml Configuration
