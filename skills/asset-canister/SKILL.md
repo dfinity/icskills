@@ -47,6 +47,8 @@ Access patterns:
 
 8. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
 
+9. **Downgrading the asset canister WASM version.** Upgrading a canister to an older WASM version can fail with "Cannot parse header" panics if the stable memory format changed between versions. Prefer the `@dfinity/asset-canister` recipe over `type: pre-built` with a manually specified WASM URL — the recipe loads the latest asset canister version automatically if not explicitly specified in `configuration.version`. If you must pin a version, ensure it matches or exceeds the version currently deployed on-chain. If a downgrade is intentional, use reinstall mode (`icp deploy --mode reinstall`) instead of upgrade — this wipes stable memory and all uploaded assets.
+
 ## Implementation
 
 ### icp.yaml Configuration
