@@ -1,115 +1,160 @@
 ---
 name: canister-calls
-description: "Discover and call any Internet Computer canister. Covers retrieving Candid interfaces from deployed canisters (both off-chain and via inter-canister calls), reading type signatures, generating typed client bindings, and constructing calls using any IC agent library. Includes curated workflows for well-known infrastructure canisters (ICRC ledgers, ckBTC minter, EVM RPC). Use when making any canister call, exploring an unfamiliar canister's API, integrating with IC infrastructure canisters, working with token transfers, ckBTC deposits/withdrawals, or Ethereum/EVM calls from IC."
+description: "Generate typed bindings from a Candid interface and call a canister from JavaScript/TypeScript, Rust, or Motoko. Covers Candid ↔ JS/TS type mapping (nat as BigInt, opt as T | null, variant as object not string), binding generation with @icp-sdk/bindgen or ic-cdk-bindgen, and actor/client initialization. Use when you have a canister ID or .did file and need to call it from frontend or canister code, or when handling Candid types in TypeScript. Do NOT use for token transfer workflows — use icrc-ledger instead. Do NOT use for ckBTC — use ckbtc instead. Do NOT use for EVM JSON-RPC — use evm-rpc instead. Do NOT use for inter-canister call patterns and error handling — use multi-canister instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0"
+compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
-  title: Canister Calls & Interface Discovery
+  title: Canister Calls & Bindings
   category: Integration
 ---
 
-# Canister Calls & Interface Discovery
+# Canister Calls & Bindings
 
 ## What This Is
 
-Every canister on the Internet Computer exposes a Candid interface — a typed API description embedded in the WASM module. Candid is to canisters what `--help` is to CLI tools: the standard way to discover what a canister can do and how to call it. This skill teaches you how to retrieve, read, and use Candid interfaces to call any canister, plus curated workflows for well-known infrastructure canisters where raw Candid alone isn't enough.
+Every canister on the Internet Computer exposes a Candid interface — a typed API description embedded in the WASM module. This skill covers how to fetch that interface, generate typed bindings for your language, and call the canister from JavaScript/TypeScript, Rust, or Motoko.
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
-- For Rust: `ic-cdk >= 0.19`, `candid >= 0.10`
-- For JavaScript/TypeScript: `@icp-sdk/core` (runtime), `@icp-sdk/bindgen` (codegen)
-- For Rust bindings: `ic-cdk-bindgen` (build-time Candid-to-Rust codegen)
+- **JavaScript/TypeScript**: `@icp-sdk/core` (>= 5.0.0), `@icp-sdk/bindgen` (>= 0.3.0)
+- **Rust**: `ic-cdk` (>= 0.19), `candid` (>= 0.10), `ic-cdk-bindgen` (build-time, optional)
+- **CLI**: `icp-cli` (>= 0.2.2)
 
-## Discovering a Canister's Interface
-
-### From Outside IC (Off-Chain)
-
-Retrieve the Candid interface of any deployed canister:
+## Fetching the Candid Interface
 
 ```bash
-# Fetch the .did file from a deployed canister (local or mainnet)
-icp canister metadata <CANISTER_ID> candid:service -e ic
+# Fetch from mainnet and save to a .did file
+icp canister metadata <CANISTER_ID> candid:service -e ic > mycanister.did
 
-# Example: get the ICP ledger's interface
-icp canister metadata ryjl3-tyaaa-aaaaa-aaaba-cai candid:service -e ic
+# Fetch from local replica
+icp canister metadata <CANISTER_ID> candid:service > mycanister.did
 ```
 
-This returns the full Candid service definition with all method signatures, types, and documentation comments (if the canister author included them).
+This returns the full Candid service definition: method names, argument and return types, and whether each method is `query` or `update`.
 
-### From Inside a Canister (Inter-Canister)
+## Reading a Candid Interface
 
-When your canister needs to call another canister dynamically, you can fetch its Candid interface at runtime using the management canister:
-
-```bash
-# The management canister exposes canister metadata
-icp canister call aaaaa-aa canister_metadata '(record { canister_id = principal "<CANISTER_ID>"; path = "candid:service" })' -e ic
-```
-
-### Reading Candid Interfaces
-
-A Candid interface describes:
-- **Method names** and whether they are `query` (fast, read-only) or `update` (consensus-based, can mutate state)
-- **Argument types** and **return types** — fully typed, including records, variants, optionals, vectors
-- **Documentation comments** (if the canister author included them, prefixed with `///` in the .did file)
-
-Example Candid snippet:
 ```candid
 service : {
-  icrc1_transfer : (TransferArg) -> (variant { Ok : nat; Err : TransferError });
-  icrc1_balance_of : (Account) -> (nat) query;
-  icrc1_fee : () -> (nat) query;
+  // update — goes through consensus, can mutate state (~2s)
+  submit : (OrderRequest) -> (variant { Ok : OrderId; Err : Text });
+
+  // query — fast read-only, does not go through consensus (~200ms)
+  get_order : (OrderId) -> (opt Order) query;
+
+  // vec = array, nat = BigInt in JS
+  list_orders : () -> (vec Order) query;
 }
 ```
 
-This tells you: `icrc1_transfer` is an update call taking `TransferArg` and returning a result variant. `icrc1_balance_of` is a query call. The types (`TransferArg`, `Account`, `TransferError`) are defined elsewhere in the same .did file.
+All referenced types (`OrderRequest`, `Order`, etc.) are defined earlier in the same `.did` file.
 
-### Generating Typed Client Bindings
+## Candid ↔ JavaScript/TypeScript Type Mapping
 
-Each language has a dedicated tool for generating typed bindings from .did files:
+Agents with `@dfinity/agent` background frequently get these wrong:
 
-#### Rust
+| Candid type | JS/TS type (bindgen wrapper) | Common mistake |
+|-------------|------------------------------|----------------|
+| `nat`, `nat64` | `BigInt` | Using `number` — silent overflow for large values |
+| `nat32`, `nat16`, `nat8` | `number` | Fine as `number` |
+| `opt T` | `T \| null` | Using `[] \| [T]` — raw Candid encoding; bindgen wrapper converts to `T \| null` |
+| `variant { Ok : T; Err : E }` | `{ Ok: T } \| { Err: E }` | Checking `result === 'Ok'` — variants are objects, not strings |
+| `record { field : T }` | `{ field: T }` | — |
+| `vec T` | `Array<T>` | — |
+| `principal` | `Principal` | Passing as string — use `Principal.fromText()` |
+| `blob` | `Uint8Array` | — |
 
-Use `ic-cdk-bindgen` to generate typed Rust bindings from .did files at build time. Add it to your `build-dependencies` in `Cargo.toml` and configure it in `build.rs`. See https://crates.io/crates/ic-cdk-bindgen for setup.
+### Variant handling
 
-#### JavaScript / TypeScript
+```typescript
+const result = await actor.submit(request);
 
-Use `@icp-sdk/bindgen` to generate typed JS/TS bindings from .did files:
+// Wrong — variants are objects, not strings
+if (result === "Ok") { ... }
+
+// Correct — check for the key
+if ("Ok" in result) {
+  console.log("Order ID:", result.Ok);
+} else {
+  console.error("Error:", result.Err);
+}
+```
+
+### opt T handling
+
+```typescript
+const order = await actor.get_order(orderId);
+
+// Wrong — raw Candid array style (@dfinity/agent legacy)
+if (order.length > 0) { const o = order[0]; }
+
+// Correct — bindgen wrapper converts opt T to T | null
+if (order !== null) {
+  console.log(order.status);
+}
+```
+
+## Generating Typed Bindings
+
+### JavaScript / TypeScript — Vite plugin (recommended)
+
+```js
+// vite.config.js
+import { icpBindgen } from "@icp-sdk/bindgen/plugins/vite";
+
+export default defineConfig({
+  plugins: [
+    icpBindgen({
+      didFile: "../backend/backend.did",
+      outDir: "./src/bindings",
+    }),
+  ],
+});
+```
+
+Each `icpBindgen()` generates a `<name>.ts` file in `outDir` with a `createActor` function. The `.did` file must be committed to the repo — see the **icp-cli** skill for how to configure `candid:` in the recipe so the `.did` is generated at build time.
+
+### JavaScript / TypeScript — CLI (non-Vite)
 
 ```bash
-npx @icp-sdk/bindgen --canister <CANISTER_ID> -e ic
+npx @icp-sdk/bindgen --did ./mycanister.did --out ./src/bindings
 ```
 
-See https://www.npmjs.com/package/@icp-sdk/bindgen for options.
+### Rust
 
-### Calling Any Canister via CLI
+Use `ic-cdk-bindgen` in `build.rs` to generate Rust types from `.did` files at build time. See https://crates.io/crates/ic-cdk-bindgen for setup.
 
-Once you know the method signature from the Candid interface:
+## Initializing a Client
 
-```bash
-# Call any method on any canister
-icp canister call <CANISTER_ID> <METHOD_NAME> '(<CANDID_ARGS>)' -e ic
+### JavaScript / TypeScript
 
-# Query call (faster, read-only)
-icp canister call <CANISTER_ID> <METHOD_NAME> '(<CANDID_ARGS>)' --query -e ic
+```typescript
+import { createActor } from "./bindings/backend";
+import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
+
+const canisterEnv = safeGetCanisterEnv();
+
+// Unauthenticated actor
+const actor = createActor(canisterId, {
+  agentOptions: {
+    host: window.location.origin,
+    rootKey: canisterEnv?.IC_ROOT_KEY,
+  },
+});
+
+// Authenticated actor (after Internet Identity login)
+const authedActor = createActor(canisterId, {
+  agentOptions: {
+    identity, // from authClient.getIdentity()
+    host: window.location.origin,
+    rootKey: canisterEnv?.IC_ROOT_KEY,
+  },
+});
 ```
 
-### Calling Any Canister from Code
+**Pitfall:** passing `{ agent }` instead of `{ agentOptions }`. The `createActor` generated by `@icp-sdk/bindgen` takes `{ agentOptions }` and creates the agent internally. Passing `{ agent }` silently falls back to an anonymous identity — calls return empty data or access denied with no error.
 
-#### Motoko — Dynamic Actor Reference
-
-```motoko
-// Reference a remote canister by principal with a typed interface
-transient let remote = actor ("aaaaa-bbbbb-ccccc-ddddd-cai") : actor {
-  some_method : shared (Nat) -> async Text;
-  some_query : shared query () -> async Nat;
-};
-
-// Call it
-let result = await remote.some_method(42);
-```
-
-#### Rust — Using ic-cdk Call API
+### Rust — Inter-Canister Call (ic-cdk >= 0.19)
 
 ```rust
 use ic_cdk::call::Call;
@@ -117,39 +162,43 @@ use candid::Principal;
 
 let canister_id = Principal::from_text("aaaaa-bbbbb-ccccc-ddddd-cai").unwrap();
 
-// Unbounded wait (guaranteed response)
-let (result,): (String,) = Call::unbounded_wait(canister_id, "some_method")
-    .with_arg(42u64)
+// unbounded_wait: no timeout, always gets a response or rejection
+let (result,): (String,) = Call::unbounded_wait(canister_id, "get_greeting")
+    .with_arg("world")
     .await
-    .expect("Call failed")
+    .expect("call failed")
     .candid_tuple()
-    .expect("Decode failed");
+    .expect("decode failed");
+
+// bounded_wait: completes when the called canister responds or times out
+let (result,): (String,) = Call::bounded_wait(canister_id, "get_greeting")
+    .with_arg("world")
+    .await
+    .expect("call failed or timed out")
+    .candid_tuple()
+    .expect("decode failed");
 ```
 
-## What Candid Doesn't Tell You
+**Pitfall:** `ic_cdk::call()` and `Call::new()` do not exist in ic-cdk >= 0.19. Use `Call::unbounded_wait` or `Call::bounded_wait`.
 
-Candid gives you the shape of an API but not the workflow. For well-known infrastructure canisters, you need to know:
-- **Which canisters to call and in what order** (e.g., ckBTC deposit is a multi-step flow across minter + ledger)
-- **Cycle costs** (e.g., EVM RPC requires cycles attached to calls)
-- **Fee amounts and units** (e.g., ICP fee is 10,000 e8s, not 10,000 ICP)
-- **Pitfalls that cause silent failures** (e.g., forgetting `update_balance` after a BTC deposit)
+### Motoko — Dynamic Actor Reference
 
-The reference files below contain this curated knowledge for each well-known canister.
+```motoko
+// Type the remote interface inline — no .did file needed at compile time
+transient let remote = actor ("aaaaa-bbbbb-ccccc-ddddd-cai") : actor {
+  get_greeting : shared query (Text) -> async Text;
+  submit : shared (OrderRequest) -> async { #Ok : OrderId; #Err : Text };
+};
 
-## Well-Known Canister Registry
+let greeting = await remote.get_greeting("world");
+```
 
-| Canister | ID (Mainnet) | What It Does | Reference |
-|----------|-------------|-------------|-----------|
-| ICP Ledger | `ryjl3-tyaaa-aaaaa-aaaba-cai` | ICP token transfers, balances, ICRC-1/2 | `references/icrc-ledger.md` |
-| ckBTC Ledger | `mxzaz-hqaaa-aaaar-qaada-cai` | ckBTC token transfers | `references/icrc-ledger.md` |
-| ckBTC Minter | `mqygn-kiaaa-aaaar-qaadq-cai` | BTC deposit/withdrawal via ckBTC | `references/ckbtc.md` |
-| ckETH Ledger | `ss2fx-dyaaa-aaaar-qacoq-cai` | ckETH token transfers | `references/icrc-ledger.md` |
-| EVM RPC | `7hfb6-caaaa-aaaar-qadga-cai` | Ethereum/EVM JSON-RPC proxy | `references/evm-rpc.md` |
+## Calling via CLI
 
-**For any canister not listed here**, use the Candid discovery flow above: fetch the .did, read the types, generate bindings, and call.
+```bash
+# Update call
+icp canister call <CANISTER_ID> <METHOD> '(<CANDID_ARGS>)' -e ic
 
-### When to Read a Reference File
-
-- **Making token transfers (ICP, ckBTC, ckETH)** or working with **ICRC-1/ICRC-2 approve/transferFrom** -> Read `references/icrc-ledger.md`
-- **Integrating Bitcoin** (BTC deposits, ckBTC minting, BTC withdrawals) -> Read `references/ckbtc.md`
-- **Calling Ethereum/EVM chains** (ETH balances, ERC-20 reads, sending transactions) -> Read `references/evm-rpc.md`
+# Query call (faster)
+icp canister call <CANISTER_ID> <METHOD> '(<CANDID_ARGS>)' --query -e ic
+```
