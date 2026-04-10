@@ -39,6 +39,13 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
 
+When adding new behaviors, commands, or pitfalls to a skill, also consider whether the `evaluations/<skill-name>.json` file needs new eval cases to cover them. New pitfalls and non-obvious behaviors are strong candidates for evals — especially adversarial ones where an agent would likely get it wrong without the skill.
+
+**PR eval requirements:**
+- **New skill:** run the full suite (`node scripts/evaluate-skills.js <skill-name>`) and include both output eval and trigger eval results in the PR description. PRs without eval results are not accepted.
+- **Skill improvement with new evals:** run only the new eval cases and include both with-skill and baseline results.
+- Always wrap eval output in a collapsed `<details>` block in the PR description.
+
 ## LLM Quality Scoring
 
 Before submitting a PR, run LLM scoring locally to check skill quality:

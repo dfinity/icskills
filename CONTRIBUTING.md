@@ -168,7 +168,7 @@ if the user is already authenticated. Keep it minimal — no backend code,
 no icp.yaml, no deploy steps."
 ```
 
-**Running evaluations** (optional, requires `claude` CLI):
+**Running evaluations** (requires `claude` CLI):
 
 ```bash
 node scripts/evaluate-skills.js <skill-name>                    # All evals, with + without skill
@@ -181,7 +181,7 @@ node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals
 
 This sends each prompt to Claude with and without the skill, then has a judge score the output. Results are saved to `evaluations/results/` (gitignored).
 
-Including a summary of eval results in your PR description is recommended but not required — running evals needs `claude` CLI access and costs API credits.
+**Eval results are required in the PR for new skills** — see [Step 7](#7-submit-a-pr) for the required format.
 
 ### 6. That's it — the website auto-discovers skills
 
@@ -195,6 +195,20 @@ Stats (skill count, categories) all update automatically.
 - Include a brief description of what the skill covers and why it's needed
 - Include LLM scoring output in your PR description if you ran it locally (see step 4)
 - Make sure the SKILL.md is tested — code examples should compile and deploy
+- **Eval results are required.** Run the full evaluation suite locally and paste the results into the PR description. Both output evals and trigger evals must be included. PRs without eval results will not be accepted.
+- **Collapse the results** using a `<details>` block to keep the PR description readable:
+
+  ````markdown
+  <details>
+  <summary>Evaluation results</summary>
+
+  ```
+  [paste eval output here]
+  ```
+
+  </details>
+  ````
+
 - **All PRs require approval from a repo admin before merge.** No skill additions or updates go live without review.
 
 ---
@@ -204,7 +218,10 @@ Stats (skill count, categories) all update automatically.
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
 3. Optionally run LLM scoring (see step 4 above)
-4. Submit a PR with a summary of what changed
+4. If you added new evaluation cases, run those evals locally and include the results in the PR
+5. Submit a PR with a summary of what changed
+
+**Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#7-submit-a-pr) above).
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
