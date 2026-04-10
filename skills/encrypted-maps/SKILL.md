@@ -346,16 +346,14 @@ A complete Motoko backend is available in `references/motoko-backend.md`. It exp
 
 ### icp.yaml
 
-**Rust:**
-
 ```yaml
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/rust@v3.2.0"
+      type: "@dfinity/rust@v3.2.0"       # Motoko: "@dfinity/motoko@v4.1.0"
       configuration:
-        package: encrypted-maps-backend
-    init_args: '("test_key_1")'
+        package: encrypted-maps-backend   # Motoko: main: backend/src/Main.mo
+    init_args: '("test_key_1")'           # Use '("key_1")' for production
 
   - name: frontend
     recipe:
@@ -372,33 +370,7 @@ networks:
     ii: true
 ```
 
-**Motoko:**
-
-```yaml
-canisters:
-  - name: backend
-    recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: backend/src/Main.mo
-    init_args: '("test_key_1")'
-
-  - name: frontend
-    recipe:
-      type: "@dfinity/asset-canister@v2.1.0"
-      configuration:
-        dir: frontend/dist
-        build:
-          - npm --prefix frontend install
-          - npm --prefix frontend run build
-
-networks:
-  - name: local
-    mode: managed
-    ii: true
-```
-
-Change `init_args` to `'("key_1")'` for production. See the `icp-cli` skill for the full configuration reference.
+See the `icp-cli` skill for the full configuration reference.
 
 ### Frontend (TypeScript)
 
@@ -450,12 +422,6 @@ await encryptedMaps.setValue(owner, mapName, mapKey, value);
 const decrypted = await encryptedMaps.getValue(owner, mapName, mapKey);
 const data = JSON.parse(new TextDecoder().decode(decrypted));
 
-// Update — same as store, overwrites existing value
-const updated = new TextEncoder().encode(
-    JSON.stringify({ username: "me@gmail.com", password: "n3w_s3cret" }),
-);
-await encryptedMaps.setValue(owner, mapName, mapKey, updated);
-
 // Delete a single value
 await encryptedMaps.removeEncryptedValue(owner, mapName, mapKey);
 
@@ -505,61 +471,22 @@ const users = await encryptedMaps.getSharedUserAccessForMap(owner, mapName);
 await encryptedMaps.removeUser(owner, mapName, otherUser);
 ```
 
-**Access rights values:**
-
-```typescript
-{ Read: null }             // Can retrieve values
-{ ReadWrite: null }        // Can retrieve and modify values
-{ ReadWriteManage: null }  // Can retrieve, modify, and manage other users
-```
-
-## Deploy & Test
-
-### Local Development
+## Deploy & Verify
 
 ```bash
-# Start the local network (provisions test_key_1 and key_1 automatically)
 icp network start -d
-
 icp deploy backend
 
-# Verify the canister is running
+# 1. Backend responds — expected: (vec {})
 icp canister call backend get_owned_non_empty_map_names '()'
-# Expected: (vec {})
 
-# Verify vetkey infrastructure works (costs cycles — canister needs balance)
+# 2. VetKey works (costs cycles) — expected: (record { inner = blob "..." }) 96+ bytes
 icp canister call backend get_vetkey_verification_key '()'
-# Expected: (record { inner = blob "..." }) — non-empty BLS verification key
-```
 
-### Mainnet
+# 3. Frontend: authenticate, store a value, retrieve it (should match),
+#    share with second user (they can read), revoke (they can't)
 
-```bash
-# Change init_args in icp.yaml to '("key_1")' for production, then:
-icp deploy backend -e ic
-
-# Ensure canister has enough cycles (each key derivation costs ~26B cycles)
-icp cycles top-up backend 10T -e ic
-```
-
-## Verify It Works
-
-```bash
-# 1. Backend responds
-icp canister call backend get_owned_non_empty_map_names '()'
-# Expected: (vec {})
-
-# 2. VetKey verification key is returned (non-empty blob)
-icp canister call backend get_vetkey_verification_key '()'
-# Expected: (record { inner = blob "\ab\cd..." }) — 96+ bytes
-
-# 3. Frontend integration: open your app, authenticate, then verify:
-#    - Store a value → no errors
-#    - Retrieve the same value → matches what was stored
-#    - Share the map with a second user → second user can read the value
-#    - Revoke access → second user can no longer read
-
-# 4. Verify isolation: different maps produce different encrypted values
-#    Store the same plaintext in two different maps → the ciphertext on-chain differs
-#    (different maps derive different encryption keys)
+# Mainnet: change init_args to '("key_1")' in icp.yaml, then:
+# icp deploy backend -e ic
+# icp cycles top-up backend 10T -e ic
 ```
