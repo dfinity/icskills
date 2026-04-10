@@ -215,11 +215,26 @@ ic-wasm --version
     icp new my-project --subfolder rust --define project_name=my-project --silent
     ```
 
+19. **Using the anonymous identity on mainnet.** The local network seeds all managed identities — including the anonymous identity, which is the default — with ICP and cycles on start, so local development works out of the box with no identity or cycles setup required. On mainnet this does not apply, and the anonymous identity should never be used: it is shared by anyone, meaning ICP sent to it is publicly accessible and canisters deployed under it are uncontrolled.
+
+    Before deploying to mainnet, switch to a named identity:
+    ```bash
+    icp identities list                                        # check available identities
+    icp identity default my-identity                           # switch to an existing one
+    # or: icp identity new my-identity && icp identity default my-identity
+    ```
+    Then verify it has funds — a new identity will need to be funded with ICP or cycles before proceeding:
+    ```bash
+    icp token balance -n ic    # check ICP balance on mainnet
+    icp cycles balance -n ic   # check cycles balance on mainnet
+    icp identity account-id    # get account ID to fund if needed
+    ```
+
 ## How It Works
 
 ### Project Creation
 
-`icp new` scaffolds projects from templates. Without flags, an interactive prompt launches — this will hang indefinitely in CI or any non-interactive environment. For scripted use, pass `--subfolder`, `--define`, and `--silent`:
+`icp new` scaffolds projects from templates. Pass `--subfolder`, `--define`, and `--silent` for non-interactive use:
 ```bash
 icp new my-project --subfolder rust --define project_name=my-project --silent
 ```

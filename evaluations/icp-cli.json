@@ -23,7 +23,8 @@
         "Uses 'icp deploy -e ic', NOT 'dfx deploy --network ic' or '--network ic'",
         "Mentions cycles are needed",
         "Mentions canister IDs are stored in .icp/data/ and should be committed to git",
-        "Does NOT use --network ic flag for deployment"
+        "Does NOT use --network ic flag for deployment",
+        "Recommends checking ICP or cycles balance on mainnet before deploying (icp token balance -n ic or icp cycles balance -n ic)"
       ]
     },
     {
@@ -217,6 +218,17 @@
         "Passes --subfolder and --define flags to icp new (e.g., --subfolder rust --define project_name=...)",
         "Uses icp (not dfx) for project scaffolding"
       ]
+    },
+    {
+      "name": "Adversarial: deploying to mainnet with the anonymous identity",
+      "prompt": "My project works great locally. Can I just run 'icp deploy -e ic' to deploy to mainnet?",
+      "expected_behaviors": [
+        "Warns that the anonymous identity (default locally) should not be used on mainnet — it is shared and uncontrolled",
+        "Recommends checking and switching to a named identity using icp commands (e.g. icp identity default, icp identity new, icp identity default <name>) — NOT dfx identity use",
+        "Recommends checking mainnet balance before deploying using icp commands: icp token balance -n ic or icp cycles balance -n ic (NOT dfx ledger balance)",
+        "Mentions that a new identity will need to be funded with ICP or cycles before it can deploy",
+        "Presents identity switch and balance check as required prerequisites before running icp deploy -e ic, not optional suggestions"
+      ]
     }
   ],
 
@@ -235,7 +247,6 @@
       "How do I check my canister status on mainnet?",
       "How do I set up output_env_file for my canister IDs?",
       "Generate TypeScript declarations for my canister",
-      "Set up a Motoko canister with mops",
       "Configure Vite dev server for local IC development",
       "Build a hello-world dapp with Motoko and React"
     ],
