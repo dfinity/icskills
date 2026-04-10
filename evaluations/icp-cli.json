@@ -197,6 +197,26 @@
         "Mentions the ic_env cookie for passing canister IDs and root key to the frontend",
         "Does NOT suggest using .env files or process.env for canister IDs"
       ]
+    },
+    {
+      "name": "Port conflict on local network start",
+      "prompt": "I'm trying to start my local network with 'icp network start -d' but it fails because port 8000 is already in use. How do I fix this?",
+      "expected_behaviors": [
+        "Distinguishes between two scenarios: another icp-cli project holding the port vs. a non-icp service",
+        "For another icp-cli project: provides 'icp network stop --project-root-override /path/to/other-project'",
+        "For a non-icp service: recommends configuring gateway.port in icp.yaml to use an alternate port",
+        "Mentions 'icp network status --json' to read the actual gateway URL dynamically instead of hardcoding localhost:8000",
+        "Does NOT suggest killing processes manually or using dfx commands"
+      ]
+    },
+    {
+      "name": "Scripted project creation in CI",
+      "prompt": "What is the correct icp new command to scaffold a Rust project non-interactively in CI? Just the command, no deploy steps.",
+      "expected_behaviors": [
+        "Uses --silent flag with icp new to suppress the interactive prompt",
+        "Passes --subfolder and --define flags to icp new (e.g., --subfolder rust --define project_name=...)",
+        "Uses icp (not dfx) for project scaffolding"
+      ]
     }
   ],
 
