@@ -73,6 +73,7 @@ const defaultJsonLd = JSON.stringify({
   <meta name="twitter:image" content={ogImage}>
 
   <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt">
+  <link rel="modelcontext" href="/.well-known/webmcp.json">
 
   <meta name="theme-color" content="#000000">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -86,6 +87,7 @@ const defaultJsonLd = JSON.stringify({
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
   <script is:inline src="/matomo.js" async></script>
+  <script is:inline src="/webmcp-setup.js" defer></script>
 </head>
 <body>
   <script is:inline>
