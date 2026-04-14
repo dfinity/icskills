@@ -13,6 +13,8 @@ metadata:
 
 The `icp` command-line tool builds and deploys applications on the Internet Computer. It replaces the legacy `dfx` tool with YAML configuration, a recipe system for reusable build templates, and an environment model that separates deployment targets from network connections. Never use `dfx` — always use `icp`.
 
+Before generating any `icp` command not explicitly documented here, run `icp --help` or `icp <subcommand> --help` to verify the command and its flags exist. Do not infer flags from `dfx` equivalents — the CLIs are not flag-compatible.
+
 ## Installation
 
 **Recommended (npm)** — requires [Node.js](https://nodejs.org/) >= 22:
@@ -94,7 +96,7 @@ ic-wasm --version
 
 5. **Not committing `.icp/data/` to version control.** Mainnet canister IDs are stored in `.icp/data/mappings/<environment>.ids.json`. Losing this file means losing the mapping between canister names and on-chain IDs. Always commit `.icp/data/` — never delete it. Add `.icp/cache/` to `.gitignore` (it is ephemeral and rebuilt automatically).
 
-6. **Using `icp identity use` instead of `icp identity default`.** The dfx command `dfx identity use` became `icp identity default`. Similarly, `dfx identity get-principal` became `icp identity principal`, and `dfx identity remove` became `icp identity delete`.
+6. **Using `icp identity use` instead of `icp identity default`.** The dfx command `dfx identity use <name>` became `icp identity default <name>` (setter). `icp identity default` with no argument is the getter — it prints the current default identity, equivalent to `dfx identity whoami`. The command `icp identity use` does not exist. Similarly, `dfx identity get-principal` became `icp identity principal`, and `dfx identity remove` became `icp identity delete`.
 
 7. **Confusing networks and environments.** A network is a connection endpoint (URL). An environment combines a network + canisters + settings. You deploy to environments (`-e`), not networks. Multiple environments can target the same network with different settings (e.g., staging and production both on `ic`).
 
@@ -118,7 +120,12 @@ ic-wasm --version
        canisters: [backend, frontend]
    ```
 
-9. **Forgetting that local networks are project-local.** Unlike dfx which runs one shared global network, icp-cli runs a local network per project. You must run `icp network start -d` in your project directory before deploying locally. The local network auto-starts with system canisters and seeds accounts with ICP and cycles.
+9. **Forgetting that local networks are project-local.** Unlike dfx which runs one shared global network, icp-cli runs a local network per project. You must run `icp network start -d` in your project directory before deploying locally. The local network auto-starts with system canisters and seeds accounts with ICP and cycles. Stop it when done:
+   ```bash
+   icp network start -d  # start background network
+   icp deploy            # build + deploy + sync
+   icp network stop      # stop when done
+   ```
 
 10. **Not specifying build commands for asset canisters.** dfx automatically runs `npm run build` for asset canisters. icp-cli requires explicit build commands in the recipe configuration:
     ```yaml
@@ -184,11 +191,54 @@ ic-wasm --version
     $(mops toolchain bin moc) --idl $(mops sources) -o backend/backend.did backend/app.mo
     ```
 
+17. **Port 8000 already in use when starting the local network.** Two scenarios:
+
+    **Scenario A — another icp-cli project holds the port.** Stop that project's network using `--project-root-override` (a global flag available on all commands):
+    ```bash
+    icp network stop --project-root-override /path/to/other-project
+    ```
+
+    **Scenario B — a non-icp service holds the port.** Configure an alternate port in `icp.yaml` and read the actual URLs dynamically via `icp network status --json` rather than hardcoding localhost:8000:
+    ```yaml
+    networks:
+      - name: local
+        mode: managed
+        gateway:
+          port: 8001
+    ```
+    ```bash
+    icp network status --json  # returns gateway URL, replica URL, etc.
+    ```
+
+18. **`icp new` hangs in CI without `--silent`.** Without `--define` flags, `icp new` launches an interactive prompt that blocks indefinitely in non-interactive environments. Always pass `--subfolder`, `--define`, and `--silent` for scripted use:
+    ```bash
+    icp new my-project --subfolder rust --define project_name=my-project --silent
+    ```
+
+19. **Using the anonymous identity on mainnet.** The local network seeds all managed identities — including the anonymous identity, which is the default — with ICP and cycles on start, so local development works out of the box with no identity or cycles setup required. On mainnet this does not apply, and the anonymous identity should never be used: it is shared by anyone, meaning ICP sent to it is publicly accessible and canisters deployed under it are uncontrolled.
+
+    Before deploying to mainnet, switch to a named identity:
+    ```bash
+    icp identities list                                        # check available identities
+    icp identity default my-identity                           # switch to an existing one
+    # or: icp identity new my-identity && icp identity default my-identity
+    ```
+    Then verify it has funds — a new identity will need to be funded with ICP or cycles before proceeding:
+    ```bash
+    icp token balance -n ic    # check ICP balance on mainnet
+    icp cycles balance -n ic   # check cycles balance on mainnet
+    icp identity account-id    # get account ID to fund if needed
+    ```
+
 ## How It Works
 
 ### Project Creation
 
-`icp new` scaffolds projects from templates. Without flags, an interactive prompt launches. For scripted or non-interactive use, pass `--subfolder` and `--define` flags directly. Available templates and options: [dfinity/icp-cli-templates](https://github.com/dfinity/icp-cli-templates).
+`icp new` scaffolds projects from templates. Pass `--subfolder`, `--define`, and `--silent` for non-interactive use:
+```bash
+icp new my-project --subfolder rust --define project_name=my-project --silent
+```
+Available templates and options: [dfinity/icp-cli-templates](https://github.com/dfinity/icp-cli-templates).
 
 ### Build → Deploy → Sync
 

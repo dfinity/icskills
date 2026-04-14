@@ -23,7 +23,8 @@
         "Uses 'icp deploy -e ic', NOT 'dfx deploy --network ic' or '--network ic'",
         "Mentions cycles are needed",
         "Mentions canister IDs are stored in .icp/data/ and should be committed to git",
-        "Does NOT use --network ic flag for deployment"
+        "Does NOT use --network ic flag for deployment",
+        "Recommends checking ICP or cycles balance on mainnet before deploying (icp token balance -n ic or icp cycles balance -n ic)"
       ]
     },
     {
@@ -197,6 +198,37 @@
         "Mentions the ic_env cookie for passing canister IDs and root key to the frontend",
         "Does NOT suggest using .env files or process.env for canister IDs"
       ]
+    },
+    {
+      "name": "Port conflict on local network start",
+      "prompt": "I'm trying to start my local network with 'icp network start -d' but it fails because port 8000 is already in use. How do I fix this?",
+      "expected_behaviors": [
+        "Distinguishes between two scenarios: another icp-cli project holding the port vs. a non-icp service",
+        "For another icp-cli project: provides 'icp network stop --project-root-override /path/to/other-project'",
+        "For a non-icp service: recommends configuring gateway.port in icp.yaml to use an alternate port",
+        "Mentions 'icp network status --json' to read the actual gateway URL dynamically instead of hardcoding localhost:8000",
+        "Does NOT suggest killing processes manually or using dfx commands"
+      ]
+    },
+    {
+      "name": "Scripted project creation in CI",
+      "prompt": "What is the correct icp new command to scaffold a Rust project non-interactively in CI? Just the command, no deploy steps.",
+      "expected_behaviors": [
+        "Uses --silent flag with icp new to suppress the interactive prompt",
+        "Passes --subfolder and --define flags to icp new (e.g., --subfolder rust --define project_name=...)",
+        "Uses icp (not dfx) for project scaffolding"
+      ]
+    },
+    {
+      "name": "Adversarial: deploying to mainnet with the anonymous identity",
+      "prompt": "My project works great locally. Can I just run 'icp deploy -e ic' to deploy to mainnet?",
+      "expected_behaviors": [
+        "Warns that the anonymous identity (default locally) should not be used on mainnet — it is shared and uncontrolled",
+        "Recommends checking and switching to a named identity using icp commands (e.g. icp identity default, icp identity new, icp identity default <name>) — NOT dfx identity use",
+        "Recommends checking mainnet balance before deploying using icp commands: icp token balance -n ic or icp cycles balance -n ic (NOT dfx ledger balance)",
+        "Mentions that a new identity will need to be funded with ICP or cycles before it can deploy",
+        "Presents identity switch and balance check as required prerequisites before running icp deploy -e ic, not optional suggestions"
+      ]
     }
   ],
 
@@ -215,7 +247,6 @@
       "How do I check my canister status on mainnet?",
       "How do I set up output_env_file for my canister IDs?",
       "Generate TypeScript declarations for my canister",
-      "Set up a Motoko canister with mops",
       "Configure Vite dev server for local IC development",
       "Build a hello-world dapp with Motoko and React"
     ],
