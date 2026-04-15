@@ -5,7 +5,7 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: process.env.SITE_URL || 'https://skills.internetcomputer.org',
   base: '/',
-  integrations: [preact(), sitemap()],
+  integrations: [preact(), sitemap({ lastmod: new Date() })],
   build: {
     format: 'directory',
   },

@@ -6,6 +6,9 @@ interface Props {
   ogTitle?: string;
   ogDescription?: string;
   jsonLd?: string;
+  extraJsonLd?: string;
+  prevUrl?: string;
+  nextUrl?: string;
 }
 
 import { SITE_URL } from "../data/site";
@@ -17,6 +20,9 @@ const {
   ogTitle = "Internet Computer (ICP) Skills — Skills for agents, not docs for humans",
   ogDescription = "Agent-readable skill files for every Internet Computer capability. Zero hallucinations. Paste the raw URL into Claude, Cursor, or any agent.",
   jsonLd,
+  extraJsonLd,
+  prevUrl,
+  nextUrl,
 } = Astro.props;
 
 const site = SITE_URL;
@@ -59,6 +65,8 @@ const defaultJsonLd = JSON.stringify({
   <meta name="robots" content="index, follow">
   <meta name="author" content="Internet Computer (ICP) Skills">
   <link rel="canonical" href={canonicalUrl}>
+  {prevUrl && <link rel="prev" href={prevUrl} />}
+  {nextUrl && <link rel="next" href={nextUrl} />}
 
   <meta property="og:type" content="website">
   <meta property="og:url" content={canonicalUrl}>
@@ -80,6 +88,7 @@ const defaultJsonLd = JSON.stringify({
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
+  {extraJsonLd && <script is:inline type="application/ld+json" set:html={extraJsonLd} />}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
