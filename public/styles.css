@@ -87,18 +87,7 @@ h4 { font-size: 1.05rem; }
   flex-wrap: wrap;
 }
 .brand { display: inline-flex; align-items: center; gap: 0.65rem; text-decoration: none; color: var(--fg); }
-/* Dual-dot brand mark — warm, editorial */
-.brand-mark {
-  width: 26px; height: 26px; position: relative; flex-shrink: 0;
-}
-.brand-mark::before, .brand-mark::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%;
-}
-.brand-mark::before { background: var(--accent); mix-blend-mode: multiply; transform: translateX(-5px); }
-.brand-mark::after { background: var(--fg); mix-blend-mode: multiply; transform: translateX(5px); opacity: 0.85; }
-@media (prefers-color-scheme: dark) {
-  .brand-mark::before, .brand-mark::after { mix-blend-mode: screen; }
-}
+.brand-mark { width: 26px; height: 26px; flex-shrink: 0; }
 .brand-name {
   font-family: var(--serif); font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.98rem;
