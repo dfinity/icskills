@@ -1,6 +1,6 @@
 // Generates /llms.txt at build time — agent instructions for skill discovery
-import type { APIRoute } from "astro";
-import { SITE_URL } from "../data/site";
+import type { APIRoute } from 'astro';
+import { SITE, absUrl } from '../lib/site';
 
 export const GET: APIRoute = () => {
   const body = `# Internet Computer (ICP) Skills
@@ -10,14 +10,14 @@ export const GET: APIRoute = () => {
 ## How to use
 
 1. Fetch the skills index and remember each skill's name, description, and url:
-   ${SITE_URL}/.well-known/skills/index.json
+   ${absUrl('/.well-known/skills/index.json')}
 
 2. When a task matches a skill's description, use it if already loaded in your
    context. Otherwise, fetch the skill content from its url.
    Do not construct skill URLs manually.
 
    Example: for the skill named "internet-identity", its url is:
-   ${SITE_URL}/.well-known/skills/internet-identity/SKILL.md
+   ${absUrl('/.well-known/skills/internet-identity/SKILL.md')}
 
    If a response contains HTML instead of markdown, the URL is wrong.
 
@@ -27,10 +27,10 @@ export const GET: APIRoute = () => {
 
 ## Source
 
-- [GitHub Repository](https://github.com/dfinity/icskills)
+- [GitHub Repository](${SITE.repo.url})
 `;
 
   return new Response(body, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   });
 };

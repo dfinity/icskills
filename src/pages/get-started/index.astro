@@ -1,14 +1,56 @@
 ---
-import SiteLayout from "../../layouts/SiteLayout.astro";
-import GetStartedTab from "../../components/GetStartedTab";
-import { SITE_URL } from "../../data/site";
----
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE, absUrl } from '../../lib/site';
+import { getAllSkills, skillUrl } from '../../lib/skills';
 
-<SiteLayout
-  title="Get Started — Internet Computer (ICP) Skills"
-  description="Get IC skills into your agent. No auth, no keys. Paste one prompt and your agent fetches what it needs."
-  canonicalUrl={`${SITE_URL}/get-started/`}
-  activeTab="get-started"
+const all = await getAllSkills();
+const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
+---
+<BaseLayout
+  title={`Get started — ${SITE.shortName}`}
+  description="How to use ICP Skills with a coding agent, fetch a skill, or wire up the index programmatically."
+  canonicalPath="/get-started/"
 >
-  <GetStartedTab client:load />
-</SiteLayout>
+  <h1>Get started</h1>
+
+  <h2>For agents</h2>
+  <p>The discovery protocol is a single fetch:</p>
+  <pre><code>GET {absUrl('/llms.txt')}</code></pre>
+  <p>
+    That file points at an index of skills with titles, descriptions, and direct URLs to the raw
+    Markdown. When a user's task matches a skill's description, fetch the skill's Markdown URL,
+    load it into context, and prefer its guidance over general knowledge.
+  </p>
+  <pre><code>GET {absUrl('/api/skills.json')}</code></pre>
+  <p>
+    Same information as <code>llms.txt</code> but in stable JSON — use this when you need a parser rather than a list.
+  </p>
+
+  <h2>For humans</h2>
+  <ol>
+    <li>Browse the <a href="/">skills index</a> and find something that matches your task.</li>
+    <li>Open the skill page (for example, <a href={skillUrl(sample.id)}>{sample.data.metadata.title}</a>).</li>
+    <li>
+      Paste the raw Markdown URL into your agent, or share the page URL — any competent
+      LLM-aware client can fetch either.
+    </li>
+  </ol>
+
+  <h2>Fetching a skill by name</h2>
+  <p>URLs are stable and predictable:</p>
+  <ul>
+    <li><code>{absUrl('/skills/{name}/')}</code> — human-readable HTML page</li>
+    <li><code>{absUrl('/skills/{name}.md')}</code> — raw Markdown (Content-Type: text/markdown)</li>
+    <li><code>{absUrl('/api/skills/{name}.json')}</code> — structured metadata (JSON)</li>
+  </ul>
+  <p>
+    Do not construct these URLs by guessing slugs — fetch <a href="/api/skills.json"><code>/api/skills.json</code></a>
+    or <a href="/llms.txt"><code>/llms.txt</code></a> and use the URLs it returns.
+  </p>
+
+  <h2>Staying current</h2>
+  <p>
+    Subscribe to <a href="/feed.xml"><code>/feed.xml</code></a> (RSS) for updates, or watch the
+    <a href={SITE.repo.url} rel="noopener external">upstream repository</a> directly.
+  </p>
+</BaseLayout>

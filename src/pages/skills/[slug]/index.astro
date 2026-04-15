@@ -1,178 +1,182 @@
 ---
-import SiteLayout from "../../../layouts/SiteLayout.astro";
-import CopyButton from "../../../components/CopyButton";
-import { CategoryIcon, GitHubIcon } from "../../../components/Icons";
-import { loadAllSkills } from "../../../data/skills";
-import { SITE_URL } from "../../../data/site";
-import { marked } from "marked";
-import "../../../styles/global.css";
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { SITE, absUrl } from '../../../lib/site';
+import {
+  getAllSkills,
+  getSkillUpdatedAt,
+  githubUrl,
+  skillUrl,
+  type Skill,
+} from '../../../lib/skills';
+import { render } from 'astro:content';
 
-marked.setOptions({ gfm: true, breaks: false });
-
-export function getStaticPaths() {
-  const skills = loadAllSkills();
-  return skills.map((skill, idx) => ({
-    params: { slug: skill.name },
-    props: {
-      skill,
-      relatedSkills: skills.filter((s) => s.category === skill.category && s.name !== skill.name).slice(0, 5),
-      prevSkill: idx > 0 ? { name: skills[idx - 1].name, title: skills[idx - 1].title } : null,
-      nextSkill: idx < skills.length - 1 ? { name: skills[idx + 1].name, title: skills[idx + 1].title } : null,
-    },
-  }));
+export async function getStaticPaths() {
+  const skills = await getAllSkills();
+  return skills.map((skill) => ({ params: { slug: skill.id }, props: { skill } }));
 }
 
-const { skill, relatedSkills, prevSkill, nextSkill } = Astro.props;
-const site = SITE_URL;
-const url = `${site}/skills/${skill.name}/`;
+interface Props {
+  skill: Skill;
+}
 
-// Strip the first h1 from rendered content (already shown as page title)
-let html = marked.parse(skill.content) as string;
-html = html.replace(/^<h1[^>]*>.*?<\/h1>\s*/i, "");
+const { skill } = Astro.props;
+const { Content } = await render(skill);
 
-const skillPath = `/.well-known/skills/${skill.name}/SKILL.md`;
-const rawUrl = `${site}${skillPath}`;
-const githubUrl = `https://github.com/dfinity/icskills/blob/main/skills/${skill.name}/SKILL.md`;
-const downloadPath = skill.fileCount > 1
-  ? `/.well-known/skills/${skill.name}/SKILL.zip`
-  : skillPath;
-const downloadTitle = skill.fileCount > 1
-  ? `Download SKILL.zip (${skill.fileCount} files)`
-  : "Download SKILL.md";
+const updatedAt = await getSkillUpdatedAt(skill);
+const mdPath = `/skills/${skill.id}.md`;
+const jsonPath = `/api/skills/${skill.id}.json`;
+const gh = githubUrl(skill.id);
+const canonicalPath = skillUrl(skill.id);
 
-const prevUrl = prevSkill ? `${site}/skills/${prevSkill.name}/` : undefined;
-const nextUrl = nextSkill ? `${site}/skills/${nextSkill.name}/` : undefined;
-
-const jsonLd = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "TechArticle",
-  headline: `${skill.title} — Internet Computer (ICP) Skills`,
-  description: skill.description,
-  url,
-  author: { "@type": "Organization", name: "DFINITY Foundation", url: "https://dfinity.org" },
-  about: { "@type": "Thing", name: skill.title },
-  isPartOf: { "@id": `${site}/#website` },
-  proficiencyLevel: "Expert",
-  keywords: `Internet Computer, ICP, ${skill.title}, ${skill.category}, AI agent, icp-cli`,
-});
-
-const breadcrumbJsonLd = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
-    { "@type": "ListItem", position: 2, name: "All Skills", item: `${site}/skills/` },
-    { "@type": "ListItem", position: 3, name: skill.title, item: url },
+const techArticleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: skill.data.metadata.title,
+  name: skill.data.metadata.title,
+  description: skill.data.description,
+  url: absUrl(canonicalPath),
+  mainEntityOfPage: absUrl(canonicalPath),
+  inLanguage: SITE.locale,
+  dateModified: updatedAt,
+  articleSection: skill.data.metadata.category,
+  keywords: [
+    'Internet Computer',
+    'ICP',
+    'DFINITY',
+    skill.data.metadata.category,
+    skill.data.name,
+  ].join(', '),
+  author: {
+    '@type': 'Organization',
+    name: SITE.author.name,
+    url: SITE.author.url,
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: SITE.author.name,
+    url: SITE.author.url,
+  },
+  license: SITE.license.url,
+  isBasedOn: gh,
+  sameAs: [gh],
+  encoding: [
+    { '@type': 'MediaObject', encodingFormat: 'text/html', contentUrl: absUrl(canonicalPath) },
+    { '@type': 'MediaObject', encodingFormat: 'text/markdown', contentUrl: absUrl(mdPath) },
+    { '@type': 'MediaObject', encodingFormat: 'application/json', contentUrl: absUrl(jsonPath) },
   ],
-});
+};
+
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Browse', item: SITE.url },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: skill.data.metadata.category,
+      item: absUrl(`/#category-${encodeURIComponent(skill.data.metadata.category)}`),
+    },
+    {
+      '@type': 'ListItem',
+      position: 3,
+      name: skill.data.metadata.title,
+      item: absUrl(canonicalPath),
+    },
+  ],
+};
+
+const pageTitle = `${skill.data.metadata.title} — ${SITE.shortName}`;
 ---
-
-<SiteLayout
-  title={`${skill.title} — Internet Computer (ICP) Skills`}
-  description={skill.description}
-  canonicalUrl={url}
-  ogTitle={`${skill.title} — Internet Computer (ICP) Skills`}
-  ogDescription={skill.description}
-  jsonLd={jsonLd}
-  extraJsonLd={breadcrumbJsonLd}
-  prevUrl={prevUrl}
-  nextUrl={nextUrl}
-  activeTab="skills"
+<BaseLayout
+  title={pageTitle}
+  description={skill.data.description}
+  canonicalPath={canonicalPath}
+  jsonLd={[techArticleLd, breadcrumbLd]}
+  ogType="article"
+  modifiedTime={updatedAt}
 >
-  {/* Breadcrumb nav */}
-  <nav aria-label="Breadcrumb" style="margin-bottom:24px;">
-    <ol style="display:flex;align-items:center;gap:6px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--text-muted);">
-      <li><a href="/" style="color:var(--text-muted);text-decoration:none;">Home</a></li>
-      <li aria-hidden="true" style="color:var(--border-strong);">/</li>
-      <li><a href="/skills/" style="color:var(--text-muted);text-decoration:none;">All Skills</a></li>
-      <li aria-hidden="true" style="color:var(--border-strong);">/</li>
-      <li aria-current="page" style="color:var(--text-primary);">{skill.title}</li>
-    </ol>
-  </nav>
-
-  {/* Skill title + metadata */}
-  <div style="margin-bottom:32px;">
-    <h1 style="font-size:clamp(24px,4vw,36px);font-weight:800;color:var(--text-primary);letter-spacing:-1.5px;line-height:1.1;margin:0 0 16px 0;">
-      {skill.title}
-    </h1>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);padding:4px 12px;border-radius:6px;background:var(--bg-card);border:1px solid var(--border-default);">
-        <CategoryIcon category={skill.category} size={14} />
-        {skill.category}
-      </span>
-      <span style="font-size:12px;color:var(--text-muted);">
-        updated {skill.lastUpdated}
-      </span>
-      <a href={githubUrl} target="_blank" rel="noopener noreferrer"
-        title="View on GitHub"
-        class="github-link"
-        style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:4px;color:var(--text-faint);background:var(--bg-card);border:1px solid var(--border-default);">
-        <GitHubIcon />
+  <article class="skill" itemscope itemtype="https://schema.org/TechArticle">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/">Browse</a>
+      <span aria-hidden="true">&rsaquo;</span>
+      <a href={`/#category-${encodeURIComponent(skill.data.metadata.category)}`}>
+        {skill.data.metadata.category}
       </a>
-    </div>
-  </div>
-
-  {/* Fetch bar */}
-  <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-code);border:1px solid var(--border-default);border-radius:8px;margin-bottom:32px;">
-    <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">
-      fetch:
-    </span>
-    <code style="flex:1;font-size:12px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">
-      {rawUrl}
-    </code>
-    <CopyButton client:load text={rawUrl} />
-    <a href={downloadPath} download
-      title={downloadTitle}
-      style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:4px;background:var(--bg-card);border:1px solid var(--border-default);color:var(--text-muted);cursor:pointer;text-decoration:none;flex-shrink:0;">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 2v8M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11" />
-      </svg>
-    </a>
-  </div>
-
-  {/* Skill content */}
-  <div
-    class="skill-content"
-    set:html={html}
-    style="font-size:15px;line-height:1.8;color:var(--text-body);font-family:'Inter',system-ui,sans-serif;"
-  />
-
-  {/* Related skills */}
-  {relatedSkills.length > 0 && (
-    <div style="margin-top:64px;padding-top:40px;border-top:1px solid var(--border-default);">
-      <h2 style="font-size:14px;font-weight:600;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin:0 0 20px 0;">
-        Related Skills
-      </h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px;">
-        {relatedSkills.map((s) => (
-          <a href={`/skills/${s.name}/`} style="display:block;padding:16px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:5px;text-decoration:none;color:inherit;">
-            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{s.title}</div>
-            <div style="font-size:12px;color:var(--text-dim);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{s.description}</div>
-          </a>
-        ))}
-      </div>
-    </div>
-  )}
-
-  {/* Prev / Next navigation */}
-  {(prevSkill || nextSkill) && (
-    <nav aria-label="Skill navigation" style="margin-top:40px;padding-top:32px;border-top:1px solid var(--border-default);display:flex;justify-content:space-between;gap:16px;">
-      <div>
-        {prevSkill && (
-          <a href={`/skills/${prevSkill.name}/`} style="display:inline-flex;flex-direction:column;text-decoration:none;color:inherit;">
-            <span style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">← Previous</span>
-            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">{prevSkill.title}</span>
-          </a>
-        )}
-      </div>
-      <div style="text-align:right;">
-        {nextSkill && (
-          <a href={`/skills/${nextSkill.name}/`} style="display:inline-flex;flex-direction:column;align-items:flex-end;text-decoration:none;color:inherit;">
-            <span style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Next →</span>
-            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">{nextSkill.title}</span>
-          </a>
-        )}
-      </div>
+      <span aria-hidden="true">&rsaquo;</span>
+      <span itemprop="name">{skill.data.metadata.title}</span>
     </nav>
-  )}
-</SiteLayout>
+
+    <header class="skill-header">
+      <p class="skill-category" itemprop="articleSection">{skill.data.metadata.category}</p>
+      <h1 itemprop="headline">{skill.data.metadata.title}</h1>
+      <p class="skill-description" itemprop="description">{skill.data.description}</p>
+
+      <dl class="skill-meta">
+        <div>
+          <dt>Skill ID</dt>
+          <dd><code>{skill.data.name}</code></dd>
+        </div>
+        <div>
+          <dt>Category</dt>
+          <dd>{skill.data.metadata.category}</dd>
+        </div>
+        {skill.data.license && (
+          <div>
+            <dt>License</dt>
+            <dd>
+              <a href={SITE.license.url} rel="noopener external">{skill.data.license}</a>
+            </dd>
+          </div>
+        )}
+        {skill.data.compatibility && (
+          <div>
+            <dt>Compatibility</dt>
+            <dd><code>{skill.data.compatibility}</code></dd>
+          </div>
+        )}
+        <div>
+          <dt>Last updated</dt>
+          <dd>
+            <time datetime={updatedAt} itemprop="dateModified">
+              {new Date(updatedAt).toISOString().slice(0, 10)}
+            </time>
+          </dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd>
+            <a href={gh} rel="noopener external" itemprop="isBasedOn">
+              {SITE.repo.name}/skills/{skill.id}
+            </a>
+          </dd>
+        </div>
+      </dl>
+
+      <nav class="skill-formats" aria-label="Alternative formats">
+        <strong>Also available as:</strong>
+        <ul>
+          <li>
+            <a href={mdPath} rel="alternate" type="text/markdown">Markdown</a>
+          </li>
+          <li>
+            <a href={jsonPath} rel="alternate" type="application/json">JSON</a>
+          </li>
+        </ul>
+      </nav>
+
+      <p class="trust-banner" role="note">
+        <strong>Trust note.</strong>
+        This page is a static, pre-rendered mirror of
+        <a href={gh} rel="noopener external">{SITE.repo.name}/skills/{skill.id}/SKILL.md</a>.
+        The canonical source is the Git commit it was built from.
+        Licensed {' '}
+        <a href={SITE.license.url} rel="noopener external">{SITE.license.spdx}</a>.
+      </p>
+    </header>
+
+    <div class="skill-body prose" itemprop="articleBody">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>

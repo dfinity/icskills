@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ICP SKILLS — Aurora Mesh</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --fg: #0b0616;
+    --muted: #5b5475;
+    --surface: #ffffff;
+    --surface-2: rgba(255,255,255,0.62);
+    --border: rgba(15,10,30,0.08);
+    --p1: #7928ca;  /* purple */
+    --p2: #ff0080;  /* hot pink */
+    --p3: #00d9ff;  /* cyan */
+    --p4: #ffb800;  /* gold */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fafafd; color: var(--fg); min-height: 100vh; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px; line-height: 1.6;
+    background:
+      radial-gradient(1200px 600px at -10% -20%, rgba(121,40,202,0.25), transparent 60%),
+      radial-gradient(900px 600px at 110% -10%, rgba(255,0,128,0.25), transparent 60%),
+      radial-gradient(1000px 700px at 50% 110%, rgba(0,217,255,0.22), transparent 60%),
+      radial-gradient(700px 500px at 90% 60%, rgba(255,184,0,0.15), transparent 60%),
+      #fafafd;
+    background-attachment: fixed;
+  }
+  .container { max-width: 76rem; margin: 0 auto; padding: 0 1.5rem; }
+  a { color: var(--p1); }
+
+  /* Sticky nav — glassy */
+  header.site {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    background: rgba(255,255,255,0.65);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .container { display: flex; align-items: center; gap: 2rem; padding: 0.9rem 1.5rem; }
+  .brand { display: inline-flex; align-items: center; gap: 0.7rem; text-decoration: none; color: var(--fg); }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: conic-gradient(from 90deg, var(--p1), var(--p2), var(--p4), var(--p3), var(--p1));
+    filter: saturate(1.1);
+    box-shadow: 0 10px 30px -10px rgba(121,40,202,0.45);
+  }
+  .brand-name {
+    font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.95rem;
+  }
+  nav.primary { display: flex; gap: 1.5rem; margin-left: auto; font-size: 0.95rem; }
+  nav.primary a { color: var(--fg); text-decoration: none; font-weight: 500; opacity: 0.8; }
+  nav.primary a:hover { opacity: 1; color: var(--p2); }
+
+  /* Hero */
+  .hero { padding: 5rem 0 3rem; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0.85rem; border-radius: 999px; background: var(--surface);
+    border: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); font-weight: 500;
+    box-shadow: 0 8px 24px -10px rgba(121,40,202,0.15);
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%;
+               background: linear-gradient(135deg, var(--p1), var(--p2)); }
+  h1.hero-title {
+    font-size: clamp(2.8rem, 6vw, 4.8rem); line-height: 1.02; margin: 1.25rem 0;
+    font-weight: 800; letter-spacing: -0.03em;
+  }
+  h1.hero-title .grad {
+    background: linear-gradient(100deg, var(--p1) 10%, var(--p2) 50%, var(--p3) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.lede { font-size: 1.2rem; color: var(--muted); max-width: 44rem; margin: 0 0 2rem; }
+  .cta-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.85rem 1.4rem; border-radius: 14px; text-decoration: none;
+    font-weight: 600; font-size: 0.95rem;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-primary {
+    color: #fff; background: linear-gradient(135deg, var(--p1), var(--p2));
+    box-shadow: 0 14px 40px -10px rgba(255,0,128,0.55);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 20px 50px -10px rgba(121,40,202,0.55); }
+  .btn-ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--p1); color: var(--p1); }
+
+  /* Stats */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+    margin: 3rem 0;
+  }
+  .stat {
+    background: var(--surface-2); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border); border-radius: 18px; padding: 1.25rem 1.4rem;
+    box-shadow: 0 8px 30px -15px rgba(15,10,30,0.2);
+  }
+  .stat-num { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em;
+              background: linear-gradient(135deg, var(--p1), var(--p2));
+              -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat-label { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
+
+  /* Category */
+  .cat-head { display: flex; align-items: baseline; gap: 0.9rem; margin: 3rem 0 1.5rem; }
+  .cat-head h2 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.015em; }
+  .cat-head .count {
+    font-size: 0.82rem; padding: 0.25rem 0.65rem; border-radius: 999px;
+    background: linear-gradient(135deg, rgba(121,40,202,0.12), rgba(255,0,128,0.12));
+    color: var(--p1); font-weight: 600;
+  }
+
+  /* Skill cards — glassmorphism */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); gap: 1.1rem; }
+  .card {
+    position: relative; padding: 1.6rem; border-radius: 20px; overflow: hidden;
+    background: var(--surface-2);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 40px -18px rgba(15,10,30,0.22);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .card:hover { transform: translateY(-4px);
+                box-shadow: 0 22px 50px -18px rgba(121,40,202,0.35);
+              }
+  .card-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.22rem 0.55rem; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 600; margin-bottom: 0.7rem;
+    background: linear-gradient(135deg, rgba(121,40,202,0.12), rgba(0,217,255,0.12));
+    color: var(--p1); letter-spacing: 0.02em;
+  }
+  .card h3 { margin: 0 0 0.55rem; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+  .card h3 a { color: var(--fg); text-decoration: none; }
+  .card:hover h3 a {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .card p { margin: 0 0 1rem; color: var(--muted); font-size: 0.95rem; }
+  .card-links { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.82rem; }
+  .card-links a {
+    padding: 0.3rem 0.65rem; border-radius: 8px; text-decoration: none;
+    background: rgba(255,255,255,0.7); border: 1px solid var(--border);
+    color: var(--fg); font-weight: 500;
+  }
+  .card-links a:hover { border-color: var(--p2); color: var(--p2); }
+
+  /* Footer */
+  footer {
+    margin-top: 5rem; padding: 2.25rem 0; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.88rem;
+    background: rgba(255,255,255,0.55); backdrop-filter: blur(12px);
+  }
+  footer .container { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  footer a { color: var(--p1); text-decoration: none; margin-right: 0.85rem; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="container">
+    <a class="brand" href="#">
+      <span class="brand-mark"></span>
+      <span class="brand-name">ICP SKILLS</span>
+    </a>
+    <nav class="primary">
+      <a href="#">Browse</a>
+      <a href="#">How it works</a>
+      <a href="#">Get started</a>
+      <a href="#">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <span class="pill"><span class="dot"></span> Built for agents · Served on-chain · Apache-2.0</span>
+    <h1 class="hero-title">The <span class="grad">skills layer</span> for the Internet&nbsp;Computer.</h1>
+    <p class="lede">Curated, agent-readable skill files — correct dependency versions, configuration formats, and the pitfalls that prevent build failures. One fetch and your agent ships.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#">Get started →</a>
+      <a class="btn btn-ghost" href="#">Explore skills</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-num">19</div><div class="stat-label">Skills</div></div>
+      <div class="stat"><div class="stat-num">10</div><div class="stat-label">Categories</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-label">Formats per skill</div></div>
+      <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Agents served</div></div>
+    </div>
+  </section>
+
+  <div class="cat-head"><h2>Architecture</h2><span class="count">3 skills</span></div>
+  <div class="grid">
+    <article class="card">
+      <span class="card-chip">Architecture</span>
+      <h3><a href="#">Motoko Language</a></h3>
+      <p>Motoko pitfalls and modern syntax. Persistent actors, stable types, mo:core stdlib, type system rules.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+    <article class="card">
+      <span class="card-chip">Architecture</span>
+      <h3><a href="#">Multi-Canister Architecture</a></h3>
+      <p>Design and deploy multi-canister dapps. Inter-canister calls, factory pattern, async pitfalls, 2MB payload limits.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+    <article class="card">
+      <span class="card-chip">Architecture</span>
+      <h3><a href="#">Stable Memory &amp; Upgrades</a></h3>
+      <p>Persist canister state across upgrades. StableBTreeMap, MemoryManager, persistent actors, upgrade hooks.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+  </div>
+
+  <div class="cat-head"><h2>Infrastructure</h2><span class="count">3 skills</span></div>
+  <div class="grid">
+    <article class="card">
+      <span class="card-chip">Infrastructure</span>
+      <h3><a href="#">ICP CLI</a></h3>
+      <p>The <code>icp</code> command-line tool. icp.yaml, recipes, environments, identity management. Replaces <code>dfx</code>.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+    <article class="card">
+      <span class="card-chip">Infrastructure</span>
+      <h3><a href="#">Canister Help</a></h3>
+      <p>Display a human-readable summary of a canister's interface given its mainnet canister ID.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+    <article class="card">
+      <span class="card-chip">Infrastructure</span>
+      <h3><a href="#">Cycles Management</a></h3>
+      <p>Manage cycles and canister lifecycle. Balance checks, top-ups, freezing thresholds.</p>
+      <div class="card-links"><a href="#">Read</a><a href="#">Markdown</a><a href="#">JSON</a></div>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div><strong>ICP SKILLS</strong> · maintained by DFINITY Foundation · Apache-2.0</div>
+    <div>
+      <a href="#">llms.txt</a><a href="#">llms-full.txt</a><a href="#">skills.json</a><a href="#">sitemap</a><a href="#">rss</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
