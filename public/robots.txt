@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://skills.internetcomputer.org/sitemap-index.xml
