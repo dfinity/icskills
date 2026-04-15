@@ -155,14 +155,14 @@ const pageTitle = `${skill.data.metadata.title} — ${SITE.shortName}`;
 
       <nav class="skill-formats" aria-label="Alternative formats">
         <strong>Also available as:</strong>
-        <a href={mdPath} rel="alternate" type="text/markdown">
-          <code>{mdPath}</code>
-          <span class="hint">raw markdown</span>
-        </a>
-        <a href={jsonPath} rel="alternate" type="application/json">
-          <code>{jsonPath}</code>
-          <span class="hint">JSON metadata</span>
-        </a>
+        <ul>
+          <li>
+            <a href={mdPath} rel="alternate" type="text/markdown">Markdown</a>
+          </li>
+          <li>
+            <a href={jsonPath} rel="alternate" type="application/json">JSON</a>
+          </li>
+        </ul>
       </nav>
 
       <p class="trust-banner" role="note">

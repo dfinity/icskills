@@ -250,18 +250,17 @@ h4 { font-size: 1.05rem; }
 .skill-meta dd { margin: 0.3rem 0 0; font-size: 0.98rem; }
 .skill-meta code { font-size: 0.88rem; }
 
-.skill-formats { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.25rem 0; align-items: center; }
+.skill-formats { display: flex; align-items: baseline; gap: 0.5rem; margin: 1.25rem 0; }
 .skill-formats strong {
-  font-weight: 500; color: var(--muted); font-size: 0.85rem;
+  font-weight: 500; color: var(--muted); font-size: 0.82rem;
   text-transform: uppercase; letter-spacing: 0.1em;
 }
+.skill-formats ul { display: flex; gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
 .skill-formats a {
-  display: inline-flex; gap: 0.5rem; align-items: baseline;
-  padding: 0.4rem 0.75rem; border: 1px solid var(--rule); border-radius: 5px;
-  text-decoration: none; background: var(--bg-elev); color: var(--fg);
+  padding: 0.3rem 0.6rem; border: 1px solid var(--rule); border-radius: 4px;
+  text-decoration: none; background: var(--bg-elev); color: var(--fg); font-size: 0.82rem;
 }
 .skill-formats a:hover { border-color: var(--accent); color: var(--accent); }
-.skill-formats .hint { color: var(--muted); font-size: 0.82rem; }
 
 .trust-banner {
   margin-top: 1.5rem; padding: 1rem 1.25rem;
