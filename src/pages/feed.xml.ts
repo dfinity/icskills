@@ -25,7 +25,7 @@ export const GET: APIRoute = async (context) => {
       categories: [skill.data.metadata.category],
       author: SITE.author.name,
       customData:
-        `<source url="${absUrl(`/skills/${skill.id}.md`)}">raw markdown</source>`,
+        `<source url="${absUrl(`/.well-known/skills/${skill.data.name}/SKILL.md`)}">raw markdown</source>`,
     })),
     customData:
       `<language>${SITE.locale}</language>` +

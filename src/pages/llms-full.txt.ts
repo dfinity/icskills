@@ -33,7 +33,7 @@ export const GET: APIRoute = async () => {
     parts.push('');
     parts.push(
       `<!-- skill: ${skill.data.name} | category: ${skill.data.metadata.category} | ` +
-        `html: ${absUrl(`/skills/${skill.id}/`)} | markdown: ${absUrl(`/skills/${skill.id}.md`)} | ` +
+        `html: ${absUrl(`/skills/${skill.id}/`)} | markdown: ${absUrl(`/.well-known/skills/${skill.data.name}/SKILL.md`)} | ` +
         `json: ${absUrl(`/api/skills/${skill.id}.json`)} | source: ${githubUrl(skill.id)} | ` +
         `updated: ${updated} | license: ${SITE.license.spdx} -->`,
     );

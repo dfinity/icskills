@@ -5,7 +5,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+
 
 export type Skill = CollectionEntry<'skills'>;
 
@@ -84,5 +84,58 @@ export function githubUrl(slug: string): string {
   return `https://github.com/dfinity/icskills/blob/main/skills/${slug}/SKILL.md`;
 }
 
-// Suppress unused import warning when this file is the only consumer.
-void fileURLToPath;
+/**
+ * List all files in a skill's directory, with SKILL.md first.
+ * Used by the .well-known/skills/index.json endpoint.
+ */
+export async function getSkillFiles(skill: Skill): Promise<string[]> {
+  const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
+  const skillDir = path.dirname(path.resolve(process.cwd(), rel));
+  const allFiles = await collectFiles(skillDir, skillDir);
+  return ['SKILL.md', ...allFiles.filter((f) => f !== 'SKILL.md').sort()];
+}
+
+export interface SkillFileEntry {
+  name: string;
+  path: string;
+  content: string;
+}
+
+/**
+ * Load all individual reference files across all skills (excluding SKILL.md).
+ * Used by the catch-all route at /.well-known/skills/{name}/{path}.
+ */
+export async function getSkillFileEntries(): Promise<SkillFileEntry[]> {
+  const skills = await getAllSkills();
+  const entries: SkillFileEntry[] = [];
+
+  for (const skill of skills) {
+    const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
+    const skillDir = path.dirname(path.resolve(process.cwd(), rel));
+    const allFiles = await collectFiles(skillDir, skillDir);
+
+    for (const filePath of allFiles) {
+      if (filePath === 'SKILL.md') continue;
+      const content = await fs.readFile(path.join(skillDir, filePath), 'utf8');
+      entries.push({ name: skill.data.name, path: filePath, content });
+    }
+  }
+
+  return entries;
+}
+
+/** Recursively collect all file paths relative to baseDir, skipping dotfiles. */
+async function collectFiles(dir: string, baseDir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFiles(fullPath, baseDir)));
+    } else if (entry.isFile()) {
+      files.push(path.relative(baseDir, fullPath));
+    }
+  }
+  return files;
+}
