@@ -105,10 +105,6 @@ export default function BrowseTab({ skills }: Props) {
           return (
             <div
               key={skill.name}
-              role="link"
-              tabIndex={0}
-              onClick={() => { window.location.href = `/skills/${skill.name}/`; }}
-              onKeyDown={(e) => { if (e.key === "Enter") window.location.href = `/skills/${skill.name}/`; }}
               className="skill-card"
               style={{
                 padding: "24px",
@@ -119,6 +115,7 @@ export default function BrowseTab({ skills }: Props) {
                 color: "inherit",
                 display: "block",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
@@ -130,12 +127,13 @@ export default function BrowseTab({ skills }: Props) {
                   flexShrink: 0,
                 }}><CategoryIcon category={skill.category} /></span>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{
+                  <a href={`/skills/${skill.name}/`} className="skill-card-link" style={{
                     fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    textDecoration: "none", display: "block",
                   }}>
                     {skill.title}
-                  </div>
+                  </a>
                   <div style={{ fontSize: "13px", color: "var(--text-faint)", marginTop: "2px" }}>
                     {skill.category}
                   </div>
@@ -144,7 +142,6 @@ export default function BrowseTab({ skills }: Props) {
                     ? `/.well-known/skills/${skill.name}/SKILL.zip`
                     : `/.well-known/skills/${skill.name}/SKILL.md`}
                   download
-                  onClick={(e) => e.stopPropagation()}
                   title={skill.fileCount > 1 ? "Download skill (.zip)" : "Download skill (.md)"}
                   aria-label={`Download ${skill.title}`}
                   className="github-link"
@@ -161,7 +158,6 @@ export default function BrowseTab({ skills }: Props) {
                 </a>
                 <a href={`https://github.com/dfinity/icskills/blob/main/skills/${skill.name}/SKILL.md`}
                   target="_blank" rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
                   title="View on GitHub" aria-label={`View ${skill.title} on GitHub`}
                   className="github-link"
                   style={{

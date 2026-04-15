@@ -198,7 +198,18 @@ a:focus-visible {
   transform: translateY(-1px);
 }
 
-.skill-card:focus-visible {
+.skill-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.skill-card .github-link {
+  position: relative;
+  z-index: 1;
+}
+
+.skill-card:has(.skill-card-link:focus-visible) {
   outline: 1px solid var(--text-primary);
   outline-offset: 2px;
   border-color: var(--border-hover) !important;
