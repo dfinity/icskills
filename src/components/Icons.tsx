@@ -7,7 +7,7 @@ export function CategoryIcon({ category, size = 18 }: { category: string; size?:
     "stroke-linecap": "round" as const, "stroke-linejoin": "round" as const,
   };
   switch (category) {
-    case "Architecture":
+    case "Core":
       return (<svg {...common}><path d="M9 2L2 6l7 4 7-4z" /><path d="M2 9l7 4 7-4" /><path d="M2 12l7 4 7-4" /></svg>);
     case "Auth":
       return (<svg {...common}><path d="M6 8V5.5a3 3 0 016 0V8" /><path d="M4 8h10a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" /></svg>);
@@ -23,10 +23,6 @@ export function CategoryIcon({ category, size = 18 }: { category: string; size?:
       return (<svg {...common}><path d="M7 11L5 13a2.8 2.8 0 01-4-4l2-2" /><path d="M11 7l2-2a2.8 2.8 0 014 4l-2 2" /><path d="M7 11l4-4" /></svg>);
     case "Security":
       return (<svg {...common}><path d="M9 1.5L3 4.5v4c0 4 2.5 7 6 8.5 3.5-1.5 6-4.5 6-8.5v-4z" /></svg>);
-    case "Tokens":
-      return (<svg {...common}><path d="M9 2a7 7 0 100 14A7 7 0 009 2z" /><path d="M9 5v8" /><path d="M7 7.5h4" /><path d="M7 10.5h4" /></svg>);
-    case "Wallet":
-      return (<svg {...common}><path d="M3 5a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><path d="M13 9h2v3h-2a1.5 1.5 0 010-3z" /></svg>);
     default:
       return null;
   }

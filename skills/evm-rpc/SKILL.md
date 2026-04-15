@@ -4,7 +4,7 @@ description: "Call Ethereum and EVM chains from IC canisters (Rust) via the EVM 
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
-  title: EVM RPC Integration
+  title: EVM RPC
   category: Integration
 ---
 

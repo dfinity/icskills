@@ -9,16 +9,14 @@ import { join } from "path";
 import { listSkillDirs, readSkill, SKILLS_DIR } from "./lib/parse-skill.js";
 
 const KNOWN_CATEGORIES = [
-  "DeFi",
-  "Tokens",
   "Auth",
-  "Architecture",
-  "Integration",
-  "Governance",
+  "Core",
+  "DeFi",
   "Frontend",
-  "Security",
+  "Governance",
   "Infrastructure",
-  "Wallet",
+  "Integration",
+  "Security",
 ];
 
 const evalsDir = join(SKILLS_DIR, "..", "evaluations");

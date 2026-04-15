@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: "Node.js >= 22"
 metadata:
   title: Wallet Integration
-  category: Wallet
+  category: DeFi
 ---
 
 # Wallet Integration

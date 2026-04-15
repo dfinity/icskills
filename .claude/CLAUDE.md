@@ -78,7 +78,7 @@ Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-c
 
 ## Categories
 
-Known categories: DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure, Wallet. New categories are allowed — the validator warns but does not block.
+Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Security. New categories are allowed — the validator warns but does not block.
 
 ## Tech Stack
 
