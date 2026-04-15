@@ -11,13 +11,18 @@ marked.setOptions({ gfm: true, breaks: false });
 
 export function getStaticPaths() {
   const skills = loadAllSkills();
-  return skills.map((skill) => ({
+  return skills.map((skill, idx) => ({
     params: { slug: skill.name },
-    props: { skill },
+    props: {
+      skill,
+      relatedSkills: skills.filter((s) => s.category === skill.category && s.name !== skill.name).slice(0, 5),
+      prevSkill: idx > 0 ? { name: skills[idx - 1].name, title: skills[idx - 1].title } : null,
+      nextSkill: idx < skills.length - 1 ? { name: skills[idx + 1].name, title: skills[idx + 1].title } : null,
+    },
   }));
 }
 
-const { skill } = Astro.props;
+const { skill, relatedSkills, prevSkill, nextSkill } = Astro.props;
 const site = SITE_URL;
 const url = `${site}/skills/${skill.name}/`;
 
@@ -35,6 +40,9 @@ const downloadTitle = skill.fileCount > 1
   ? `Download SKILL.zip (${skill.fileCount} files)`
   : "Download SKILL.md";
 
+const prevUrl = prevSkill ? `${site}/skills/${prevSkill.name}/` : undefined;
+const nextUrl = nextSkill ? `${site}/skills/${nextSkill.name}/` : undefined;
+
 const jsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "TechArticle",
@@ -47,6 +55,16 @@ const jsonLd = JSON.stringify({
   proficiencyLevel: "Expert",
   keywords: `Internet Computer, ICP, ${skill.title}, ${skill.category}, AI agent, icp-cli`,
 });
+
+const breadcrumbJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
+    { "@type": "ListItem", position: 2, name: "All Skills", item: `${site}/skills/` },
+    { "@type": "ListItem", position: 3, name: skill.title, item: url },
+  ],
+});
 ---
 
 <SiteLayout
@@ -56,8 +74,22 @@ const jsonLd = JSON.stringify({
   ogTitle={`${skill.title} — Internet Computer (ICP) Skills`}
   ogDescription={skill.description}
   jsonLd={jsonLd}
-  activeTab="browse"
+  extraJsonLd={breadcrumbJsonLd}
+  prevUrl={prevUrl}
+  nextUrl={nextUrl}
+  activeTab="skills"
 >
+  {/* Breadcrumb nav */}
+  <nav aria-label="Breadcrumb" style="margin-bottom:24px;">
+    <ol style="display:flex;align-items:center;gap:6px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--text-muted);">
+      <li><a href="/" style="color:var(--text-muted);text-decoration:none;">Home</a></li>
+      <li aria-hidden="true" style="color:var(--border-strong);">/</li>
+      <li><a href="/skills/" style="color:var(--text-muted);text-decoration:none;">All Skills</a></li>
+      <li aria-hidden="true" style="color:var(--border-strong);">/</li>
+      <li aria-current="page" style="color:var(--text-primary);">{skill.title}</li>
+    </ol>
+  </nav>
+
   {/* Skill title + metadata */}
   <div style="margin-bottom:32px;">
     <h1 style="font-size:clamp(24px,4vw,36px);font-weight:800;color:var(--text-primary);letter-spacing:-1.5px;line-height:1.1;margin:0 0 16px 0;">
@@ -104,4 +136,43 @@ const jsonLd = JSON.stringify({
     set:html={html}
     style="font-size:15px;line-height:1.8;color:var(--text-body);font-family:'Inter',system-ui,sans-serif;"
   />
+
+  {/* Related skills */}
+  {relatedSkills.length > 0 && (
+    <div style="margin-top:64px;padding-top:40px;border-top:1px solid var(--border-default);">
+      <h2 style="font-size:14px;font-weight:600;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin:0 0 20px 0;">
+        Related Skills
+      </h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px;">
+        {relatedSkills.map((s) => (
+          <a href={`/skills/${s.name}/`} style="display:block;padding:16px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:5px;text-decoration:none;color:inherit;">
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{s.title}</div>
+            <div style="font-size:12px;color:var(--text-dim);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{s.description}</div>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {/* Prev / Next navigation */}
+  {(prevSkill || nextSkill) && (
+    <nav aria-label="Skill navigation" style="margin-top:40px;padding-top:32px;border-top:1px solid var(--border-default);display:flex;justify-content:space-between;gap:16px;">
+      <div>
+        {prevSkill && (
+          <a href={`/skills/${prevSkill.name}/`} style="display:inline-flex;flex-direction:column;text-decoration:none;color:inherit;">
+            <span style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">← Previous</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">{prevSkill.title}</span>
+          </a>
+        )}
+      </div>
+      <div style="text-align:right;">
+        {nextSkill && (
+          <a href={`/skills/${nextSkill.name}/`} style="display:inline-flex;flex-direction:column;align-items:flex-end;text-decoration:none;color:inherit;">
+            <span style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Next →</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text-primary);">{nextSkill.title}</span>
+          </a>
+        )}
+      </div>
+    </nav>
+  )}
 </SiteLayout>

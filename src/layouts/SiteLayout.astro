@@ -10,7 +10,10 @@ interface Props {
   ogTitle?: string;
   ogDescription?: string;
   jsonLd?: string;
-  activeTab: "browse" | "how-it-works" | "get-started";
+  extraJsonLd?: string;
+  prevUrl?: string;
+  nextUrl?: string;
+  activeTab?: "skills" | "how-it-works" | "get-started";
 }
 
 const {
@@ -20,17 +23,20 @@ const {
   ogTitle,
   ogDescription,
   jsonLd,
+  extraJsonLd,
+  prevUrl,
+  nextUrl,
   activeTab,
 } = Astro.props;
 
 const tabs = [
-  { id: "browse", label: "browse", href: "/" },
+  { id: "skills", label: "browse", href: "/skills/" },
   { id: "how-it-works", label: "how it works", href: "/how-it-works/" },
   { id: "get-started", label: "get started", href: "/get-started/" },
 ] as const;
 ---
 
-<BaseLayout title={title} description={description} canonicalUrl={canonicalUrl} ogTitle={ogTitle} ogDescription={ogDescription} jsonLd={jsonLd}>
+<BaseLayout title={title} description={description} canonicalUrl={canonicalUrl} ogTitle={ogTitle} ogDescription={ogDescription} jsonLd={jsonLd} extraJsonLd={extraJsonLd} prevUrl={prevUrl} nextUrl={nextUrl}>
   <div style="min-height:100vh;background:var(--bg-page);color:var(--text-body);font-family:'Inter',system-ui,sans-serif;position:relative;overflow:hidden;">
     <!-- Grid background -->
     <div style="position:fixed;inset:0;opacity:var(--grid-opacity);background-image:linear-gradient(var(--border-subtle) 1px,transparent 1px),linear-gradient(90deg,var(--border-subtle) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;"></div>
