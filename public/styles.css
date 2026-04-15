@@ -296,5 +296,42 @@ h4 { font-size: 1.05rem; }
 .prose img { max-width: 100%; height: auto; }
 .prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2rem 0; }
 
+/* ---------- Mobile ---------- */
+@media (max-width: 480px) {
+  body { font-size: 16px; }
+  .container { padding: 0 1rem; }
+
+  /* Header */
+  .site-header .container { padding: 1rem; gap: 0.75rem; }
+  .site-header nav { gap: 1rem; font-size: 0.88rem; }
+  .brand-name { font-size: 0.88rem; }
+
+  /* Hero */
+  .hero { padding: 2.5rem 0 1.5rem; }
+  .hero .lede { font-size: 1.05rem; }
+
+  /* Stats */
+  .stats { margin: 2rem 0 1.5rem; padding: 1rem 0; }
+  .stat-num { font-size: 1.6rem; }
+
+  /* Callout */
+  .callout { padding: 1rem 1.25rem; margin: 2rem 0; }
+  .callout p { font-size: 1rem; }
+
+  /* Skill detail */
+  .skill-meta { padding: 0.75rem 1rem; gap: 0.75rem 1rem; }
+  .skill-header h1 { font-size: 1.8rem; }
+  .skill-description { font-size: 1rem; }
+  .trust-banner { padding: 0.75rem 1rem; font-size: 0.88rem; }
+
+  /* Footer */
+  .site-footer .container { flex-direction: column; gap: 0.75rem; }
+  .site-footer { margin-top: 3rem; padding: 1.5rem 0 2rem; }
+
+  /* Prose */
+  .prose pre { padding: 0.75rem 0.85rem; font-size: 0.85em; }
+  .prose table { font-size: 0.85rem; display: block; overflow-x: auto; }
+}
+
 /* ---------- 404 ---------- */
 main h1 { font-family: var(--serif); }
