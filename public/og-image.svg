@@ -1,10 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#0a0a0a"/>
-  <rect x="0" y="600" width="1200" height="30" fill="#ffffff" opacity="0.04"/>
-  <rect x="60" y="0" width="3" height="630" fill="#ffffff" opacity="0.08"/>
-  <circle cx="1050" cy="120" r="180" fill="#ffffff" opacity="0.02"/>
-  <circle cx="150" cy="500" r="120" fill="#ffffff" opacity="0.02"/>
-  <text x="100" y="260" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="72" font-weight="800" fill="#ffffff">ICP Skills</text>
-  <text x="100" y="350" font-family="'Inter', 'Helvetica Neue', sans-serif" font-size="32" fill="#666666">for agents that write code</text>
-  <text x="100" y="540" font-family="'JetBrains Mono', monospace" font-size="18" fill="#333333">skills.internetcomputer.org</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f8f5ef"/>
+  <g transform="translate(80, 140)">
+    <circle cx="30" cy="30" r="28" fill="#cc5a2b"/>
+    <circle cx="62" cy="30" r="28" fill="#1a1714" opacity="0.85" style="mix-blend-mode:multiply"/>
+  </g>
+  <g fill="#1a1714" font-family="Newsreader, Source Serif 4, ui-serif, Georgia, serif">
+    <text x="80" y="300" font-size="76" font-weight="500" letter-spacing="-1">Internet Computer Skills</text>
+    <text x="80" y="380" font-size="34" font-style="italic" fill="#cc5a2b">A library for agents — and the humans who direct them.</text>
+  </g>
+  <g fill="#6b6660" font-family="Inter, -apple-system, sans-serif" font-size="22">
+    <text x="80" y="550" letter-spacing="3" font-weight="600" fill="#cc5a2b">ICP SKILLS</text>
+    <text x="80" y="580">skills.internetcomputer.org · maintained by DFINITY · Apache-2.0</text>
+  </g>
 </svg>
