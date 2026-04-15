@@ -4,8 +4,8 @@ description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers (ICP, ckBTC, 
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
-  title: ICRC Ledger Standard
-  category: Tokens
+  title: ICRC Token Ledgers
+  category: DeFi
 ---
 
 # ICRC Ledger Standards

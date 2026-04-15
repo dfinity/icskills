@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: "moc >= 1.0.0, mops with core >= 2.0.0"
 metadata:
   title: Motoko Language
-  category: Architecture
+  category: Core
 ---
 
 # Motoko Language

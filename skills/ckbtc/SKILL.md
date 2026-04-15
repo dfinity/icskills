@@ -4,7 +4,7 @@ description: "Accept, send, and manage ckBTC (chain-key Bitcoin). Covers BTC dep
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
-  title: ckBTC Integration
+  title: ckBTC (chain-key Bitcoin)
   category: DeFi
 ---
 

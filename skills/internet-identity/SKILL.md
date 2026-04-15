@@ -4,7 +4,7 @@ description: "Integrate Internet Identity authentication. Covers passkey and Ope
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
-  title: Internet Identity Auth
+  title: Internet Identity
   category: Auth
 ---
 

@@ -36,7 +36,7 @@
         "category": {
           "type": "string",
           "minLength": 1,
-          "description": "Skill category for browsing/filtering. Use an existing category when possible: DeFi, Tokens, Auth, Architecture, Integration, Governance, Frontend, Security, Infrastructure, Wallet."
+          "description": "Skill category for browsing/filtering. Use an existing category when possible: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Security."
         }
       },
       "additionalProperties": false

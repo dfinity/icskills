@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: "Stable Memory & Upgrades"
-  category: Architecture
+  category: Core
 ---
 
 # Stable Memory & Canister Upgrades

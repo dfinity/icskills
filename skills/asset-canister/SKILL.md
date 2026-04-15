@@ -4,11 +4,11 @@ description: "Deploy frontend assets to the IC. Covers certified assets, SPA rou
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
-  title: "Asset Canister & Frontend"
+  title: Asset Canister
   category: Frontend
 ---
 
-# Asset Canister & Frontend Hosting
+# Asset Canister
 
 ## What This Is
 
