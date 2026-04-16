@@ -3,13 +3,13 @@
 
 import type { APIRoute } from 'astro';
 import rss from '@astrojs/rss';
-import { getAllSkills, getSkillUpdatedAt, skillUrl } from '../lib/skills';
+import { getAllSkills, getSkillGitInfo, skillUrl } from '../lib/skills';
 import { SITE, absUrl } from '../lib/site';
 
 export const GET: APIRoute = async (context) => {
   const all = await getAllSkills();
   const withDates = await Promise.all(
-    all.map(async (s) => ({ skill: s, updated: await getSkillUpdatedAt(s) })),
+    all.map(async (s) => { const { updatedAt } = await getSkillGitInfo(s); return { skill: s, updated: updatedAt }; }),
   );
   withDates.sort((a, b) => b.updated.localeCompare(a.updated));
 

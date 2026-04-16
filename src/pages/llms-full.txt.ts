@@ -2,7 +2,7 @@
 // provenance headers. One fetch gives a training scraper the entire corpus.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, getSkillRawMarkdown, getSkillUpdatedAt, githubUrl } from '../lib/skills';
+import { getAllSkills, getSkillGitInfo, getSkillRawMarkdown, githubCommitUrl } from '../lib/skills';
 import { SITE, absUrl } from '../lib/site';
 
 export const GET: APIRoute = async () => {
@@ -25,7 +25,7 @@ export const GET: APIRoute = async () => {
   parts.push('');
 
   for (const skill of all) {
-    const updated = await getSkillUpdatedAt(skill);
+    const { sha, updatedAt: updated } = await getSkillGitInfo(skill);
     const raw = await getSkillRawMarkdown(skill);
     parts.push('---');
     parts.push('');
@@ -34,7 +34,7 @@ export const GET: APIRoute = async () => {
     parts.push(
       `<!-- skill: ${skill.data.name} | category: ${skill.data.metadata.category} | ` +
         `html: ${absUrl(`/skills/${skill.id}/`)} | markdown: ${absUrl(`/.well-known/skills/${skill.data.name}/SKILL.md`)} | ` +
-        `json: ${absUrl(`/api/skills/${skill.id}.json`)} | source: ${githubUrl(skill.id)} | ` +
+        `json: ${absUrl(`/api/skills/${skill.id}.json`)} | source: ${githubCommitUrl(skill.id, sha)} | ` +
         `updated: ${updated} | license: ${SITE.license.spdx} -->`,
     );
     parts.push('');

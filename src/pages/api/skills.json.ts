@@ -2,27 +2,30 @@
 // and from llms.txt. A single fetch tells a scraper everything on the site.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, getSkillUpdatedAt, githubUrl, skillUrl } from '../../lib/skills';
+import { getAllSkills, getSkillGitInfo, githubCommitUrl, skillUrl } from '../../lib/skills';
 import { SITE, absUrl } from '../../lib/site';
 
 export const GET: APIRoute = async () => {
   const skills = await getAllSkills();
   const items = await Promise.all(
-    skills.map(async (skill) => ({
-      name: skill.data.name,
-      title: skill.data.metadata.title,
-      category: skill.data.metadata.category,
-      description: skill.data.description,
-      license: skill.data.license ?? SITE.license.spdx,
-      compatibility: skill.data.compatibility ?? null,
-      updated: await getSkillUpdatedAt(skill),
-      urls: {
-        html: absUrl(skillUrl(skill.id)),
-        markdown: absUrl(`/.well-known/skills/${skill.id}/SKILL.md`),
-        json: absUrl(`/api/skills/${skill.id}.json`),
-        source: githubUrl(skill.id),
-      },
-    })),
+    skills.map(async (skill) => {
+      const { sha, updatedAt } = await getSkillGitInfo(skill);
+      return {
+        name: skill.data.name,
+        title: skill.data.metadata.title,
+        category: skill.data.metadata.category,
+        description: skill.data.description,
+        license: skill.data.license ?? SITE.license.spdx,
+        compatibility: skill.data.compatibility ?? null,
+        updated: updatedAt,
+        urls: {
+          html: absUrl(skillUrl(skill.id)),
+          markdown: absUrl(`/.well-known/skills/${skill.id}/SKILL.md`),
+          json: absUrl(`/api/skills/${skill.id}.json`),
+          source: githubCommitUrl(skill.id, sha),
+        },
+      };
+    }),
   );
 
   const payload = {

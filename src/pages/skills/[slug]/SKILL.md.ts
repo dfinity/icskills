@@ -4,7 +4,7 @@
 // comment so the origin stays visible even if the file is copy-pasted.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, getSkillRawMarkdown, getSkillUpdatedAt, githubUrl } from '../../../lib/skills';
+import { getAllSkills, getSkillGitInfo, getSkillRawMarkdown, githubCommitUrl } from '../../../lib/skills';
 import { SITE, absUrl } from '../../../lib/site';
 
 export async function getStaticPaths() {
@@ -19,15 +19,16 @@ export const GET: APIRoute = async ({ props }) => {
   if (!skill) return new Response('Not found', { status: 404 });
 
   const body = await getSkillRawMarkdown(skill);
-  const updatedAt = await getSkillUpdatedAt(skill);
+  const { sha, updatedAt } = await getSkillGitInfo(skill);
+  const sourceUrl = githubCommitUrl(slug, sha);
   const attribution =
-    `<!-- source: ${absUrl(`/skills/${slug}/`)} | origin: ${githubUrl(slug)} | ` +
+    `<!-- source: ${absUrl(`/skills/${slug}/`)} | origin: ${sourceUrl} | ` +
     `publisher: ${SITE.author.name} | license: ${SITE.license.spdx} | updated: ${updatedAt} -->\n`;
 
   return new Response(attribution + body, {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
-      'X-Content-Source': githubUrl(slug),
+      'X-Content-Source': sourceUrl,
       'X-License': SITE.license.spdx,
     },
   });
