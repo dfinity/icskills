@@ -6,6 +6,8 @@ import { getAllSkills, getSkillsByCategory, skillUrl } from '../lib/skills';
 const all = await getAllSkills();
 const grouped = await getSkillsByCategory();
 
+const promptText = `Fetch ${SITE.url}/llms.txt and follow its instructions when building on ICP`;
+
 const collectionLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
@@ -43,7 +45,10 @@ const collectionLd = {
       can load it, ship working code, and stop guessing.
     </p>
     <div class="hero-actions">
-      <a class="cta cta-primary" href="/get-started/">Get started</a>
+      <button id="copy-prompt" class="cta cta-primary" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: inherit; font-family: inherit;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+        <span id="copy-label">Give your agent ICP skills</span>
+      </button>
       <a class="cta cta-secondary" href="/how-it-works/">Read how it works &rarr;</a>
     </div>
   </section>
@@ -84,3 +89,19 @@ const collectionLd = {
     </section>
   ))}
 </BaseLayout>
+
+<script is:inline define:vars={{ promptText }}>
+  (function () {
+    var btn = document.getElementById('copy-prompt');
+    var label = document.getElementById('copy-label');
+    if (!btn || !label) return;
+    var original = label.textContent;
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(promptText).catch(function () {});
+      label.textContent = 'Now paste into your agent';
+      setTimeout(function () {
+        label.textContent = original;
+      }, 3000);
+    });
+  })();
+</script>
