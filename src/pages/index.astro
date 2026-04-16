@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../lib/site';
-import { getAllSkills, getSkillsByCategory, skillUrl } from '../lib/skills';
+import { getAllSkills, getSkillsByCategory, skillUrl, skillMarkdownUrl } from '../lib/skills';
 
 const all = await getAllSkills();
 const grouped = await getSkillsByCategory();
@@ -78,14 +78,14 @@ const collectionLd = {
       </div>
       <ul class="skill-list">
         {skills.map((s) => (
-          <li class="skill-row">
+          <li class="skill-row" data-skill-id={s.id}>
             <div class="skill-title">
               <a href={skillUrl(s.id)}>{s.data.metadata.title}</a>
             </div>
             <p class="skill-desc">{s.data.description}</p>
             <div class="skill-links">
               <a href={skillUrl(s.id)}>Read</a>
-              <a href={`/skills/${s.id}.md`} rel="alternate" type="text/markdown">Markdown</a>
+              <a href={skillMarkdownUrl(s.id)} rel="alternate" type="text/markdown">Markdown</a>
               <a href={`/api/skills/${s.id}.json`} rel="alternate" type="application/json">JSON</a>
             </div>
           </li>
@@ -127,7 +127,8 @@ const collectionLd = {
         rows.forEach(function (row) {
           var title = row.querySelector('.skill-title');
           var desc = row.querySelector('.skill-desc');
-          var text = (catName + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
+          var skillId = row.getAttribute('data-skill-id') || '';
+          var text = (catName + ' ' + skillId + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
           var match = catMatch || !q || text.indexOf(q) !== -1;
           row.style.display = match ? '' : 'none';
           if (match) visible++;

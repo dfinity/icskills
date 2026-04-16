@@ -3,9 +3,10 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../../../lib/site';
 import {
   getAllSkills,
-  getSkillUpdatedAt,
-  githubUrl,
+  getSkillGitInfo,
+  githubCommitUrl,
   skillUrl,
+  skillMarkdownUrl,
   type Skill,
 } from '../../../lib/skills';
 import { render } from 'astro:content';
@@ -22,10 +23,10 @@ interface Props {
 const { skill } = Astro.props;
 const { Content } = await render(skill);
 
-const updatedAt = await getSkillUpdatedAt(skill);
-const mdPath = `/skills/${skill.id}.md`;
+const { sha: commitHash, updatedAt } = await getSkillGitInfo(skill);
+const mdPath = skillMarkdownUrl(skill.id);
 const jsonPath = `/api/skills/${skill.id}.json`;
-const gh = githubUrl(skill.id);
+const gh = githubCommitUrl(skill.id, commitHash);
 const canonicalPath = skillUrl(skill.id);
 
 const techArticleLd = {

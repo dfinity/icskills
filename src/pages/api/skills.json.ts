@@ -18,7 +18,7 @@ export const GET: APIRoute = async () => {
       updated: await getSkillUpdatedAt(skill),
       urls: {
         html: absUrl(skillUrl(skill.id)),
-        markdown: absUrl(`/skills/${skill.id}.md`),
+        markdown: absUrl(`/.well-known/skills/${skill.id}/SKILL.md`),
         json: absUrl(`/api/skills/${skill.id}.json`),
         source: githubUrl(skill.id),
       },

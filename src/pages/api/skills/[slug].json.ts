@@ -5,8 +5,8 @@
 import type { APIRoute } from 'astro';
 import {
   getAllSkills,
-  getSkillUpdatedAt,
-  githubUrl,
+  getSkillGitInfo,
+  githubCommitUrl,
   skillUrl,
 } from '../../../lib/skills';
 import { SITE, absUrl } from '../../../lib/site';
@@ -22,7 +22,8 @@ export const GET: APIRoute = async ({ props }) => {
   const skill = skills.find((s) => s.id === slug);
   if (!skill) return new Response('Not found', { status: 404 });
 
-  const updatedAt = await getSkillUpdatedAt(skill);
+  const { sha, updatedAt } = await getSkillGitInfo(skill);
+  const sourceUrl = githubCommitUrl(slug, sha);
   const payload = {
     name: skill.data.name,
     title: skill.data.metadata.title,
@@ -33,9 +34,9 @@ export const GET: APIRoute = async ({ props }) => {
     updated: updatedAt,
     urls: {
       html: absUrl(skillUrl(slug)),
-      markdown: absUrl(`/skills/${slug}.md`),
+      markdown: absUrl(`/.well-known/skills/${slug}/SKILL.md`),
       json: absUrl(`/api/skills/${slug}.json`),
-      source: githubUrl(slug),
+      source: sourceUrl,
     },
     publisher: SITE.author,
     canonicalRepo: SITE.repo,
@@ -44,7 +45,7 @@ export const GET: APIRoute = async ({ props }) => {
   return new Response(JSON.stringify(payload, null, 2) + '\n', {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'X-Content-Source': githubUrl(slug),
+      'X-Content-Source': sourceUrl,
     },
   });
 };

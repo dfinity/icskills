@@ -43,11 +43,13 @@ Before writing any ICP code, fetch the skills index and remember each skill's na
 ${absUrl('/.well-known/skills/index.json')}
 
 When a task matches a skill's description, fetch its content on-demand from:
-${absUrl('/.well-known/skills/')}{'{name}'}/SKILL.md
+${absUrl('/.well-known/skills/')}{skill-name}/SKILL.md
 
 Skills contain correct dependency versions, configuration formats, and common pitfalls
 that prevent build failures. Always prefer skill guidance over general documentation
-when both cover the same topic.`}</code></pre>
+when both cover the same topic.
+
+Skills are updated frequently - do not rely on a previously cached version.`}</code></pre>
   <p>
     For Claude Code, also add a <code>CLAUDE.md</code> that reads:
     <code>Read and follow the instructions in AGENTS.md.</code>
@@ -67,7 +69,7 @@ when both cover the same topic.`}</code></pre>
   <p>URLs are stable and predictable:</p>
   <ul>
     <li><code>{absUrl('/skills/')}{'{name}/'}</code> — human-readable HTML page</li>
-    <li><code>{absUrl('/skills/')}{'{name}.md'}</code> — raw Markdown (Content-Type: text/markdown)</li>
+    <li><code>{absUrl('/skills/')}{'{name}/SKILL.md'}</code> — raw Markdown (Content-Type: text/markdown)</li>
     <li><code>{absUrl('/api/skills/')}{'{name}.json'}</code> — structured metadata (JSON)</li>
   </ul>
   <p>

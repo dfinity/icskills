@@ -1,11 +1,11 @@
-// Raw markdown endpoint: /skills/{slug}.md returns the unmodified SKILL.md
+// Raw markdown endpoint: /skills/{slug}/SKILL.md returns the unmodified SKILL.md
 // bytes (frontmatter + body). Served with text/markdown so LLM crawlers can
 // parse it natively. An attribution header line is prepended as a markdown
 // comment so the origin stays visible even if the file is copy-pasted.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, getSkillRawMarkdown, getSkillUpdatedAt, githubUrl } from '../../lib/skills';
-import { SITE, absUrl } from '../../lib/site';
+import { getAllSkills, getSkillRawMarkdown, getSkillUpdatedAt, githubUrl } from '../../../lib/skills';
+import { SITE, absUrl } from '../../../lib/site';
 
 export async function getStaticPaths() {
   const skills = await getAllSkills();

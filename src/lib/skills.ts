@@ -5,6 +5,10 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 
 export type Skill = CollectionEntry<'skills'>;
@@ -48,21 +52,31 @@ export async function getSkillsByCategory(): Promise<Array<{ category: string; s
   return categories.map((category) => ({ category, skills: byCat.get(category)! }));
 }
 
+export interface SkillGitInfo {
+  sha: string;
+  updatedAt: string;
+}
+
 /**
- * Returns the last-modified ISO date string for a skill, derived from its
- * SKILL.md file mtime. Used as the "updated" timestamp in UI, JSON-LD, and
- * the RSS feed so freshness signals match the underlying file.
+ * Returns the last commit SHA and author date for a skill's SKILL.md from git.
+ * Git commit time is used instead of filesystem mtime because mtime varies
+ * across CI clones and checkout orders, while the commit date is stable and
+ * content-tied. Falls back to the current time / 'main' if git is unavailable.
  */
-export async function getSkillUpdatedAt(skill: Skill): Promise<string> {
-  // Astro's content loader exposes the source filePath in `filePath`.
+export async function getSkillGitInfo(skill: Skill): Promise<SkillGitInfo> {
   const rel = skill.filePath ?? `upstream/skills/${skill.id}/SKILL.md`;
   const abs = path.resolve(process.cwd(), rel);
   try {
-    const stat = await fs.stat(abs);
-    return stat.mtime.toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%H|%aI', '--', abs]);
+    const [sha, date] = stdout.trim().split('|');
+    if (sha && date) return { sha, updatedAt: date };
+  } catch { /* fall through */ }
+  return { sha: 'main', updatedAt: new Date().toISOString() };
+}
+
+/** @deprecated Use getSkillGitInfo instead. */
+export async function getSkillUpdatedAt(skill: Skill): Promise<string> {
+  return (await getSkillGitInfo(skill)).updatedAt;
 }
 
 /**
@@ -80,9 +94,27 @@ export function skillUrl(slug: string): string {
   return `/skills/${slug}/`;
 }
 
-/** Canonical GitHub permalink for a skill. */
+/** Human-facing raw markdown URL for a skill. */
+export function skillMarkdownUrl(slug: string): string {
+  return `/skills/${slug}/SKILL.md`;
+}
+
+/** Canonical GitHub permalink for a skill (main branch). */
 export function githubUrl(slug: string): string {
   return `https://github.com/dfinity/icskills/blob/main/skills/${slug}/SKILL.md`;
+}
+
+/** GitHub permalink pinned to a specific commit SHA. */
+export function githubCommitUrl(slug: string, sha: string): string {
+  return `https://github.com/dfinity/icskills/blob/${sha}/skills/${slug}/SKILL.md`;
+}
+
+/**
+ * Returns the full SHA of the last git commit that touched a skill's SKILL.md.
+ * Falls back to 'main' if git is unavailable or the file has no history.
+ */
+export async function getSkillCommitHash(skill: Skill): Promise<string> {
+  return (await getSkillGitInfo(skill)).sha;
 }
 
 /**

@@ -13,7 +13,7 @@ export const GET: APIRoute = () => {
    ${absUrl('/.well-known/skills/index.json')}
 
 2. When a task matches a skill's description, fetch the skill content from its url.
-   Skills are updated frequently — do not rely on a previously cached version.
+   Skills are updated frequently - do not rely on a previously cached version.
 
    Example: for the skill named "internet-identity", its url is:
    ${absUrl('/.well-known/skills/internet-identity/SKILL.md')}
