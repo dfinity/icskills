@@ -17,13 +17,40 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
   <p>The discovery protocol is a single fetch:</p>
   <pre><code>GET {absUrl('/llms.txt')}</code></pre>
   <p>
-    That file points at an index of skills with titles, descriptions, and direct URLs to the raw
-    Markdown. When a user's task matches a skill's description, fetch the skill's Markdown URL,
-    load it into context, and prefer its guidance over general knowledge.
+    That file contains agent instructions: it tells your agent to fetch the skills index and to pull matching skills on demand
+    when a task fits a skill's description. Paste the URL and your agent handles the rest.
   </p>
   <pre><code>GET {absUrl('/api/skills.json')}</code></pre>
   <p>
-    Same information as <code>llms.txt</code> but in stable JSON — use this when you need a parser rather than a list.
+    A structured JSON index of all skills with titles, descriptions, categories, and direct URLs
+    to each format (HTML, Markdown, JSON). Use this when you need to parse the catalogue programmatically.
+  </p>
+
+  <h2>Use the CLI</h2>
+  <p>Install all skills at once — auto-detects your agents (Claude Code, Cursor, Copilot, and more) and writes the skills into their rules files:</p>
+  <pre><code>npx skills add dfinity/icskills</code></pre>
+  <p>Or install a single skill by name:</p>
+  <pre><code>npx skills add dfinity/icskills --skill ckbtc</code></pre>
+
+  <h2>Add AGENTS.md to your repo</h2>
+  <p>
+    Commit once, and every agent session auto-discovers ICP skills. Create an <code>AGENTS.md</code> in your project root:
+  </p>
+  <pre><code>{`# AI Agent Instructions
+
+Tested implementation patterns for ICP development are available as agent skills.
+Before writing any ICP code, fetch the skills index and remember each skill's name and description:
+${absUrl('/.well-known/skills/index.json')}
+
+When a task matches a skill's description, fetch its content on-demand from:
+${absUrl('/.well-known/skills/')}{'{name}'}/SKILL.md
+
+Skills contain correct dependency versions, configuration formats, and common pitfalls
+that prevent build failures. Always prefer skill guidance over general documentation
+when both cover the same topic.`}</code></pre>
+  <p>
+    For Claude Code, also add a <code>CLAUDE.md</code> that reads:
+    <code>Read and follow the instructions in AGENTS.md.</code>
   </p>
 
   <h2>For humans</h2>
@@ -54,3 +81,25 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
     <a href={SITE.repo.url} rel="noopener external">upstream repository</a> directly.
   </p>
 </BaseLayout>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('pre').forEach(function (pre) {
+      pre.style.position = 'relative';
+      var btn = document.createElement('button');
+      var copyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      var checkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      btn.innerHTML = copyIcon;
+      btn.setAttribute('aria-label', 'Copy to clipboard');
+      btn.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-card);color:var(--text-muted);cursor:pointer;';
+      pre.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var code = pre.querySelector('code');
+        var text = (code || pre).textContent;
+        navigator.clipboard.writeText(text).catch(function () {});
+        btn.innerHTML = checkIcon;
+        setTimeout(function () { btn.innerHTML = copyIcon; }, 2000);
+      });
+    });
+  })();
+</script>
