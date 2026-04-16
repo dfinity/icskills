@@ -119,13 +119,16 @@ const collectionLd = {
       var q = input.value.toLowerCase().trim();
       var sections = document.querySelectorAll('section.category');
       sections.forEach(function (section) {
+        var catHead = section.querySelector('.cat-head h2');
+        var catName = catHead ? catHead.textContent.toLowerCase() : '';
+        var catMatch = !q || catName.indexOf(q) !== -1;
         var rows = section.querySelectorAll('.skill-row');
         var visible = 0;
         rows.forEach(function (row) {
           var title = row.querySelector('.skill-title');
           var desc = row.querySelector('.skill-desc');
-          var text = ((title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
-          var match = !q || text.indexOf(q) !== -1;
+          var text = (catName + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
+          var match = catMatch || !q || text.indexOf(q) !== -1;
           row.style.display = match ? '' : 'none';
           if (match) visible++;
         });
