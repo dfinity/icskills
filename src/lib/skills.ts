@@ -52,21 +52,31 @@ export async function getSkillsByCategory(): Promise<Array<{ category: string; s
   return categories.map((category) => ({ category, skills: byCat.get(category)! }));
 }
 
+export interface SkillGitInfo {
+  sha: string;
+  updatedAt: string;
+}
+
 /**
- * Returns the last-modified ISO date string for a skill, derived from its
- * SKILL.md file mtime. Used as the "updated" timestamp in UI, JSON-LD, and
- * the RSS feed so freshness signals match the underlying file.
+ * Returns the last commit SHA and author date for a skill's SKILL.md from git.
+ * Git commit time is used instead of filesystem mtime because mtime varies
+ * across CI clones and checkout orders, while the commit date is stable and
+ * content-tied. Falls back to the current time / 'main' if git is unavailable.
  */
-export async function getSkillUpdatedAt(skill: Skill): Promise<string> {
-  // Astro's content loader exposes the source filePath in `filePath`.
+export async function getSkillGitInfo(skill: Skill): Promise<SkillGitInfo> {
   const rel = skill.filePath ?? `upstream/skills/${skill.id}/SKILL.md`;
   const abs = path.resolve(process.cwd(), rel);
   try {
-    const stat = await fs.stat(abs);
-    return stat.mtime.toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%H|%aI', '--', abs]);
+    const [sha, date] = stdout.trim().split('|');
+    if (sha && date) return { sha, updatedAt: date };
+  } catch { /* fall through */ }
+  return { sha: 'main', updatedAt: new Date().toISOString() };
+}
+
+/** @deprecated Use getSkillGitInfo instead. */
+export async function getSkillUpdatedAt(skill: Skill): Promise<string> {
+  return (await getSkillGitInfo(skill)).updatedAt;
 }
 
 /**
@@ -104,15 +114,7 @@ export function githubCommitUrl(slug: string, sha: string): string {
  * Falls back to 'main' if git is unavailable or the file has no history.
  */
 export async function getSkillCommitHash(skill: Skill): Promise<string> {
-  const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
-  const abs = path.resolve(process.cwd(), rel);
-  try {
-    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%H', '--', abs]);
-    const sha = stdout.trim();
-    return sha || 'main';
-  } catch {
-    return 'main';
-  }
+  return (await getSkillGitInfo(skill)).sha;
 }
 
 /**

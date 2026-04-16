@@ -3,8 +3,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../../../lib/site';
 import {
   getAllSkills,
-  getSkillUpdatedAt,
-  getSkillCommitHash,
+  getSkillGitInfo,
   githubCommitUrl,
   skillUrl,
   skillMarkdownUrl,
@@ -24,8 +23,7 @@ interface Props {
 const { skill } = Astro.props;
 const { Content } = await render(skill);
 
-const updatedAt = await getSkillUpdatedAt(skill);
-const commitHash = await getSkillCommitHash(skill);
+const { sha: commitHash, updatedAt } = await getSkillGitInfo(skill);
 const mdPath = skillMarkdownUrl(skill.id);
 const jsonPath = `/api/skills/${skill.id}.json`;
 const gh = githubCommitUrl(skill.id, commitHash);
