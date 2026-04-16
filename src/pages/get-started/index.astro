@@ -39,9 +39,9 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
   <h2>Fetching a skill by name</h2>
   <p>URLs are stable and predictable:</p>
   <ul>
-    <li><code>{absUrl('/skills/{name}/')}</code> — human-readable HTML page</li>
-    <li><code>{absUrl('/skills/{name}.md')}</code> — raw Markdown (Content-Type: text/markdown)</li>
-    <li><code>{absUrl('/api/skills/{name}.json')}</code> — structured metadata (JSON)</li>
+    <li><code>{absUrl('/skills/')}{'{name}/'}</code> — human-readable HTML page</li>
+    <li><code>{absUrl('/skills/')}{'{name}.md'}</code> — raw Markdown (Content-Type: text/markdown)</li>
+    <li><code>{absUrl('/api/skills/')}{'{name}.json'}</code> — structured metadata (JSON)</li>
   </ul>
   <p>
     Do not construct these URLs by guessing slugs — fetch <a href="/api/skills.json"><code>/api/skills.json</code></a>
