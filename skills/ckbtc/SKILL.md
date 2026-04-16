@@ -1,6 +1,6 @@
 ---
 name: ckbtc
-description: "Accept, send, and manage ckBTC (chain-key Bitcoin). Covers BTC deposit flow via minter, ckBTC transfers, withdrawal to BTC, subaccount derivation, and UTXO management. Use when integrating Bitcoin, ckBTC, BTC deposits, or BTC withdrawals in a canister. Do NOT use for plain token transfers without BTC minting/withdrawal - use icrc-ledger instead."
+description: "Accept, send, and manage ckBTC (chain-key Bitcoin). Covers BTC deposit flow via minter, ckBTC transfers, withdrawal to BTC, subaccount derivation, and UTXO management. Use when integrating Bitcoin, ckBTC, BTC deposits, or BTC withdrawals in a canister. Do NOT use for plain token transfers without BTC minting/withdrawal — use icrc-ledger instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -98,7 +98,7 @@ icrc2-types = "1.1.0"
 
 #### icp.yaml
 
-Your backend canister calls the ckBTC ledger and minter by principal directly - no local ckBTC canister deployment needed.
+Your backend canister calls the ckBTC ledger and minter by principal directly — no local ckBTC canister deployment needed.
 
 ```yaml
 canisters:
@@ -684,7 +684,7 @@ icp canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
   '(record { owner = opt principal "YOUR-PRINCIPAL"; subaccount = null })' \
   -e ic
 
-# Transfer ckBTC (amount in e8s - 1 ckBTC = 100_000_000)
+# Transfer ckBTC (amount in e8s — 1 ckBTC = 100_000_000)
 icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT-PRINCIPAL"; subaccount = null };
@@ -713,7 +713,7 @@ icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_fee '()' -e ic
 icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
   '(record { owner = principal "YOUR-PRINCIPAL"; subaccount = null })' \
   -e ic
-# Expected: (AMOUNT : nat) - balance in satoshis (e8s)
+# Expected: (AMOUNT : nat) — balance in satoshis (e8s)
 ```
 
 ### Verify Transfer
@@ -743,7 +743,7 @@ icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of \
 ```bash
 # 1. Get deposit address
 icp canister call YOUR-CANISTER getDepositAddress -e ic
-# Expected: "bc1q..." or "3..." - a valid Bitcoin address
+# Expected: "bc1q..." or "3..." — a valid Bitcoin address
 
 # 2. Send BTC to that address (external wallet)
 

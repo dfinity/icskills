@@ -28,7 +28,7 @@ Each `icpBindgen()` instance generates a `<canister-name>.ts` file (named after 
 
 ## Creating actors from bindings
 
-Connect the generated bindings with the `ic_env` cookie. **Important:** pass `{ agentOptions }`, NOT `{ agent }`. The old `@dfinity/agent` pattern passed a pre-built `HttpAgent` object - the `@icp-sdk/bindgen` pattern passes options instead and creates the agent internally. Passing `{ agent }` silently falls back to an anonymous identity with no error - calls simply return empty data or access denied.
+Connect the generated bindings with the `ic_env` cookie. **Important:** pass `{ agentOptions }`, NOT `{ agent }`. The old `@dfinity/agent` pattern passed a pre-built `HttpAgent` object — the `@icp-sdk/bindgen` pattern passes options instead and creates the agent internally. Passing `{ agent }` silently falls back to an anonymous identity with no error — calls simply return empty data or access denied.
 
 ```js
 // src/actor.js
@@ -62,11 +62,11 @@ npx @icp-sdk/bindgen --did ../backend/backend.did --out ./src/bindings
 `@icp-sdk/bindgen` generates two layers: raw declarations under `src/bindings/` use the standard `@icp-sdk/core` Candid representation where `opt T` is `[] | [T]`, and a wrapper class that converts this to idiomatic `T | null`. Since `createActor` returns the wrapper, always use `T | null`:
 
 ```ts
-// Wrong - raw Candid style (only applies if using declarations directly)
+// Wrong — raw Candid style (only applies if using declarations directly)
 const result = await backend.getNickname();
 if (result.length > 0) { name = result[0]; }
 
-// Correct - wrapper returns T | null
+// Correct — wrapper returns T | null
 const result = await backend.getNickname();
 if (result !== null) { name = result; }
 ```
@@ -79,7 +79,7 @@ npm install @icp-sdk/core@^5.0.0
 npm install -D @icp-sdk/bindgen@^0.3.0
 ```
 
-**Important:** `@icp-sdk/core` starts at version 5.x - there is no 0.x or 1.x release. Do not guess a lower version.
+**Important:** `@icp-sdk/core` starts at version 5.x — there is no 0.x or 1.x release. Do not guess a lower version.
 
-- The `.did` file must exist on disk before the frontend builds. The recommended workflow: generate the `.did` file once (see SKILL.md pitfall #16), commit it to the repo, and specify `candid:` in the recipe config. If `candid` is omitted, the recipe auto-generates the `.did` into the build cache at a non-deterministic path that bindgen cannot reference - so always commit the `.did` and set `candid:` when using bindgen.
-- `@icp-sdk/bindgen` (>= 0.3.0) generates code that depends on `@icp-sdk/core` (>= 5.0.0). Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional - there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.
+- The `.did` file must exist on disk before the frontend builds. The recommended workflow: generate the `.did` file once (see SKILL.md pitfall #16), commit it to the repo, and specify `candid:` in the recipe config. If `candid` is omitted, the recipe auto-generates the `.did` into the build cache at a non-deterministic path that bindgen cannot reference — so always commit the `.did` and set `candid:` when using bindgen.
+- `@icp-sdk/bindgen` (>= 0.3.0) generates code that depends on `@icp-sdk/core` (>= 5.0.0). Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional — there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.

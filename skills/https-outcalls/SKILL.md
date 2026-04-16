@@ -1,6 +1,6 @@
 ---
 name: https-outcalls
-description: "Make HTTPS requests from canisters to external web APIs. Covers transform functions for consensus, cycle cost management, response size limits, and idempotency patterns. Use when a canister needs to call an external API, fetch data from the web, or make HTTP requests. Do NOT use for EVM/Ethereum calls - use evm-rpc instead."
+description: "Make HTTPS requests from canisters to external web APIs. Covers transform functions for consensus, cycle cost management, response size limits, and idempotency patterns. Use when a canister needs to call an external API, fetch data from the web, or make HTTP requests. Do NOT use for EVM/Ethereum calls — use evm-rpc instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -39,7 +39,7 @@ You do not deploy anything extra. The management canister is built into every su
 
 4. **Exceeding the 2MB response limit.** The maximum response body is 2MB (2_097_152 bytes). If the external API returns more, the call fails. Use the `max_response_bytes` field to set a limit and design your queries to return small responses.
 
-5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly - roughly 21.5 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
+5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 21.5 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
 
 6. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
 
@@ -81,7 +81,7 @@ persistent actor {
 
     let request : IC.http_request_args = {
       url = url;
-      max_response_bytes = ?(10_000 : Nat64); // Always set - omitting defaults to 2MB and charges accordingly
+      max_response_bytes = ?(10_000 : Nat64); // Always set — omitting defaults to 2MB and charges accordingly
       headers = [
         { name = "User-Agent"; value = "ic-canister" },
       ];

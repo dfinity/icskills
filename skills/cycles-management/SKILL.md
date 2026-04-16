@@ -1,6 +1,6 @@
 ---
 name: cycles-management
-description: "Manage cycles and canister lifecycle. Covers cycle balance checks, top-ups, freezing thresholds, canister creation, and ICP-to-cycles conversion via the CMC. Use when working with cycles, canister funding, freezing threshold, frozen canister, out of cycles, top-up, canister creation, or cycle balance. Do NOT use for wallet-to-dApp integration or ICRC signer flows - use wallet-integration instead."
+description: "Manage cycles and canister lifecycle. Covers cycle balance checks, top-ups, freezing thresholds, canister creation, and ICP-to-cycles conversion via the CMC. Use when working with cycles, canister funding, freezing threshold, frozen canister, out of cycles, top-up, canister creation, or cycle balance. Do NOT use for wallet-to-dApp integration or ICRC signer flows — use wallet-integration instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:

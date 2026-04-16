@@ -1,6 +1,6 @@
 ---
 name: custom-domains
-description: "Register and manage custom domains for IC canisters via the HTTP gateway custom domain service. Covers DNS record configuration (CNAME, TXT, ACME challenge), the .well-known/ic-domains file, domain registration/validation/update/deletion via the REST API, TLS certificate provisioning, and HttpAgent host configuration. Use when the user wants to serve a canister under a custom domain, configure DNS for IC, register a domain with boundary nodes, troubleshoot custom domain issues, or update/remove a custom domain. Do NOT use for general frontend hosting or asset canister configuration without custom domains - use asset-canister instead."
+description: "Register and manage custom domains for IC canisters via the HTTP gateway custom domain service. Covers DNS record configuration (CNAME, TXT, ACME challenge), the .well-known/ic-domains file, domain registration/validation/update/deletion via the REST API, TLS certificate provisioning, and HttpAgent host configuration. Use when the user wants to serve a canister under a custom domain, configure DNS for IC, register a domain with boundary nodes, troubleshoot custom domain issues, or update/remove a custom domain. Do NOT use for general frontend hosting or asset canister configuration without custom domains — use asset-canister instead."
 license: Apache-2.0
 compatibility: "curl, DNS registrar access, deployed canister"
 metadata:
@@ -14,7 +14,7 @@ metadata:
 
 By default, canisters are accessible at `<canister-id>.icp0.io`. The custom domains service lets you serve any canister under your own domain (e.g., `yourdomain.com`). You configure DNS, deploy a domain ownership file to your canister, and register via a REST API. The HTTP gateways then handle TLS certificate provisioning, renewal, and routing automatically.
 
-Custom domains work at the boundary node level - they map a domain to any canister ID via DNS. This works with any canister that can serve `/.well-known/ic-domains` over HTTP, not just asset canisters. That includes asset canisters, Juno satellites, and custom canisters implementing `http_request`.
+Custom domains work at the boundary node level — they map a domain to any canister ID via DNS. This works with any canister that can serve `/.well-known/ic-domains` over HTTP, not just asset canisters. That includes asset canisters, Juno satellites, and custom canisters implementing `http_request`.
 
 ## Prerequisites
 

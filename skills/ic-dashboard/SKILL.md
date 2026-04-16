@@ -31,28 +31,28 @@ These public REST APIs power **dashboard.internetcomputer.org**. They expose rea
 
 Full URLs for specs and UI:
 
-- IC API: https://ic-api.internetcomputer.org/api/v3/openapi.json - https://ic-api.internetcomputer.org/api/v3/swagger
-- ICRC API: https://icrc-api.internetcomputer.org/openapi.json - https://icrc-api.internetcomputer.org/docs
-- SNS API: https://sns-api.internetcomputer.org/openapi.json - https://sns-api.internetcomputer.org/docs
-- Ledger API: https://ledger-api.internetcomputer.org/openapi.json - https://ledger-api.internetcomputer.org/swagger-ui/
-- Metrics API: https://metrics-api.internetcomputer.org/api/v1/openapi.json - https://metrics-api.internetcomputer.org/api/v1/docs
+- IC API: https://ic-api.internetcomputer.org/api/v3/openapi.json — https://ic-api.internetcomputer.org/api/v3/swagger
+- ICRC API: https://icrc-api.internetcomputer.org/openapi.json — https://icrc-api.internetcomputer.org/docs
+- SNS API: https://sns-api.internetcomputer.org/openapi.json — https://sns-api.internetcomputer.org/docs
+- Ledger API: https://ledger-api.internetcomputer.org/openapi.json — https://ledger-api.internetcomputer.org/swagger-ui/
+- Metrics API: https://metrics-api.internetcomputer.org/api/v1/openapi.json — https://metrics-api.internetcomputer.org/api/v1/docs
 
 ## How It Works
 
 1. **Prefer v2+ APIs with cursor pagination.** IC API v4 (`/api/v4/canisters`, `/api/v4/subnets`), ICRC API v2 (`/api/v2/ledgers`, `/api/v2/ledgers/{id}/transactions`, etc.), and SNS API v2 (`/api/v2/snses`, `/api/v2/snses/{id}/proposals`, `/api/v2/snses/{id}/neurons`) use `after`, `before`, and `limit` for stable, efficient paging. Avoid v1/offset-based endpoints when a v2+ alternative exists.
-2. **Choose the right API** for the data you need: IC API (canisters, subnets, NNS neurons/proposals), **Ledger API for mainnet ICP** (accounts, transactions, supply), ICRC API for **other** ICRC ledgers only (ckBTC, SNS tokens, testicp - ICRC API does not expose mainnet ICP), SNS API (SNS list, neurons, proposals), Metrics API (governance, cycles, Bitcoin, etc.).
+2. **Choose the right API** for the data you need: IC API (canisters, subnets, NNS neurons/proposals), **Ledger API for mainnet ICP** (accounts, transactions, supply), ICRC API for **other** ICRC ledgers only (ckBTC, SNS tokens, testicp — ICRC API does not expose mainnet ICP), SNS API (SNS list, neurons, proposals), Metrics API (governance, cycles, Bitcoin, etc.).
 3. **Use the OpenAPI spec** to get exact path, query, and body schemas and response shapes; prefer the spec over hand-written docs to avoid drift.
 4. **Call over HTTPS** with `GET` (or documented method). Use the `next_cursor` / `previous_cursor` from v2+ responses to request the next or previous page.
 
 ## Mistakes That Break Your Build
 
-1. **Wrong base URL or API version.** IC API uses `/api/v3/` (and v4 for canisters/subnets); ICRC has `/api/v1/` and `/api/v2/` (ICRC API does not serve mainnet ICP - use Ledger API). Ledger API uses unversioned paths for some endpoints (e.g. `/accounts`, `/supply/total/latest`) and `/v2/` for cursor-paginated lists. Metrics API uses `/api/v1/`. Using the wrong prefix returns 404 or wrong schema.
+1. **Wrong base URL or API version.** IC API uses `/api/v3/` (and v4 for canisters/subnets); ICRC has `/api/v1/` and `/api/v2/` (ICRC API does not serve mainnet ICP — use Ledger API). Ledger API uses unversioned paths for some endpoints (e.g. `/accounts`, `/supply/total/latest`) and `/v2/` for cursor-paginated lists. Metrics API uses `/api/v1/`. Using the wrong prefix returns 404 or wrong schema.
 
 2. **Canister ID format.** Canister IDs in paths and queries must match the principal-like pattern: 27 characters, five groups of five plus a final three (e.g. `ryjl3-tyaaa-aaaaa-aaaba-cai`). Subnet IDs use the longer pattern (e.g. 63 chars). Sending a raw principal string in the wrong encoding or length causes 422 or 400.
 
 3. **Using ICRC API for mainnet ICP.** ICRC API exposes **test ICP (TestICP) only**, not mainnet ICP. For mainnet ICP token data (accounts, transactions, supply) use **Ledger API** (`ledger-api.internetcomputer.org`). Use ICRC API for other ICRC ledgers (e.g. ckBTC, SNS tokens) and for TestICP.
 
-4. **ICRC API: ledger_canister_id in path.** ICRC endpoints require `ledger_canister_id` in the path (e.g. `/api/v2/ledgers/{ledger_canister_id}/transactions`). Use the canister ID of the ledger you want (e.g. ckBTC `mxzaz-hqaaa-aaaar-qaada-cai`). Do not use ICRC API for mainnet ICP - use Ledger API instead.
+4. **ICRC API: ledger_canister_id in path.** ICRC endpoints require `ledger_canister_id` in the path (e.g. `/api/v2/ledgers/{ledger_canister_id}/transactions`). Use the canister ID of the ledger you want (e.g. ckBTC `mxzaz-hqaaa-aaaar-qaada-cai`). Do not use ICRC API for mainnet ICP — use Ledger API instead.
 
 5. **Using v1 or offset-based pagination when v2+ exists.** Always prefer v2 or higher endpoints that support cursor pagination (`after`, `before`, `limit`). IC API v4 (canisters, subnets), ICRC API v2 (ledgers, accounts, transactions), and SNS API v2 (snses, proposals, neurons) return `next_cursor`/`previous_cursor` and accept cursor query params. Older v1/offset/`max_*_index` endpoints are legacy; using the wrong pagination model returns empty or incorrect pages.
 
@@ -64,7 +64,7 @@ Full URLs for specs and UI:
 
 ## Implementation
 
-### IC API - Canisters and subnets (prefer v4 with cursor pagination)
+### IC API — Canisters and subnets (prefer v4 with cursor pagination)
 
 ```bash
 # List canisters (v4: cursor pagination, next_cursor/previous_cursor in response)
@@ -83,7 +83,7 @@ curl -s "https://ic-api.internetcomputer.org/api/v4/subnets?limit=10"
 curl -s "https://ic-api.internetcomputer.org/api/v3/proposals?limit=5"
 ```
 
-### ICRC API - Other ICRC ledgers only (v2 with cursor pagination)
+### ICRC API — Other ICRC ledgers only (v2 with cursor pagination)
 
 ICRC API exposes **TestICP and other ICRC ledgers (e.g. ckBTC, SNS tokens), not mainnet ICP.** For mainnet ICP use Ledger API.
 
@@ -91,7 +91,7 @@ ICRC API exposes **TestICP and other ICRC ledgers (e.g. ckBTC, SNS tokens), not 
 # List ledgers (v2: after/before/limit, next_cursor/previous_cursor in response)
 curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers?limit=10"
 
-# Get one ledger (e.g. ckBTC - mainnet ICP is not on ICRC API)
+# Get one ledger (e.g. ckBTC — mainnet ICP is not on ICRC API)
 curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-qaada-cai"
 
 # List transactions for a ledger (v2: cursor pagination)
@@ -101,7 +101,7 @@ curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-
 curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers/mxzaz-hqaaa-aaaar-qaada-cai/accounts?limit=10"
 ```
 
-### SNS API - SNS list and proposals (prefer v2 with cursor pagination)
+### SNS API — SNS list and proposals (prefer v2 with cursor pagination)
 
 ```bash
 # List SNSes (v2: after/before/limit, next_cursor/previous_cursor)
@@ -115,7 +115,7 @@ curl -s "https://sns-api.internetcomputer.org/api/v2/snses/ROOT_CANISTER_ID/prop
 curl -s "https://sns-api.internetcomputer.org/api/v2/snses/ROOT_CANISTER_ID/neurons?limit=10"
 ```
 
-### Ledger API - Mainnet ICP token (prefer v2 for cursor pagination)
+### Ledger API — Mainnet ICP token (prefer v2 for cursor pagination)
 
 ```bash
 # List accounts (v2: after/before/limit, next_cursor/prev_cursor)
