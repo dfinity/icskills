@@ -65,6 +65,11 @@ const collectionLd = {
     <cite>— ICP Skills protocol, <a href="/llms.txt"><code>/llms.txt</code></a></cite>
   </blockquote>
 
+  <div class="search-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="skill-search" type="text" placeholder="Filter skills…" autocomplete="off" />
+  </div>
+
   {grouped.map(({ category, skills }) => (
     <section class="category" id={`category-${encodeURIComponent(category)}`} aria-labelledby={`cat-h-${category}`}>
       <div class="cat-head">
@@ -102,6 +107,30 @@ const collectionLd = {
       setTimeout(function () {
         label.textContent = original;
       }, 3000);
+    });
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    var input = document.getElementById('skill-search');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      var q = input.value.toLowerCase().trim();
+      var sections = document.querySelectorAll('section.category');
+      sections.forEach(function (section) {
+        var rows = section.querySelectorAll('.skill-row');
+        var visible = 0;
+        rows.forEach(function (row) {
+          var title = row.querySelector('.skill-title');
+          var desc = row.querySelector('.skill-desc');
+          var text = ((title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
+          var match = !q || text.indexOf(q) !== -1;
+          row.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        section.style.display = visible ? '' : 'none';
+      });
     });
   })();
 </script>

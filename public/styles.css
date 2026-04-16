@@ -173,6 +173,20 @@ h4 { font-size: 1.05rem; }
   font-size: 0.85rem; margin-top: 0.4rem;
 }
 
+/* ---------- Search bar ---------- */
+.search-bar {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.6rem 1rem; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--bg-elev);
+  margin-bottom: 1rem;
+}
+.search-bar svg { color: var(--meta); flex-shrink: 0; }
+.search-bar input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 0.95rem; color: var(--fg); font-family: inherit;
+}
+.search-bar input::placeholder { color: var(--meta); }
+
 /* ---------- Category heads & skill rows ---------- */
 .category { margin: 3rem 0; }
 .cat-head {
