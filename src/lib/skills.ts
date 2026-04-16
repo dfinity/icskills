@@ -106,14 +106,6 @@ export function githubCommitUrl(slug: string, sha: string): string {
 }
 
 /**
- * Returns the full SHA of the last git commit that touched a skill's SKILL.md.
- * Falls back to 'main' if git is unavailable or the file has no history.
- */
-export async function getSkillCommitHash(skill: Skill): Promise<string> {
-  return (await getSkillGitInfo(skill)).sha;
-}
-
-/**
  * List all files in a skill's directory, with SKILL.md first.
  * Used by the .well-known/skills/index.json endpoint.
  */
