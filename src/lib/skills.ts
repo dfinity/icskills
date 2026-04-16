@@ -80,6 +80,11 @@ export function skillUrl(slug: string): string {
   return `/skills/${slug}/`;
 }
 
+/** Human-facing raw markdown URL for a skill. */
+export function skillMarkdownUrl(slug: string): string {
+  return `/skills/${slug}/SKILL.md`;
+}
+
 /** Canonical GitHub permalink for a skill. */
 export function githubUrl(slug: string): string {
   return `https://github.com/dfinity/icskills/blob/main/skills/${slug}/SKILL.md`;

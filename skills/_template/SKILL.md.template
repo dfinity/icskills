@@ -2,7 +2,7 @@
 name: <skill-name>
 description: "<What does this skill do AND when should an agent load it? Include specific keywords. See CONTRIBUTING.md for guidance.>"
 license: Apache-2.0
-compatibility: "<Environment requirements — e.g., icp-cli >= 0.1.0, network access for HTTPS calls>"
+compatibility: "<Environment requirements - e.g., icp-cli >= 0.1.0, network access for HTTPS calls>"
 metadata:
   title: "<Display Name>"
   category: <CategoryName>
@@ -58,7 +58,7 @@ Brief explanation of the technology. 2-3 sentences max. What does it do? Why doe
 
 <!-- Include working, tested code for each supported language.
      Use subsections per language (### Motoko, ### Rust, ### JavaScript).
-     Show complete file contents — agents copy-paste directly. -->
+     Show complete file contents - agents copy-paste directly. -->
 
 ## Deploy & Test
 

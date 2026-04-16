@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../lib/site';
-import { getAllSkills, getSkillsByCategory, skillUrl } from '../lib/skills';
+import { getAllSkills, getSkillsByCategory, skillUrl, skillMarkdownUrl } from '../lib/skills';
 
 const all = await getAllSkills();
 const grouped = await getSkillsByCategory();
@@ -85,7 +85,7 @@ const collectionLd = {
             <p class="skill-desc">{s.data.description}</p>
             <div class="skill-links">
               <a href={skillUrl(s.id)}>Read</a>
-              <a href={`/skills/${s.id}.md`} rel="alternate" type="text/markdown">Markdown</a>
+              <a href={skillMarkdownUrl(s.id)} rel="alternate" type="text/markdown">Markdown</a>
               <a href={`/api/skills/${s.id}.json`} rel="alternate" type="application/json">JSON</a>
             </div>
           </li>

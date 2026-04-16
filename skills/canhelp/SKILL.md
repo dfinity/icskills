@@ -1,6 +1,6 @@
 ---
 name: canhelp
-description: Display a human-readable summary of a canister's interface given its mainnet canister ID or a human-readable name. Like --help but for canisters. Only for mainnet canisters — for local canisters, read the generated .did file in your project directly.
+description: Display a human-readable summary of a canister's interface given its mainnet canister ID or a human-readable name. Like --help but for canisters. Only for mainnet canisters - for local canisters, read the generated .did file in your project directly.
 license: Apache-2.0
 compatibility: "icp-cli >= 0.1.0"
 allowed-tools: Bash(./scripts/resolve-canister-id.sh *), Bash(./scripts/fetch-candid.sh *), Read, Grep, Glob
@@ -36,7 +36,7 @@ Given a canister ID or name in `$ARGUMENTS`, fetch and summarize its Candid inte
    **Canister `<canister-id>`**
 
    **Query methods:**
-   - `method_name(arg1: type1, arg2: type2) → return_type` — one-line description if inferable from the name
+   - `method_name(arg1: type1, arg2: type2) → return_type` - one-line description if inferable from the name
 
    **Update methods:**
    - `method_name(arg1: type1) → return_type`

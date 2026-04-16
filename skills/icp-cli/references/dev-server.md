@@ -9,7 +9,7 @@ The dev server configuration queries the local network for backend canister IDs 
 1. Start the local network: `icp network start -d`
 2. Deploy the backend: `icp deploy backend`
 
-Without a running network and deployed backend canisters, `getDevServerConfig()` will fail because `icp network status` and `icp canister status` have nothing to query. The frontend canister does not need to be deployed for local development — Vite serves it directly.
+Without a running network and deployed backend canisters, `getDevServerConfig()` will fail because `icp network status` and `icp canister status` have nothing to query. The frontend canister does not need to be deployed for local development - Vite serves it directly.
 
 ## Configuration
 

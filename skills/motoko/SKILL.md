@@ -1,6 +1,6 @@
 ---
 name: motoko
-description: "Motoko language pitfalls and modern syntax for the Internet Computer. Covers persistent actor requirements, stable types, mo:core standard library, type system rules, and common compilation errors. Use when writing Motoko canister code, fixing Motoko compiler errors, or generating Motoko actors. Do NOT use for deployment, icp.yaml config, or CLI commands — use icp-cli instead. Do NOT use for upgrade persistence patterns — use stable-memory instead."
+description: "Motoko language pitfalls and modern syntax for the Internet Computer. Covers persistent actor requirements, stable types, mo:core standard library, type system rules, and common compilation errors. Use when writing Motoko canister code, fixing Motoko compiler errors, or generating Motoko actors. Do NOT use for deployment, icp.yaml config, or CLI commands - use icp-cli instead. Do NOT use for upgrade persistence patterns - use stable-memory instead."
 license: Apache-2.0
 compatibility: "moc >= 1.0.0, mops with core >= 2.0.0"
 metadata:
@@ -25,13 +25,13 @@ moc = "1.3.0"
 core = "2.3.1"
 ```
 
-`moc` must be pinned — the `@dfinity/motoko` recipe resolves the compiler from this field. Without it, `icp build` fails. Install the package manager with `npm i -g ic-mops`.
+`moc` must be pinned - the `@dfinity/motoko` recipe resolves the compiler from this field. Without it, `icp build` fails. Install the package manager with `npm i -g ic-mops`.
 
 ## Compilation Error Pitfalls
 
 1. **Writing `actor` instead of `persistent actor`.** Since moc 0.15.0, the `persistent` keyword is mandatory on all actors and actor classes. Plain `actor` produces error M0220.
    ```motoko
-   // Wrong — error M0220: this actor or actor class should be declared `persistent`
+   // Wrong - error M0220: this actor or actor class should be declared `persistent`
    actor {
      var count : Nat = 0;
    };
@@ -50,7 +50,7 @@ core = "2.3.1"
 
 2. **Putting type declarations before the actor.** Only `import` statements are allowed before `persistent actor`. All type definitions, `let`, and `var` declarations must go inside the actor body. Violation produces error M0141.
    ```motoko
-   // Wrong — error M0141: move these declarations into the body of the main actor or actor class
+   // Wrong - error M0141: move these declarations into the body of the main actor or actor class
    import Nat "mo:core/Nat";
    type UserId = Nat;
    let MAX = 100;
@@ -67,34 +67,34 @@ core = "2.3.1"
 3. **Using `stable` keyword in persistent actors.** In `persistent actor`, all `let` and `var` declarations are stable by default. Writing `stable var` is redundant and produces warning M0218. Use `transient var` for data that should reset on upgrade.
    ```motoko
    persistent actor {
-     // Wrong — warning M0218: redundant `stable` keyword
+     // Wrong - warning M0218: redundant `stable` keyword
      stable var count : Nat = 0;
 
-     // Correct — implicitly stable
+     // Correct - implicitly stable
      var count : Nat = 0;
 
-     // Correct — resets to 0 on every upgrade
+     // Correct - resets to 0 on every upgrade
      transient var requestCount : Nat = 0;
    };
    ```
    The old keyword `flexible` was renamed to `transient` in moc 0.13.5. Never use `flexible`.
 
-4. **Using HashMap, Buffer, TrieMap, or RBTree in persistent actors.** These types from the old `base` library contain closures and are NOT stable. Using them in a `persistent actor` produces error M0131. They do not exist in `mo:core` — the modern standard library has stable replacements.
+4. **Using HashMap, Buffer, TrieMap, or RBTree in persistent actors.** These types from the old `base` library contain closures and are NOT stable. Using them in a `persistent actor` produces error M0131. They do not exist in `mo:core` - the modern standard library has stable replacements.
    ```motoko
-   // Wrong — these types do not exist in mo:core and are not stable
+   // Wrong - these types do not exist in mo:core and are not stable
    import HashMap "mo:base/HashMap";
    import Buffer "mo:base/Buffer";
 
-   // Correct — use mo:core stable collections
+   // Correct - use mo:core stable collections
    import Map "mo:core/Map";     // key-value map (B-tree, stable)
    import Set "mo:core/Set";     // set (B-tree, stable)
    import List "mo:core/List";   // growable list (stable)
    import Queue "mo:core/Queue"; // FIFO queue (stable)
    ```
 
-5. **Reassigning `let` bindings.** `let` is immutable in Motoko — there is no reassignment. Use `var` for mutable values.
+5. **Reassigning `let` bindings.** `let` is immutable in Motoko - there is no reassignment. Use `var` for mutable values.
    ```motoko
-   // Wrong — cannot assign to immutable let binding
+   // Wrong - cannot assign to immutable let binding
    let count = 0;
    count := 1;
 
@@ -102,7 +102,7 @@ core = "2.3.1"
    var count = 0;
    count := 1;
 
-   // Also correct — let is fine for collections (they mutate internally)
+   // Also correct - let is fine for collections (they mutate internally)
    let users = Map.empty<Nat, Text>();
    Map.add(users, Nat.compare, 0, "Alice"); // mutates the map in place
    ```
@@ -125,13 +125,13 @@ core = "2.3.1"
 
 7. **Shared function parameter types must be shared.** All parameters and return types of `public` actor functions must be shared types. Closures, mutable records, `Error`, and `async*` are NOT shared types. Error codes: M0031, M0032, M0033.
    ```motoko
-   // Wrong — functions are not shared types
+   // Wrong - functions are not shared types
    public func register(callback : () -> ()) : async () { };
 
-   // Wrong — mutable records are not shared types
+   // Wrong - mutable records are not shared types
    public func store(data : { var count : Nat }) : async () { };
 
-   // Correct — use immutable records and avoid closures
+   // Correct - use immutable records and avoid closures
    public func store(data : { count : Nat }) : async () { };
    ```
 
@@ -139,7 +139,7 @@ core = "2.3.1"
    ```motoko
    type Color = { #red; #green; #blue };
 
-   // Wrong — error M0145: pattern does not cover value #blue
+   // Wrong - error M0145: pattern does not cover value #blue
    func name(c : Color) : Text {
      switch (c) {
        case (#red) "Red";
@@ -147,7 +147,7 @@ core = "2.3.1"
      }
    };
 
-   // Correct — cover all cases (or use a wildcard)
+   // Correct - cover all cases (or use a wildcard)
    func name(c : Color) : Text {
      switch (c) {
        case (#red) "Red";
@@ -161,22 +161,22 @@ core = "2.3.1"
    ```motoko
    type Action = { #transfer : Nat; #none };
 
-   // Potentially confusing — what does this parse as?
-   let a = #transfer 1 + 2;   // parsed as (#transfer(1)) + 2 — type error
+   // Potentially confusing - what does this parse as?
+   let a = #transfer 1 + 2;   // parsed as (#transfer(1)) + 2 - type error
 
-   // Clear — use parentheses for complex expressions
+   // Clear - use parentheses for complex expressions
    let a = #transfer(1 + 2);  // #transfer(3)
    ```
 
 10. **Using `do ? { }` blocks incorrectly.** The `!` operator (null break) only works inside a `do ? { }` block. Using it outside produces error M0064.
     ```motoko
-    // Wrong — error M0064: misplaced '!' (no enclosing 'do ? { ... }' expression)
+    // Wrong - error M0064: misplaced '!' (no enclosing 'do ? { ... }' expression)
     func getName(map : Map.Map<Nat, Text>, id : Nat) : ?Text {
       let name = Map.get(map, Nat.compare, id)!;
       ?name
     };
 
-    // Correct — wrap in do ? { }
+    // Correct - wrap in do ? { }
     func getName(map : Map.Map<Nat, Text>, id : Nat) : ?Text {
       do ? {
         let name = Map.get(map, Nat.compare, id)!;
@@ -257,8 +257,8 @@ import List "mo:core/List";
 let items = List.empty<Text>();
 List.add(items, "first");
 List.add(items, "second");
-List.get(items, 0);  // ?"first" — returns ?T, null if out of bounds
-List.at(items, 0);   // "first" — returns T, traps if out of bounds
+List.get(items, 0);  // ?"first" - returns ?T, null if out of bounds
+List.at(items, 0);   // "first" - returns T, traps if out of bounds
 ```
 Note: `List.get` returns `?T` (safe). `List.at` returns `T` and traps on out-of-bounds. In core < 1.0.0 the names were different (`get` was `getOpt`, `at` was `get`).
 
@@ -359,8 +359,8 @@ public func safeTransfer(to : Principal, amount : Nat) : async Result.Result<(),
 ```motoko
 import Runtime "mo:core/Runtime";
 
-// Injected by icp deploy — available in mo:core >= 2.1.0
-// Returns ?Text — null if the variable is not set
+// Injected by icp deploy - available in mo:core >= 2.1.0
+// Returns ?Text - null if the variable is not set
 let ?backendId = Runtime.envVar("PUBLIC_CANISTER_ID:backend")
   else Debug.trap("PUBLIC_CANISTER_ID:backend not set");
 ```

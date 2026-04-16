@@ -1,6 +1,6 @@
 ---
 name: asset-canister
-description: "Deploy frontend assets to the IC. Covers certified assets, SPA routing with .ic-assets.json5, content encoding, and programmatic uploads. Use when hosting a frontend, deploying static files, or setting up SPA routing on IC. Do NOT use for canister-level code patterns or custom domain setup — use custom-domains instead."
+description: "Deploy frontend assets to the IC. Covers certified assets, SPA routing with .ic-assets.json5, content encoding, and programmatic uploads. Use when hosting a frontend, deploying static files, or setting up SPA routing on IC. Do NOT use for canister-level code patterns or custom domain setup - use custom-domains instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
@@ -16,7 +16,7 @@ The asset canister hosts static files (HTML, CSS, JS, images) directly on the In
 
 ## Prerequisites
 
-- `@icp-sdk/canisters` (>= 3.5.0), `@icp-sdk/core` (>= 5.0.0) — for programmatic uploads
+- `@icp-sdk/canisters` (>= 3.5.0), `@icp-sdk/core` (>= 5.0.0) - for programmatic uploads
 
 ## Canister IDs
 
@@ -35,7 +35,7 @@ Access patterns:
 
 2. **Missing `.ic-assets.json5` for single-page apps.** Without a rewrite rule, refreshing on `/about` returns a 404 because the asset canister looks for a file literally named `/about`. You must configure a fallback to `index.html`.
 
-3. **Missing or misconfigured `build` in the recipe.** If `configuration.build` is specified, `icp deploy` runs those commands automatically before uploading the `dir` contents. If `build` is omitted, you must run your build command (e.g., `npm run build`) manually before deploying — otherwise the `dir` directory will be stale or empty.
+3. **Missing or misconfigured `build` in the recipe.** If `configuration.build` is specified, `icp deploy` runs those commands automatically before uploading the `dir` contents. If `build` is omitted, you must run your build command (e.g., `npm run build`) manually before deploying - otherwise the `dir` directory will be stale or empty.
 
 4. **Not setting content-type headers.** The asset canister infers content types from file extensions. If you upload files programmatically without setting the content type, browsers may not render them correctly.
 
@@ -47,7 +47,7 @@ Access patterns:
 
 8. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
 
-9. **Downgrading the asset canister WASM version.** Upgrading a canister to an older WASM version can fail with "Cannot parse header" panics if the stable memory format changed between versions. Prefer the `@dfinity/asset-canister` recipe over `type: pre-built` with a manually specified WASM URL — the recipe loads the latest asset canister version automatically if not explicitly specified in `configuration.version`. If you must pin a version, ensure it matches or exceeds the version currently deployed on-chain. If a downgrade is intentional, use reinstall mode (`icp deploy --mode reinstall`) instead of upgrade — this wipes stable memory and all uploaded assets.
+9. **Downgrading the asset canister WASM version.** Upgrading a canister to an older WASM version can fail with "Cannot parse header" panics if the stable memory format changed between versions. Prefer the `@dfinity/asset-canister` recipe over `type: pre-built` with a manually specified WASM URL - the recipe loads the latest asset canister version automatically if not explicitly specified in `configuration.version`. If you must pin a version, ensure it matches or exceeds the version currently deployed on-chain. If a downgrade is intentional, use reinstall mode (`icp deploy --mode reinstall`) instead of upgrade - this wipes stable memory and all uploaded assets.
 
 ## Implementation
 

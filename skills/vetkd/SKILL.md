@@ -1,6 +1,6 @@
 ---
 name: vetkd
-description: "Implement on-chain encryption using vetKeys (verifiable encrypted threshold key derivation). Covers key derivation, IBE encryption/decryption, transport keys, and access control. Use when adding encryption, decryption, on-chain privacy, vetKeys, or identity-based encryption to a canister. Do NOT use for authentication — use internet-identity instead."
+description: "Implement on-chain encryption using vetKeys (verifiable encrypted threshold key derivation). Covers key derivation, IBE encryption/decryption, transport keys, and access control. Use when adding encryption, decryption, on-chain privacy, vetKeys, or identity-based encryption to a canister. Do NOT use for authentication - use internet-identity instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -16,7 +16,7 @@ metadata:
 
 ## What This Is
 
-vetKeys (verifiably encrypted threshold keys) bring on-chain privacy to the IC via the **vetKD** protocol: secure, on-demand key derivation so that a public blockchain can hold and work with secret data. Keys are **verifiable** (users can check correctness and lack of tampering), **encrypted** (derived keys are encrypted under a user-supplied transport key—no node or canister ever sees the raw key), and **threshold** (a quorum of subnet nodes cooperates to derive keys; no single party has the master key). A canister requests a derived key from the subnet’s threshold infrastructure, receives it encrypted under the client’s transport public key, and only the client decrypts it locally. This unlocks decentralized key management (DKMS), encrypted on-chain storage, private messaging, identity-based encryption (IBE), timelock encryption, threshold BLS, and verifiable randomness—use cases.
+vetKeys (verifiably encrypted threshold keys) bring on-chain privacy to the IC via the **vetKD** protocol: secure, on-demand key derivation so that a public blockchain can hold and work with secret data. Keys are **verifiable** (users can check correctness and lack of tampering), **encrypted** (derived keys are encrypted under a user-supplied transport key-no node or canister ever sees the raw key), and **threshold** (a quorum of subnet nodes cooperates to derive keys; no single party has the master key). A canister requests a derived key from the subnet’s threshold infrastructure, receives it encrypted under the client’s transport public key, and only the client decrypts it locally. This unlocks decentralized key management (DKMS), encrypted on-chain storage, private messaging, identity-based encryption (IBE), timelock encryption, threshold BLS, and verifiable randomness-use cases.
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ Any canister on the IC can use any available master key regardless of which subn
 | `test_key_1`   | Local + Mainnet  | Development & testing | 10_000_000_000 (mainnet) | Works both locally and on mainnet. Use for development and testing. |
 | `key_1`        | Mainnet          | Production        | 26_153_846_153     | Subnet pzp6e (backed up on uzr34) |
 
-Fees depend on the **subnet where the master key resides** (and its size), not on the calling canister's subnet. If the canister may be blackholed or used by other canisters, send **more cycles** than the current cost so that future subnet size increases do not cause calls to fail; unused cycles are refunded. See [vetKD API — API fees](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api#api-fees) for current USD estimates.
+Fees depend on the **subnet where the master key resides** (and its size), not on the calling canister's subnet. If the canister may be blackholed or used by other canisters, send **more cycles** than the current cost so that future subnet size increases do not cause calls to fail; unused cycles are refunded. See [vetKD API - API fees](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api#api-fees) for current USD estimates.
 
 ## Key Concepts
 
@@ -72,15 +72,15 @@ Fees depend on the **subnet where the master key resides** (and its size), not o
 
 8. **Not attaching enough cycles to `vetkd_derive_key`.** `vetkd_derive_key` consumes cycles; `vetkd_public_key` does not. For derive_key, `key_1` costs ~26B cycles and `test_key_1` costs ~10B cycles.
 
-9. **Rolling your own IBE without proper authorization checks.** If you implement IBE manually (bypassing `KeyManager` / `EncryptedMaps`), your canister must enforce that `vetkd_derive_key` only returns the derived key to the authorized caller — e.g. the principal whose identity was used as the `input`. Without this check, any caller can request any derived key and decrypt messages meant for someone else. The provided `ic-vetkeys` / `@dfinity/vetkeys` libraries handle this correctly; prefer them over a custom implementation.
+9. **Rolling your own IBE without proper authorization checks.** If you implement IBE manually (bypassing `KeyManager` / `EncryptedMaps`), your canister must enforce that `vetkd_derive_key` only returns the derived key to the authorized caller - e.g. the principal whose identity was used as the `input`. Without this check, any caller can request any derived key and decrypt messages meant for someone else. The provided `ic-vetkeys` / `@dfinity/vetkeys` libraries handle this correctly; prefer them over a custom implementation.
 
 ## System API (Candid)
 
-The vetKD API lets canisters request vetKeys derived by the threshold protocol. Derivation is **deterministic**: the same inputs always produce the same key, so keys can be retrieved reliably. Different inputs yield different keys—canisters can derive an unlimited number of unique keys. Summary below; full spec: [vetKD API](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api) and the [IC interface specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#ic-vetkd_derive_key).
+The vetKD API lets canisters request vetKeys derived by the threshold protocol. Derivation is **deterministic**: the same inputs always produce the same key, so keys can be retrieved reliably. Different inputs yield different keys-canisters can derive an unlimited number of unique keys. Summary below; full spec: [vetKD API](https://docs.internetcomputer.org/building-apps/network-features/vetkeys/api) and the [IC interface specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#ic-vetkd_derive_key).
 
 ### vetkd_public_key
 
-Returns a public key used to **verify** keys derived with `vetkd_derive_key`. With an empty context you get the canister-level master public key; with a non-empty context you get the derived subkey for that context. In IBE, this public key lets anyone encrypt to an identity (e.g. a principal); only the holder of that identity can later obtain the matching vetKey and decrypt—no prior key exchange or recipient presence required.
+Returns a public key used to **verify** keys derived with `vetkd_derive_key`. With an empty context you get the canister-level master public key; with a non-empty context you get the derived subkey for that context. In IBE, this public key lets anyone encrypt to an identity (e.g. a principal); only the holder of that identity can later obtain the matching vetKey and decrypt-no prior key exchange or recipient presence required.
 
 ```candid
 vetkd_public_key : (record {
@@ -110,7 +110,7 @@ vetkd_derive_key : (record {
 }) -> (record { encrypted_key : blob })
 ```
 
-- `input`: Arbitrary data used as the key identifier—different inputs yield different derived keys. Does not need to be random; sent in plaintext to the management canister.
+- `input`: Arbitrary data used as the key identifier-different inputs yield different derived keys. Does not need to be random; sent in plaintext to the management canister.
 - `context`: Domain separator; must match the context used when obtaining the public key (e.g. for verification or IBE).
 - `transport_public_key`: The recipient's public key; the derived key is encrypted under this for secure delivery.
 - Returns: `encrypted_key`. Decrypt with the transport secret to get the raw vetKey, then use it as required (e.g. derive a symmetric key; do not use raw bytes directly as an AES key).
@@ -130,7 +130,7 @@ ic-cdk = "0.19"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
 
-# High-level library (recommended) — source: https://github.com/dfinity/vetkeys
+# High-level library (recommended) - source: https://github.com/dfinity/vetkeys
 ic-vetkeys = "0.6"
 ic-stable-structures = "0.7"
 ```
@@ -145,7 +145,7 @@ use ic_stable_structures::DefaultMemoryImpl;
 use ic_vetkeys::key_manager::KeyManager;
 use ic_vetkeys::types::{AccessRights, VetKDCurve, VetKDKeyId};
 
-// KeyManager is generic over an AccessControl type — AccessRights is the default.
+// KeyManager is generic over an AccessControl type - AccessRights is the default.
 // It uses stable memory for persistent storage of access control state.
 thread_local! {
     static MEMORY_MANAGER: std::cell::RefCell<MemoryManager<DefaultMemoryImpl>> =
@@ -460,7 +460,7 @@ let canister_key = master_key.derive_canister_key(canister_id.as_slice());
 // Derive a sub-key for a specific context/identity
 let derived_key: DerivedPublicKey = canister_key.derive_sub_key(b"my_app_v1");
 
-// Use derived_key for IBE encryption — no canister call needed
+// Use derived_key for IBE encryption - no canister call needed
 ```
 
 **TypeScript:**
@@ -479,12 +479,12 @@ const derivedKey: DerivedPublicKey = canisterKey.deriveSubKey(
   new TextEncoder().encode("my_app_v1"),
 );
 
-// Use derivedKey for IBE encryption — no canister call needed
+// Use derivedKey for IBE encryption - no canister call needed
 ```
 
 ### Identity-Based Encryption (IBE)
 
-IBE lets you encrypt to an identity (e.g. a principal) using only the canister's derived public key—the recipient does not need to be online or have registered a key beforehand. The recipient later authenticates to the canister, obtains their vetKey (derived for that identity) via `vetkd_derive_key`, and decrypts locally.
+IBE lets you encrypt to an identity (e.g. a principal) using only the canister's derived public key-the recipient does not need to be online or have registered a key beforehand. The recipient later authenticates to the canister, obtains their vetKey (derived for that identity) via `vetkd_derive_key`, and decrypts locally.
 
 **TypeScript:**
 
@@ -556,9 +556,9 @@ let decrypted = deserialized.decrypt(&vet_key)
 
 Both the Rust crate and TypeScript package provide two higher-level modules that handle the transport key flow, access control, and encrypted storage for you:
 
-- **`KeyManager<T: AccessControl>`** (Rust) / **`KeyManager`** (TS) — Manages access-controlled vetKeys with stable storage. The canister enforces who may request which keys; the library handles derivation requests, user rights (`Read`, `ReadWrite`, `ReadWriteManage`), and key sharing between principals.
+- **`KeyManager<T: AccessControl>`** (Rust) / **`KeyManager`** (TS) - Manages access-controlled vetKeys with stable storage. The canister enforces who may request which keys; the library handles derivation requests, user rights (`Read`, `ReadWrite`, `ReadWriteManage`), and key sharing between principals.
 
-- **`EncryptedMaps<T: AccessControl>`** (Rust) / **`EncryptedMaps`** (TS) — Builds on KeyManager to provide an encrypted key-value store. Each map is access-controlled and encrypted under a derived vetKey. Encryption and decryption of values are handled on the client (frontend) using vetKeys; the canister only stores ciphertext.
+- **`EncryptedMaps<T: AccessControl>`** (Rust) / **`EncryptedMaps`** (TS) - Builds on KeyManager to provide an encrypted key-value store. Each map is access-controlled and encrypted under a derived vetKey. Encryption and decryption of values are handled on the client (frontend) using vetKeys; the canister only stores ciphertext.
 
 In Rust, these live in `ic_vetkeys::key_manager` and `ic_vetkeys::encrypted_maps`. In TypeScript, import from `@dfinity/vetkeys/key_manager` and `@dfinity/vetkeys/encrypted_maps`. See the [vetkeys repository](https://github.com/dfinity/vetkeys) for full examples.
 

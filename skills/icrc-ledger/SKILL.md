@@ -1,6 +1,6 @@
 ---
 name: icrc-ledger
-description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers (ICP, ckBTC, ckETH). Covers transfers, balances, approve/transferFrom allowances, fee handling, and ledger deployment. Use when working with ICP transfers, token transfers, balances, ICRC-1, ICRC-2, approve, allowance, or any fungible token on IC. Do NOT use for ckBTC minting or BTC deposit/withdrawal flows — use ckbtc instead."
+description: "Deploy and interact with ICRC-1/ICRC-2 token ledgers (ICP, ckBTC, ckETH). Covers transfers, balances, approve/transferFrom allowances, fee handling, and ledger deployment. Use when working with ICP transfers, token transfers, balances, ICRC-1, ICRC-2, approve, allowance, or any fungible token on IC. Do NOT use for ckBTC minting or BTC deposit/withdrawal flows - use ckbtc instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -35,7 +35,7 @@ All ICRC-1 ledgers expose `icrc1_fee : () -> (nat) query` to return the current 
 
 ## Common Pitfalls
 
-1. **Assuming all ledgers share the same fee** -- Each ledger sets its own fee (e.g., ICP = 10000 e8s, ckBTC = 10 satoshis). Never copy a fee value from one ledger and use it for another. Look up the fee via `icrc1_fee` (on-chain query or `icp canister call <ledger> icrc1_fee '()'` via CLI). Fees can also change at runtime, so always handle `BadFee { expected_fee }` — the ledger tells you the correct fee in the error response.
+1. **Assuming all ledgers share the same fee** -- Each ledger sets its own fee (e.g., ICP = 10000 e8s, ckBTC = 10 satoshis). Never copy a fee value from one ledger and use it for another. Look up the fee via `icrc1_fee` (on-chain query or `icp canister call <ledger> icrc1_fee '()'` via CLI). Fees can also change at runtime, so always handle `BadFee { expected_fee }` - the ledger tells you the correct fee in the error response.
 
 2. **Forgetting approve before transferFrom** -- ICRC-2 transferFrom will reject with `InsufficientAllowance` if the token owner has not called `icrc2_approve` first. This is a two-step flow: owner approves, then spender calls transferFrom.
 
@@ -51,9 +51,9 @@ All ICRC-1 ledgers expose `icrc1_fee : () -> (nat) query` to return the current 
 
 8. **Shell substitution in `--argument-file` / `init_args.path`** -- Expressions like `$(icp identity principal)` do NOT expand inside files referenced by `init_args: { path: ... }` or `--argument-file`. The file is read as literal text. Either use `--argument` on the command line (where the shell expands variables), or pre-generate the file with `envsubst` / `sed` before deploying.
 
-9. **Minting account cannot call `icrc2_approve`** -- If the ledger's `minting_account` and `initial_balances` use the same principal, that principal cannot call `icrc2_approve` — the ledger traps with "the minting account cannot delegate mints." Always use a **separate** principal for `minting_account` and different ones for `initial_balances`. In production, the minting account is typically a dedicated minter canister (e.g., the ckBTC minter); for local development, any principal that differs from your funded accounts works.
+9. **Minting account cannot call `icrc2_approve`** -- If the ledger's `minting_account` and `initial_balances` use the same principal, that principal cannot call `icrc2_approve` - the ledger traps with "the minting account cannot delegate mints." Always use a **separate** principal for `minting_account` and different ones for `initial_balances`. In production, the minting account is typically a dedicated minter canister (e.g., the ckBTC minter); for local development, any principal that differs from your funded accounts works.
 
-10. **Transfers to/from the minting account have zero fee** -- A transfer TO the minting account is a **burn**, and a transfer FROM the minting account is a **mint**. Both require `fee = null` (or `fee = ?0`). Passing the regular transfer fee (e.g., `fee = ?10000` for ICP) will fail with `BadFee { expected_fee = 0 }`. The error message gives no indication that burn/mint semantics are involved — it just says the expected fee is 0.
+10. **Transfers to/from the minting account have zero fee** -- A transfer TO the minting account is a **burn**, and a transfer FROM the minting account is a **mint**. Both require `fee = null` (or `fee = ?0`). Passing the regular transfer fee (e.g., `fee = ?10000` for ICP) will fail with `BadFee { expected_fee = 0 }`. The error message gives no indication that burn/mint semantics are involved - it just says the expected fee is 0.
 
 
 ## Implementation
@@ -167,7 +167,7 @@ persistent actor {
     icrc1_supported_standards : shared query () -> async [{ name : Text; url : Text }];
   };
 
-  // Fee for the ICP ledger — look up via icrc1_fee if targeting a different ledger
+  // Fee for the ICP ledger - look up via icrc1_fee if targeting a different ledger
   transient let icpFee : Nat = 10000;
 
   // Check balance
@@ -179,7 +179,7 @@ persistent actor {
   };
 
   // Transfer tokens (this canister sends from its own account)
-  // WARNING: Add access control in production — this allows any caller to transfer tokens
+  // WARNING: Add access control in production - this allows any caller to transfer tokens
   public func sendTokens(to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc1_transfer({
@@ -223,7 +223,7 @@ persistent actor {
   };
 
   // ICRC-2: Transfer from another account (requires prior approval)
-  // WARNING: Add access control in production — this allows any caller to transfer tokens
+  // WARNING: Add access control in production - this allows any caller to transfer tokens
   public func transferFrom(from : Principal, to : Principal, amount : Nat) : async Nat {
     let now = Nat64.fromNat(Int.abs(Time.now()));
     let result = await icpLedger.icrc2_transfer_from({
@@ -278,7 +278,7 @@ use ic_cdk::update;
 use ic_cdk::call::Call;
 
 const ICP_LEDGER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
-// Fee for the ICP ledger — look up via icrc1_fee if targeting a different ledger
+// Fee for the ICP ledger - look up via icrc1_fee if targeting a different ledger
 const ICP_FEE: u64 = 10_000;
 
 fn ledger_id() -> Principal {
@@ -302,7 +302,7 @@ async fn get_balance(who: Principal) -> Nat {
 }
 
 // Transfer tokens from this canister's account
-// WARNING: Add access control in production — this allows any caller to transfer tokens
+// WARNING: Add access control in production - this allows any caller to transfer tokens
 #[update]
 async fn send_tokens(to: Principal, amount: Nat) -> Result<Nat, String> {
     let fee = Nat::from(ICP_FEE);
@@ -366,7 +366,7 @@ async fn approve_spender(spender: Principal, amount: Nat) -> Result<Nat, String>
 }
 
 // ICRC-2: Transfer from another account (requires prior approval)
-// WARNING: Add access control in production — this allows any caller to transfer tokens
+// WARNING: Add access control in production - this allows any caller to transfer tokens
 #[update]
 async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> Result<Nat, String> {
     let fee = Nat::from(ICP_FEE);

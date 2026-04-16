@@ -6,6 +6,7 @@ import {
   getSkillUpdatedAt,
   githubUrl,
   skillUrl,
+  skillMarkdownUrl,
   type Skill,
 } from '../../../lib/skills';
 import { render } from 'astro:content';
@@ -23,7 +24,7 @@ const { skill } = Astro.props;
 const { Content } = await render(skill);
 
 const updatedAt = await getSkillUpdatedAt(skill);
-const mdPath = `/skills/${skill.id}.md`;
+const mdPath = skillMarkdownUrl(skill.id);
 const jsonPath = `/api/skills/${skill.id}.json`;
 const gh = githubUrl(skill.id);
 const canonicalPath = skillUrl(skill.id);

@@ -1,6 +1,6 @@
 ---
 name: evm-rpc
-description: "Call Ethereum and EVM chains from IC canisters (Rust) via the EVM RPC canister using the evm_rpc_client crate. Covers typed API calls, raw JSON-RPC, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a Rust canister. Do NOT use for generic HTTPS calls to non-EVM APIs — use https-outcalls instead."
+description: "Call Ethereum and EVM chains from IC canisters (Rust) via the EVM RPC canister using the evm_rpc_client crate. Covers typed API calls, raw JSON-RPC, multi-provider consensus, ERC-20 reads, and sending pre-signed transactions. Use when calling Ethereum, Arbitrum, Base, Optimism, or any EVM chain from a Rust canister. Do NOT use for generic HTTPS calls to non-EVM APIs - use https-outcalls instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2"
 metadata:
@@ -8,7 +8,7 @@ metadata:
   category: Integration
 ---
 
-# EVM RPC Canister — Calling Ethereum from IC
+# EVM RPC Canister - Calling Ethereum from IC
 
 ## What This Is
 
@@ -24,7 +24,7 @@ The EVM RPC canister is an IC system canister that proxies JSON-RPC calls to Eth
 |---|---|---|
 | EVM RPC (mainnet) | `7hfb6-caaaa-aaaar-qadga-cai` | 34-node fiduciary |
 
-Candid interface: `https://github.com/dfinity/evm-rpc-canister/releases/latest/download/evm_rpc.did` — or use the `canhelp` skill to fetch it directly from the mainnet canister.
+Candid interface: `https://github.com/dfinity/evm-rpc-canister/releases/latest/download/evm_rpc.did` - or use the `canhelp` skill to fetch it directly from the mainnet canister.
 
 ## Supported Chains
 
@@ -83,7 +83,7 @@ Use `requestCost` to get an exact estimate before calling.
 
 ### icp.yaml Configuration
 
-The `evm_rpc` canister definition is only needed for local development — the local replica doesn't have the EVM RPC canister pre-installed, so you deploy your own copy from the pre-built WASM. On mainnet, the DFINITY-maintained canister is already deployed at `7hfb6-caaaa-aaaar-qadga-cai` — do NOT deploy your own instance. Use environments to control which canisters are deployed where:
+The `evm_rpc` canister definition is only needed for local development - the local replica doesn't have the EVM RPC canister pre-installed, so you deploy your own copy from the pre-built WASM. On mainnet, the DFINITY-maintained canister is already deployed at `7hfb6-caaaa-aaaar-qadga-cai` - do NOT deploy your own instance. Use environments to control which canisters are deployed where:
 
 ```yaml
 canisters:

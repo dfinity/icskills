@@ -1,6 +1,6 @@
 ---
 name: internet-identity
-description: "Integrate Internet Identity authentication. Covers passkey and OpenID login flows, delegation handling, and principal-per-app isolation. Use when adding login, sign-in, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
+description: "Integrate Internet Identity authentication. Covers passkey and OpenID login flows, delegation handling, and principal-per-app isolation. Use when adding login, sign-in, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows - use wallet-integration instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
@@ -33,13 +33,13 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 3. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
 
-4. **Using `shouldFetchRootKey` or `fetchRootKey()` instead of the `ic_env` cookie.** The `ic_env` cookie (set by the asset canister or the Vite dev server) already contains the root key as `IC_ROOT_KEY`. Pass it via the `rootKey` option to `HttpAgent.create()` — this works in both local and production environments without environment branching. See the icp-cli skill's `references/binding-generation.md` for the pattern. Never call `fetchRootKey()` — it fetches the root key from the replica at runtime, which lets a man-in-the-middle substitute a fake key on mainnet.
+4. **Using `shouldFetchRootKey` or `fetchRootKey()` instead of the `ic_env` cookie.** The `ic_env` cookie (set by the asset canister or the Vite dev server) already contains the root key as `IC_ROOT_KEY`. Pass it via the `rootKey` option to `HttpAgent.create()` - this works in both local and production environments without environment branching. See the icp-cli skill's `references/binding-generation.md` for the pattern. Never call `fetchRootKey()` - it fetches the root key from the replica at runtime, which lets a man-in-the-middle substitute a fake key on mainnet.
 
 5. **Getting `2vxsx-fae` as the principal after login.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL, missing `onSuccess` callback, or not extracting the identity from `authClient.getIdentity()` after login.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
-7. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
+7. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this - it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
 
 ## Using II during local development
 
@@ -55,7 +55,7 @@ networks:
 ```
 
 This deploys the II canisters automatically when the local network is started. By default, the II frontend will be available at http://id.ai.localhost:8000
-No canister entry needed — II is not part of your project's canisters.
+No canister entry needed - II is not part of your project's canisters.
 For the full `icp.yaml` canister configuration, see the **icp-cli** and **asset-canister** skills.
 
 ### Frontend: Vanilla JavaScript/TypeScript Login Flow
@@ -71,7 +71,7 @@ import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 let authClient;
 
 // Read the ic_env cookie (set by the asset canister or Vite dev server).
-// Contains the root key and canister IDs — works in both local and production.
+// Contains the root key and canister IDs - works in both local and production.
 const canisterEnv = safeGetCanisterEnv();
 
 // Determine II URL based on environment.
@@ -114,7 +114,7 @@ async function logout() {
 }
 
 // Create an authenticated agent and actor.
-// Uses rootKey from the ic_env cookie — no shouldFetchRootKey or environment branching needed.
+// Uses rootKey from the ic_env cookie - no shouldFetchRootKey or environment branching needed.
 async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   const agent = await HttpAgent.create({
     identity,
@@ -125,7 +125,7 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
 
-// Initialization — wraps async setup in a function so this code works with
+// Initialization - wraps async setup in a function so this code works with
 // any bundler target (Vite defaults to es2020 which lacks top-level await).
 async function init() {
   authClient = await AuthClient.create();
@@ -144,4 +144,4 @@ init();
 
 ### Backend: Access Control
 
-Backend access control (anonymous principal rejection, role guards, caller binding in async functions) is not II-specific — the same patterns apply regardless of authentication method. See the **canister-security** skill for complete Motoko and Rust examples.
+Backend access control (anonymous principal rejection, role guards, caller binding in async functions) is not II-specific - the same patterns apply regardless of authentication method. See the **canister-security** skill for complete Motoko and Rust examples.

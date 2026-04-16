@@ -125,7 +125,7 @@ fn init() {
 #[post_upgrade]
 fn post_upgrade() {
     // Assumes data has already been deserialized from stable memory into the TREE.
-    // CRITICAL: re-establish certification after upgrade — certified_data is cleared on upgrade.
+    // CRITICAL: re-establish certification after upgrade - certified_data is cleared on upgrade.
     update_certified_data();
 }
 
@@ -411,7 +411,7 @@ async function getVerifiedValue(
   // Confirm the canister-returned value matches the witness-proven value
   if (response.value !== null && response.value !== verifiedValue) {
     throw new Error(
-      "Response value does not match witness — canister returned tampered data"
+      "Response value does not match witness - canister returned tampered data"
     );
   }
 

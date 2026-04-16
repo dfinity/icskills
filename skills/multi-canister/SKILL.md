@@ -54,7 +54,7 @@ For building a multi-canister application, take the perspective of an experience
 6. **Defensive practice: bind `msg_caller()` before `.await` in Rust.** The current ic-cdk executor preserves caller across `.await` points via protected tasks, but capturing it early guards against future executor changes. **Motoko is safe:** `public shared ({ caller }) func` captures `caller` as an immutable binding at function entry.
 
     ```rust
-    // Recommended (Rust) — capture caller before await:
+    // Recommended (Rust) - capture caller before await:
     #[update]
     async fn do_thing() {
         let original_caller = ic_cdk::api::msg_caller(); // Defensive: capture before await
@@ -126,7 +126,7 @@ canisters:
 
 ### Motoko
 
-#### src/shared/Types.mo — Shared Types
+#### src/shared/Types.mo - Shared Types
 
 ```motoko
 module {
@@ -156,7 +156,7 @@ module {
 };
 ```
 
-#### src/user_service/main.mo — User Canister
+#### src/user_service/main.mo - User Canister
 
 ```motoko
 import Map "mo:core/Map";
@@ -212,7 +212,7 @@ persistent actor {
 };
 ```
 
-#### src/content_service/main.mo — Content Canister (calls User Service)
+#### src/content_service/main.mo - Content Canister (calls User Service)
 
 ```motoko
 import Map "mo:core/Map";
@@ -225,7 +225,7 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Types "../shared/Types";
 
-// Import the other canister — name must match icp.yaml canister key
+// Import the other canister - name must match icp.yaml canister key
 import UserService "canister:user_service";
 
 persistent actor {
@@ -235,7 +235,7 @@ persistent actor {
   let posts = Map.empty<Nat, Post>();
   var postCounter : Nat = 0;
 
-  // Create a post — validates user via inter-canister call
+  // Create a post - validates user via inter-canister call
   public shared ({ caller }) func createPost(title : Text, body : Text) : async Result.Result<Post, Types.ServiceError> {
     let originalCaller = caller;
 
@@ -272,7 +272,7 @@ persistent actor {
     Array.fromIter<Post>(Map.values(posts))
   };
 
-  // Get posts by author — with enriched user data
+  // Get posts by author - with enriched user data
   public func getPostsWithAuthor(authorId : Principal) : async {
     user : ?Types.UserProfile;
     posts : [Post];
@@ -289,7 +289,7 @@ persistent actor {
     { user = userProfile; posts = authorPosts }
   };
 
-  // Delete a post — only the author can delete
+  // Delete a post - only the author can delete
   public shared ({ caller }) func deletePost(id : Nat) : async Result.Result<(), Types.ServiceError> {
     let originalCaller = caller;
 
@@ -311,7 +311,7 @@ persistent actor {
 
 The content service examples above are intentionally kept simple to demonstrate multi-canister communication patterns. They lack several things that would be needed for production use:
 
-- **Input validation.** The `username` parameter in `register` accepts any string — including empty strings or strings up to the 2MB message size limit. Validate length (e.g., 1–64 characters), enforce allowed character sets, and add a uniqueness constraint via a reverse lookup map to prevent impersonation.
+- **Input validation.** The `username` parameter in `register` accepts any string - including empty strings or strings up to the 2MB message size limit. Validate length (e.g., 1–64 characters), enforce allowed character sets, and add a uniqueness constraint via a reverse lookup map to prevent impersonation.
 - **User enumeration and pagination on `getUsers`.** Using `getUsers`, it's possible for everyone to enumerate all users on the platform, which may not be desirable. Furthermore, the `getUsers` endpoint returns all user profiles in a single response. As the user base grows, this will hit the 2MB response size limit and trap, bricking the endpoint. Add pagination (offset/limit parameters). The same applies to `getPosts`.
 
 ### Rust

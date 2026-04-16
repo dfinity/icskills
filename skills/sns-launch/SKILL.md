@@ -247,7 +247,7 @@ struct Config {
 }
 
 thread_local! {
-    // ⚠ STATE LOSS: RefCell<T> in thread_local! is HEAP storage — it is wiped on every
+    // ⚠ STATE LOSS: RefCell<T> in thread_local! is HEAP storage - it is wiped on every
     // canister upgrade. In production, use ic-stable-structures (StableCell or StableBTreeMap)
     // to persist this across upgrades. At minimum, implement #[pre_upgrade]/#[post_upgrade]
     // hooks to serialize/deserialize this data. Without that, an upgrade erases your
@@ -359,7 +359,7 @@ dfx sns init-config-file validate
 # Or review the rendered proposal by inspecting the yaml output carefully.
 # You can also test the full flow on a local replica first (see Local Testing above).
 
-# Step 3: Submit the proposal (THIS IS IRREVERSIBLE — double-check your config)
+# Step 3: Submit the proposal (THIS IS IRREVERSIBLE - double-check your config)
 dfx sns propose --network ic --neuron $NEURON_ID sns_init.yaml
 ```
 
