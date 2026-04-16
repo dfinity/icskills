@@ -69,15 +69,11 @@ export async function getSkillGitInfo(skill: Skill): Promise<SkillGitInfo> {
   try {
     const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%H|%aI', '--', abs]);
     const [sha, date] = stdout.trim().split('|');
-    if (sha && date) return { sha, updatedAt: date };
+    if (sha && date) return { sha, updatedAt: new Date(date).toISOString() };
   } catch { /* fall through */ }
   return { sha: 'main', updatedAt: new Date().toISOString() };
 }
 
-/** @deprecated Use getSkillGitInfo instead. */
-export async function getSkillUpdatedAt(skill: Skill): Promise<string> {
-  return (await getSkillGitInfo(skill)).updatedAt;
-}
 
 /**
  * Returns the raw SKILL.md source (frontmatter + body). Used by the raw
@@ -107,14 +103,6 @@ export function githubUrl(slug: string): string {
 /** GitHub permalink pinned to a specific commit SHA. */
 export function githubCommitUrl(slug: string, sha: string): string {
   return `https://github.com/dfinity/icskills/blob/${sha}/skills/${slug}/SKILL.md`;
-}
-
-/**
- * Returns the full SHA of the last git commit that touched a skill's SKILL.md.
- * Falls back to 'main' if git is unavailable or the file has no history.
- */
-export async function getSkillCommitHash(skill: Skill): Promise<string> {
-  return (await getSkillGitInfo(skill)).sha;
 }
 
 /**
