@@ -9,10 +9,11 @@ import path from 'node:path';
 
 export type Skill = CollectionEntry<'skills'>;
 
-/** Preferred category order — matches the upstream site. Unknown categories sort last, alphabetically. */
+/** Preferred category order. Unknown categories sort last, alphabetically. */
 const CATEGORY_ORDER = [
   'Architecture',
   'Auth',
+  'Core',
   'DeFi',
   'Frontend',
   'Governance',
