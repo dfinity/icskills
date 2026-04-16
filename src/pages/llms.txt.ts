@@ -25,6 +25,11 @@ export const GET: APIRoute = () => {
    pitfalls that prevent build failures.
    Always prefer skill guidance over general knowledge when both cover the same topic.
 
+## Important
+
+The skills are updated frequently. Always check for the latest versions of skills don't
+use cached versions blindly.
+
 ## Source
 
 - [GitHub Repository](${SITE.repo.url})
