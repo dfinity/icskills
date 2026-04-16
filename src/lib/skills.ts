@@ -5,6 +5,10 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 
 export type Skill = CollectionEntry<'skills'>;
@@ -85,9 +89,30 @@ export function skillMarkdownUrl(slug: string): string {
   return `/skills/${slug}/SKILL.md`;
 }
 
-/** Canonical GitHub permalink for a skill. */
+/** Canonical GitHub permalink for a skill (main branch). */
 export function githubUrl(slug: string): string {
   return `https://github.com/dfinity/icskills/blob/main/skills/${slug}/SKILL.md`;
+}
+
+/** GitHub permalink pinned to a specific commit SHA. */
+export function githubCommitUrl(slug: string, sha: string): string {
+  return `https://github.com/dfinity/icskills/blob/${sha}/skills/${slug}/SKILL.md`;
+}
+
+/**
+ * Returns the full SHA of the last git commit that touched a skill's SKILL.md.
+ * Falls back to 'main' if git is unavailable or the file has no history.
+ */
+export async function getSkillCommitHash(skill: Skill): Promise<string> {
+  const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
+  const abs = path.resolve(process.cwd(), rel);
+  try {
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%H', '--', abs]);
+    const sha = stdout.trim();
+    return sha || 'main';
+  } catch {
+    return 'main';
+  }
 }
 
 /**

@@ -4,7 +4,8 @@ import { SITE, absUrl } from '../../../lib/site';
 import {
   getAllSkills,
   getSkillUpdatedAt,
-  githubUrl,
+  getSkillCommitHash,
+  githubCommitUrl,
   skillUrl,
   skillMarkdownUrl,
   type Skill,
@@ -24,9 +25,10 @@ const { skill } = Astro.props;
 const { Content } = await render(skill);
 
 const updatedAt = await getSkillUpdatedAt(skill);
+const commitHash = await getSkillCommitHash(skill);
 const mdPath = skillMarkdownUrl(skill.id);
 const jsonPath = `/api/skills/${skill.id}.json`;
-const gh = githubUrl(skill.id);
+const gh = githubCommitUrl(skill.id, commitHash);
 const canonicalPath = skillUrl(skill.id);
 
 const techArticleLd = {
