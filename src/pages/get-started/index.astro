@@ -1,14 +1,105 @@
 ---
-import SiteLayout from "../../layouts/SiteLayout.astro";
-import GetStartedTab from "../../components/GetStartedTab";
-import { SITE_URL } from "../../data/site";
----
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE, absUrl } from '../../lib/site';
+import { getAllSkills, skillUrl } from '../../lib/skills';
 
-<SiteLayout
-  title="Get Started — Internet Computer (ICP) Skills"
-  description="Get IC skills into your agent. No auth, no keys. Paste one prompt and your agent fetches what it needs."
-  canonicalUrl={`${SITE_URL}/get-started/`}
-  activeTab="get-started"
+const all = await getAllSkills();
+const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
+---
+<BaseLayout
+  title={`Get started — ${SITE.shortName}`}
+  description="How to use ICP Skills with a coding agent, fetch a skill, or wire up the index programmatically."
+  canonicalPath="/get-started/"
 >
-  <GetStartedTab client:load />
-</SiteLayout>
+  <h1>Get started</h1>
+
+  <h2>For agents</h2>
+  <p>The discovery protocol is a single fetch:</p>
+  <pre><code>GET {absUrl('/llms.txt')}</code></pre>
+  <p>
+    That file contains agent instructions: it tells your agent to fetch the skills index and to pull matching skills on demand
+    when a task fits a skill's description. Paste the URL and your agent handles the rest.
+  </p>
+  <pre><code>GET {absUrl('/api/skills.json')}</code></pre>
+  <p>
+    A structured JSON index of all skills with titles, descriptions, categories, and direct URLs
+    to each format (HTML, Markdown, JSON). Use this when you need to parse the catalogue programmatically.
+  </p>
+
+  <h2>Use the CLI</h2>
+  <p>Install all skills at once — auto-detects your agents (Claude Code, Cursor, Copilot, and more) and writes the skills into their rules files:</p>
+  <pre><code>npx skills add dfinity/icskills</code></pre>
+  <p>Or install a single skill by name:</p>
+  <pre><code>npx skills add dfinity/icskills --skill ckbtc</code></pre>
+
+  <h2>Add AGENTS.md to your repo</h2>
+  <p>
+    Commit once, and every agent session auto-discovers ICP skills. Create an <code>AGENTS.md</code> in your project root:
+  </p>
+  <pre><code>{`# AI Agent Instructions
+
+Tested implementation patterns for ICP development are available as agent skills.
+Before writing any ICP code, fetch the skills index and remember each skill's name and description:
+${absUrl('/.well-known/skills/index.json')}
+
+When a task matches a skill's description, fetch its content on-demand from:
+${absUrl('/.well-known/skills/')}{'{name}'}/SKILL.md
+
+Skills contain correct dependency versions, configuration formats, and common pitfalls
+that prevent build failures. Always prefer skill guidance over general documentation
+when both cover the same topic.`}</code></pre>
+  <p>
+    For Claude Code, also add a <code>CLAUDE.md</code> that reads:
+    <code>Read and follow the instructions in AGENTS.md.</code>
+  </p>
+
+  <h2>For humans</h2>
+  <ol>
+    <li>Browse the <a href="/">skills index</a> and find something that matches your task.</li>
+    <li>Open the skill page (for example, <a href={skillUrl(sample.id)}>{sample.data.metadata.title}</a>).</li>
+    <li>
+      Paste the raw Markdown URL into your agent, or share the page URL — any competent
+      LLM-aware client can fetch either.
+    </li>
+  </ol>
+
+  <h2>Fetching a skill by name</h2>
+  <p>URLs are stable and predictable:</p>
+  <ul>
+    <li><code>{absUrl('/skills/')}{'{name}/'}</code> — human-readable HTML page</li>
+    <li><code>{absUrl('/skills/')}{'{name}.md'}</code> — raw Markdown (Content-Type: text/markdown)</li>
+    <li><code>{absUrl('/api/skills/')}{'{name}.json'}</code> — structured metadata (JSON)</li>
+  </ul>
+  <p>
+    Do not construct these URLs by guessing slugs — fetch <a href="/api/skills.json"><code>/api/skills.json</code></a>
+    or <a href="/llms.txt"><code>/llms.txt</code></a> and use the URLs it returns.
+  </p>
+
+  <h2>Staying current</h2>
+  <p>
+    Subscribe to <a href="/feed.xml"><code>/feed.xml</code></a> (RSS) for updates, or watch the
+    <a href={SITE.repo.url} rel="noopener external">upstream repository</a> directly.
+  </p>
+</BaseLayout>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('pre').forEach(function (pre) {
+      pre.style.position = 'relative';
+      var btn = document.createElement('button');
+      var copyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      var checkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      btn.innerHTML = copyIcon;
+      btn.setAttribute('aria-label', 'Copy to clipboard');
+      btn.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-card);color:var(--text-muted);cursor:pointer;';
+      pre.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var code = pre.querySelector('code');
+        var text = (code || pre).textContent;
+        navigator.clipboard.writeText(text).catch(function () {});
+        btn.innerHTML = checkIcon;
+        setTimeout(function () { btn.innerHTML = copyIcon; }, 2000);
+      });
+    });
+  })();
+</script>

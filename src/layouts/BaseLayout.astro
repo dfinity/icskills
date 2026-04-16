@@ -1,105 +1,148 @@
 ---
-interface Props {
-  title: string;
-  description?: string;
-  canonicalUrl?: string;
-  ogTitle?: string;
-  ogDescription?: string;
-  jsonLd?: string;
-  extraJsonLd?: string;
-  prevUrl?: string;
-  nextUrl?: string;
-}
+// BaseLayout: HTML shell. Emits everything trust/SEO-relevant:
+// canonical link, description, Open Graph, Twitter card, JSON-LD.
+// All pages go through this layout so meta tags are consistent.
+import { SITE, absUrl } from '../lib/site';
 
-import { SITE_URL } from "../data/site";
+export interface Props {
+  title: string;
+  description: string;
+  /** Path-only canonical (e.g. "/skills/motoko/"). Absolute URL derived from SITE.url. */
+  canonicalPath: string;
+  /** Optional: additional JSON-LD objects to inject as <script type="application/ld+json">. */
+  jsonLd?: unknown[];
+  /** Optional: ISO date for article-style pages (skill detail). */
+  publishedTime?: string;
+  modifiedTime?: string;
+  /** og:type — "article" for skill pages, otherwise "website". */
+  ogType?: 'website' | 'article';
+}
 
 const {
   title,
-  description = "Structured skill files for AI agents building on the Internet Computer. ckBTC, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, and more. Prevents hallucinations.",
-  canonicalUrl = `${SITE_URL}/`,
-  ogTitle = "Internet Computer (ICP) Skills — Skills for agents, not docs for humans",
-  ogDescription = "Agent-readable skill files for every Internet Computer capability. Zero hallucinations. Paste the raw URL into Claude, Cursor, or any agent.",
-  jsonLd,
-  extraJsonLd,
-  prevUrl,
-  nextUrl,
+  description,
+  canonicalPath,
+  jsonLd = [],
+  publishedTime,
+  modifiedTime,
+  ogType = 'website',
 } = Astro.props;
 
-const site = SITE_URL;
-const ogImage = `${site}/og-image.png`;
+const canonical = absUrl(canonicalPath);
+const ogImage = absUrl('/og-image.svg');
 
-const defaultJsonLd = JSON.stringify({
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebSite",
-      "@id": `${site}/#website`,
-      "url": site,
-      "name": "Internet Computer (ICP) Skills",
-      "description": "Agent-readable skill files for Internet Computer development. Structured markdown files that prevent AI hallucinations when building on ICP."
-    },
-    {
-      "@type": "SoftwareApplication",
-      "name": "Internet Computer (ICP) Skills",
-      "url": site,
-      "applicationCategory": "DeveloperApplication",
-      "description": "A library of agent-readable skill files for Internet Computer (ICP) development.",
-      "keywords": "Internet Computer, ICP, DFINITY, Motoko, Rust, canister, agent, LLM, AI coding, icp-cli",
-      "license": "https://www.apache.org/licenses/LICENSE-2.0",
-      "codeRepository": "https://github.com/dfinity/icskills",
-      "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-    }
-  ]
-});
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  alternateName: SITE.shortName,
+  url: SITE.url,
+  description: SITE.description,
+  inLanguage: SITE.locale,
+  publisher: {
+    '@type': 'Organization',
+    name: SITE.author.name,
+    url: SITE.author.url,
+  },
+  license: SITE.license.url,
+};
+
+const allLd = [websiteLd, ...jsonLd];
 ---
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <meta name="keywords" content="Internet Computer, ICP, DFINITY, Motoko, Rust, canister, icp-cli, AI agent, LLM documentation, ckBTC, ICRC, Internet Identity, stable memory">
-  <meta name="robots" content="index, follow">
-  <meta name="author" content="Internet Computer (ICP) Skills">
-  <link rel="canonical" href={canonicalUrl}>
-  {prevUrl && <link rel="prev" href={prevUrl} />}
-  {nextUrl && <link rel="next" href={nextUrl} />}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
 
-  <meta property="og:type" content="website">
-  <meta property="og:url" content={canonicalUrl}>
-  <meta property="og:title" content={ogTitle}>
-  <meta property="og:description" content={ogDescription}>
-  <meta property="og:image" content={ogImage}>
-  <meta property="og:site_name" content="Internet Computer (ICP) Skills">
+    <meta name="author" content={SITE.author.name} />
+    <meta name="publisher" content={SITE.author.name} />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="generator" content={Astro.generator} />
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content={ogTitle}>
-  <meta name="twitter:description" content={ogDescription}>
-  <meta name="twitter:image" content={ogImage}>
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={SITE.locale.replace('-', '_')} />
+    <meta property="og:image" content={ogImage} />
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 
-  <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt">
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
-  <meta name="theme-color" content="#000000">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <!-- Machine-readable mirrors -->
+    <link rel="alternate" type="text/markdown" href={absUrl('/llms-full.txt')} title="All skills as markdown" />
+    <link rel="alternate" type="application/rss+xml" href={absUrl('/feed.xml')} title={`${SITE.name} updates`} />
+    <link rel="alternate" type="application/json" href={absUrl('/api/skills.json')} title="Skills index (JSON)" />
 
-  <script type="application/ld+json" set:html={jsonLd || defaultJsonLd} />
-  {extraJsonLd && <script is:inline type="application/ld+json" set:html={extraJsonLd} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Fonts: serif headings + sans body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap"
+    />
 
-  <script is:inline src="/matomo.js" async></script>
-</head>
-<body>
-  <script is:inline>
-    (function(){var t=localStorage.getItem('ic-skills-theme');if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})();
-  </script>
-  <slot />
-</body>
+    <!-- Structured data -->
+    {allLd.map((obj) => (
+      <script type="application/ld+json" set:html={JSON.stringify(obj)} />
+    ))}
+
+    <link rel="stylesheet" href="/styles.css" />
+    <script is:inline src="/matomo.js" async></script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <header class="site-header" role="banner">
+      <div class="container">
+        <a href="/" class="brand" aria-label={`${SITE.name} home`}>
+          <img class="brand-mark" src="/icp-logo.svg" alt="" width="26" height="26" />
+          <span class="brand-name">{SITE.shortName}</span>
+        </a>
+        <nav aria-label="Primary">
+          <a href="/how-it-works/">How it works</a>
+          <a href="/get-started/">Get started</a>
+          <a href={SITE.repo.url} rel="noopener external" aria-label="GitHub" title="GitHub" style="display:inline-flex;align-items:center;">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="container" role="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container">
+        <p>
+          <strong>{SITE.name}</strong> &mdash; maintained by
+          <a href={SITE.author.url} rel="noopener external">{SITE.author.name}</a>
+          Source: <a href={SITE.repo.url} rel="noopener external">{SITE.repo.name}</a>
+          Licensed <a href={SITE.license.url} rel="noopener external">{SITE.license.spdx}</a>
+        </p>
+        <p class="machine-links">
+          Machine-readable:
+          <a href="/llms.txt">llms.txt</a>
+          <a href="/llms-full.txt">llms-full.txt</a>
+          <a href="/api/skills.json">skills.json</a>
+          <a href="/sitemap-index.xml">sitemap</a>
+          <a href="/feed.xml">RSS</a>
+        </p>
+      </div>
+    </footer>
+  </body>
 </html>

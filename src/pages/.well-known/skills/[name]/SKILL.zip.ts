@@ -1,22 +1,20 @@
 // Serves /.well-known/skills/<name>/SKILL.zip at build time
 // Only generated for multi-file skills (SKILL.md + references)
-import type { APIRoute } from "astro";
-import archiver from "archiver";
-import { readdirSync, readFileSync, statSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import type { APIRoute } from 'astro';
+import archiver from 'archiver';
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SKILLS_DIR = join(__dirname, "..", "..", "..", "..", "..", "skills");
+const SKILLS_DIR = join(process.cwd(), 'skills');
 
 function parseName(content: string): string | null {
-  const match = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
+  const match = content.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
-  for (const line of match[1].split("\n")) {
-    const idx = line.indexOf(":");
+  for (const line of match[1].split('\n')) {
+    const idx = line.indexOf(':');
     if (idx === -1) continue;
     const key = line.slice(0, idx).trim();
-    if (key === "name") return line.slice(idx + 1).trim();
+    if (key === 'name') return line.slice(idx + 1).trim();
   }
   return null;
 }
@@ -42,12 +40,12 @@ interface SkillZipData {
 
 async function buildZip(skillDir: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    const archive = archiver('zip', { zlib: { level: 9 } });
     const chunks: Buffer[] = [];
 
-    archive.on("data", (chunk: Buffer) => chunks.push(chunk));
-    archive.on("end", () => resolve(Buffer.concat(chunks)));
-    archive.on("error", reject);
+    archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+    archive.on('end', () => resolve(Buffer.concat(chunks)));
+    archive.on('error', reject);
 
     const files = collectFilePaths(skillDir, skillDir);
     for (const file of files) {
@@ -65,9 +63,12 @@ async function loadMultiFileSkillZips(): Promise<SkillZipData[]> {
 
   const dirs = readdirSync(SKILLS_DIR)
     .filter((d) => {
-      if (d.startsWith("_")) return false;
-      try { return statSync(join(SKILLS_DIR, d, "SKILL.md")).isFile(); }
-      catch { return false; }
+      if (d.startsWith('_')) return false;
+      try {
+        return statSync(join(SKILLS_DIR, d, 'SKILL.md')).isFile();
+      } catch {
+        return false;
+      }
     })
     .sort();
 
@@ -78,7 +79,7 @@ async function loadMultiFileSkillZips(): Promise<SkillZipData[]> {
     const files = collectFilePaths(skillDir, skillDir);
     if (files.length <= 1) continue; // skip single-file skills
 
-    const content = readFileSync(join(skillDir, "SKILL.md"), "utf-8");
+    const content = readFileSync(join(skillDir, 'SKILL.md'), 'utf-8');
     const name = parseName(content);
     if (!name) continue;
 
@@ -101,8 +102,8 @@ export async function getStaticPaths() {
 export const GET: APIRoute = ({ props }) => {
   return new Response(props.zipBuffer, {
     headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="SKILL.zip"`,
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename="SKILL.zip"',
     },
   });
 };

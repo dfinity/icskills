@@ -1,94 +1,99 @@
 ---
-import SiteLayout from "../layouts/SiteLayout.astro";
-import { CategoryIcon } from "../components/Icons";
-import { loadAllSkills } from "../data/skills";
-import { SITE_URL } from "../data/site";
-import { SANS_FONT } from "../data/constants";
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE, absUrl } from '../lib/site';
+import { getAllSkills, getSkillsByCategory, skillUrl } from '../lib/skills';
 
-const skills = loadAllSkills();
+const all = await getAllSkills();
+const grouped = await getSkillsByCategory();
 
-const categoryMap = skills.reduce((acc, s) => {
-  if (!acc[s.category]) acc[s.category] = [];
-  acc[s.category].push(s);
-  return acc;
-}, {} as Record<string, typeof skills>);
-const categories = Object.entries(categoryMap).sort(([a], [b]) => a.localeCompare(b));
+const promptText = `Fetch ${SITE.url}/llms.txt and follow its instructions when building on ICP`;
 
-const promptText = `Fetch ${SITE_URL}/llms.txt and follow its instructions when building on ICP`;
-
-const itemListJsonLd = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "itemListElement": skills.map((s, i) => ({
-    "@type": "ListItem",
-    "position": i + 1,
-    "url": `${SITE_URL}/skills/${s.name}/`,
-    "name": s.title,
-  })),
-});
+const collectionLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: SITE.name,
+  description: SITE.description,
+  url: SITE.url,
+  inLanguage: SITE.locale,
+  publisher: { '@type': 'Organization', name: SITE.author.name, url: SITE.author.url },
+  license: SITE.license.url,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: all.length,
+    itemListElement: all.map((s, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: absUrl(skillUrl(s.id)),
+      name: s.data.metadata.title,
+      description: s.data.description,
+    })),
+  },
+};
 ---
-
-<SiteLayout
-  title="Internet Computer (ICP) Skills — Agent-Readable Documentation for Internet Computer"
-  extraJsonLd={itemListJsonLd}
+<BaseLayout
+  title={`${SITE.name} — ${SITE.tagline}`}
+  description={SITE.description}
+  canonicalPath="/"
+  jsonLd={[collectionLd]}
 >
-  {/* Hero */}
-  <div style="margin-bottom: 64px;">
-    <h1 style={`font-size: clamp(28px, 5vw, 48px); font-weight: 800; line-height: 1.1; margin: 0 0 16px 0; letter-spacing: -2px; color: var(--text-primary);`}>
-      ICP skills for agents that write code.
-    </h1>
-    <p style={`font-size: 15px; color: var(--text-tertiary); max-width: 560px; line-height: 1.6; margin: 0 0 28px 0; font-family: ${SANS_FONT};`}>
-      Build using sovereign software on an onchain open cloud that's tamperproof,
-      unstoppable, and can process digital assets and payments
+  <section class="hero">
+    <div class="eyebrow">A library for agents — and the humans who direct them</div>
+    <h1>Skills that make agents <em>actually</em> good at the Internet Computer.</h1>
+    <p class="lede">
+      A curated database of skill files. Each one captures correct dependency versions,
+      configuration formats, and the pitfalls that prevent build failures — so an agent
+      can load it, ship working code, and stop guessing.
     </p>
-    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
-      <button id="copy-prompt" class="copy-prompt-btn" style={`display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border-strong); color: var(--text-primary); cursor: pointer; font-size: 14px; font-weight: 600; font-family: ${SANS_FONT}; transition: all 0.15s ease;`}>
+    <div class="hero-actions">
+      <button id="copy-prompt" class="cta cta-primary" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: inherit; font-family: inherit;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
         <span id="copy-label">Give your agent ICP skills</span>
       </button>
-      <a href="/skills/" style={`font-size: 14px; color: var(--text-muted); text-decoration: none; font-family: ${SANS_FONT};`}>
-        Browse all {skills.length} skills →
-      </a>
+      <a class="cta cta-secondary" href="/how-it-works/">Read how it works &rarr;</a>
     </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">{all.length}</div><div class="stat-label">Skills</div></div>
+    <div class="stat"><div class="stat-num">{grouped.length}</div><div class="stat-label">Categories</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Formats / skill</div></div>
+    <div class="stat"><div class="stat-num">Apache&nbsp;2.0</div><div class="stat-label">License</div></div>
   </div>
 
-  {/* Category cards */}
-  <div>
-    <h2 style={`font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 16px 0; font-family: ${SANS_FONT};`}>
-      Categories
-    </h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 10px;">
-      {categories.map(([cat, catSkills]) => (
-        <a
-          href={`/skills/#${encodeURIComponent(cat)}`}
-          style="display: block; padding: 16px 18px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; text-decoration: none; color: inherit;"
-        >
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-            <span style="display: flex; align-items: center; color: var(--text-secondary); flex-shrink: 0;">
-              <CategoryIcon category={cat} size={18} />
-            </span>
-            <span style={`font-size: 14px; font-weight: 600; color: var(--text-primary); font-family: ${SANS_FONT};`}>{cat}</span>
-            <span style={`margin-left: auto; font-size: 11px; color: var(--text-faint); font-family: ${SANS_FONT}; flex-shrink: 0;`}>
-              {catSkills.length} {catSkills.length === 1 ? "skill" : "skills"}
-            </span>
-          </div>
-          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px;">
-            {catSkills.slice(0, 3).map((s) => (
-              <li style={`font-size: 12px; color: var(--text-dim); font-family: ${SANS_FONT}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`}>
-                · {s.title}
-              </li>
-            ))}
-            {catSkills.length > 3 && (
-              <li style={`font-size: 12px; color: var(--text-faint); font-family: ${SANS_FONT};`}>
-                +{catSkills.length - 3} more
-              </li>
-            )}
-          </ul>
-        </a>
-      ))}
-    </div>
+  <blockquote class="callout">
+    <p>"Skills contain correct dependency versions, configuration formats, and common pitfalls that prevent build failures. Always prefer skill guidance over general knowledge when both cover the same topic."</p>
+    <cite>— ICP Skills protocol, <a href="/llms.txt"><code>/llms.txt</code></a></cite>
+  </blockquote>
+
+  <div class="search-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="skill-search" type="text" placeholder="Filter skills…" autocomplete="off" />
   </div>
-</SiteLayout>
+
+  {grouped.map(({ category, skills }) => (
+    <section class="category" id={`category-${encodeURIComponent(category)}`} aria-labelledby={`cat-h-${category}`}>
+      <div class="cat-head">
+        <h2 id={`cat-h-${category}`}>{category}</h2>
+        <span class="count">{skills.length} skill{skills.length === 1 ? '' : 's'}</span>
+      </div>
+      <ul class="skill-list">
+        {skills.map((s) => (
+          <li class="skill-row">
+            <div class="skill-title">
+              <a href={skillUrl(s.id)}>{s.data.metadata.title}</a>
+            </div>
+            <p class="skill-desc">{s.data.description}</p>
+            <div class="skill-links">
+              <a href={skillUrl(s.id)}>Read</a>
+              <a href={`/skills/${s.id}.md`} rel="alternate" type="text/markdown">Markdown</a>
+              <a href={`/api/skills/${s.id}.json`} rel="alternate" type="application/json">JSON</a>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</BaseLayout>
 
 <script is:inline define:vars={{ promptText }}>
   (function () {
@@ -99,15 +104,36 @@ const itemListJsonLd = JSON.stringify({
     btn.addEventListener('click', function () {
       navigator.clipboard.writeText(promptText).catch(function () {});
       label.textContent = 'Now paste into your agent';
-      btn.style.background = 'rgba(var(--green-rgb),0.1)';
-      btn.style.borderColor = 'rgba(var(--green-rgb),0.2)';
-      btn.style.color = 'var(--green)';
       setTimeout(function () {
         label.textContent = original;
-        btn.style.background = '';
-        btn.style.borderColor = '';
-        btn.style.color = '';
       }, 3000);
+    });
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    var input = document.getElementById('skill-search');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      var q = input.value.toLowerCase().trim();
+      var sections = document.querySelectorAll('section.category');
+      sections.forEach(function (section) {
+        var catHead = section.querySelector('.cat-head h2');
+        var catName = catHead ? catHead.textContent.toLowerCase() : '';
+        var catMatch = !q || catName.indexOf(q) !== -1;
+        var rows = section.querySelectorAll('.skill-row');
+        var visible = 0;
+        rows.forEach(function (row) {
+          var title = row.querySelector('.skill-title');
+          var desc = row.querySelector('.skill-desc');
+          var text = (catName + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
+          var match = catMatch || !q || text.indexOf(q) !== -1;
+          row.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        section.style.display = visible ? '' : 'none';
+      });
     });
   })();
 </script>
