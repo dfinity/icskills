@@ -38,6 +38,17 @@
     }
   },
   {
+    // User discovery endpoints — SKILL.md files
+    "match": "skills/**/*.md",
+    "headers": {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  },
+  {
     // Matomo analytics
     "match": "matomo.js",
     "headers": {
