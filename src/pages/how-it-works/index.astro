@@ -10,19 +10,18 @@ import { SITE } from '../../lib/site';
   <h1>How it works</h1>
 
   <p class="lede">
-    This site is a trust-optimised, pre-rendered mirror of the skill files in
-    <a href={SITE.repo.url} rel="noopener external">{SITE.repo.name}</a>. Every page exists
+    This site is a pre-rendered mirror of the skill files in
+    <a href={SITE.repo.url} rel="noopener external">{SITE.repo.name}</a>. Every Skill exists
     as HTML, raw Markdown, and JSON.
   </p>
 
   <h2>Where the content comes from</h2>
   <p>
-    Each skill is a Markdown file at <code>skills/&lt;name&gt;/SKILL.md</code> in the upstream
-    repository, with YAML frontmatter conforming to the
-    <a href="https://skills.internetcomputer.org/skills/skill.schema.json">IC Skill schema</a>.
-    The content follows the <a href="https://agentskills.io/specification" rel="noopener external">Agent Skills specification</a>
-    so it can be consumed directly by agents. This site pins an exact Git commit of the
-    upstream repo as a submodule — the Markdown bytes served here are the bytes in that commit.
+    Each skill is a Markdown file at <code>skills/&lt;name&gt;/SKILL.md</code> in the repository,
+    with YAML frontmatter conforming to the <a href="/skills/skill.schema.json">IC Skill schema</a>.
+    The content follows the <a href="https://agentskills.io/specification" rel="noopener external">Agent Skills Specification</a>
+    so it can be consumed directly by agents. This site is continuously deployed from the main branch of the
+    <a href={SITE.repo.url} rel="noopener external">{SITE.repo.name}</a> repository.
   </p>
 
   <h2>Representations</h2>
