@@ -78,7 +78,7 @@ const collectionLd = {
       </div>
       <ul class="skill-list">
         {skills.map((s) => (
-          <li class="skill-row">
+          <li class="skill-row" data-skill-id={s.id}>
             <div class="skill-title">
               <a href={skillUrl(s.id)}>{s.data.metadata.title}</a>
             </div>
@@ -127,7 +127,8 @@ const collectionLd = {
         rows.forEach(function (row) {
           var title = row.querySelector('.skill-title');
           var desc = row.querySelector('.skill-desc');
-          var text = (catName + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
+          var skillId = row.getAttribute('data-skill-id') || '';
+          var text = (catName + ' ' + skillId + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
           var match = catMatch || !q || text.indexOf(q) !== -1;
           row.style.display = match ? '' : 'none';
           if (match) visible++;
