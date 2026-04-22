@@ -3,6 +3,7 @@ canisters:
     recipe:
       type: "@dfinity/asset-canister@v2.1.0"
       configuration:
+        version: asset-canister-404-support
         dir: dist
         build:
           - npm install
