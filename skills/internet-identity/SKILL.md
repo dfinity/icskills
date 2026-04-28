@@ -43,6 +43,10 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Using II during local development
 
+You have two choices for local development:
+* Starting with `icp-cli >= 0.2.4` the local network can validate signatures from https://id.ai, so you can use mainnet identities with the local network.
+* You can configure your local network to deploy internet identity to the local network which makes it accessible at http://id.ai.localhost:8000 by default.
+
 ### icp.yaml Configuration
 
 Add `ii: true` to the local network in your `icp.yaml` to enable Internet Identity locally:
