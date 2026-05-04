@@ -114,9 +114,9 @@ async function signIn() {
   }
 }
 
-// Log out
-async function logout() {
-  await authClient.logout();
+// Sign out
+async function signOut() {
+  await authClient.signOut();
   // Optionally reload or reset UI state
 }
 
