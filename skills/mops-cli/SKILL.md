@@ -11,7 +11,9 @@ metadata:
 <!-- Upstream: https://github.com/caffeinelabs/mops
      Tag: cli-v2.13.1  Commit: c947a79fc68d2d4d5b0d3bad10e23370b8134364
      File: .agents/skills/mops-cli/SKILL.md
-     Last synced: 2026-05-04 -->
+     Last synced: 2026-05-04
+     Sections owned by icskills (do not overwrite from upstream):
+     Additional References (uses icskills skill names: motoko, migrating-motoko, migrating-motoko-enhanced) -->
 
 # Mops CLI
 

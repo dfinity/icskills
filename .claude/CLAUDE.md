@@ -119,7 +119,23 @@ diff /tmp/upstream.md skills/<skill-name>/SKILL.md
 | `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
 | `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.1 | `c947a79fc68d2d4d5b0d3bad10e23370b8134364` |
 
-When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements, (4) update the upstream comment with the new tag and SHA, (5) update the table above.
+When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements **except for sections listed as "owned by icskills"**, (4) update the upstream comment with the new tag and SHA, (5) update the table above.
+
+### What icskills changes vs upstream
+
+| Change type | Examples | Rule |
+|-------------|---------|------|
+| **Cross-reference links** | `Load motoko skill`, `Load mops-cli skill` | Always rewrite to icskills skill names; never overwrite from upstream |
+| **Bug fixes to upstream** | Removed `args = ["--enhanced-migration=..."]` from migrating-motoko-enhanced | Keep our fix; consider contributing upstream |
+| **icp-cli / IC-specific additions** | Runtime.envVar, icp-cli deployment notes, M0141/M0145 pitfalls | icskills-owned; do not overwrite |
+| **Style additions** | transient var section, variant tag examples | icskills-owned if not in upstream; otherwise align |
+| **Content shared with upstream** | All patterns, syntax, error tables | Sync from upstream when unchanged |
+
+### Automated upstream release detection
+
+A GitHub Actions workflow (`.github/workflows/sync-upstream.yml`) runs weekly to detect new releases of tracked upstream repos. When a new release is found it opens a PR with the raw upstream diff, so maintainers can review and cherry-pick improvements manually. The workflow does NOT auto-apply changes — it only surfaces the diff.
+
+This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
 ## Writing Guidelines
 

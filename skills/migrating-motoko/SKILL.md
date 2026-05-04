@@ -11,7 +11,9 @@ metadata:
 <!-- Upstream: https://github.com/caffeinelabs/motoko
      Tag: 1.7.0  Commit: 1e65e26346b35927869dda044bb76763627c2c57
      File: .agents/skills/migrating-motoko/SKILL.md
-     Last synced: 2026-05-04 -->
+     Last synced: 2026-05-04
+     Sections owned by icskills (do not overwrite from upstream):
+     Additional References (uses icskills skill names: motoko, mops-cli) -->
 
 # Inline Actor Migration
 
