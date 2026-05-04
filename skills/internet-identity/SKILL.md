@@ -16,7 +16,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- `@icp-sdk/auth` (>= 6.0.0), `@icp-sdk/core` (>= 5.0.0)
+- `@icp-sdk/auth` (>= 7.0.0), `@icp-sdk/core` (>= 5.0.0)
 
 ## Canister IDs
 
