@@ -30,10 +30,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             dirs=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'skills/' \
-              | grep -oP '^skills/\K[^/]+' \
+              | grep -oP '^skills/\K[^/]+(?=/)' \
               | sort -u \
               | grep -v '^_' \
-              | while read -r d; do [ -f "skills/$d/SKILL.md" ] && echo "$d"; done)
+              | while read -r d; do [ -f "skills/$d/SKILL.md" ] && echo "$d" || true; done)
             if [ -n "$dirs" ]; then
               # Build space-separated paths for skill-validator
               paths=$(echo "$dirs" | sed 's|^|skills/|' | tr '\n' ' ')
