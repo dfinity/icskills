@@ -1,0 +1,249 @@
+name: Upstream sync check
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  check-motoko:
+    name: Check caffeinelabs/motoko
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest motoko release tag
+        id: latest
+        run: |
+          TAG=$(gh release view --repo caffeinelabs/motoko --json tagName -q .tagName)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current pinned tag
+        id: current
+        run: |
+          TAG=$(grep 'Tag:' skills/motoko/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if update needed
+        id: check
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          CURRENT="${{ steps.current.outputs.tag }}"
+          BRANCH="infra/sync-motoko-${LATEST}"
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already at latest: $CURRENT"
+          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Branch $BRANCH already exists — PR likely open, skipping"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+            echo "New release: $LATEST (current: $CURRENT)"
+          fi
+
+      - name: Resolve commit SHA for new release
+        if: steps.check.outputs.needed == 'true'
+        id: sha
+        run: |
+          TAG="${{ steps.latest.outputs.tag }}"
+          RESULT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/ref/tags/${TAG}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
+          OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
+          OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
+          if [ "$OBJ_TYPE" = "tag" ]; then
+            COMMIT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/tags/${OBJ_SHA}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+              python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
+          else
+            COMMIT="$OBJ_SHA"
+          fi
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Fetch upstream files and build diff
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          SHA="${{ steps.sha.outputs.commit }}"
+          CURRENT="${{ steps.current.outputs.tag }}"
+          LATEST="${{ steps.latest.outputs.tag }}"
+
+          declare -A UPSTREAM_TO_LOCAL=(
+            ["writing-motoko"]="motoko"
+            ["migrating-motoko"]="migrating-motoko"
+            ["migrating-motoko-enhanced"]="migrating-motoko-enhanced"
+          )
+
+          {
+            echo "## Upstream diff: caffeinelabs/motoko \`${CURRENT}\` → \`${LATEST}\`"
+            echo ""
+            echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/motoko/commit/${SHA})"
+            echo ""
+            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in each"
+            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
+            echo ""
+          } > /tmp/pr-body.md
+
+          HAS_CHANGES=false
+          for upstream_name in "writing-motoko" "migrating-motoko" "migrating-motoko-enhanced"; do
+            local_name="${UPSTREAM_TO_LOCAL[$upstream_name]}"
+            curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${SHA}/.agents/skills/${upstream_name}/SKILL.md" \
+              > /tmp/upstream-${upstream_name}.md 2>/dev/null || {
+              echo "(skill not found at this path)" > /tmp/upstream-${upstream_name}.md
+            }
+            DIFF=$(diff /tmp/upstream-${upstream_name}.md skills/${local_name}/SKILL.md || true)
+            if [ -n "$DIFF" ]; then
+              HAS_CHANGES=true
+              {
+                echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
+                echo ""
+                echo '<details><summary>Show diff</summary>'
+                echo ""
+                echo '```diff'
+                echo "$DIFF"
+                echo '```'
+                echo ""
+                echo '</details>'
+                echo ""
+              } >> /tmp/pr-body.md
+            else
+              echo "### \`${local_name}\` — no changes" >> /tmp/pr-body.md
+              echo "" >> /tmp/pr-body.md
+            fi
+          done
+
+          echo "has_changes=$HAS_CHANGES" >> $GITHUB_ENV
+
+      - name: Create sync PR
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          BRANCH="${{ steps.check.outputs.branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}" \
+            --body-file /tmp/pr-body.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-mops:
+    name: Check caffeinelabs/mops
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest mops release tag
+        id: latest
+        run: |
+          TAG=$(gh release view --repo caffeinelabs/mops --json tagName -q .tagName)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current pinned tag
+        id: current
+        run: |
+          TAG=$(grep 'Tag:' skills/mops-cli/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if update needed
+        id: check
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          CURRENT="${{ steps.current.outputs.tag }}"
+          BRANCH="infra/sync-mops-${LATEST}"
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already at latest: $CURRENT"
+          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Branch $BRANCH already exists — PR likely open, skipping"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+            echo "New release: $LATEST (current: $CURRENT)"
+          fi
+
+      - name: Resolve commit SHA for new release
+        if: steps.check.outputs.needed == 'true'
+        id: sha
+        run: |
+          TAG="${{ steps.latest.outputs.tag }}"
+          RESULT=$(curl -sf "https://api.github.com/repos/caffeinelabs/mops/git/ref/tags/${TAG}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
+          OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
+          OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
+          if [ "$OBJ_TYPE" = "tag" ]; then
+            COMMIT=$(curl -sf "https://api.github.com/repos/caffeinelabs/mops/git/tags/${OBJ_SHA}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+              python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
+          else
+            COMMIT="$OBJ_SHA"
+          fi
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Fetch upstream file and build diff
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          SHA="${{ steps.sha.outputs.commit }}"
+          CURRENT="${{ steps.current.outputs.tag }}"
+          LATEST="${{ steps.latest.outputs.tag }}"
+
+          curl -sf "https://raw.githubusercontent.com/caffeinelabs/mops/${SHA}/.agents/skills/mops-cli/SKILL.md" \
+            > /tmp/upstream-mops-cli.md 2>/dev/null || {
+            echo "(skill not found at this path)" > /tmp/upstream-mops-cli.md
+          }
+
+          DIFF=$(diff /tmp/upstream-mops-cli.md skills/mops-cli/SKILL.md || true)
+
+          {
+            echo "## Upstream diff: caffeinelabs/mops \`${CURRENT}\` → \`${LATEST}\`"
+            echo ""
+            echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/mops/commit/${SHA})"
+            echo ""
+            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in the"
+            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
+            echo ""
+            echo "### \`mops-cli\`"
+            echo ""
+            if [ -n "$DIFF" ]; then
+              echo '<details><summary>Show diff</summary>'
+              echo ""
+              echo '```diff'
+              echo "$DIFF"
+              echo '```'
+              echo ""
+              echo '</details>'
+            else
+              echo "No changes."
+            fi
+          } > /tmp/pr-body.md
+
+      - name: Create sync PR
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          BRANCH="${{ steps.check.outputs.branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}" \
+            --body-file /tmp/pr-body.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

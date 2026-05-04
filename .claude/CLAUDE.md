@@ -133,7 +133,7 @@ When a new version of an upstream repo is released: (1) get the new commit SHA, 
 
 ### Automated upstream release detection
 
-A GitHub Actions workflow (`.github/workflows/sync-upstream.yml`) runs weekly to detect new releases of tracked upstream repos. When a new release is found it opens a PR with the raw upstream diff, so maintainers can review and cherry-pick improvements manually. The workflow does NOT auto-apply changes — it only surfaces the diff.
+`.github/workflows/sync-upstream.yml` runs weekly to detect new releases of tracked upstream repos. When a new release is found it opens a PR with the raw upstream diff, so maintainers can review and cherry-pick improvements manually. The workflow does NOT auto-apply changes — it only surfaces the diff.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
