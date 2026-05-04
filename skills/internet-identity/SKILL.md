@@ -16,7 +16,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- `@icp-sdk/auth` (>= 5.0.0), `@icp-sdk/core` (>= 5.0.0)
+- `@icp-sdk/auth` (>= 6.0.0), `@icp-sdk/core` (>= 5.0.0)
 
 ## Canister IDs
 
@@ -31,11 +31,11 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 2. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
 
-3. **Not handling auth callbacks.** The `authClient.login()` call requires `onSuccess` and `onError` callbacks. Without them, login failures are silently swallowed.
+3. **Not awaiting `signIn()` or skipping the `try`/`catch`.** `authClient.signIn()` returns a promise that rejects when the user closes the popup or authentication fails. Without `await` and a `catch`, those failures are silently swallowed.
 
 4. **Using `shouldFetchRootKey` or `fetchRootKey()` instead of the `ic_env` cookie.** The `ic_env` cookie (set by the asset canister or the Vite dev server) already contains the root key as `IC_ROOT_KEY`. Pass it via the `rootKey` option to `HttpAgent.create()` — this works in both local and production environments without environment branching. See the icp-cli skill's `references/binding-generation.md` for the pattern. Never call `fetchRootKey()` — it fetches the root key from the replica at runtime, which lets a man-in-the-middle substitute a fake key on mainnet.
 
-5. **Getting `2vxsx-fae` as the principal after login.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL, missing `onSuccess` callback, or not extracting the identity from `authClient.getIdentity()` after login.
+5. **Getting `2vxsx-fae` as the principal after login.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL passed to the `AuthClient` constructor, an unhandled rejection from `signIn()`, or reading `getIdentity()` before `signIn()` resolved.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
@@ -71,9 +71,6 @@ import { AuthClient } from "@icp-sdk/auth/client";
 import { HttpAgent, Actor } from "@icp-sdk/core/agent";
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 
-// Module-scoped so login/logout/createAuthenticatedActor can access it.
-let authClient;
-
 // Read the ic_env cookie (set by the asset canister or Vite dev server).
 // Contains the root key and canister IDs — works in both local and production.
 const canisterEnv = safeGetCanisterEnv();
@@ -91,24 +88,26 @@ function getIdentityProviderUrl() {
   return "https://id.ai";
 }
 
-// Login
+// Construct once — identityProvider (and optionally derivationOrigin or
+// openIdProvider for one-click sign-in: 'google' | 'apple' | 'microsoft')
+// are configured at construction time, not per sign-in.
+const authClient = new AuthClient({
+  identityProvider: getIdentityProviderUrl(),
+});
+
+// Login: signIn() returns the new Identity directly and rejects if the user
+// closes the popup or authentication fails.
 async function login() {
-  return new Promise((resolve, reject) => {
-    authClient.login({
-      identityProvider: getIdentityProviderUrl(),
+  try {
+    const identity = await authClient.signIn({
       maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
-      onSuccess: () => {
-        const identity = authClient.getIdentity();
-        const principal = identity.getPrincipal().toText();
-        console.log("Logged in as:", principal);
-        resolve(identity);
-      },
-      onError: (error) => {
-        console.error("Login failed:", error);
-        reject(error);
-      },
     });
-  });
+    console.log("Logged in as:", identity.getPrincipal().toText());
+    return identity;
+  } catch (error) {
+    console.error("Login failed:", error);
+    throw error;
+  }
 }
 
 // Logout
@@ -132,12 +131,9 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
 // Initialization — wraps async setup in a function so this code works with
 // any bundler target (Vite defaults to es2020 which lacks top-level await).
 async function init() {
-  authClient = await AuthClient.create();
-
-  // Check if already authenticated (on page load)
-  const isAuthenticated = await authClient.isAuthenticated();
-  if (isAuthenticated) {
-    const identity = authClient.getIdentity();
+  // isAuthenticated() is sync; getIdentity() is async.
+  if (authClient.isAuthenticated()) {
+    const identity = await authClient.getIdentity();
     const actor = await createAuthenticatedActor(identity, canisterId, idlFactory);
     // Use actor to call backend methods
   }
