@@ -1,6 +1,6 @@
 ---
 name: internet-identity
-description: "Integrate Internet Identity authentication. Covers passkey and OpenID login flows, delegation handling, and principal-per-app isolation. Use when adding login, sign-in, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
+description: "Integrate Internet Identity authentication. Covers passkey and OpenID sign-in flows, delegation handling, and principal-per-app isolation. Use when adding sign-in, login, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
 metadata:
@@ -12,7 +12,7 @@ metadata:
 
 ## What This Is
 
-Internet Identity (II) is the Internet Computer's native authentication system. Users authenticate into II-powered apps either with passkeys stored in their devices or thorugh OpenID accounts (e.g., Google, Apple, Microsoft) -- no login or passwords required. Each user gets a unique principal per app, preventing cross-app tracking.
+Internet Identity (II) is the Internet Computer's native authentication system. Users authenticate into II-powered apps either with passkeys stored in their devices or thorugh OpenID accounts (e.g., Google, Apple, Microsoft) -- no usernames or passwords required. Each user gets a unique principal per app, preventing cross-app tracking.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 4. **Using `shouldFetchRootKey` or `fetchRootKey()` instead of the `ic_env` cookie.** The `ic_env` cookie (set by the asset canister or the Vite dev server) already contains the root key as `IC_ROOT_KEY`. Pass it via the `rootKey` option to `HttpAgent.create()` — this works in both local and production environments without environment branching. See the icp-cli skill's `references/binding-generation.md` for the pattern. Never call `fetchRootKey()` — it fetches the root key from the replica at runtime, which lets a man-in-the-middle substitute a fake key on mainnet.
 
-5. **Getting `2vxsx-fae` as the principal after login.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL passed to the `AuthClient` constructor, an unhandled rejection from `signIn()`, or reading `getIdentity()` before `signIn()` resolved.
+5. **Getting `2vxsx-fae` as the principal after sign-in.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL passed to the `AuthClient` constructor, an unhandled rejection from `signIn()`, or reading `getIdentity()` before `signIn()` resolved.
 
 6. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
@@ -66,7 +66,7 @@ This deploys the II canisters automatically when the local network is started. B
 No canister entry needed — II is not part of your project's canisters.
 For the full `icp.yaml` canister configuration, see the **icp-cli** and **asset-canister** skills.
 
-### Frontend: Vanilla JavaScript/TypeScript Login Flow
+### Frontend: Vanilla JavaScript/TypeScript Sign-In Flow
 
 This is framework-agnostic. Adapt the DOM manipulation to your framework.
 
@@ -99,22 +99,22 @@ const authClient = new AuthClient({
   identityProvider: getIdentityProviderUrl(),
 });
 
-// Login: signIn() returns the new Identity directly and rejects if the user
+// Sign in: signIn() returns the new Identity directly and rejects if the user
 // closes the popup or authentication fails.
-async function login() {
+async function signIn() {
   try {
     const identity = await authClient.signIn({
       maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
     });
-    console.log("Logged in as:", identity.getPrincipal().toText());
+    console.log("Signed in as:", identity.getPrincipal().toText());
     return identity;
   } catch (error) {
-    console.error("Login failed:", error);
+    console.error("Sign-in failed:", error);
     throw error;
   }
 }
 
-// Logout
+// Log out
 async function logout() {
   await authClient.logout();
   // Optionally reload or reset UI state
