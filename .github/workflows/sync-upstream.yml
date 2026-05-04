@@ -145,7 +145,7 @@ jobs:
       - name: Get latest mops release tag
         id: latest
         run: |
-          TAG=$(gh release list --repo caffeinelabs/mops --json tagName --jq '[.[] | select(.tagName | startswith("cli-"))] | first | .tagName')
+          TAG=$(gh release list --repo caffeinelabs/mops --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("cli-"))] | first | .tagName')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
