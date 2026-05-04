@@ -241,6 +241,6 @@ The website auto-generates from SKILL.md frontmatter — no need to edit any sou
 
 Use an existing category when possible. The validator warns on unknown categories to catch typos, but new categories are not blocked.
 
-Current categories: **Auth**, **Core**, **DeFi**, **Frontend**, **Governance**, **Infrastructure**, **Integration**, **Security**
+Current categories: **Auth**, **Core**, **DeFi**, **Frontend**, **Governance**, **Infrastructure**, **Integration**, **Motoko**, **Security**
 
-To add a new category: update the enum in `skills/skill.schema.json` and the icon in `src/components/Icons.tsx`.
+To add a new category: update the description string in `skills/skill.schema.json`, the `KNOWN_CATEGORIES` array in `scripts/check-project.js`, and the `CATEGORY_ORDER` array in `src/lib/skills.ts`.
