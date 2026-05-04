@@ -1,0 +1,99 @@
+{
+  "skill": "migrating-motoko",
+  "description": "Evaluation cases for the migrating-motoko skill. Tests whether agents generate correct inline migration syntax, use (with migration = ...) correctly, define old types inline, handle field semantics, and avoid deprecated patterns like preupgrade/postupgrade.",
+
+  "output_evals": [
+    {
+      "name": "Rename a field",
+      "prompt": "My Motoko canister has `var count : Nat` and I want to rename it to `var total : Nat` in the next upgrade. Write the migration.",
+      "expected_behaviors": [
+        "Uses `(with migration = ...)` syntax before the actor",
+        "Migration function takes `{ var count : Nat }` as input and returns `{ var total : Nat }`",
+        "Migration function body maps `count` to `total`",
+        "Actor body declares `var total : Nat` with an initializer",
+        "Does NOT use `preupgrade`/`postupgrade`",
+        "Does NOT use `stable` keyword"
+      ]
+    },
+    {
+      "name": "Bool to variant",
+      "prompt": "I have a Motoko canister with `var completed : Bool` and I want to change it to a richer status variant `{ #pending; #inProgress; #completed }` in my next upgrade.",
+      "expected_behaviors": [
+        "Uses `(with migration = ...)` syntax",
+        "Maps `completed = true` to `#completed` and `completed = false` to `#pending`",
+        "New actor declares `var status : { #pending; #inProgress; #completed }`",
+        "Does NOT use `preupgrade`/`postupgrade`"
+      ]
+    },
+    {
+      "name": "Add field with default",
+      "prompt": "Write a Motoko migration that adds a `zipCode : Text` field (defaulting to empty string) to each record in a Map of users stored in my canister.",
+      "expected_behaviors": [
+        "Uses `(with migration = ...)` on the actor",
+        "Defines `OldUser` and `NewUser` types inline in the migration module",
+        "Uses dot notation on the Map: `old.users.map<...>(func(_, u) { { u with zipCode = \"\" } })`",
+        "Does NOT import old types from the existing codebase"
+      ]
+    },
+    {
+      "name": "Implicit migration — no code needed",
+      "prompt": "I want to add a new optional field `?Text` to my Motoko actor in the next upgrade. Do I need to write a migration function?",
+      "expected_behaviors": [
+        "Explains that adding a field is an implicit (compatible) change — no migration function needed",
+        "Mentions that removing fields, changing mutability, and widening types are also implicit",
+        "Notes that renaming fields or changing types DO require an explicit migration"
+      ]
+    },
+    {
+      "name": "Migration module pattern",
+      "prompt": "Write a Motoko migration that transforms task state: rename field `title` to `name` and add a `priority : Nat` field defaulting to 0. Show the migration.mo and main.mo.",
+      "expected_behaviors": [
+        "Creates a separate `migration.mo` module",
+        "Defines `OldActor` and `NewActor` record types inline in the migration module",
+        "Does NOT import old types from `types.mo` or other files",
+        "`main.mo` uses `(with migration = Migration.run)` before `actor`",
+        "Actor fields have initializers (used on fresh install)"
+      ]
+    },
+    {
+      "name": "Adversarial: preupgrade/postupgrade",
+      "prompt": "I need to migrate my Motoko canister's state on upgrade. Can I use `system func preupgrade()` to save state to a stable variable and restore it in `postupgrade()`?",
+      "expected_behaviors": [
+        "Redirects to `(with migration = ...)` syntax instead",
+        "Explains that `preupgrade`/`postupgrade` are not needed for data migration in modern Motoko (persistent actors auto-persist state)",
+        "Does NOT provide a `preupgrade`/`postupgrade` implementation"
+      ]
+    },
+    {
+      "name": "Adversarial: importing old types",
+      "prompt": "I'm writing a migration.mo file. Can I import my old `Types` module to get the old type definitions I need in the migration function?",
+      "expected_behaviors": [
+        "Explains that old types must be defined inline in the migration module",
+        "Warns that importing from existing code paths creates coupling to the current state of those files, not the old state",
+        "Shows example of defining OldActor types inline"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I rename a field in my Motoko canister upgrade?",
+      "Write a Motoko migration to change a Bool field to a variant",
+      "My Motoko canister upgrade fails with Compatibility error M0170",
+      "How do I migrate Motoko actor state?",
+      "What is (with migration = ...) in Motoko?",
+      "I need to restructure my Motoko canister state on upgrade",
+      "How do I add a field to my Motoko canister without losing existing data?"
+    ],
+    "should_not_trigger": [
+      "Write a Motoko canister with a counter",
+      "How do I use Map in Motoko?",
+      "Set up a migrations directory with --enhanced-migration",
+      "How do I run mops migrate new?",
+      "Deploy my canister to mainnet",
+      "What is mo:core?",
+      "How do I pin the moc version?"
+    ]
+  }
+}

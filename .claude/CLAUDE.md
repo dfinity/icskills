@@ -69,6 +69,58 @@ Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-c
 
 **Eval prompt guidelines:** Keep prompts focused to avoid the 120s timeout. Scope the response ("just the function, no deploy steps"), ask for one thing, and match expected behaviors to what the prompt actually asks. See CONTRIBUTING.md for details and examples.
 
+## Upstream Sync Strategy
+
+Several skills track content from external upstream repositories. **Do not use git submodules** — we only need a small number of files per repo and submodules complicate every clone.
+
+### Upstream comment format
+
+Every skill that tracks upstream content must have this comment block at the top of the SKILL.md body (after frontmatter):
+
+```html
+<!-- Upstream: https://github.com/<org>/<repo>
+     Tag: <tag>  Commit: <full-sha>
+     File: <path-to-upstream-skill-file>
+     Last synced: YYYY-MM-DD
+     Sections owned by icskills (do not overwrite from upstream):
+     <comma-separated list of sections that icskills extends or differs> -->
+```
+
+Always use the **full commit SHA** of the tag, not just the tag name. Annotated tags require a two-step dereference (tag object → commit SHA).
+
+### Getting a commit SHA for a tag
+
+```bash
+# Step 1: get tag object SHA and type
+TAG_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/ref/tags/<tag>" | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
+
+# Step 2: if type is "tag" (annotated), dereference to the commit
+curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/<tag-sha>" | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])"
+```
+
+### Checking for upstream changes
+
+```bash
+# Fetch upstream skill file at a new tag/commit
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
+
+# Compare to find what changed
+diff /tmp/upstream.md skills/<skill-name>/SKILL.md
+```
+
+### Current upstream sources
+
+| Skill | Upstream repo | Tag | Commit |
+|-------|--------------|-----|--------|
+| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
+| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
+| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
+| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.1 | `c947a79fc68d2d4d5b0d3bad10e23370b8134364` |
+
+When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements, (4) update the upstream comment with the new tag and SHA, (5) update the table above.
+
 ## Writing Guidelines
 
 - **Write for agents, not humans.** Be explicit with canister IDs, function signatures, and error messages.
@@ -78,7 +130,7 @@ Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-c
 
 ## Categories
 
-Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Security. New categories are allowed — the validator warns but does not block.
+Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security. New categories are allowed — the validator warns but does not block.
 
 ## Tech Stack
 
