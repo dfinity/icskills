@@ -43,6 +43,8 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 8. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` matches an action it actually started. Have the backend mint and return the nonce from a `registerBegin`-style method, and check it against the bundle's implicit fields when the user calls the protected method.
 
+9. **Reading attribute data without verifying the signer.** `msg_caller_info_data` (Rust) and `Prim.callerInfoData` (Motoko) return whatever bundle the caller provided. The IC verifies the signature, not the identity of the signer — any canister can produce a valid bundle. Check `msg_caller_info_signer` / `Prim.callerInfoSigner` against `rdmx6-jaaaa-aaaaa-aaadq-cai` (Internet Identity) before trusting any attribute, otherwise an attacker canister can forge attributes like `email = "admin@you.com"`.
+
 ## Using II during local development
 
 You have two choices for local development:
@@ -215,6 +217,132 @@ const attributesPromise = authClient.requestAttributes({
   nonce,
 });
 ```
+
+### Backend: Reading Identity Attributes
+
+When the frontend wraps an identity with `AttributesIdentity`, every call carries a verified attribute bundle.
+
+- **Rust** (ic-cdk >= 0.20.1): `ic_cdk::api::msg_caller_info_data() -> Vec<u8>`, `ic_cdk::api::msg_caller_info_signer() -> Option<Principal>`.
+- **Motoko** (compiler with caller_info prims, e.g. >= 0.16): `Prim.callerInfoData<system>() : Blob`, `Prim.callerInfoSigner<system>() : Blob` (empty when no signer).
+
+**Always verify the signer first.** The IC checks that the bundle is signed; it does not check *who* signed it. Any canister can produce a valid bundle. Trust the data only when the signer matches the trusted issuer (`rdmx6-jaaaa-aaaaa-aaadq-cai` for Internet Identity).
+
+The data is Candid-encoded as an ICRC-3 `Value::Map` whose entries are:
+- `implicit:nonce` (Blob) — must match a nonce your canister minted for this user/action.
+- `implicit:origin` (Text) — must match a trusted frontend origin.
+- `implicit:issued_at_timestamp_ns` (Nat) — reject if outside your freshness window.
+- Plain attribute keys (e.g., `"email"`) for default-scope attributes.
+- OpenID-scoped keys (e.g., `"openid:https://accounts.google.com:email"`) when `scopedKeys` was used on the frontend.
+
+```motoko
+import Prim "mo:prim";
+import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
+
+persistent actor {
+  let iiPrincipal = Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai");
+
+  type Icrc3Value = {
+    #Nat : Nat;
+    #Int : Int;
+    #Blob : Blob;
+    #Text : Text;
+    #Array : [Icrc3Value];
+    #Map : [(Text, Icrc3Value)];
+  };
+
+  func lookupText(entries : [(Text, Icrc3Value)], key : Text) : ?Text {
+    for ((k, v) in entries.vals()) {
+      if (k == key) { switch v { case (#Text t) { return ?t }; case _ {} } };
+    };
+    null;
+  };
+
+  // Returns the verified attribute map, trapping if the signer is not II.
+  func iiAttributes() : [(Text, Icrc3Value)] {
+    let signer = Prim.callerInfoSigner<system>();
+    if (signer.size() == 0 or Principal.fromBlob(signer) != iiPrincipal) {
+      Runtime.trap("Untrusted attribute signer");
+    };
+    let data = Prim.callerInfoData<system>();
+    let ?value : ?Icrc3Value = from_candid (data) else Runtime.trap("invalid attribute bundle");
+    let #Map(entries) = value else Runtime.trap("expected attribute map");
+    entries
+  };
+
+  public shared ({ caller }) func registerFinish() : async Text {
+    if (Principal.isAnonymous(caller)) Runtime.trap("Anonymous caller not allowed");
+    let entries = iiAttributes();
+
+    let ?origin = lookupText(entries, "implicit:origin") else Runtime.trap("missing origin");
+    if (origin != "https://your-app.icp0.io") Runtime.trap("Wrong origin");
+    // Compare implicit:nonce to the nonce minted in registerBegin and check
+    // implicit:issued_at_timestamp_ns is within your freshness window (omitted).
+
+    let ?email = lookupText(entries, "email") else Runtime.trap("missing email");
+    "Registered " # Principal.toText(caller) # " with email " # email
+  };
+};
+```
+
+```rust
+use candid::{decode_one, CandidType, Deserialize, Principal};
+use ic_cdk::api::{msg_caller, msg_caller_info_data, msg_caller_info_signer};
+use ic_cdk::update;
+
+const II_PRINCIPAL: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
+
+#[derive(CandidType, Deserialize)]
+enum Icrc3Value {
+    Nat(candid::Nat),
+    Int(candid::Int),
+    Blob(Vec<u8>),
+    Text(String),
+    Array(Vec<Icrc3Value>),
+    Map(Vec<(String, Icrc3Value)>),
+}
+
+fn lookup_text<'a>(entries: &'a [(String, Icrc3Value)], key: &str) -> Option<&'a str> {
+    entries.iter().find_map(|(k, v)| match v {
+        Icrc3Value::Text(s) if k == key => Some(s.as_str()),
+        _ => None,
+    })
+}
+
+// Returns the verified attribute entries, trapping if the signer is not II.
+fn ii_attributes() -> Vec<(String, Icrc3Value)> {
+    let trusted = Principal::from_text(II_PRINCIPAL).unwrap();
+    if msg_caller_info_signer() != Some(trusted) {
+        ic_cdk::trap("Untrusted attribute signer");
+    }
+    let bundle = msg_caller_info_data();
+    let value: Icrc3Value = decode_one(&bundle)
+        .unwrap_or_else(|_| ic_cdk::trap("invalid attribute bundle"));
+    match value {
+        Icrc3Value::Map(entries) => entries,
+        _ => ic_cdk::trap("expected attribute map"),
+    }
+}
+
+#[update]
+fn register_finish() -> String {
+    let caller = msg_caller();
+    if caller == Principal::anonymous() { ic_cdk::trap("Anonymous caller not allowed"); }
+    let entries = ii_attributes();
+
+    let origin = lookup_text(&entries, "implicit:origin")
+        .unwrap_or_else(|| ic_cdk::trap("missing origin"));
+    if origin != "https://your-app.icp0.io" { ic_cdk::trap("Wrong origin"); }
+    // Compare implicit:nonce to the nonce minted in register_begin and check
+    // implicit:issued_at_timestamp_ns is within your freshness window (omitted).
+
+    let email = lookup_text(&entries, "email")
+        .unwrap_or_else(|| ic_cdk::trap("missing email"));
+    format!("Registered {} with email {}", caller, email)
+}
+```
+
+**Storing the nonce:** mint it in `registerBegin` (or equivalent), persist it in stable memory keyed by the user's principal and the action name, and mark it consumed in `registerFinish` so a bundle cannot be replayed. Use a short freshness window so abandoned attempts age out. See the **stable-memory** skill for storage patterns.
 
 ### Backend: Access Control
 
