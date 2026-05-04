@@ -41,6 +41,8 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 7. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
 
+8. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` matches an action it actually started. Have the backend mint and return the nonce from a `registerBegin`-style method, and check it against the bundle's implicit fields when the user calls the protected method.
+
 ## Using II during local development
 
 You have two choices for local development:
@@ -140,6 +142,78 @@ async function init() {
 }
 
 init();
+```
+
+### Frontend: Requesting Identity Attributes
+
+When the backend needs more than the user's principal (e.g., a verified email), Internet Identity can return signed attributes alongside the delegation. The backend issues a nonce scoped to a specific action; the frontend requests the attributes during sign-in; the backend verifies the bundle when the user calls the protected method.
+
+```javascript
+import { AuthClient } from "@icp-sdk/auth/client";
+import { AttributesIdentity } from "@icp-sdk/core/identity";
+import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { Principal } from "@icp-sdk/core/principal";
+
+async function registerWithEmail(authClient, backendCanisterId, backendIdl, appCanisterId, appIdl) {
+  // 1. The backend issues a nonce scoped to this registration.
+  //    Frontend-generated nonces defeat replay protection — see Mistake #8.
+  const anonymousAgent = await HttpAgent.create();
+  const backend = Actor.createActor(backendIdl, {
+    agent: anonymousAgent,
+    canisterId: backendCanisterId,
+  });
+  const nonce = await backend.registerBegin();
+
+  // 2. Run sign-in and the attribute request in parallel; the user sees
+  //    a single Internet Identity interaction.
+  const signInPromise = authClient.signIn();
+  const attributesPromise = authClient.requestAttributes({
+    keys: ["email"],
+    nonce,
+  });
+
+  const identity = await signInPromise;
+  const { data, signature } = await attributesPromise;
+
+  // 3. Wrap the identity so the signed attributes travel with each call.
+  const identityWithAttributes = new AttributesIdentity({
+    inner: identity,
+    attributes: { data, signature },
+    // The Internet Identity backend canister ID is the attribute signer.
+    signer: { canisterId: Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai") },
+  });
+
+  // 4. Call the protected method. The backend verifies the bundle's
+  //    implicit:nonce, implicit:origin, and implicit:issued_at_timestamp_ns,
+  //    then reads the requested attributes (email here).
+  const agent = await HttpAgent.create({ identity: identityWithAttributes });
+  const app = Actor.createActor(appIdl, { agent, canisterId: appCanisterId });
+  await app.registerFinish();
+}
+```
+
+Each signed bundle carries three implicit fields the backend MUST verify:
+- `implicit:nonce` — matches the canister-issued nonce, preventing replay across actions and users.
+- `implicit:origin` — the frontend origin, preventing a malicious dapp from forwarding bundles to a different backend.
+- `implicit:issued_at_timestamp_ns` — issuance time, letting the canister reject stale bundles even when the nonce is still valid.
+
+For OpenID one-click sign-in, attributes can be scoped to the provider via the `scopedKeys` helper. Authentication and attribute sharing happen in a single step (no extra prompt):
+
+```javascript
+import { AuthClient, scopedKeys } from "@icp-sdk/auth/client";
+
+const authClient = new AuthClient({
+  identityProvider: getIdentityProviderUrl(),
+  openIdProvider: "google",
+});
+const nonce = await backend.registerBegin();
+const signInPromise = authClient.signIn();
+// Requests name, email, and verified_email from the Google account
+// linked to the user's Internet Identity.
+const attributesPromise = authClient.requestAttributes({
+  keys: scopedKeys({ openIdProvider: "google" }),
+  nonce,
+});
 ```
 
 ### Backend: Access Control
