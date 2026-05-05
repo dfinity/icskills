@@ -32,9 +32,9 @@
     },
     {
       "name": "Authenticated actor creation",
-      "prompt": "I already have AuthClient set up and login working. Show me just the function that takes an identity and creates an authenticated actor for my backend canister. Keep it minimal — just the function, no AuthClient setup.",
+      "prompt": "I already have AuthClient set up and sign-in working. Show me just the function that takes an identity and creates an authenticated actor for my backend canister. Keep it minimal — just the function, no AuthClient setup.",
       "expected_behaviors": [
-        "Gets the identity from authClient.getIdentity()",
+        "Calls await authClient.getIdentity() (it is async in @icp-sdk/auth v6+)",
         "Creates an HttpAgent with the identity",
         "Creates an actor using Actor.createActor with the agent",
         "All await calls are inside async functions — no bare top-level await",
@@ -42,12 +42,33 @@
       ]
     },
     {
-      "name": "Debugging anonymous principal after login",
-      "prompt": "After II login, my backend says 'Anonymous principal not allowed' and the console shows principal 2vxsx-fae. What does that mean and what should I check? Keep it brief.",
+      "name": "Debugging anonymous principal after sign-in",
+      "prompt": "After II sign-in, my backend says 'Anonymous principal not allowed' and the console shows principal 2vxsx-fae. What does that mean and what should I check? Keep it brief.",
       "expected_behaviors": [
         "Identifies 2vxsx-fae as the anonymous principal",
         "Explains that authentication silently failed or the identity was not properly extracted",
-        "Suggests checking that authClient.getIdentity() is called after login and passed to HttpAgent"
+        "Suggests checking the identityProvider URL passed to the AuthClient constructor",
+        "Suggests checking that authClient.signIn() did not reject (use try/catch around the awaited promise) and that the identity from await authClient.getIdentity() is passed to HttpAgent"
+      ]
+    },
+    {
+      "name": "Adversarial: frontend-generated attribute nonce",
+      "prompt": "Show me how to call requestAttributes for an email attribute. The frontend can just generate a random nonce with crypto.getRandomValues, right? Just the snippet that builds the request.",
+      "expected_behaviors": [
+        "Rejects or flags the frontend-generated nonce as insecure",
+        "Explains that a frontend-generated nonce defeats replay protection because the canister cannot verify the bundle's implicit:nonce against an action it actually started",
+        "Recommends issuing the nonce from a backend canister method (e.g. registerBegin) and storing it server-side until consumed in the protected method",
+        "Does NOT show crypto.getRandomValues or Math.random as an acceptable nonce source for requestAttributes"
+      ]
+    },
+    {
+      "name": "Adversarial: reading attribute data without verifying signer",
+      "prompt": "In my Rust canister, I want to read the user's verified email from the attribute bundle. Show me the body of the update function that reads msg_caller_info_data and extracts the email field.",
+      "expected_behaviors": [
+        "Calls msg_caller_info_signer() and verifies it equals the Internet Identity backend canister principal (rdmx6-jaaaa-aaaaa-aaadq-cai) BEFORE trusting any data",
+        "Traps or rejects the call when the signer is None or does not match the trusted issuer",
+        "Explains that the IC verifies the signature but not the identity of the signer — any canister can produce a valid bundle",
+        "Decodes msg_caller_info_data as a Candid-encoded ICRC-3 Value::Map and looks up the requested attribute key only after the signer check passes"
       ]
     },
     {

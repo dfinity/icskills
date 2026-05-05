@@ -16,7 +16,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- `@icp-sdk/auth` (>= 7.0.0), `@icp-sdk/core` (>= 5.0.0)
+- `@icp-sdk/auth` (>= 7.0.0), `@icp-sdk/core` (>= 5.3.0) (`AttributesIdentity` was added in core v5.3.0)
 
 ## Canister IDs
 
@@ -167,8 +167,11 @@ async function registerWithEmail(authClient, backendCanisterId, backendIdl, appC
   const nonce = await backend.registerBegin();
 
   // 2. Run sign-in and the attribute request in parallel; the user sees
-  //    a single Internet Identity interaction.
-  const signInPromise = authClient.signIn();
+  //    a single Internet Identity interaction. Pass the same maxTimeToLive
+  //    you use elsewhere so the delegation lifetime stays consistent.
+  const signInPromise = authClient.signIn({
+    maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
+  });
   const attributesPromise = authClient.requestAttributes({
     keys: ["email"],
     nonce,
@@ -199,23 +202,45 @@ Each signed bundle carries three implicit fields the backend MUST verify:
 - `implicit:origin` — the frontend origin, preventing a malicious dapp from forwarding bundles to a different backend.
 - `implicit:issued_at_timestamp_ns` — issuance time, letting the canister reject stale bundles even when the nonce is still valid.
 
-For OpenID one-click sign-in, attributes can be scoped to the provider via the `scopedKeys` helper. Authentication and attribute sharing happen in a single step (no extra prompt):
+For OpenID one-click sign-in, attributes can be scoped to the provider via the `scopedKeys` helper. Authentication and attribute sharing happen in a single step (no extra prompt). The rest of the flow (await the promises, wrap with `AttributesIdentity`, call the protected method) is identical to `registerWithEmail` above:
 
 ```javascript
 import { AuthClient, scopedKeys } from "@icp-sdk/auth/client";
+import { AttributesIdentity } from "@icp-sdk/core/identity";
+import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { Principal } from "@icp-sdk/core/principal";
 
 const authClient = new AuthClient({
   identityProvider: getIdentityProviderUrl(),
   openIdProvider: "google",
 });
+
 const nonce = await backend.registerBegin();
-const signInPromise = authClient.signIn();
+
+const signInPromise = authClient.signIn({
+  maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000),
+});
 // Requests name, email, and verified_email from the Google account
-// linked to the user's Internet Identity.
+// linked to the user's Internet Identity. The keys returned by
+// scopedKeys() arrive in the bundle as e.g.
+// "openid:https://accounts.google.com:email".
 const attributesPromise = authClient.requestAttributes({
   keys: scopedKeys({ openIdProvider: "google" }),
   nonce,
 });
+
+const identity = await signInPromise;
+const { data, signature } = await attributesPromise;
+
+const identityWithAttributes = new AttributesIdentity({
+  inner: identity,
+  attributes: { data, signature },
+  signer: { canisterId: Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai") },
+});
+
+const agent = await HttpAgent.create({ identity: identityWithAttributes });
+const app = Actor.createActor(appIdl, { agent, canisterId: appCanisterId });
+await app.registerFinish();
 ```
 
 ### Backend: Reading Identity Attributes
@@ -258,6 +283,25 @@ persistent actor {
     null;
   };
 
+  func lookupBlob(entries : [(Text, Icrc3Value)], key : Text) : ?Blob {
+    for ((k, v) in entries.vals()) {
+      if (k == key) { switch v { case (#Blob b) { return ?b }; case _ {} } };
+    };
+    null;
+  };
+
+  func lookupNat(entries : [(Text, Icrc3Value)], key : Text) : ?Nat {
+    for ((k, v) in entries.vals()) {
+      if (k == key) { switch v { case (#Nat n) { return ?n }; case _ {} } };
+    };
+    null;
+  };
+
+  // Pending nonces minted in registerBegin, keyed by caller. See the
+  // "Storing the nonce" note below for storage patterns.
+  // type PendingNonces = Map<Principal, Blob>;
+  // var pendingNonces : PendingNonces = ...;
+
   // Returns the verified attribute map, trapping if the signer is not II.
   func iiAttributes() : [(Text, Icrc3Value)] {
     let signer = Prim.callerInfoSigner<system>();
@@ -276,8 +320,16 @@ persistent actor {
 
     let ?origin = lookupText(entries, "implicit:origin") else Runtime.trap("missing origin");
     if (origin != "https://your-app.icp0.io") Runtime.trap("Wrong origin");
-    // Compare implicit:nonce to the nonce minted in registerBegin and check
-    // implicit:issued_at_timestamp_ns is within your freshness window (omitted).
+
+    // Verify implicit:nonce matches a nonce we minted for this caller, and consume it.
+    let ?nonce = lookupBlob(entries, "implicit:nonce") else Runtime.trap("missing nonce");
+    let ?expected = pendingNonces.remove(caller) else Runtime.trap("no pending registration for caller");
+    if (nonce != expected) Runtime.trap("Nonce mismatch");
+
+    // Verify implicit:issued_at_timestamp_ns is within a 5-minute freshness window.
+    let ?issuedAt = lookupNat(entries, "implicit:issued_at_timestamp_ns") else Runtime.trap("missing timestamp");
+    let nowNs = Nat64.toNat(Prim.time());
+    if (nowNs > issuedAt + 300_000_000_000) Runtime.trap("Bundle too old");
 
     let ?email = lookupText(entries, "email") else Runtime.trap("missing email");
     "Registered " # Principal.toText(caller) # " with email " # email
@@ -309,6 +361,20 @@ fn lookup_text<'a>(entries: &'a [(String, Icrc3Value)], key: &str) -> Option<&'a
     })
 }
 
+fn lookup_blob<'a>(entries: &'a [(String, Icrc3Value)], key: &str) -> Option<&'a [u8]> {
+    entries.iter().find_map(|(k, v)| match v {
+        Icrc3Value::Blob(b) if k == key => Some(b.as_slice()),
+        _ => None,
+    })
+}
+
+fn lookup_nat<'a>(entries: &'a [(String, Icrc3Value)], key: &str) -> Option<&'a candid::Nat> {
+    entries.iter().find_map(|(k, v)| match v {
+        Icrc3Value::Nat(n) if k == key => Some(n),
+        _ => None,
+    })
+}
+
 // Returns the verified attribute entries, trapping if the signer is not II.
 fn ii_attributes() -> Vec<(String, Icrc3Value)> {
     let trusted = Principal::from_text(II_PRINCIPAL).unwrap();
@@ -324,6 +390,14 @@ fn ii_attributes() -> Vec<(String, Icrc3Value)> {
     }
 }
 
+// Pending nonces minted in register_begin, keyed by caller. See the
+// "Storing the nonce" note below for storage patterns. Provided by
+// the canister's stable-memory state (e.g. a StableBTreeMap).
+fn consume_pending_nonce(_caller: Principal) -> Option<Vec<u8>> {
+    // pendingNonces.remove(&caller)
+    unimplemented!("see Storing the nonce")
+}
+
 #[update]
 fn register_finish() -> String {
     let caller = msg_caller();
@@ -333,8 +407,22 @@ fn register_finish() -> String {
     let origin = lookup_text(&entries, "implicit:origin")
         .unwrap_or_else(|| ic_cdk::trap("missing origin"));
     if origin != "https://your-app.icp0.io" { ic_cdk::trap("Wrong origin"); }
-    // Compare implicit:nonce to the nonce minted in register_begin and check
-    // implicit:issued_at_timestamp_ns is within your freshness window (omitted).
+
+    // Verify implicit:nonce matches a nonce we minted for this caller, and consume it.
+    let nonce = lookup_blob(&entries, "implicit:nonce")
+        .unwrap_or_else(|| ic_cdk::trap("missing nonce"));
+    let expected = consume_pending_nonce(caller)
+        .unwrap_or_else(|| ic_cdk::trap("no pending registration for caller"));
+    if nonce != expected.as_slice() { ic_cdk::trap("Nonce mismatch"); }
+
+    // Verify implicit:issued_at_timestamp_ns is within a 5-minute freshness window.
+    let issued_at_ns: u64 = lookup_nat(&entries, "implicit:issued_at_timestamp_ns")
+        .unwrap_or_else(|| ic_cdk::trap("missing timestamp"))
+        .0.clone().try_into()
+        .unwrap_or_else(|_| ic_cdk::trap("timestamp out of range"));
+    if ic_cdk::api::time() > issued_at_ns + 300_000_000_000 {
+        ic_cdk::trap("Bundle too old");
+    }
 
     let email = lookup_text(&entries, "email")
         .unwrap_or_else(|| ic_cdk::trap("missing email"));
