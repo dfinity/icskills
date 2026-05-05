@@ -9,12 +9,16 @@ jobs:
   check-motoko:
     name: Check caffeinelabs/motoko
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
+        id: app-token
+        with:
+          app-id: ${{ vars.PR_AUTOMATION_BOT_PUBLIC_APP_ID }}
+          private-key: ${{ secrets.PR_AUTOMATION_BOT_PUBLIC_PRIVATE_KEY }}
 
       - name: Get latest motoko release tag
         id: latest
@@ -22,7 +26,7 @@ jobs:
           TAG=$(gh release view --repo caffeinelabs/motoko --json tagName -q .tagName)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Get current pinned tag
         id: current
@@ -54,18 +58,20 @@ jobs:
         run: |
           TAG="${{ steps.latest.outputs.tag }}"
           RESULT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/ref/tags/${TAG}" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+            -H "Authorization: Bearer $GH_TOKEN" | \
             python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
           OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
           OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
           if [ "$OBJ_TYPE" = "tag" ]; then
             COMMIT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/tags/${OBJ_SHA}" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+              -H "Authorization: Bearer $GH_TOKEN" | \
               python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
           else
             COMMIT="$OBJ_SHA"
           fi
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Fetch upstream files and build diff
         if: steps.check.outputs.needed == 'true'
@@ -116,13 +122,12 @@ jobs:
             fi
           done
 
-
       - name: Create sync PR
         if: steps.check.outputs.needed == 'true'
         run: |
           BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "pr-automation-bot-public[bot]"
+          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}"
           git push -u origin "$BRANCH"
@@ -130,17 +135,21 @@ jobs:
             --title "chore: sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}" \
             --body-file /tmp/pr-body.md
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
   check-mops:
     name: Check caffeinelabs/mops
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
+        id: app-token
+        with:
+          app-id: ${{ vars.PR_AUTOMATION_BOT_PUBLIC_APP_ID }}
+          private-key: ${{ secrets.PR_AUTOMATION_BOT_PUBLIC_PRIVATE_KEY }}
 
       - name: Get latest mops release tag
         id: latest
@@ -148,7 +157,7 @@ jobs:
           TAG=$(gh release list --repo caffeinelabs/mops --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("cli-"))] | first | .tagName')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Get current pinned tag
         id: current
@@ -180,18 +189,20 @@ jobs:
         run: |
           TAG="${{ steps.latest.outputs.tag }}"
           RESULT=$(curl -sf "https://api.github.com/repos/caffeinelabs/mops/git/ref/tags/${TAG}" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+            -H "Authorization: Bearer $GH_TOKEN" | \
             python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
           OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
           OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
           if [ "$OBJ_TYPE" = "tag" ]; then
             COMMIT=$(curl -sf "https://api.github.com/repos/caffeinelabs/mops/git/tags/${OBJ_SHA}" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+              -H "Authorization: Bearer $GH_TOKEN" | \
               python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
           else
             COMMIT="$OBJ_SHA"
           fi
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Fetch upstream file and build diff
         if: steps.check.outputs.needed == 'true'
@@ -234,8 +245,8 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         run: |
           BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "pr-automation-bot-public[bot]"
+          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}"
           git push -u origin "$BRANCH"
@@ -243,4 +254,4 @@ jobs:
             --title "chore: sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}" \
             --body-file /tmp/pr-body.md
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
