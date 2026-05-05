@@ -14,7 +14,9 @@ metadata:
      Last synced: 2026-05-04
      Sections owned by icskills (do not overwrite from upstream):
      M0141 / M0145 / do?{} / variant tag / transient var /
-     Runtime.envVar / Text.join / List.get vs List.at -->
+     Runtime.envVar / Text.join / List.get vs List.at
+     References owned by icskills (not from upstream, do not delete):
+     references/examples.md, references/control-flow.md, references/type-conversions.md -->
 
 # Motoko Language
 
@@ -216,7 +218,7 @@ import Debug "mo:core/Debug"; import Runtime "mo:core/Runtime";
 
 **Import requirement**: Dot-notation methods only work when the module is imported. `myArray.find(...)` requires `import Array "mo:core/Array"`; iterator chaining requires `import Iter "mo:core/Iter"`; `myBool.toText()` requires `import Bool "mo:core/Bool"`. The error message hints at the missing import (M0072).
 
-Full API signatures: [references/api-reference.md](references/api-reference.md).
+Full API signatures: [mops.one/core](https://mops.one/core).
 
 ### Collections
 
@@ -355,7 +357,7 @@ let ?backendId = Runtime.envVar("PUBLIC_CANISTER_ID:backend")
 
 ## Additional References
 
-- **API signatures**: [references/api-reference.md](references/api-reference.md) — complete mo:core function signatures
+- **API signatures**: [mops.one/core](https://mops.one/core) — live mo:core function signatures (authoritative)
 - **Working examples**: [references/examples.md](references/examples.md) — full actors, multi-file architecture, todo app, timers
 - **Control flow**: [references/control-flow.md](references/control-flow.md) — switch, for loops, break/continue
 - **Type conversions**: [references/type-conversions.md](references/type-conversions.md) — Nat/Int size conversions
