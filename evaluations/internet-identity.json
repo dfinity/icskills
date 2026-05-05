@@ -85,7 +85,8 @@
       "prompt": "I have an admin allowlist of email addresses. I want to gate a sensitive update method on the caller's email being in that list. Show me how to request the email from II and check it on the backend.",
       "expected_behaviors": [
         "Requests verified_email (not just email) for access-gating use cases",
-        "Explains that email is whatever the user's II-linked account reports while verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — only verified_email is trustworthy for authorisation",
+        "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
+        "Explains that verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — that is what makes verified_email trustworthy for authorisation",
         "On the backend, looks up implicit:nonce, implicit:origin, signer (against rdmx6-jaaaa-aaaaa-aaadq-cai), and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
         "Does NOT recommend reading the email field as a substitute for verified_email"
       ]

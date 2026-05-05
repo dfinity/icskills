@@ -47,7 +47,10 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 10. **Substituting `{tid}` in the Microsoft scoped-key prefix.** The `microsoft` OpenID provider URL is the literal string `https://login.microsoftonline.com/{tid}/v2.0` — `{tid}` is part of the URL, not a tenant-ID placeholder you fill in. Bundle keys returned by `scopedKeys({ openIdProvider: 'microsoft' })` look like `openid:https://login.microsoftonline.com/{tid}/v2.0:email` exactly, and the backend must look up that literal key. Replacing `{tid}` with a tenant GUID will silently miss every attribute lookup.
 
-11. **Treating `email` as verified.** `email` and `verified_email` are distinct keys. `email` is whatever the user's II-linked account reports; `verified_email` is only present when the source OpenID provider (e.g., Google) marked the email as verified, and II surfaces that signal through. Use `verified_email` for any access gating (admin allowlists, capability checks); use `email` only for soft uses like contact info or mailing lists. Request both for fallback behaviour: both are returned with the same value when the source provider marked the email as verified, only `email` when it didn't.
+11. **Treating `email` as verified.** `email` and `verified_email` are distinct keys.
+    - `email` is the raw email string from the user's II-linked account. II does not check it. Treat it as user-supplied input.
+    - `verified_email` is the same email as `email`, but only present when the source OpenID provider (e.g., Google) marked it as verified and II surfaced that signal through.
+    Use `verified_email` for any access gating (admin allowlists, capability checks). Use `email` only for soft uses like contact info or mailing lists. Request both for fallback behaviour: both are returned with the same value when the source provider marked the email as verified, only `email` when it didn't.
 
 ## Using II during local development
 
@@ -158,11 +161,11 @@ When the backend needs more than the user's principal (e.g., a verified email), 
 
 `requestAttributes({ keys })` accepts the following keys:
 
-| Key | Meaning | When to use |
+| Key | What it IS | When to use |
 |---|---|---|
-| `name` | The user's display name. | Personalisation in the UI. |
-| `email` | The user's email as reported by their II linked account. | Mailing-list signups, contact email, anything where you don't gate access on the email. |
-| `verified_email` | Same value as `email`, but only present when the source OpenID provider (e.g., Google) marked the email as verified, and II surfaces that signal. | Access gating (e.g. an admin allowlist by email). Treat this as the only trustworthy email for authorisation. |
+| `name` | The user's display name from the II-linked account. | Personalisation in the UI. |
+| `email` | The raw email string from the user's II-linked account. **II does not check it.** Treat as user-supplied input. | Mailing-list signups, contact email, anything where you don't gate access on the email. |
+| `verified_email` | The same email as `email`, but only present when the source OpenID provider (e.g., Google) marked it as verified and II surfaced that signal. **The provider's verification is what makes it trustworthy.** | Access gating (e.g. an admin allowlist by email). Treat this as the only trustworthy email for authorisation. |
 
 Request both `email` and `verified_email` if you want fallback behaviour: when the source provider marked the email as verified, both keys are present with the same value; when it didn't, only `email` is returned.
 
