@@ -159,7 +159,7 @@ When the backend needs more than the user's principal (e.g., a verified email), 
 
 #### Available attribute keys
 
-`requestAttributes({ keys })` accepts the following keys:
+`requestAttributes({ keys, nonce })` requires both `keys` and `nonce`: there is no default key set, you must pass an explicit list. The keys II currently accepts are:
 
 | Key | What it IS | When to use |
 |---|---|---|
@@ -177,7 +177,7 @@ Request both `email` and `verified_email` if you want fallback behaviour: when t
 | `'apple'` | `openid:https://appleid.apple.com:` |
 | `'microsoft'` | `openid:https://login.microsoftonline.com/{tid}/v2.0:` (the `{tid}` part is literal: do not substitute a tenant ID into it) |
 
-`keys` defaults to `['name', 'email', 'verified_email']`. Examples:
+The `keys` argument to `scopedKeys` is optional and defaults to `['name', 'email', 'verified_email']`. (`requestAttributes` itself has no default; the `scopedKeys` helper just builds the array you then pass to it.) Examples:
 
 - `scopedKeys({ openIdProvider: 'google' })` &rarr; `['openid:https://accounts.google.com:name', 'openid:https://accounts.google.com:email', 'openid:https://accounts.google.com:verified_email']`
 - `scopedKeys({ openIdProvider: 'google', keys: ['email'] })` &rarr; `['openid:https://accounts.google.com:email']`
