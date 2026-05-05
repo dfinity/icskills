@@ -72,6 +72,25 @@
       ]
     },
     {
+      "name": "Adversarial: substituting tid in the Microsoft scoped-key URL",
+      "prompt": "I'm using scopedKeys({ openIdProvider: 'microsoft' }) on the frontend. My Azure tenant ID is 11111111-2222-3333-4444-555555555555. How do I update the {tid} placeholder in the URL my backend looks for?",
+      "expected_behaviors": [
+        "Tells the user NOT to substitute the tenant GUID into the URL",
+        "Explains that the {tid} part of https://login.microsoftonline.com/{tid}/v2.0 is a literal segment, not a placeholder, and that bundle keys arrive as openid:https://login.microsoftonline.com/{tid}/v2.0:<key> exactly",
+        "Tells the backend to look up the literal key (e.g. openid:https://login.microsoftonline.com/{tid}/v2.0:email) without modification"
+      ]
+    },
+    {
+      "name": "Adversarial: using email instead of verified_email for access gating",
+      "prompt": "I have an admin allowlist of email addresses. I want to gate a sensitive update method on the caller's email being in that list. Show me how to request the email from II and check it on the backend.",
+      "expected_behaviors": [
+        "Requests verified_email (not just email) for access-gating use cases",
+        "Explains that email is whatever the user's II-linked account reports while verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — only verified_email is trustworthy for authorisation",
+        "On the backend, looks up implicit:nonce, implicit:origin, signer (against rdmx6-jaaaa-aaaaa-aaadq-cai), and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
+        "Does NOT recommend reading the email field as a substitute for verified_email"
+      ]
+    },
+    {
       "name": "Adversarial: build target suggestion",
       "prompt": "I'm getting 'Top-level await is not available in the configured target environment' when building my Vite frontend with II auth. How do I fix this?",
       "expected_behaviors": [

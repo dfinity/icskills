@@ -45,6 +45,10 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 9. **Reading attribute data without verifying the signer.** `msg_caller_info_data` (Rust) and `Prim.callerInfoData` (Motoko) return whatever bundle the caller provided. The IC verifies the signature, not the identity of the signer — any canister can produce a valid bundle. Check `msg_caller_info_signer` / `Prim.callerInfoSigner` against `rdmx6-jaaaa-aaaaa-aaadq-cai` (Internet Identity) before trusting any attribute, otherwise an attacker canister can forge attributes like `email = "admin@you.com"`.
 
+10. **Substituting `{tid}` in the Microsoft scoped-key prefix.** The `microsoft` OpenID provider URL is the literal string `https://login.microsoftonline.com/{tid}/v2.0` — `{tid}` is part of the URL, not a tenant-ID placeholder you fill in. Bundle keys returned by `scopedKeys({ openIdProvider: 'microsoft' })` look like `openid:https://login.microsoftonline.com/{tid}/v2.0:email` exactly, and the backend must look up that literal key. Replacing `{tid}` with a tenant GUID will silently miss every attribute lookup.
+
+11. **Treating `email` as verified.** `email` and `verified_email` are distinct keys. `email` is whatever the user's II-linked account reports; `verified_email` is only present when the source OpenID provider (e.g., Google) marked the email as verified, and II surfaces that signal through. Use `verified_email` for any access gating (admin allowlists, capability checks); use `email` only for soft uses like contact info or mailing lists. Request both for fallback behaviour: both are returned with the same value when the source provider marked the email as verified, only `email` when it didn't.
+
 ## Using II during local development
 
 You have two choices for local development:
@@ -149,6 +153,33 @@ init();
 ### Frontend: Requesting Identity Attributes
 
 When the backend needs more than the user's principal (e.g., a verified email), Internet Identity can return signed attributes alongside the delegation. The backend issues a nonce scoped to a specific action; the frontend requests the attributes during sign-in; the backend verifies the bundle when the user calls the protected method.
+
+#### Available attribute keys
+
+`requestAttributes({ keys })` accepts the following keys:
+
+| Key | Meaning | When to use |
+|---|---|---|
+| `name` | The user's display name. | Personalisation in the UI. |
+| `email` | The user's email as reported by their II linked account. | Mailing-list signups, contact email, anything where you don't gate access on the email. |
+| `verified_email` | Same value as `email`, but only present when the source OpenID provider (e.g., Google) marked the email as verified, and II surfaces that signal. | Access gating (e.g. an admin allowlist by email). Treat this as the only trustworthy email for authorisation. |
+
+Request both `email` and `verified_email` if you want fallback behaviour: when the source provider marked the email as verified, both keys are present with the same value; when it didn't, only `email` is returned.
+
+`scopedKeys({ openIdProvider, keys? })` rewrites the keys above into provider-scoped keys of the form `openid:<provider-url>:<key>`, so II returns the values from the linked OpenID account directly (with implicit consent, no extra prompt). Provider URLs:
+
+| Provider | URL prefix in the bundle keys |
+|---|---|
+| `'google'` | `openid:https://accounts.google.com:` |
+| `'apple'` | `openid:https://appleid.apple.com:` |
+| `'microsoft'` | `openid:https://login.microsoftonline.com/{tid}/v2.0:` (the `{tid}` part is literal: do not substitute a tenant ID into it) |
+
+`keys` defaults to `['name', 'email', 'verified_email']`. Examples:
+
+- `scopedKeys({ openIdProvider: 'google' })` &rarr; `['openid:https://accounts.google.com:name', 'openid:https://accounts.google.com:email', 'openid:https://accounts.google.com:verified_email']`
+- `scopedKeys({ openIdProvider: 'google', keys: ['email'] })` &rarr; `['openid:https://accounts.google.com:email']`
+
+The same `email` vs `verified_email` rule applies to scoped keys: use the verified variant when the email gates access.
 
 ```javascript
 import { AuthClient } from "@icp-sdk/auth/client";
