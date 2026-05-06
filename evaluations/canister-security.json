@@ -15,14 +15,14 @@
       ]
     },
     {
-      "name": "CallerGuard reentrancy in Rust",
-      "prompt": "Write a Rust ic-cdk canister function `withdraw` that calls an external ledger canister to transfer funds. It must be safe against reentrancy from the same caller. Show just the withdraw function and the CallerGuard type — no Candid export, no init.",
+      "name": "Adversarial: reentrancy guard with global boolean",
+      "prompt": "Here's my Motoko reentrancy protection. Is it correct?\n\n```motoko\nvar processing = false;\n\npublic shared ({ caller }) func withdraw(amount : Nat) : async Result<(), Text> {\n  if (processing) { return #err(\"request already in progress\") };\n  processing := true;\n  let result = await ledger.transfer(caller, amount);\n  processing := false;\n  #ok\n};\n```",
       "expected_behaviors": [
-        "Defines a CallerGuard struct that implements Drop to remove the caller from a shared set",
-        "Acquires the guard with a named binding like `let _guard = CallerGuard::new(caller)?`",
-        "Does NOT use `let _ = CallerGuard::new(caller)?` (would immediately drop and release the lock)",
-        "Locks or deducts balance before the inter-canister await",
-        "Returns an error (not a panic) if the caller already has a pending request"
+        "Identifies that a single global boolean blocks ALL callers, not just the same caller making concurrent requests",
+        "Identifies that if the callback traps, `processing` stays true permanently, locking the canister for everyone",
+        "States that lock release must be in a `finally` block to survive callback traps",
+        "Recommends per-caller locking (e.g., a Set of in-flight principals) so only the same caller is blocked",
+        "Does NOT accept the code as a correct reentrancy guard"
       ]
     },
     {
@@ -36,13 +36,14 @@
       ]
     },
     {
-      "name": "TOCTOU: deduct before await in Motoko",
-      "prompt": "Write a Motoko function `send` that transfers an amount from the caller's balance to a recipient by calling an external ledger canister. The canister tracks balances in a Map. Show just the send function — assume the map and ledger canister reference already exist.",
+      "name": "Adversarial: balance deducted after await",
+      "prompt": "Here's my Motoko send function. Is there a security issue?\n\n```motoko\npublic shared ({ caller }) func send(recipient : Principal, amount : Nat) : async Result<(), Text> {\n  let bal = switch (Map.get(balances, Principal.compare, caller)) {\n    case null { return #err(\"no balance\") };\n    case (?b) { b };\n  };\n  if (bal < amount) { return #err(\"insufficient funds\") };\n  let _ = await ledger.transfer(recipient, amount);\n  Map.put(balances, Principal.compare, caller, bal - amount);\n  #ok\n};\n```",
       "expected_behaviors": [
-        "Deducts the sender's balance BEFORE the inter-canister await, not after",
-        "Does NOT read balance before await and re-check or deduct after await returns",
-        "Handles failure (restores balance or rolls back) if the await call fails or traps",
-        "Uses try/finally or equivalent to ensure the balance is restored on failure"
+        "Identifies the TOCTOU vulnerability: balance is checked before the await but only deducted after",
+        "Explains that other messages can interleave during the await, allowing the same balance to be spent multiple times",
+        "States that the balance must be deducted BEFORE the inter-canister call",
+        "Mentions that a try/finally or equivalent is needed to restore the balance if the call fails or traps",
+        "Does NOT accept the code as safe"
       ]
     },
     {
@@ -77,12 +78,13 @@
       ]
     },
     {
-      "name": "Backup controller at deploy",
-      "prompt": "I'm deploying a production canister to mainnet for the first time. What's the most critical security configuration to set at deploy time? Give me a one-item answer — just the single most important thing.",
+      "name": "Adversarial: serializing heap data in preupgrade",
+      "prompt": "My Motoko canister stores user profiles in a HashMap and serializes them during upgrades. Is there a risk with this pattern as the user base grows?\n\n```motoko\nactor {\n  var profiles : HashMap.HashMap<Principal, Profile> = HashMap.HashMap(0, Principal.equal, Principal.hash);\n  stable var profilesStable : [(Principal, Profile)] = [];\n\n  system func preupgrade() {\n    profilesStable := Iter.toArray(profiles.entries());\n  };\n\n  system func postupgrade() {\n    profiles := HashMap.fromIter(profilesStable.vals(), 0, Principal.equal, Principal.hash);\n    profilesStable := [];\n  };\n};\n```",
       "expected_behaviors": [
-        "Identifies adding a backup controller (or governance canister) as the critical step",
-        "Explains that losing the sole controller key permanently prevents future upgrades",
-        "Provides the command or approach to add a second controller"
+        "Identifies that if the HashMap grows large enough, preupgrade will exceed the instruction limit and trap",
+        "Explains that a trapping preupgrade makes the canister permanently non-upgradeable",
+        "Recommends using `persistent actor` in modern Motoko to eliminate manual serialization entirely",
+        "Does NOT say this pattern is safe as data grows"
       ]
     }
   ],
