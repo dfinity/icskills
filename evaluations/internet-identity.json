@@ -87,7 +87,7 @@
         "Requests verified_email (not just email) for access-gating use cases",
         "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
         "Explains that verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — that is what makes verified_email trustworthy for authorisation",
-        "On the backend, looks up implicit:nonce, implicit:origin, signer (against rdmx6-jaaaa-aaaaa-aaadq-cai), and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
+        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — either via an explicit `msg_caller_info_signer()` check (Rust) or via `mo:core/CallerAttributes` with the `trusted_attribute_signers` env var configured (Motoko) — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
         "Does NOT recommend reading the email field as a substitute for verified_email"
       ]
     },

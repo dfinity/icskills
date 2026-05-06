@@ -17,6 +17,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 ## Prerequisites
 
 - `@icp-sdk/auth` (>= 7.0.0), `@icp-sdk/core` (>= 5.3.0) (`AttributesIdentity` was added in core v5.3.0)
+- For the Motoko backend example: `mo:core` >= 2.5.0 (the `CallerAttributes` module that wraps the caller-info primitives behind a single trusted-signer-aware call)
 
 ## Canister IDs
 
@@ -43,7 +44,9 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 8. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` matches an action it actually started. Have the backend mint and return the nonce from a `registerBegin`-style method, and check it against the bundle's implicit fields when the user calls the protected method.
 
-9. **Reading attribute data without verifying the signer.** `msg_caller_info_data` (Rust) and `Prim.callerInfoData` (Motoko) return whatever bundle the caller provided. The IC verifies the signature, not the identity of the signer — any canister can produce a valid bundle. Check `msg_caller_info_signer` / `Prim.callerInfoSigner` against `rdmx6-jaaaa-aaaaa-aaadq-cai` (Internet Identity) before trusting any attribute, otherwise an attacker canister can forge attributes like `email = "admin@you.com"`.
+9. **Reading attribute data without verifying the signer.** The IC verifies the signature, not the identity of the signer — any canister can produce a valid bundle. The trusted signer is `rdmx6-jaaaa-aaaaa-aaadq-cai` (Internet Identity). The check looks different per language:
+    - **Motoko**: prefer `mo:core/CallerAttributes`. `CallerAttributes.getAttributes<system>()` returns `?Blob` and traps if the signer isn't listed in the canister's `trusted_attribute_signers` env var. Configure that env var in `icp.yaml` (see "Backend: Reading Identity Attributes"). Don't roll your own check on top of `Prim.callerInfoSigner` unless you have a reason to.
+    - **Rust**: there is no CDK wrapper yet. Always check `msg_caller_info_signer()` against the trusted issuer principal before reading `msg_caller_info_data()`. Skipping this lets an attacker canister forge attributes like `email = "admin@you.com"`.
 
 10. **Substituting `{tid}` in the Microsoft scoped-key prefix.** The `microsoft` OpenID provider URL is the literal string `https://login.microsoftonline.com/{tid}/v2.0` — `{tid}` is part of the URL, not a tenant-ID placeholder you fill in. Bundle keys returned by `scopedKeys({ openIdProvider: 'microsoft' })` look like `openid:https://login.microsoftonline.com/{tid}/v2.0:email` exactly, and the backend must look up that literal key. Replacing `{tid}` with a tenant GUID will silently miss every attribute lookup.
 
@@ -249,42 +252,64 @@ const authClient = new AuthClient({
   openIdProvider: "google",
 });
 
-const nonce = await backend.registerBegin();
+// Wrap the flow in an async function so this code works with any bundler
+// target (Vite defaults to es2020 which lacks top-level await).
+async function registerWithGoogle(backend, appCanisterId, appIdl) {
+  const nonce = await backend.registerBegin();
 
-const signInPromise = authClient.signIn({
-  maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000),
-});
-// Requests name, email, and verified_email from the Google account
-// linked to the user's Internet Identity. The keys returned by
-// scopedKeys() arrive in the bundle as e.g.
-// "openid:https://accounts.google.com:email".
-const attributesPromise = authClient.requestAttributes({
-  keys: scopedKeys({ openIdProvider: "google" }),
-  nonce,
-});
+  const signInPromise = authClient.signIn({
+    maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000),
+  });
+  // Requests name, email, and verified_email from the Google account
+  // linked to the user's Internet Identity. The keys returned by
+  // scopedKeys() arrive in the bundle as e.g.
+  // "openid:https://accounts.google.com:email".
+  const attributesPromise = authClient.requestAttributes({
+    keys: scopedKeys({ openIdProvider: "google" }),
+    nonce,
+  });
 
-const identity = await signInPromise;
-const { data, signature } = await attributesPromise;
+  const identity = await signInPromise;
+  const { data, signature } = await attributesPromise;
 
-const identityWithAttributes = new AttributesIdentity({
-  inner: identity,
-  attributes: { data, signature },
-  signer: { canisterId: Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai") },
-});
+  const identityWithAttributes = new AttributesIdentity({
+    inner: identity,
+    attributes: { data, signature },
+    signer: { canisterId: Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai") },
+  });
 
-const agent = await HttpAgent.create({ identity: identityWithAttributes });
-const app = Actor.createActor(appIdl, { agent, canisterId: appCanisterId });
-await app.registerFinish();
+  const agent = await HttpAgent.create({ identity: identityWithAttributes });
+  const app = Actor.createActor(appIdl, { agent, canisterId: appCanisterId });
+  await app.registerFinish();
+}
 ```
 
 ### Backend: Reading Identity Attributes
 
 When the frontend wraps an identity with `AttributesIdentity`, every call carries a verified attribute bundle.
 
-- **Rust** (ic-cdk >= 0.20.1): `ic_cdk::api::msg_caller_info_data() -> Vec<u8>`, `ic_cdk::api::msg_caller_info_signer() -> Option<Principal>`.
-- **Motoko** (compiler with caller_info prims, e.g. >= 0.16): `Prim.callerInfoData<system>() : Blob`, `Prim.callerInfoSigner<system>() : Blob` (empty when no signer).
+- **Rust** (ic-cdk >= 0.20.1): `ic_cdk::api::msg_caller_info_data() -> Vec<u8>`, `ic_cdk::api::msg_caller_info_signer() -> Option<Principal>`. There is no CDK wrapper for the trusted-signer check yet; do it explicitly in your code.
+- **Motoko** (mo:core >= 2.5.0): `CallerAttributes.getAttributes<system>() : ?Blob` from `mo:core/CallerAttributes`. The wrapper returns `null` when no attributes are attached and **traps** when the signer isn't listed in the canister's `trusted_attribute_signers` env var, so you don't write the signer check yourself. Underlying primitives `Prim.callerInfoData<system>` / `Prim.callerInfoSigner<system>` are still exposed by the compiler but the wrapper is preferred.
 
-**Always verify the signer first.** The IC checks that the bundle is signed; it does not check *who* signed it. Any canister can produce a valid bundle. Trust the data only when the signer matches the trusted issuer (`rdmx6-jaaaa-aaaaa-aaadq-cai` for Internet Identity).
+**Always verify the signer.** The IC checks that the bundle is signed; it does not check *who* signed it. Any canister can produce a valid bundle. Trust the data only when the signer matches the trusted issuer (`rdmx6-jaaaa-aaaaa-aaadq-cai` for Internet Identity). Motoko handles this for you via the env var; Rust requires an explicit `msg_caller_info_signer()` check.
+
+#### Configuring `trusted_attribute_signers` (Motoko path)
+
+`CallerAttributes.getAttributes` reads the trusted signer list from the canister's `trusted_attribute_signers` environment variable (a comma-separated list of principal texts). Set it in your `icp.yaml` so `icp deploy` configures the canister automatically:
+
+```yaml
+canisters:
+  - name: backend
+    settings:
+      environment_variables:
+        # Mainnet II principal. List both the mainnet principal and your local II
+        # canister principal if your tests run against a locally deployed II.
+        trusted_attribute_signers: "rdmx6-jaaaa-aaaaa-aaadq-cai"
+```
+
+If the env var is unset, `getAttributes` traps with `"trusted_attribute_signers environment variable is not set"`. That trap is the right behavior: an unconfigured canister should not trust attribute bundles.
+
+#### Reading the bundle
 
 The data is Candid-encoded as an ICRC-3 `Value::Map` whose entries are:
 - `implicit:nonce` (Blob) — must match a nonce your canister minted for this user/action.
@@ -294,13 +319,12 @@ The data is Candid-encoded as an ICRC-3 `Value::Map` whose entries are:
 - OpenID-scoped keys (e.g., `"openid:https://accounts.google.com:email"`) when `scopedKeys` was used on the frontend.
 
 ```motoko
-import Prim "mo:prim";
+import CallerAttributes "mo:core/CallerAttributes";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
+import Time "mo:core/Time";
 
 persistent actor {
-  let iiPrincipal = Principal.fromText("rdmx6-jaaaa-aaaaa-aaadq-cai");
-
   type Icrc3Value = {
     #Nat : Nat;
     #Int : Int;
@@ -332,17 +356,17 @@ persistent actor {
   };
 
   // Pending nonces minted in registerBegin, keyed by caller. See the
-  // "Storing the nonce" note below for storage patterns.
-  // type PendingNonces = Map<Principal, Blob>;
-  // var pendingNonces : PendingNonces = ...;
+  // "Storing the nonce" note below for storage patterns. Provided by
+  // the canister's stable-memory state (e.g. a Map<Principal, Blob>).
+  func consumePendingNonce(_caller : Principal) : ?Blob {
+    // pendingNonces.remove(caller)
+    Runtime.trap("see Storing the nonce");
+  };
 
-  // Returns the verified attribute map, trapping if the signer is not II.
+  // Returns the verified attribute map. Traps when the signer is not
+  // listed in the canister's trusted_attribute_signers env var.
   func iiAttributes() : [(Text, Icrc3Value)] {
-    let signer = Prim.callerInfoSigner<system>();
-    if (signer.size() == 0 or Principal.fromBlob(signer) != iiPrincipal) {
-      Runtime.trap("Untrusted attribute signer");
-    };
-    let data = Prim.callerInfoData<system>();
+    let ?data = CallerAttributes.getAttributes<system>() else Runtime.trap("no trusted attributes");
     let ?value : ?Icrc3Value = from_candid (data) else Runtime.trap("invalid attribute bundle");
     let #Map(entries) = value else Runtime.trap("expected attribute map");
     entries
@@ -357,13 +381,13 @@ persistent actor {
 
     // Verify implicit:nonce matches a nonce we minted for this caller, and consume it.
     let ?nonce = lookupBlob(entries, "implicit:nonce") else Runtime.trap("missing nonce");
-    let ?expected = pendingNonces.remove(caller) else Runtime.trap("no pending registration for caller");
+    let ?expected = consumePendingNonce(caller) else Runtime.trap("no pending registration for caller");
     if (nonce != expected) Runtime.trap("Nonce mismatch");
 
     // Verify implicit:issued_at_timestamp_ns is within a 5-minute freshness window.
+    // Time.now() is Int (nanoseconds); Nat <: Int so the comparison works directly.
     let ?issuedAt = lookupNat(entries, "implicit:issued_at_timestamp_ns") else Runtime.trap("missing timestamp");
-    let nowNs = Nat64.toNat(Prim.time());
-    if (nowNs > issuedAt + 300_000_000_000) Runtime.trap("Bundle too old");
+    if (Time.now() > issuedAt + 300_000_000_000) Runtime.trap("Bundle too old");
 
     let ?email = lookupText(entries, "email") else Runtime.trap("missing email");
     "Registered " # Principal.toText(caller) # " with email " # email
