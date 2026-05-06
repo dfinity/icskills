@@ -20,7 +20,7 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
 
 ## Security Pitfalls
 
-1. **Relying on `canister_inspect_message` for access control.** This hook runs on a single replica without full consensus. A malicious boundary node can bypass it by forwarding the message anyway. It is also never called for inter-canister calls, query calls, or management canister calls. Always duplicate access checks inside every update method. Use `inspect_message` only as a cycle-saving optimization, never as a security boundary.
+1. **Relying on `canister_inspect_message` for access control.** This hook runs on a single replica without full consensus. If that replica is malicious, it can simply skip the check and execute the update call without any message inspection. It is also never called for inter-canister calls, query calls, or management canister calls. Always duplicate access checks inside every update method. Use `inspect_message` only as a cycle-saving optimization, never as a security boundary.
 
 2. **Forgetting to reject the anonymous principal.** Every endpoint that requires authentication must check that the caller is not the anonymous principal (`2vxsx-fae`). In Motoko use `Principal.isAnonymous(caller)`, in Rust compare `msg_caller() != Principal::anonymous()`. Without this, unauthenticated callers can invoke protected methods — and if the canister uses the caller principal as an identity key (e.g., for balances), the anonymous principal becomes a shared identity anyone can use.
 

@@ -1,0 +1,114 @@
+{
+  "skill": "canister-security",
+  "description": "Evaluation cases for the canister-security skill. Tests whether agents avoid documented pitfalls: relying on inspect_message for access control, missing CallerGuard reentrancy protection, the let _ = footgun that silently disables locking, TOCTOU state mutations across await, callback trap cleanup placement, and fetchRootKey in production.",
+
+  "output_evals": [
+    {
+      "name": "Adversarial: inspect_message as access control",
+      "prompt": "My Motoko canister has admin methods that should only be callable by the owner. Can I use canister_inspect_message to reject unauthorized callers and skip the check inside each method? Just explain whether this is the right approach.",
+      "expected_behaviors": [
+        "Says inspect_message is NOT sufficient as an access control boundary",
+        "Explains that inspect_message runs on a single replica without consensus, so a malicious node can skip the check",
+        "States that access checks must be duplicated inside every update method",
+        "Mentions that inspect_message is only useful as a cycle-saving optimization",
+        "Does NOT suggest relying on inspect_message as the sole guard for admin methods"
+      ]
+    },
+    {
+      "name": "CallerGuard reentrancy in Rust",
+      "prompt": "Write a Rust ic-cdk canister function `withdraw` that calls an external ledger canister to transfer funds. It must be safe against reentrancy from the same caller. Show just the withdraw function and the CallerGuard type — no Candid export, no init.",
+      "expected_behaviors": [
+        "Defines a CallerGuard struct that implements Drop to remove the caller from a shared set",
+        "Acquires the guard with a named binding like `let _guard = CallerGuard::new(caller)?`",
+        "Does NOT use `let _ = CallerGuard::new(caller)?` (would immediately drop and release the lock)",
+        "Locks or deducts balance before the inter-canister await",
+        "Returns an error (not a panic) if the caller already has a pending request"
+      ]
+    },
+    {
+      "name": "Adversarial: let _ = CallerGuard footgun",
+      "prompt": "Here's my Rust CallerGuard usage. Is it correct?\n\n```rust\n#[update]\nasync fn withdraw(amount: u64) -> Result<(), String> {\n    let caller = msg_caller();\n    let _ = CallerGuard::new(caller)?;\n    transfer_funds(caller, amount).await\n}\n```",
+      "expected_behaviors": [
+        "Identifies that `let _ = CallerGuard::new(caller)?` is incorrect",
+        "Explains that `let _` (without a name) immediately drops the guard, releasing the lock before the async call begins",
+        "Shows the fix: use a named binding like `let _guard = CallerGuard::new(caller)?`",
+        "Does NOT validate or accept the original code as correct"
+      ]
+    },
+    {
+      "name": "TOCTOU: deduct before await in Motoko",
+      "prompt": "Write a Motoko function `send` that transfers an amount from the caller's balance to a recipient by calling an external ledger canister. The canister tracks balances in a Map. Show just the send function — assume the map and ledger canister reference already exist.",
+      "expected_behaviors": [
+        "Deducts the sender's balance BEFORE the inter-canister await, not after",
+        "Does NOT read balance before await and re-check or deduct after await returns",
+        "Handles failure (restores balance or rolls back) if the await call fails or traps",
+        "Uses try/finally or equivalent to ensure the balance is restored on failure"
+      ]
+    },
+    {
+      "name": "Callback trap: where to release a lock",
+      "prompt": "In my Motoko canister I acquire a lock at the start of an update function, make an inter-canister call with await, then release the lock. If I put the lock release after the await in normal code flow, what happens if the callback traps? Where should the release go?",
+      "expected_behaviors": [
+        "Explains that if the callback traps, code after the await does NOT run",
+        "States the lock release must go in a `finally` block",
+        "Explains that `finally` runs in cleanup context where state changes persist even when the callback traps",
+        "Warns that putting cleanup in `catch` only is not sufficient — `catch` does not run on a trap"
+      ]
+    },
+    {
+      "name": "Adversarial: fetchRootKey in production",
+      "prompt": "I'm building an IC frontend. Is this agent setup safe for production?\n\n```typescript\nconst agent = new HttpAgent({ host: 'https://ic0.app' });\nawait agent.fetchRootKey();\n```\n\nJust answer yes or no and explain why.",
+      "expected_behaviors": [
+        "Answers NO — this is not safe for production",
+        "Explains that on mainnet the root key is hardcoded in the agent",
+        "Explains that calling fetchRootKey() on mainnet trusts whatever the replica returns, enabling a man-in-the-middle attack",
+        "States fetchRootKey() should only be called in local development",
+        "Does NOT suggest the code is acceptable as-is"
+      ]
+    },
+    {
+      "name": "Anonymous principal check",
+      "prompt": "Here's a Rust endpoint that stores user data. Is there a security issue?\n\n```rust\n#[update]\nfn set_profile(name: String) {\n    let caller = msg_caller();\n    PROFILES.with(|p| p.borrow_mut().insert(caller, name));\n}\n```",
+      "expected_behaviors": [
+        "Identifies that the anonymous principal (2vxsx-fae) is not rejected",
+        "Explains that any unauthenticated caller can write to the shared anonymous principal's slot",
+        "Shows or describes the fix: check `msg_caller() != Principal::anonymous()` before inserting",
+        "Does NOT accept the original code as correct"
+      ]
+    },
+    {
+      "name": "Backup controller at deploy",
+      "prompt": "I'm deploying a production canister to mainnet for the first time. What's the most critical security configuration to set at deploy time? Give me a one-item answer — just the single most important thing.",
+      "expected_behaviors": [
+        "Identifies adding a backup controller (or governance canister) as the critical step",
+        "Explains that losing the sole controller key permanently prevents future upgrades",
+        "Provides the command or approach to add a second controller"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I add access control to my canister?",
+      "Is my canister vulnerable to reentrancy attacks?",
+      "How do I protect my canister against cycle drain?",
+      "Secure the admin methods in my Rust canister",
+      "How do I safely handle inter-canister calls with state mutations?",
+      "What security patterns should I use for a DeFi canister?",
+      "Can I use canister_inspect_message to block unauthorized calls?",
+      "How do I prevent my canister from becoming non-upgradeable?",
+      "Reject anonymous callers in my canister endpoints"
+    ],
+    "should_not_trigger": [
+      "How do I deploy my canister to mainnet?",
+      "Set up Internet Identity authentication for my dapp",
+      "How does stable memory work in Rust canisters?",
+      "Implement ICRC-1 token transfer in my canister",
+      "How does IC subnet consensus work?",
+      "Add a React frontend to my canister",
+      "How do I store large data on the IC?",
+      "Generate TypeScript bindings for my canister"
+    ]
+  }
+}
