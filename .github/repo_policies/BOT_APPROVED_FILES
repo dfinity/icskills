@@ -1,0 +1,7 @@
+# Files the pr-automation-bot-public bot is allowed to change via automated PRs.
+
+# sync-upstream: opens sync-check PRs when upstream repos release new versions
+skills/motoko/*
+skills/migrating-motoko/*
+skills/migrating-motoko-enhanced/*
+skills/mops-cli/*
