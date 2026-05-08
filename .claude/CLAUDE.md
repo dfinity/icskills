@@ -80,6 +80,25 @@ Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-c
 
 Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Security. New categories are allowed — the validator warns but does not block.
 
+## Brand Guidelines
+
+When making any changes to the website (`src/`, `public/`, or any file that affects what is served at `https://skills.internetcomputer.org/`), you MUST read and follow the brand skills before writing any copy, choosing colors, or applying design tokens:
+
+- `.brand/icp-brand-voice/SKILL.md` — tone, language, and messaging rules
+- `.brand/icp-brand-design/SKILL.md` — visual identity, design tokens, and layout rules (see also `.brand/icp-brand-design/assets/tokens.css`)
+
+These files are not published to the site. They are internal guidelines for agents contributing to this repo.
+
+**Exception for this site:** `skills.internetcomputer.org` is a docs/skills site, not a marketing page. Dark mode served as the OS default (`prefers-color-scheme: dark`) is acceptable here, overriding the brand guide's marketing-site rule that light is always the default.
+
+## OG Image
+
+`public/og-image.svg` is the source file. `public/og-image.png` is what is actually served (social platforms don't support SVG for `og:image`). After any change to `og-image.svg`, regenerate the PNG:
+
+```bash
+rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png
+```
+
 ## Tech Stack
 
 - **Framework**: [Astro](https://astro.build/) — static site generator, zero JS by default

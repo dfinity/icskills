@@ -8,7 +8,7 @@ import { SITE, absUrl } from '../lib/site';
 export const GET: APIRoute = async () => {
   const all = await getAllSkills();
   const parts: string[] = [];
-  parts.push(`# ${SITE.name} — full corpus`);
+  parts.push(`# ${SITE.name}: full corpus`);
   parts.push('');
   parts.push(`> ${SITE.tagline}`);
   parts.push(`> Publisher: ${SITE.author.name} (${SITE.author.url})`);
