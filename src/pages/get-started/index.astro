@@ -7,7 +7,7 @@ const all = await getAllSkills();
 const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
 ---
 <BaseLayout
-  title={`Get started — ${SITE.shortName}`}
+  title={`Get started: ${SITE.shortName}`}
   description="How to use ICP Skills with a coding agent, fetch a skill, or wire up the index programmatically."
   canonicalPath="/get-started/"
 >
@@ -27,7 +27,7 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
   </p>
 
   <h2>Use the CLI</h2>
-  <p>Install all skills at once — auto-detects your agents (Claude Code, Cursor, Copilot, and more) and writes the skills into their rules files:</p>
+  <p>Install all skills at once. Auto-detects your agents (Claude Code, Cursor, Copilot, and more) and writes the skills into their rules files:</p>
   <pre><code>npx skills add dfinity/icskills</code></pre>
   <p>Or install a single skill by name:</p>
   <pre><code>npx skills add dfinity/icskills --skill ckbtc</code></pre>
@@ -60,7 +60,7 @@ Skills are updated frequently - do not rely on a previously cached version.`}</c
     <li>Browse the <a href="/">skills index</a> and find something that matches your task.</li>
     <li>Open the skill page (for example, <a href={skillUrl(sample.id)}>{sample.data.metadata.title}</a>).</li>
     <li>
-      Paste the raw Markdown URL into your agent, or share the page URL — any competent
+      Paste the raw Markdown URL into your agent, or share the page URL. Any competent
       LLM-aware client can fetch either.
     </li>
   </ol>
@@ -68,12 +68,12 @@ Skills are updated frequently - do not rely on a previously cached version.`}</c
   <h2>Fetching a skill by name</h2>
   <p>URLs are stable and predictable:</p>
   <ul>
-    <li><code>{absUrl('/skills/')}{'{name}/'}</code> — human-readable HTML page</li>
-    <li><code>{absUrl('/skills/')}{'{name}/SKILL.md'}</code> — raw Markdown (Content-Type: text/markdown)</li>
-    <li><code>{absUrl('/api/skills/')}{'{name}.json'}</code> — structured metadata (JSON)</li>
+    <li><code>{absUrl('/skills/')}{'{name}/'}</code>: human-readable HTML page</li>
+    <li><code>{absUrl('/skills/')}{'{name}/SKILL.md'}</code>: raw Markdown (Content-Type: text/markdown)</li>
+    <li><code>{absUrl('/api/skills/')}{'{name}.json'}</code>: structured metadata (JSON)</li>
   </ul>
   <p>
-    Do not construct these URLs by guessing slugs — fetch <a href="/api/skills.json"><code>/api/skills.json</code></a>
+    Do not construct these URLs by guessing slugs. Fetch <a href="/api/skills.json"><code>/api/skills.json</code></a>
     or <a href="/llms.txt"><code>/llms.txt</code></a> and use the URLs it returns.
   </p>
 

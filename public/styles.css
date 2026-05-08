@@ -3,48 +3,64 @@
    No frameworks — keeps the DOM close to what crawlers and LLMs see. */
 
 :root {
-  /* Light mode (canonical) */
-  --bg: #f8f5ef;         /* warm paper */
-  --bg-elev: #fdfaf3;
-  --fg: #1a1714;
-  --muted: #6b6660;
-  --rule: #e5ddcf;
-  --accent: #cc5a2b;     /* burnt orange */
-  --accent-dim: #f2d7c7;
+  /* Light theme — editorial parchment (mirrors internetcomputer.org) */
+  --bg: #faf9f5;              /* parchment */
+  --bg-sunk: #f3f1ea;         /* alternating sections, sunk panels */
+  --bg-elev: #ffffff;         /* cards that read as raised */
+  --fg: #1a1a1a;              /* ink, never pure black */
+  --fg-secondary: #4b4943;    /* meta strips, secondary copy */
+  --muted: #868078;           /* captions, attributions */
+  --rule: #e7e3da;            /* warm ivory hairline */
+  --rule-strong: #4b4943;
+  --accent: #a8482b;          /* rust, the single brand color */
+  --accent-strong: #8e3b22;
+  --accent-dim: rgba(168, 72, 43, 0.10);
   --code-bg: #efe8da;
-  --code-fg: #1a1714;
+  --code-fg: #1a1a1a;
 
-  --serif: "Newsreader", "Source Serif 4", "EB Garamond", ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --serif: "Newsreader", Charter, Georgia, Cambria, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-  --max: 68rem;
-  --max-prose: 48rem;
+  --max: 1280px;
+  --max-prose: 720px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14110d;
-    --bg-elev: #1b1812;
-    --fg: #f0ebe0;
-    --muted: #a29a8d;
-    --rule: #2d2820;
-    --accent: #ff7a4d;
-    --accent-dim: #3a2218;
-    --code-bg: #1b1812;
-    --code-fg: #f0ebe0;
-  }
+/* Explicit light override */
+[data-theme="light"] {
+  --bg: #faf9f5; --bg-sunk: #f3f1ea; --bg-elev: #ffffff;
+  --fg: #1a1a1a; --fg-secondary: #4b4943; --muted: #868078;
+  --rule: #e7e3da; --rule-strong: #4b4943;
+  --accent: #a8482b; --accent-strong: #8e3b22; --accent-dim: rgba(168, 72, 43, 0.10);
+  --code-bg: #efe8da; --code-fg: #1a1a1a;
+}
+
+[data-theme="dark"] {
+  --bg: #14110d;              /* deep bark */
+  --bg-sunk: #1b1812;
+  --bg-elev: #1b1812;
+  --fg: #f0ebe0;              /* bone */
+  --fg-secondary: #a29a8d;
+  --muted: #7a7367;
+  --rule: #2d2820;
+  --rule-strong: #5a5446;
+  --accent: #c25a37;          /* ember, passes AA on dark surfaces */
+  --accent-strong: #d96a45;
+  --accent-dim: rgba(194, 90, 55, 0.16);
+  --code-bg: #1b1812;
+  --code-fg: #f0ebe0;
 }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+::selection { background: var(--accent); color: #fff; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--sans);
   font-size: 17px;
-  line-height: 1.65;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -58,12 +74,12 @@ body {
 .skip-link:focus { left: 0; top: 0; }
 
 a {
-  color: var(--accent);
-  text-decoration: underline;
+  color: inherit;
+  text-decoration-color: var(--rule-strong);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
-a:hover { text-decoration-thickness: 2px; }
+a:hover { color: var(--accent); }
 
 code, pre { font-family: var(--mono); font-size: 0.92em; }
 code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; color: var(--code-fg); }
@@ -80,6 +96,20 @@ h2 { font-size: 1.7rem; margin: 2rem 0 0.85rem; }
 h3 { font-size: 1.25rem; margin: 1.4rem 0 0.5rem; }
 h4 { font-size: 1.05rem; }
 
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+  background: none; border: none; cursor: pointer; padding: 0.25rem;
+  color: var(--fg); opacity: 0.75; display: inline-flex; align-items: center;
+  border-radius: 4px; font-size: 1.1rem; line-height: 1;
+  transition: color .15s, opacity .15s;
+}
+.theme-toggle:hover { opacity: 1; color: var(--accent); }
+/* Default (dark): show sun, hide moon */
+.theme-toggle .icon-moon { display: none; }
+/* Light mode: show moon, hide sun */
+[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+[data-theme="light"] .theme-toggle .icon-moon { display: inline-flex; }
+
 /* ---------- Header ---------- */
 .site-header { border-bottom: 1px solid var(--rule); background: var(--bg); }
 .site-header .container {
@@ -89,7 +119,7 @@ h4 { font-size: 1.05rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.65rem; text-decoration: none; color: var(--fg); }
 .brand-mark { width: 26px; height: 26px; flex-shrink: 0; }
 .brand-name {
-  font-family: var(--serif); font-weight: 600;
+  font-family: var(--sans); font-weight: 500;
   letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.98rem;
 }
 .site-header nav {
@@ -118,10 +148,10 @@ h4 { font-size: 1.05rem; }
 .hero { padding: 5rem 0 3rem; max-width: 52rem; }
 .hero .eyebrow {
   font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.18em;
-  color: var(--accent); font-weight: 600;
+  color: var(--fg-secondary); font-weight: 500;
 }
 .hero h1 {
-  font-family: var(--serif); font-weight: 500;
+  font-family: var(--serif); font-weight: 380;
   font-size: clamp(2.6rem, 5vw, 4.4rem); line-height: 1.05;
   margin: 1.25rem 0 1.5rem; letter-spacing: -0.015em;
 }
@@ -131,14 +161,16 @@ h4 { font-size: 1.05rem; }
 
 .cta {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.7rem 1.25rem; border-radius: 6px; text-decoration: none;
-  font-weight: 500; font-size: 0.95rem; border: 1px solid transparent;
+  padding: 0.65rem 1.25rem; border-radius: 9999px; text-decoration: none;
+  font-family: var(--sans); font-weight: 600; font-size: 0.78rem;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border: 1px solid transparent;
   transition: background .15s, border-color .15s, color .15s;
 }
-.cta-primary { background: var(--fg); color: var(--bg); }
-.cta-primary:hover { background: var(--accent); color: #fff; }
-.cta-secondary { color: var(--fg); padding: 0.7rem 0.25rem; text-decoration: none; }
-.cta-secondary:hover { color: var(--accent); }
+.cta-primary { background: var(--accent); color: #fff; }
+.cta-primary:hover { background: var(--accent-strong); color: #fff; }
+.cta-secondary { border-color: var(--rule-strong); color: var(--fg); text-decoration: none; }
+.cta-secondary:hover { color: var(--accent); border-color: var(--accent); }
 
 /* ---------- Stats bar ---------- */
 .stats {
@@ -149,10 +181,10 @@ h4 { font-size: 1.05rem; }
 .stat { padding: 0 1rem; border-right: 1px solid var(--rule); }
 .stat:last-child { border-right: none; }
 .stat-num {
-  font-family: var(--serif); font-size: 2.2rem; font-weight: 500; letter-spacing: -0.02em;
+  font-family: var(--mono); font-size: 2.2rem; font-weight: 500; letter-spacing: -0.02em;
   color: var(--accent);
 }
-.stat-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.stat-label { color: var(--muted); font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; }
 
 @media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, 1fr); row-gap: 1.25rem; }
@@ -163,7 +195,7 @@ h4 { font-size: 1.05rem; }
 .callout {
   margin: 3rem 0; padding: 1.5rem 1.75rem;
   border-left: 3px solid var(--accent); background: var(--accent-dim);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 6px 6px 0;
 }
 .callout p {
   margin: 0; font-family: var(--serif); font-size: 1.15rem; font-style: italic; color: var(--fg);
@@ -231,7 +263,7 @@ h4 { font-size: 1.05rem; }
 .skill-header { padding-bottom: 1.5rem; margin-bottom: 1.75rem; }
 .skill-category {
   font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.18em;
-  color: var(--accent); font-weight: 600; margin: 0 0 0.5rem;
+  color: var(--fg-secondary); font-weight: 500; margin: 0 0 0.5rem;
 }
 .skill-header h1 {
   font-family: var(--serif); font-weight: 500;
@@ -260,7 +292,7 @@ h4 { font-size: 1.05rem; }
 }
 .skill-formats ul { display: flex; gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
 .skill-formats a {
-  padding: 0.3rem 0.6rem; border: 1px solid var(--rule); border-radius: 4px;
+  padding: 0.3rem 0.6rem; border: 1px solid var(--rule); border-radius: 6px;
   text-decoration: none; background: var(--bg-elev); color: var(--fg); font-size: 0.82rem;
 }
 .skill-formats a:hover { border-color: var(--accent); color: var(--accent); }

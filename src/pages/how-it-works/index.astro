@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { SITE } from '../../lib/site';
 ---
 <BaseLayout
-  title={`How it works — ${SITE.shortName}`}
+  title={`How it works: ${SITE.shortName}`}
   description="How the ICP Skills database works: sourcing, trust model, and how agents and humans consume the content."
   canonicalPath="/how-it-works/"
 >
@@ -27,9 +27,9 @@ import { SITE } from '../../lib/site';
   <h2>Representations</h2>
   <p>Every skill is available in three formats, linked from the skill page and cross-referenced in JSON-LD:</p>
   <ul>
-    <li><strong>HTML</strong> (<code>/skills/&lt;slug&gt;/</code>) — human-readable page with navigation.</li>
-    <li><strong>Markdown</strong> (<code>/skills/&lt;slug&gt;/SKILL.md</code>) — the original SKILL.md, served as <code>text/markdown</code>. Prefer this for LLM ingestion.</li>
-    <li><strong>JSON</strong> (<code>/api/skills/&lt;slug&gt;.json</code>) — structured metadata, stable shape.</li>
+    <li><strong>HTML</strong> (<code>/skills/&lt;slug&gt;/</code>): human-readable page with navigation.</li>
+    <li><strong>Markdown</strong> (<code>/skills/&lt;slug&gt;/SKILL.md</code>): the original SKILL.md, served as <code>text/markdown</code>. Prefer this for LLM ingestion.</li>
+    <li><strong>JSON</strong> (<code>/api/skills/&lt;slug&gt;.json</code>): structured metadata, stable shape.</li>
   </ul>
   <p>
     A full index is available at <a href="/api/skills.json"><code>/api/skills.json</code></a>,
@@ -39,7 +39,7 @@ import { SITE } from '../../lib/site';
 
   <h2>Trust model</h2>
   <p>
-    The site is designed to be an <em>honest mirror</em>, not a new source of truth. Three properties
+    The site is designed to be an honest mirror, not a new source of truth. Three properties
     make it trustworthy for both AI and human readers:
   </p>
   <ol>
@@ -48,8 +48,8 @@ import { SITE } from '../../lib/site';
     <li><strong>No anti-bot gating.</strong> The site is pre-rendered static HTML. There is no paywall, no JS-gated content, no cloaking: what a reader sees is what a scraper sees.</li>
   </ol>
   <p>
-    The site is served from an Internet Computer asset canister. Responses are <em>certified</em> by
-    the subnet — HTTP gateways and clients can verify integrity cryptographically, independently of
+    The site is served from an Internet Computer asset canister. Responses are certified by
+    the subnet. HTTP gateways and clients can verify integrity cryptographically, independently of
     any centralised server.
   </p>
 

@@ -29,6 +29,6 @@ export const GET: APIRoute = async (context) => {
     })),
     customData:
       `<language>${SITE.locale}</language>` +
-      `<copyright>Licensed ${SITE.license.spdx} — ${SITE.author.name}</copyright>`,
+      `<copyright>Licensed ${SITE.license.spdx}, ${SITE.author.name}</copyright>`,
   });
 };

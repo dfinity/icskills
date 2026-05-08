@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#f8f5ef"/>
-  <g transform="translate(80, 140)">
-    <circle cx="30" cy="30" r="28" fill="#cc5a2b"/>
-    <circle cx="62" cy="30" r="28" fill="#1a1714" opacity="0.85" style="mix-blend-mode:multiply"/>
+  <rect width="1200" height="630" fill="#14110d"/>
+  <g fill="#f0ebe0" font-family="Newsreader, Charter, Georgia, serif">
+    <text x="80" y="300" font-size="96" font-weight="400" letter-spacing="-1.5">ICP Skills</text>
+    <text x="80" y="378" font-size="34" font-style="italic" fill="#c25a37">A library for agents, and the humans who direct them.</text>
   </g>
-  <g fill="#1a1714" font-family="Newsreader, Source Serif 4, ui-serif, Georgia, serif">
-    <text x="80" y="300" font-size="76" font-weight="500" letter-spacing="-1">Internet Computer Skills</text>
-    <text x="80" y="380" font-size="34" font-style="italic" fill="#cc5a2b">A library for agents — and the humans who direct them.</text>
-  </g>
-  <g fill="#6b6660" font-family="Inter, -apple-system, sans-serif" font-size="22">
-    <text x="80" y="550" letter-spacing="3" font-weight="600" fill="#cc5a2b">ICP SKILLS</text>
-    <text x="80" y="580">skills.internetcomputer.org · maintained by DFINITY · Apache-2.0</text>
+  <g font-family="Inter, system-ui, sans-serif">
+    <text x="80" y="550" font-size="18" letter-spacing="3" font-weight="500" fill="#c25a37">ICP SKILLS</text>
+    <text x="80" y="578" font-size="20" fill="#7a7367">skills.internetcomputer.org · DFINITY Foundation · Apache-2.0</text>
   </g>
 </svg>
