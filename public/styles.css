@@ -17,6 +17,8 @@
   --accent-dim: rgba(168, 72, 43, 0.10);
   --code-bg: #efe8da;
   --code-fg: #1a1a1a;
+  --grid-line: rgba(26, 26, 26, 0.04);  /* hero grid paper texture */
+  --grid-tile: 24px;
 
   --serif: "Newsreader", Charter, Georgia, Cambria, "Times New Roman", serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -49,6 +51,7 @@
   --accent-dim: rgba(194, 90, 55, 0.16);
   --code-bg: #1b1812;
   --code-fg: #f0ebe0;
+  --grid-line: rgba(240, 235, 224, 0.05);
 }
 
 * { box-sizing: border-box; }
@@ -144,8 +147,21 @@ h4 { font-size: 1.05rem; }
 .site-footer a:hover { color: var(--accent); border-color: var(--accent); }
 .machine-links { white-space: normal; }
 
+/* ---------- Grid paper overlay ---------- */
+.grid-paper-overlay {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  opacity: 0.8;
+  background-image:
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-tile) var(--grid-tile);
+  background-position: -1px -1px;
+  background-repeat: repeat;
+}
+
 /* ---------- Home: hero ---------- */
-.hero { padding: 5rem 0 3rem; max-width: 52rem; }
+.hero { padding: 5rem 0 3rem; position: relative; overflow: hidden; }
+.hero-inner { max-width: 52rem; position: relative; z-index: 1; }
 .hero .eyebrow {
   font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.18em;
   color: var(--fg-secondary); font-weight: 500;
