@@ -1,8 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <!-- Grid paper texture -->
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse" x="-1" y="-1">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(240,235,224,0.05)" stroke-width="1"/>
+    </pattern>
+  </defs>
   <rect width="1200" height="630" fill="#14110d"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.8"/>
+  <!-- Content -->
   <g fill="#f0ebe0" font-family="Newsreader, Charter, Georgia, serif">
     <text x="80" y="300" font-size="96" font-weight="400" letter-spacing="-1.5">ICP Skills</text>
-    <text x="80" y="378" font-size="34" font-style="italic" fill="#c25a37">A library for agents, and the humans who direct them.</text>
+    <text x="80" y="378" font-size="34" font-style="italic">
+      <tspan fill="#f0ebe0">A library for </tspan><tspan fill="#c25a37">agents</tspan><tspan fill="#f0ebe0">, and the humans who direct them.</tspan>
+    </text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
     <text x="80" y="550" font-size="18" letter-spacing="3" font-weight="500" fill="#c25a37">ICP SKILLS</text>
