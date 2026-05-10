@@ -1,0 +1,109 @@
+{
+  "skill": "migrating-motoko-enhanced",
+  "description": "Evaluation cases for the migrating-motoko-enhanced skill. Tests whether agents generate correct migration chain files, configure mops.toml correctly, write actor bodies without initializers, handle field semantics, compose migrations correctly, and avoid common pitfalls.",
+
+  "output_evals": [
+    {
+      "name": "First migration (Init)",
+      "prompt": "I'm starting a new Motoko canister with enhanced migration. My actor has `var count : Nat` and `var name : Text`. Write the initial migration file.",
+      "expected_behaviors": [
+        "Creates a migration file with a timestamp prefix (e.g. `20250101_000000_Init.mo`)",
+        "Migration function takes empty input `(_ : {})`",
+        "Migration function returns `{ count : Nat; name : Text }` with default values",
+        "Explains that the actor body must declare these variables WITHOUT initializers"
+      ]
+    },
+    {
+      "name": "Add a field",
+      "prompt": "Write a migration file that adds an `email : Text` field (default empty string) to a Motoko canister that uses enhanced migration. The canister already has `name : Text` and `count : Nat` from a previous Init migration.",
+      "expected_behaviors": [
+        "Creates a new migration file with a timestamp prefix",
+        "Migration function takes empty input `(_ : {})`",
+        "Migration function returns `{ email : Text }` with `{ email = \"\" }`",
+        "Notes that only the NEW field needs to appear in this migration (existing fields carry through)"
+      ]
+    },
+    {
+      "name": "Actor body without initializers",
+      "prompt": "Show me what a Motoko actor looks like when using enhanced migration. It should have `var count : Nat`, `var name : Text`, and `var email : Text`.",
+      "expected_behaviors": [
+        "Actor variables are declared WITHOUT initializers: `var count : Nat;` not `var count : Nat = 0;`",
+        "Does NOT use `stable` keyword",
+        "Does NOT use `(with migration = ...)` inline syntax",
+        "Explains that values come from the migration chain"
+      ]
+    },
+    {
+      "name": "mops.toml configuration",
+      "prompt": "How do I configure mops.toml for enhanced migration on my `backend` canister with migrations in `src/backend/migrations`?",
+      "expected_behaviors": [
+        "Shows `[canisters.backend.migrations]` section with `chain` path",
+        "Does NOT put `--enhanced-migration` in `[moc].args` — it must be per-canister",
+        "Notes that mops injects `--enhanced-migration` automatically when `[canisters.<name>.migrations]` is configured",
+        "Warns not to duplicate `--enhanced-migration` in `[canisters.backend].args`"
+      ]
+    },
+    {
+      "name": "Migration chain composition",
+      "prompt": "Explain how migrations compose in the enhanced migration system. I have Init (adds `name : Text`), then AddEmail (adds `email : Text`), then RenameField (renames `name` to `displayName`). What is the final actor state?",
+      "expected_behaviors": [
+        "Explains the carry-through rule: fields not mentioned in a migration pass through unchanged",
+        "Final state is `{ displayName : Text; email : Text }`",
+        "Explains that compiler verifies each migration's input is compatible with previous output",
+        "Notes that `name` is consumed by RenameField and `displayName` is produced"
+      ]
+    },
+    {
+      "name": "Workflow with mops",
+      "prompt": "Walk me through the full workflow for adding a new field to my Motoko canister using enhanced migration.",
+      "expected_behaviors": [
+        "Mentions `mops migrate new <Name>` to create the migration file",
+        "Mentions editing the migration file",
+        "Mentions `mops check --fix` to verify chain consistency",
+        "Mentions `mops build` to compile",
+        "Mentions `mops migrate freeze` after successful deployment"
+      ]
+    },
+    {
+      "name": "Adversarial: actor with initializers",
+      "prompt": "Write a Motoko actor with enhanced migration that has `var count : Nat = 0` and `var name : Text = \"\"`.",
+      "expected_behaviors": [
+        "Removes the initializers — declares `var count : Nat;` and `var name : Text;` without values",
+        "Explains that initializers are not allowed with enhanced migration — values come from the chain",
+        "Points to the Init migration file for the initial values"
+      ]
+    },
+    {
+      "name": "Adversarial: mixing inline and enhanced migration",
+      "prompt": "Can I use `(with migration = ...)` inline syntax together with `--enhanced-migration` in the same canister?",
+      "expected_behaviors": [
+        "Explains these two approaches cannot be combined",
+        "States the restriction clearly: `--enhanced-migration` and inline `(with migration = ...)` are mutually exclusive",
+        "Recommends choosing one: inline for simple one-shot migrations, enhanced for multi-step chains"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I set up enhanced migration for my Motoko canister?",
+      "Write a migration file for my migrations/ directory",
+      "I'm getting Compatibility error M0170 with --enhanced-migration",
+      "How does the migration chain work in Motoko?",
+      "Configure mops.toml for enhanced migration",
+      "How do I add a field to my canister using the migrations directory?",
+      "Explain mops migrate new and mops migrate freeze",
+      "My actor has enhanced migration but I need to rename a field"
+    ],
+    "should_not_trigger": [
+      "Write a Motoko canister with a counter",
+      "How do I use Map in Motoko?",
+      "I need a one-shot migration for a single field rename",
+      "How do I write (with migration = ...) for my actor?",
+      "Deploy my canister to mainnet",
+      "How do I pin the moc version in mops.toml?",
+      "Set up Internet Identity in my app"
+    ]
+  }
+}

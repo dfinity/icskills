@@ -1,0 +1,127 @@
+{
+  "skill": "mops-cli",
+  "description": "Evaluation cases for the mops-cli skill. Tests whether agents produce correct mops.toml configuration, use canister names (not file paths) with mops check, pin toolchain versions, use mo:core (not mo:base), handle migration workflows correctly, and avoid documented pitfalls.",
+  "output_evals": [
+    {
+      "name": "New project setup",
+      "prompt": "I want to start a new Motoko project. Walk me through setting up mops from scratch, including the mops.toml and the initial commands. Just the setup, no deployment steps.",
+      "expected_behaviors": [
+        "Runs `mops init -y` to initialize the project",
+        "Uses `mops toolchain use moc latest` (or a specific version) \u2014 NOT the bare `mops toolchain use moc` which opens an interactive picker",
+        "Includes `[toolchain]` section in mops.toml with a concrete `moc` version",
+        "Includes `[dependencies]` with `core` (not `base`)",
+        "Includes `[canisters.<name>]` with a `main` field pointing to the entry file",
+        "Runs `mops add core` to install the core library",
+        "Does NOT suggest installing mo:base"
+      ]
+    },
+    {
+      "name": "Adding a dependency",
+      "prompt": "How do I add the `serde` package at version 1.3.0 as a regular dependency to my mops project?",
+      "expected_behaviors": [
+        "Uses `mops add serde@1.3.0`",
+        "Explains that this updates both mops.toml and mops.lock",
+        "Does NOT suggest manually editing mops.toml to add the dependency"
+      ]
+    },
+    {
+      "name": "Running mops check",
+      "prompt": "I have a canister called `backend` defined in mops.toml. How do I type-check it and auto-fix any lint issues?",
+      "expected_behaviors": [
+        "Uses `mops check backend` (canister name, NOT a file path like src/backend/main.mo)",
+        "Mentions `mops check --fix` for auto-fixing",
+        "Does NOT pass a file path like `mops check src/backend/main.mo`",
+        "Explains that per-canister args from mops.toml are applied automatically when using the canister name"
+      ]
+    },
+    {
+      "name": "Pinning moc version",
+      "prompt": "How do I pin the moc compiler to version 1.5.1 in my mops project?",
+      "expected_behaviors": [
+        "Uses `mops toolchain use moc 1.5.1`",
+        "Shows the resulting `[toolchain]` section in mops.toml with `moc = \"1.5.1\"`",
+        "Does NOT suggest editing mops.toml manually without running the command",
+        "Does NOT use `mops toolchain use moc` without a version (that opens an interactive picker)"
+      ]
+    },
+    {
+      "name": "Updating moc to latest",
+      "prompt": "I want to update moc to the latest version. What's the correct command?",
+      "expected_behaviors": [
+        "If moc is already in [toolchain]: uses `mops toolchain update moc`",
+        "Alternatively mentions `mops toolchain use moc latest` which works both for first-time pin and updates",
+        "Does NOT use `mops toolchain use moc` without a version",
+        "Clarifies that `toolchain update` only works when moc already has a [toolchain] entry"
+      ]
+    },
+    {
+      "name": "Migration workflow",
+      "prompt": "I changed my Motoko actor's stable state and mops check is now failing with a migration hint. How do I create a new migration called `AddEmailField` for the `backend` canister, and what do I do after deploying?",
+      "expected_behaviors": [
+        "Runs `mops migrate new AddEmailField backend` to create the migration",
+        "Mentions editing the generated migration file",
+        "Runs `mops check` to verify the migration resolves the error",
+        "Runs `mops build` after check passes",
+        "After deploying, runs `mops migrate freeze backend` to move next-migration to the permanent chain",
+        "Does NOT suggest adding `--enhanced-migration` to mops.toml manually (mops auto-injects it)"
+      ]
+    },
+    {
+      "name": "Warning flag configuration",
+      "prompt": "How do I enable M0236 (dot notation), M0237 (redundant explicit arguments), and M0223 (redundant type instantiation) as warnings for all canisters in my project?",
+      "expected_behaviors": [
+        "Adds `-W=M0223,M0236,M0237` to the `args` list under `[moc]` in mops.toml",
+        "Places this in `[moc]` (global), not in `[canisters.<name>]`",
+        "Explains that -W= enables these optional checks as warnings",
+        "Does NOT place warning flags in [build].args (those are build-only)"
+      ]
+    },
+    {
+      "name": "Adversarial: file path to mops check",
+      "prompt": "I want to type-check my canister. My main file is at src/backend/main.mo. I'll run: mops check src/backend/main.mo. Is that right?",
+      "expected_behaviors": [
+        "Corrects the approach \u2014 for canister projects, always use the canister name, not a file path",
+        "Provides the correct command: `mops check backend` (using the canister name from mops.toml)",
+        "Explains that using a file path bypasses per-canister args in mops.toml",
+        "Does NOT endorse `mops check src/backend/main.mo` as correct for canister projects"
+      ]
+    },
+    {
+      "name": "Adversarial: mo:base import",
+      "prompt": "I need a HashMap in my Motoko canister. Can I use `import HashMap \"mo:base/HashMap\"`?",
+      "expected_behaviors": [
+        "Explains that mo:base is deprecated and should not be used",
+        "Recommends importing Map from mo:core: `import Map \"mo:core/Map\"`",
+        "Notes that HashMap from mo:base is not stable and cannot be used in persistent actors",
+        "Does NOT confirm that mo:base/HashMap is a valid choice"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I set up a mops.toml for my Motoko project?",
+      "I need to add a package dependency with mops",
+      "How do I pin the moc compiler version?",
+      "My mops check is failing, how do I fix it?",
+      "What's the mops command to update all dependencies?",
+      "How do I create a new migration with mops migrate?",
+      "Set up lintoko in my mops project",
+      "How do I run tests with mops?",
+      "Configure moc flags for my Motoko canister",
+      "My mops.lock file is stale, what do I do?",
+      "How do I add a dev dependency with mops?",
+      "How do I run tests in my Motoko project?"
+    ],
+    "should_not_trigger": [
+      "Write a Motoko persistent actor with a counter",
+      "How do I deploy my canister to mainnet?",
+      "What is the Internet Computer consensus mechanism?",
+      "How do I set up HTTPS outcalls in my canister?",
+      "Add Internet Identity login to my frontend",
+      "How do stable variables work in Motoko?",
+      "What's the icp.yaml config for a Rust canister?",
+      "How do I implement ICRC-1 token transfer?"
+    ]
+  }
+}

@@ -16,6 +16,7 @@ const KNOWN_CATEGORIES = [
   "Governance",
   "Infrastructure",
   "Integration",
+  "Motoko",
   "Security",
 ];
 

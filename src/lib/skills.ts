@@ -23,6 +23,7 @@ const CATEGORY_ORDER = [
   'Governance',
   'Infrastructure',
   'Integration',
+  'Motoko',
   'Security',
   'Tokens',
   'Wallet',
