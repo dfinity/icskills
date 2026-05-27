@@ -154,6 +154,37 @@
         "Uses record spread `{ todo with completed = true }` for toggling",
         "Does NOT import from mo:base"
       ]
+    },
+    {
+      "name": "Multi-file architecture",
+      "prompt": "How should I structure a new Motoko backend for a product catalog? Just describe the file layout and show what main.mo should look like — no deploy steps.",
+      "expected_behaviors": [
+        "Describes a multi-file layout: types.mo, lib/, mixins/, main.mo",
+        "Product type belongs in types.mo, NOT inline in main.mo",
+        "Domain logic (e.g. create, toPublic) belongs in lib/ using the self pattern",
+        "Public canister API belongs in a mixin file in mixins/",
+        "main.mo contains only state declarations and mixin includes — NO public methods"
+      ]
+    },
+    {
+      "name": "Module with self pattern",
+      "prompt": "Write a Motoko lib/User.mo module for a User type with id (Principal), name (Text), and isActive (Bool). Include new() and a deactivate function. Just the module code.",
+      "expected_behaviors": [
+        "The deactivate (or ban) function takes `self : User` as its first parameter",
+        "Shows or describes dot-notation call: `user.deactivate()` or `user.ban()`",
+        "new() initializes isActive to true",
+        "Module is stateless — no state stored directly in the module"
+      ]
+    },
+    {
+      "name": "Adversarial: monolithic actor",
+      "prompt": "I want to put user registration, profile updates, and a messaging system all in a single main.mo Motoko file. Is this the right approach, or should I structure it differently?",
+      "expected_behaviors": [
+        "Recommends against a single-file monolithic actor",
+        "Suggests splitting into types.mo, lib/ modules, mixins/, and a thin main.mo",
+        "Explains that main.mo should only hold state bindings and mixin includes — no public methods",
+        "Does NOT produce a single-file actor with all logic inline"
+      ]
     }
   ],
   "trigger_evals": {

@@ -34,12 +34,14 @@ Motoko is the native programming language for Internet Computer canisters. It ha
 - `system func preupgrade/postupgrade` — not needed with enhanced orthogonal persistence
 - Module-function style for `self` parameters — don't write `List.add(list, item)` or `Map.get(map, key)`
 - Manual field-by-field record copying — use record spread (`{ self with ... }`)
+- Single-file monolithic actors — split logic into `lib/` modules and `mixins/`
 
 **ALWAYS use:**
 - `mo:core` library 2.0.0+
 - `--default-persistent-actors` flag in mops.toml
+- Enhanced orthogonal persistence — state persists across upgrades without the `stable` keyword
 - Contextual dot notation — `list.add(item)`, `map.get(key)`
-- Principled architecture — `types.mo`, `lib/`, `mixins/`, `main.mo`
+- Principled multi-file architecture — `types.mo`, `lib/`, `mixins/`, `main.mo`
 
 ## Prerequisites
 
@@ -179,6 +181,36 @@ For scalar mutable state shared between actor and mixin, pass a record with `var
 
 See [references/examples.md](references/examples.md) for a complete multi-file architecture.
 
+## Module with Self Pattern
+
+Stateless domain logic lives in `lib/` modules. Functions that operate on a value use `self` as the first parameter, enabling dot notation at the call site:
+
+```motoko
+// lib/User.mo
+module {
+  public type User = Types.User;
+
+  public func new(id : Principal, name : Text) : User {
+    { id; var name; var isActive = true };
+  };
+
+  public func ban(self : User) {
+    self.isActive := false;
+  };
+
+  public func rename(self : User, newName : Text) {
+    self.name := newName;
+  };
+};
+
+// Usage in main.mo or a mixin:
+let user = UserLib.new(caller, "Alice");
+user.ban();
+user.rename("Bob");
+```
+
+Keep lib modules stateless — they receive state through `self` parameters and never hold it directly. State ownership stays in the actor.
+
 ## Architecture Pattern
 
 ```
@@ -186,6 +218,8 @@ backend/
 ├── types.mo         # Central schema, public/internal type pairs
 ├── lib/             # Domain logic (stateless, self pattern)
 ├── mixins/          # Service layer (state injected via parameters)
+├── migrations/      # Enhanced migration files (--enhanced-migration projects)
+│   └── <timestamp>_<Name>.mo
 └── main.mo          # Composition root (state owner, NO public methods)
 ```
 
@@ -354,6 +388,20 @@ Always declare collection variables with opaque type aliases (`List.List<T>`, `M
 let ?backendId = Runtime.envVar("PUBLIC_CANISTER_ID:backend")
   else Debug.trap("PUBLIC_CANISTER_ID:backend not set");
 ```
+
+## Best Practices
+
+1. Always `mo:core`, never `mo:base`
+2. No `stable` keyword — enhanced orthogonal persistence handles state
+3. No single-file monolithic actors — split into `types.mo`, `lib/`, `mixins/`, `main.mo`
+4. Dot notation for all `self`-parameter functions
+5. Never annotate lambda argument types — compiler infers them
+6. Never pass implicit comparison arguments explicitly
+7. Unwrap with `switch` + `Runtime.trap()` on unexpected null; return `?T` when absence is expected
+8. Mixins for the public API surface; plain `lib/` modules for stateless domain logic
+9. `public query func` for read-only, `public func` with `async` for state changes
+10. Iterator chaining to avoid intermediate collections
+11. Record spread `{ self with ... }` instead of copying fields manually
 
 ## Additional References
 
