@@ -109,6 +109,15 @@
         "Advises NOT to add derivationOrigin or ii-alternative-origins for this",
         "Suggests the different principal is likely caused by a different passkey or device"
       ]
+    },
+    {
+      "name": "local vs mainnet II usage",
+      "prompt": "When deploying to the local network, how do I integrate with II?",
+      "expected_behaviors": [
+        "Suggest using mainnet's id.ai because the network launcher after icp-cli 0.2.4 supports verifying mainnet signatures",
+        "Explains that a local instance of internet identity can be deployed by setting `ii: true` in icp.yaml",
+        "Explains that the local instance of internet identity is accessible at http://id.ai.localhost:8000"
+      ]
     }
   ],
 
