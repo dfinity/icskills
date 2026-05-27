@@ -17,7 +17,7 @@
       "name": "Local II URL",
       "prompt": "My Internet Identity login works on mainnet but fails locally — the popup never opens. What URL should I use for the local identityProvider? Just the URL and a one-line explanation.",
       "expected_behaviors": [
-        "Local URL uses the well-known II canister ID: http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8000",
+        "Local URL uses the well-known II canister ID: http://id.ai.localhost:8000",
         "Does NOT suggest dynamic lookup via ic_env cookie, environment variables, or dfx commands for the II canister ID — it is a well-known, hardcoded ID"
       ]
     },
