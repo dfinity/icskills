@@ -114,12 +114,27 @@ diff /tmp/upstream.md skills/<skill-name>/SKILL.md
 
 | Skill | Upstream repo | Tag | Commit |
 |-------|--------------|-----|--------|
-| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
-| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
-| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.7.0 | `1e65e26346b35927869dda044bb76763627c2c57` |
-| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.1 | `c947a79fc68d2d4d5b0d3bad10e23370b8134364` |
+| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
+| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
+| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
+| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.2 | `59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352` |
+
+**Release-only policy**: Only sync from tagged releases. Never apply changes from `main`/`master` between releases — those are unreleased and may be experimental or unstable.
 
 When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements **except for sections listed as "owned by icskills"**, (4) update the upstream comment with the new tag and SHA, (5) update the table above.
+
+### Agent checklist for upstream sync
+
+When syncing a skill from a new upstream release, verify all of these before committing:
+
+- [ ] **Upstream comment updated** — Tag, Commit (full SHA), Last synced date, Sections owned
+- [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
+- [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
+- [ ] **Icskills-owned sections preserved** — Sections listed in "Sections owned by icskills" are NOT overwritten from upstream
+- [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
+- [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
+- [ ] **Evals reviewed** — Check if new upstream content introduces patterns agents would get wrong without the skill. Strong candidates: new commands, changed defaults, renamed APIs, new pitfalls. Add eval cases where the delta is non-trivial.
+- [ ] **CLAUDE.md table updated** — Update the upstream sources table with new tag and SHA
 
 ### What icskills changes vs upstream
 

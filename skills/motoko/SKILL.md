@@ -2,19 +2,18 @@
 name: motoko
 description: "Motoko language pitfalls, modern syntax, and architecture patterns for the Internet Computer. Covers persistent actors, stable types, mo:core standard library, dot notation, mixins, and common compilation errors. Use when writing Motoko canister code, fixing Motoko compiler errors, or generating Motoko actors. Do NOT use for deployment, icp.yaml, or CLI commands."
 license: Apache-2.0
-compatibility: "moc >= 1.2.0, core >= 2.0.0"
+compatibility: "moc >= 1.7.0, core >= 2.5.0"
 metadata:
   title: Motoko Language
   category: Motoko
 ---
 
 <!-- Upstream: https://github.com/caffeinelabs/motoko
-     Tag: 1.7.0  Commit: 1e65e26346b35927869dda044bb76763627c2c57
+     Tag: 1.8.2  Commit: f45204bc75c8e0ed5198fd2fe7265679af71814a
      File: .agents/skills/writing-motoko/SKILL.md
-     Last synced: 2026-05-04
+     Last synced: 2026-05-28
      Sections owned by icskills (do not overwrite from upstream):
-     M0141 / M0145 / do?{} / variant tag / transient var /
-     Runtime.envVar / Text.join / List.get vs List.at
+     M0145 / do?{} / Runtime.envVar / Text.join / List.get vs List.at
      References owned by icskills (not from upstream, do not delete):
      references/examples.md, references/control-flow.md, references/type-conversions.md -->
 
@@ -43,6 +42,8 @@ Motoko is the native programming language for Internet Computer canisters. It ha
 - Contextual dot notation — `list.add(item)`, `map.get(key)`
 - Principled multi-file architecture — `types.mo`, `lib/`, `mixins/`, `main.mo`
 
+**For actor upgrades/migrations:** load `migrating-motoko` for inline migration or `migrating-motoko-enhanced` for multi-migration with `--enhanced-migration`. Under `--enhanced-migration`, actor fields **cannot** have initializers — declare them as `var x : T;` and set initial values in the migration that introduces them.
+
 ## Prerequisites
 
 ```toml
@@ -50,7 +51,7 @@ Motoko is the native programming language for Internet Computer canisters. It ha
 moc = "1.7.0"  # pin to latest stable — check github.com/dfinity/motoko/releases
 
 [dependencies]
-core = "2.3.1"  # check mops.one/core for latest 2.x
+core = "2.5.0"  # check mops.one/core for latest 2.x
 
 [moc]
 args = ["--default-persistent-actors", "-W=M0236,M0237,M0223"]
@@ -66,24 +67,28 @@ With `--default-persistent-actors` in mops.toml (the recommended setup), all act
 
 ```motoko
 actor {
-  let users = Map.empty<Nat, Text>();   // stable — persists across upgrades
-  var count : Nat = 0;                  // stable — persists across upgrades
-  transient var requestCount : Nat = 0; // resets to 0 on every upgrade
+  let users = Map.empty<Nat, Text>();           // persists across upgrades
+  var count : Nat = 0;                          // persists across upgrades
+  transient var requestCount : Nat = 0;         // resets to 0 on every upgrade
+  transient var timerId : Nat = 0;              // timer must be re-registered after upgrade
+  transient let cache = Map.empty<Nat, Text>(); // rebuilt on every upgrade
 };
 ```
 
 Without the flag (dfx, direct `moc` invocation): write `persistent actor { }` — required since moc 0.15.0. Plain `actor` without the flag produces error M0220. The `persistent` keyword is transitional — actors will be persistent by default in a future moc release.
 
-**`transient var`** is the escape hatch for state that should reset on every upgrade:
+**`transient`** resets a field on every upgrade. Use it for:
 - Request counters, rate limiters
 - Timer IDs (timers don't survive upgrades and must be re-registered)
-- Ephemeral caches
+- Ephemeral caches, derived lookup tables
 
-**Never write `stable var`** — redundant in persistent actors; produces warning M0218. The old `flexible` keyword (renamed in moc 0.13.5) is also gone.
+**Never write `stable var`** — redundant in persistent actors; produces warning M0218.
 
-## Dot Notation (M0236) and Implicit Parameters (M0237)
+## Modern Motoko Features
 
-Functions with a `self` parameter support contextual dot notation since moc 0.16.3. Always use it — module-function style triggers warning M0236:
+### Contextual Dot Notation
+
+When a function has a `self` parameter, ALWAYS use dot notation — module-function style triggers warning M0236:
 
 ```motoko
 // Wrong (M0236)
@@ -109,7 +114,7 @@ When `.map()` transforms to a different type, provide type parameters (M0098 wit
 let names = users.map<User, Text>(func(u) { u.name });
 ```
 
-## Lambda Argument Types
+### Lambda Argument Types
 
 Never annotate lambda argument types — the compiler infers them:
 ```motoko
@@ -119,7 +124,15 @@ pairs.map(func((k, v) : (Text, Text)) : Text {    // ✗ redundant
 });
 ```
 
-## Equality and Comparison
+### Implicit Parameters
+
+The compiler infers comparison functions automatically. Never pass them explicitly:
+```motoko
+m.add(1, "hello");                        // ✓
+Map.add(m, Nat.compare, 1, "hello");      // ✗
+```
+
+### Equality and Comparison
 
 `==` uses compiler-generated structural equality. `equal`/`compare` are used as implicit arguments for `Map`, `Set`, `contains`, etc.
 
@@ -127,33 +140,13 @@ Some modules are dot-callable (have a `self` parameter): `Text`, `Principal`, `B
 Others are NOT dot-callable: `Nat`, `Int`, `Float`, sized integers.
 
 ```motoko
-s1.equal(s2)        // ✓ Text.equal has self — dot-callable
-Nat.compare(x, y)   // ✓ Nat.compare has no self — not dot-callable
+s1.equal(s2)        // ✓ Text.equal has self
+Nat.compare(x, y)   // ✓ Nat.compare has no self
 ```
 
-## Shared Types
+### Mixins
 
-Public functions accept/return only **shared types** (serializable over the wire):
-- **Shared**: `Nat`, `Int`, `Text`, `Bool`, `Principal`, `Blob`, `Float`, `[T]`, `?T`, immutable records, variants
-- **Not shared**: functions, `var` fields, `Map`, `Set`, `List`, `Queue`, `Stack`
-
-Convert internal mutable types to shared types at the API boundary:
-```motoko
-type UserInternal = { id : Principal; var name : Text; liked : Set.Set<Principal> };
-type User = { id : Principal; name : Text; liked : [Principal] };
-
-func toPublic(u : UserInternal) : User {
-  { id = u.id; name = u.name; liked = Set.toArray(u.liked) };
-};
-
-public query func getUsers() : async [User] {
-  users.map<UserInternal, User>(toPublic).toArray()
-};
-```
-
-## Mixins
-
-Composable actor fragments with state injected as parameters (available since moc 0.16.4, experimental). Mixin parameters are immutable bindings — `var` is NOT valid in parameter syntax:
+Composable actor fragments with state injected as parameters. Mixin parameters are immutable bindings — `var` is NOT valid in parameter syntax:
 
 ```motoko
 // mixins/Auth.mo
@@ -161,9 +154,6 @@ mixin (users : List.List<Types.User>) {
   public shared ({ caller }) func register(name : Text) : async Bool {
     users.add({ id = caller; var name; var isActive = true });
     true
-  };
-  public shared query ({ caller }) func getProfile() : async ?Types.User {
-    users.find(func(u) { u.id == caller })
   };
 };
 
@@ -177,9 +167,18 @@ actor {
 
 For scalar mutable state shared between actor and mixin, pass a record with `var` fields. Mutable collections (`List`, `Map`) work directly — their contents are mutable through an immutable binding.
 
-**When to use:** splitting a large actor's public surface into domain files; sharing auth/admin across actors. For stateless utilities, use a plain module.
+**When to use:** splitting a large actor's public surface into domain files; sharing auth/admin across actors. For stateless utilities, use a plain `lib/` module.
 
-See [references/examples.md](references/examples.md) for a complete multi-file architecture.
+### Record Spread
+
+Use record spread to avoid copying fields one by one:
+
+```motoko
+{ self with newField = "" };                                           // ✓
+{ id = self.id; text = self.text; completed = self.completed; newField = "" }; // ✗
+```
+
+**Caveat**: record spread cannot leave `var` fields un-overridden (M0179). When converting to a different type (e.g. internal → public), you must copy fields explicitly if the source has `var` fields that the target doesn't.
 
 ## Module with Self Pattern
 
@@ -209,7 +208,7 @@ user.ban();
 user.rename("Bob");
 ```
 
-Keep lib modules stateless — they receive state through `self` parameters and never hold it directly. State ownership stays in the actor.
+Keep lib modules stateless — they receive state through `self` parameters and never hold it directly.
 
 ## Architecture Pattern
 
@@ -233,9 +232,25 @@ actor {
 };
 ```
 
-## Security
+## Shared Types
 
-Every public update function MUST verify the caller via `{caller}` destructuring. Never trust caller-supplied principals for authorization checks.
+Public functions accept/return only **shared types** (serializable over the wire):
+- **Shared**: `Nat`, `Int`, `Text`, `Bool`, `Principal`, `Blob`, `Float`, `[T]`, `?T`, immutable records, variants
+- **Not shared**: functions, `var` fields, `Map`, `Set`, `List`, `Queue`, `Stack`
+
+Convert internal mutable types to shared types at the API boundary:
+```motoko
+type UserInternal = { id : Principal; var name : Text; liked : Set.Set<Principal> };
+type User = { id : Principal; name : Text; liked : [Principal] };
+
+func toPublic(u : UserInternal) : User {
+  { id = u.id; name = u.name; liked = Set.toArray(u.liked) };
+};
+
+public query func getUsers() : async [User] {
+  users.map<UserInternal, User>(toPublic).toArray()
+};
+```
 
 ## mo:core Standard Library
 
@@ -269,9 +284,47 @@ Full API signatures: [mops.one/core](https://mops.one/core).
 
 Always declare collection variables with opaque type aliases (`List.List<T>`, `Map.Map<K, V>`) — raw internals lose extension methods (M0072).
 
+### Iteration
+
+Build pipelines with `Iter` and materialize only at the end:
+```motoko
+self.values().map(toJson).toArray()                // ✓ single allocation
+Array.map(List.toArray(self), toJson)              // ✗ two allocations
+```
+
+### `contains` vs `find`
+
+- **`contains(element)`** — equality check. Does NOT take a predicate.
+- **`find(predicate)`** — predicate search. Returns `?T`.
+
+```motoko
+numbers.contains(3);                          // ✓ equality check
+users.contains(func(u) { u.isAdmin });        // ✗ M0096 — use find
+users.find(func(u) { u.isAdmin }) != null;    // ✓
+```
+
+## Option Handling
+
+```motoko
+// Trap on unexpected null
+let user = switch (users.find(func(u) { u.id == caller })) {
+  case (?u) { u };
+  case (null) { Runtime.trap("User not found") };
+};
+
+// Return ?T when absence is normal
+public query func findUserByName(name : Text) : async ?User {
+  users.find(func(u) { u.name == name });
+};
+```
+
+## Security
+
+Every public update function MUST verify the caller via `{caller}` destructuring. Never trust caller-supplied principals for authorization checks.
+
 ## Compilation Pitfalls
 
-1. **No `--default-persistent-actors` flag and no `persistent` keyword.** Without the flag in mops.toml, plain `actor` produces M0220. Either add `--default-persistent-actors` to `[moc].args`, or write `persistent actor`. The `persistent` keyword is transitional — actors will be persistent by default in a future release.
+1. **No `--default-persistent-actors` flag and no `persistent` keyword.** Without the flag in mops.toml, plain `actor` produces M0220. Either add `--default-persistent-actors` to `[moc].args`, or write `persistent actor`.
 
 2. **`stable var` in persistent actors.** `stable var` is redundant and produces warning M0218. Use plain `var` (auto-stable) or `transient var` (resets on upgrade).
 
@@ -292,15 +345,9 @@ Always declare collection variables with opaque type aliases (`List.List<T>`, `M
    ```motoko
    users.contains(func(u) { u.isAdmin });         // ✗ M0096
    users.find(func(u) { u.isAdmin }) != null;     // ✓
-   ids.contains(targetId);                         // ✓ equality check
    ```
 
-7. **Mutating a list inside a callback.** Never call `list.add()` inside `filter`/`map` — the iterator is live. Use `mapInPlace` for in-place updates:
-   ```motoko
-   todos.mapInPlace(func(t) {
-     if (t.id == targetId) { { t with completed = true } } else { t }
-   });
-   ```
+7. **Mutating a list inside a callback.** Never call `list.add()` inside `filter`/`map` — the iterator is live. Use `mapInPlace` for in-place updates.
 
 8. **Semicolon after function literal in argument position.**
    ```motoko
@@ -323,19 +370,7 @@ Always declare collection variables with opaque type aliases (`List.List<T>`, `M
 
 11. **Incomplete pattern matches.** Switch must cover all cases (M0145). Add missing cases or a wildcard `case _`.
 
-12. **Keywords as identifiers.** `label`, `break`, `continue`, `actor`, `func`, `type`, and all other Motoko keywords cannot be used as variable or parameter names — produces a parse error:
-    ```motoko
-    let label = "foo";    // ✗ parse error: label is a keyword
-    let myLabel = "foo";  // ✓
-    ```
-    `break` and `continue` work in loops since moc 1.2.0. For targeting outer loops, use labeled form:
-    ```motoko
-    label outer for (x in items.vals()) {
-      label inner for (y in other.vals()) {
-        if (x == y) break outer;
-      };
-    };
-    ```
+12. **Keywords as identifiers.** Motoko keywords cannot be used as variable or parameter names — produces a parse error. See Reserved Keywords below.
 
 13. **`Text.join` parameter order** — iterator first, separator second:
     ```motoko
@@ -353,6 +388,26 @@ Always declare collection variables with opaque type aliases (`List.List<T>`, `M
     import Types "types.mo";   // ✗ M0009
     import Map "mo:core/Map";  // ✓ always absolute for packages
     ```
+
+## Reserved Keywords
+
+Reserved by the Motoko grammar — **cannot** be used as identifiers; using one produces a parse error (e.g. `unexpected token 'label'`). Rename to a non-reserved word (`myLabel`, `myFunc`, `kind` instead of `type`, etc.).
+
+```
+actor       and         assert      async       await
+break       case        catch       class       composite
+continue    debug       debug_show  do          else
+false       finally     flexible    for         from_candid
+func        if          ignore      implicit    import
+in          include     label       let         loop
+mixin       module      not         null        object
+or          persistent  private     public      query
+return      shared      stable      switch      system
+throw       to_candid   transient   true        try
+type        var         weak        while       with
+```
+
+`async*`, `await*`, and `await?` are also reserved but contain non-identifier characters, so they can't collide with identifiers.
 
 ## Common Compile Error Reference
 
@@ -379,7 +434,13 @@ Always declare collection variables with opaque type aliases (`List.List<T>`, `M
 | `M0096` on `contains` callback | Predicate passed to contains | `find(pred) != null` |
 | `M0009` import file does not exist | Wrong import path | Relative path, no `.mo` extension |
 | `M0072` field X does not exist | Missing mo:core import | `import X "mo:core/X"` |
-| `unexpected token 'label'` in parameter | Keyword used as identifier | Rename the parameter |
+| `unexpected token 'X'` where X is a keyword | Keyword used as identifier | Rename — see Reserved Keywords |
+
+## Quick Reference
+
+**Basic Types:** `Nat` `Int` `Text` `Bool` `Principal` `?T` `[T]` `[var T]` `Blob` `Float` — `Time.now()` returns `Int` (nanoseconds)
+
+**Common Operations:** `debug_show(value)` → Text | `assert condition` | `# "text"` concatenation | `break` / `continue` in loops
 
 ## Canister Environment Variables
 

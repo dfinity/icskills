@@ -9,10 +9,13 @@ metadata:
 ---
 
 <!-- Upstream: https://github.com/caffeinelabs/mops
-     Tag: cli-v2.13.1  Commit: c947a79fc68d2d4d5b0d3bad10e23370b8134364
+     Tag: cli-v2.13.2  Commit: 59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352
      File: .agents/skills/mops-cli/SKILL.md
-     Last synced: 2026-05-04
+     Last synced: 2026-05-28
      Sections owned by icskills (do not overwrite from upstream):
+     What This Is,
+     Prerequisites,
+     Common Pitfalls,
      Additional References (uses icskills skill names: motoko, migrating-motoko, migrating-motoko-enhanced) -->
 
 # Mops CLI
@@ -39,11 +42,11 @@ Mops is the primary package manager and build toolchain for Motoko projects. It 
 
 ```toml
 [toolchain]
-moc = "1.5.1"
-lintoko = "0.9.0"
+moc = "1.7.0"
+lintoko = "0.10.0"
 
 [dependencies]
-core = "2.2.0"
+core = "2.5.0"
 
 [moc]
 args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
@@ -84,7 +87,7 @@ Run after cloning or after manual `mops.toml` edits. Updates `mops.lock`. In CI,
 
 ```bash
 mops add core             # latest version
-mops add core@2.2.0       # specific version
+mops add core@2.5.0       # specific version
 mops add --dev test       # dev dependency
 ```
 
@@ -118,9 +121,9 @@ Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mo
 ### `mops toolchain`
 
 ```bash
-mops toolchain use moc 1.5.1         # pin specific version
+mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest (non-interactive)
-mops toolchain use lintoko 0.9.0     # pin lintoko version
+mops toolchain use lintoko 0.10.0    # pin lintoko version
 mops toolchain update moc            # update to latest (requires existing entry)
 mops toolchain update                # update all tools
 mops toolchain bin moc               # print path to binary
@@ -144,28 +147,13 @@ mops update --major       # allow major-version updates
 mops sync                 # add missing / remove unused packages
 ```
 
-## Migration Workflow
+### Enhanced migrations
 
-When `[canisters.<name>.migrations]` is configured, mops automatically injects `--enhanced-migration` during check/build. **Do not** add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.
+When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.
 
-```toml
-[canisters.backend.migrations]
-chain = "src/backend/migrations"
-next = "src/backend/next-migration"
-check-limit = 1
-build-limit = 100
-```
+Create migration files directly in the `chain` directory.
 
-```bash
-mops migrate new AddEmail         # create new migration file
-mops migrate new AddEmail backend # specify canister explicitly
-mops migrate freeze               # move next-migration to permanent chain
-mops migrate freeze backend       # specify canister explicitly
-```
-
-Typical workflow: make a breaking stable change → `mops check` fails with a hint → `mops migrate new Name` → edit migration → `mops check` passes → `mops build` → deploy → `mops migrate freeze`.
-
-Diagnostics may print paths under `.migrations-<canister>/` — a staging directory mops removes when the command finishes. The real file lives under `chain/` or `next/`.
+`check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
 ### `check-stable` configuration
 
@@ -212,7 +200,7 @@ mops format --check       # check formatting without modifying
 
 1. **Passing file paths to `mops check` for canister projects.** Always use canister names (`mops check backend`), not file paths (`mops check src/backend/main.mo`). File paths bypass per-canister `args` in `mops.toml` and produce incorrect results.
 
-2. **Using `mops toolchain use <tool>` without a version in scripts.** This opens an interactive version picker and hangs in CI or agent contexts. Always pass an explicit version: `mops toolchain use moc 1.5.1` or `mops toolchain use moc latest`.
+2. **Using `mops toolchain use <tool>` without a version in scripts.** This opens an interactive version picker and hangs in CI or agent contexts. Always pass an explicit version: `mops toolchain use moc 1.7.0` or `mops toolchain use moc latest`.
 
 3. **Adding `--enhanced-migration` manually when using `[canisters.<name>.migrations]`.** Mops auto-injects this flag. Adding it yourself causes a mops error. Remove it from `[canisters.<name>].args`.
 
@@ -242,3 +230,9 @@ Use per-canister `args` (not global) for suppressions:
 main = "src/backend/main.mo"
 args = ["-A=M0198"]
 ```
+
+## Additional References
+
+- Load `motoko` for Motoko language reference and mo:core APIs
+- Load `migrating-motoko` for inline migration with `(with migration = ...)`
+- Load `migrating-motoko-enhanced` for enhanced multi-step migration with a `migrations/` directory

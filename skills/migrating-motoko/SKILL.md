@@ -2,18 +2,19 @@
 name: migrating-motoko
 description: "Inline actor migration for Motoko canisters using `(with migration = ...)` syntax. Use when upgrading canister state, renaming fields, changing field types, or restructuring actor state without the --enhanced-migration flag. For multi-step migration chains, use migrating-motoko-enhanced instead."
 license: Apache-2.0
-compatibility: "moc >= 1.2.0"
+compatibility: "moc >= 1.2.0, core >= 2.5.0"
 metadata:
   title: Motoko Inline Migration
   category: Motoko
 ---
 
 <!-- Upstream: https://github.com/caffeinelabs/motoko
-     Tag: 1.7.0  Commit: 1e65e26346b35927869dda044bb76763627c2c57
+     Tag: 1.8.2  Commit: f45204bc75c8e0ed5198fd2fe7265679af71814a
      File: .agents/skills/migrating-motoko/SKILL.md
-     Last synced: 2026-05-04
+     Last synced: 2026-05-28
      Sections owned by icskills (do not overwrite from upstream):
-     Additional References (uses icskills skill names: motoko, mops-cli) -->
+     What This Is,
+     Additional References (uses icskills skill names: motoko, migrating-motoko-enhanced, mops-cli) -->
 
 # Inline Actor Migration
 

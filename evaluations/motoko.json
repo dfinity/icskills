@@ -185,6 +185,15 @@
         "Explains that main.mo should only hold state bindings and mixin includes — no public methods",
         "Does NOT produce a single-file actor with all logic inline"
       ]
+    },
+    {
+      "name": "Reserved keyword as field name",
+      "prompt": "Define a Motoko record type for an asset with fields: id (Nat), name (Text), and type (Text). Just show the type definition.",
+      "expected_behaviors": [
+        "Does NOT use `type` as a field name — it is a reserved keyword in Motoko",
+        "Uses an alternative name such as `typ`, `kind`, `assetType`, or `category` instead",
+        "Shows a valid compilable type definition"
+      ]
     }
   ],
   "trigger_evals": {
