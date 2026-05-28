@@ -78,7 +78,7 @@
       "prompt": "Write a Motoko canister using HashMap to store key-value pairs. Import it from mo:base/HashMap.",
       "expected_behaviors": [
         "Redirects to mo:core/Map instead of mo:base/HashMap",
-        "Explains that mo:base is deprecated and mo:base/HashMap has no equivalent in mo:core — the correct module is mo:core/Map",
+        "Explains that mo:base is deprecated and recommends mo:core/Map as the correct module",
         "Shows Map.empty with dot notation: `map.add(k, v)`, `map.get(k)`"
       ]
     },
@@ -184,8 +184,8 @@
       "name": "Text.join parameter order",
       "prompt": "Write a Motoko expression that joins the values of a `List.List<Text>` called `names` with `\", \"` as separator. Just the expression, no full canister.",
       "expected_behaviors": [
-        "Uses `Text.join(names.values(), \", \")` — iterator first, separator second",
-        "Does NOT reverse the arguments: NOT `Text.join(\", \", names.values())`",
+        "Calls Text.join with the iterator as the first argument and the separator as the second: Text.join(names.values(), sep)",
+        "Does NOT reverse the arguments — separator must NOT come first",
         "Imports `Text` from `mo:core/Text` if it shows imports"
       ]
     },

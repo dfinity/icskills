@@ -92,7 +92,7 @@
       "Write a migration file for my migrations/ directory",
       "I'm getting Compatibility error M0170 with --enhanced-migration",
       "How does the migration chain work in Motoko?",
-      "Configure mops.toml for enhanced migration",
+      "How do I set up the migrations/ directory for my Motoko canister?",
       "How do I add a field to my canister using the migrations directory?",
       "How do I add a field to my canister with the enhanced migration workflow?",
       "My actor has enhanced migration but I need to rename a field"
