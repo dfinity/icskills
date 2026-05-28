@@ -71,111 +71,17 @@ jobs:
         if: steps.skip.outputs.needed == 'true'
         id: diff
         run: |
-          OLD_SHA="${{ steps.current.outputs.sha }}"
-          NEW_SHA="${{ steps.sha.outputs.commit }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          LATEST="${{ steps.latest.outputs.tag }}"
-
-          if [ "$OLD_SHA" = "$NEW_SHA" ]; then
+          if bash scripts/sync-upstream-check.sh \
+               "caffeinelabs/motoko" \
+               "${{ steps.current.outputs.sha }}" \
+               "${{ steps.sha.outputs.commit }}" \
+               "${{ steps.current.outputs.tag }}" \
+               "${{ steps.latest.outputs.tag }}" \
+               /tmp/issue-body.md; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "New tag $LATEST resolves to the same commit as $CURRENT — no content changes"
-            exit 0
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
-
-          declare -A UPSTREAM_TO_LOCAL=(
-            ["writing-motoko"]="motoko"
-            ["migrating-motoko"]="migrating-motoko"
-            ["migrating-motoko-enhanced"]="migrating-motoko-enhanced"
-          )
-
-          {
-            echo "## Upstream diff: caffeinelabs/motoko \`${CURRENT}\` → \`${LATEST}\`"
-            echo ""
-            echo "Commit: [\`${NEW_SHA:0:12}\`](https://github.com/caffeinelabs/motoko/commit/${NEW_SHA})"
-            echo ""
-            echo "To sync: create branch \`chore/sync-upstream-motoko-${LATEST}\`, follow the"
-            echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
-            echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
-            echo ""
-            echo "> **Note:** this diff was computed at issue-open time. Re-run before applying —"
-            echo "> changes may have landed on main since."
-            echo ""
-            echo "**Before applying:** check \`.claude/upstream.md\` for icskills-owned sections."
-            echo "Do NOT overwrite those sections from upstream. Also check whether any owned"
-            echo "section is now covered by the upstream changes — if so, drop the icskills copy"
-            echo "and remove it from the owned list to avoid duplicating content."
-            echo ""
-          } > /tmp/issue-body.md
-
-          HAS_CHANGES=false
-
-          for upstream_name in "writing-motoko" "migrating-motoko" "migrating-motoko-enhanced"; do
-            local_name="${UPSTREAM_TO_LOCAL[$upstream_name]}"
-
-            OLD_FILES=$(curl -sf \
-              "https://api.github.com/repos/caffeinelabs/motoko/contents/.agents/skills/${upstream_name}?ref=${OLD_SHA}" \
-              -H "Authorization: Bearer $GH_TOKEN" | \
-              python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-              2>/dev/null || echo "")
-
-            NEW_FILES=$(curl -sf \
-              "https://api.github.com/repos/caffeinelabs/motoko/contents/.agents/skills/${upstream_name}?ref=${NEW_SHA}" \
-              -H "Authorization: Bearer $GH_TOKEN" | \
-              python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-              2>/dev/null || echo "")
-
-            ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$')
-
-            SKILL_HAS_CHANGES=false
-            > /tmp/skill-diff-body.md
-
-            while IFS= read -r file; do
-              [ -z "$file" ] && continue
-
-              curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${OLD_SHA}/.agents/skills/${upstream_name}/${file}" \
-                > /tmp/upstream-old-file 2>/dev/null || > /tmp/upstream-old-file
-
-              curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${NEW_SHA}/.agents/skills/${upstream_name}/${file}" \
-                > /tmp/upstream-new-file 2>/dev/null || > /tmp/upstream-new-file
-
-              DIFF=$(diff /tmp/upstream-old-file /tmp/upstream-new-file || true)
-              if [ -n "$DIFF" ]; then
-                SKILL_HAS_CHANGES=true
-                HAS_CHANGES=true
-                {
-                  echo "#### \`${file}\`"
-                  echo ""
-                  echo '<details><summary>Show diff (- old upstream, + new upstream)</summary>'
-                  echo ""
-                  echo '```diff'
-                  echo "$DIFF"
-                  echo '```'
-                  echo ""
-                  echo '</details>'
-                  echo ""
-                } >> /tmp/skill-diff-body.md
-              fi
-            done <<< "$ALL_FILES"
-
-            if [ "$SKILL_HAS_CHANGES" = "true" ]; then
-              {
-                echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
-                echo ""
-                cat /tmp/skill-diff-body.md
-              } >> /tmp/issue-body.md
-            else
-              {
-                echo "### \`${local_name}\` — no changes"
-                echo ""
-              } >> /tmp/issue-body.md
-            fi
-          done
-
-          if [ "$HAS_CHANGES" = "false" ]; then
-            echo "No skill content changes detected between $CURRENT and $LATEST — skipping issue"
-          fi
-
-          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -281,90 +187,17 @@ jobs:
         if: steps.skip.outputs.needed == 'true'
         id: diff
         run: |
-          OLD_SHA="${{ steps.current.outputs.sha }}"
-          NEW_SHA="${{ steps.sha.outputs.commit }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          LATEST="${{ steps.latest.outputs.tag }}"
-
-          if [ "$OLD_SHA" = "$NEW_SHA" ]; then
+          if bash scripts/sync-upstream-check.sh \
+               "caffeinelabs/mops" \
+               "${{ steps.current.outputs.sha }}" \
+               "${{ steps.sha.outputs.commit }}" \
+               "${{ steps.current.outputs.tag }}" \
+               "${{ steps.latest.outputs.tag }}" \
+               /tmp/issue-body.md; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "New tag $LATEST resolves to the same commit as $CURRENT — no content changes"
-            exit 0
-          fi
-
-          OLD_FILES=$(curl -sf \
-            "https://api.github.com/repos/caffeinelabs/mops/contents/.agents/skills/mops-cli?ref=${OLD_SHA}" \
-            -H "Authorization: Bearer $GH_TOKEN" | \
-            python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-            2>/dev/null || echo "")
-
-          NEW_FILES=$(curl -sf \
-            "https://api.github.com/repos/caffeinelabs/mops/contents/.agents/skills/mops-cli?ref=${NEW_SHA}" \
-            -H "Authorization: Bearer $GH_TOKEN" | \
-            python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-            2>/dev/null || echo "")
-
-          ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$')
-
-          {
-            echo "## Upstream diff: caffeinelabs/mops \`${CURRENT}\` → \`${LATEST}\`"
-            echo ""
-            echo "Commit: [\`${NEW_SHA:0:12}\`](https://github.com/caffeinelabs/mops/commit/${NEW_SHA})"
-            echo ""
-            echo "To sync: create branch \`chore/sync-upstream-mops-cli-${LATEST}\`, follow the"
-            echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
-            echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
-            echo ""
-            echo "> **Note:** this diff was computed at issue-open time. Re-run before applying —"
-            echo "> changes may have landed on main since."
-            echo ""
-            echo "**Before applying:** check \`.claude/upstream.md\` for icskills-owned sections."
-            echo "Do NOT overwrite those sections from upstream. Also check whether any owned"
-            echo "section is now covered by the upstream changes — if so, drop the icskills copy"
-            echo "and remove it from the owned list to avoid duplicating content."
-            echo ""
-            echo "### \`mops-cli\`"
-            echo ""
-          } > /tmp/issue-body.md
-
-          HAS_CHANGES=false
-          > /tmp/skill-diff-body.md
-
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-
-            curl -sf "https://raw.githubusercontent.com/caffeinelabs/mops/${OLD_SHA}/.agents/skills/mops-cli/${file}" \
-              > /tmp/upstream-old-file 2>/dev/null || > /tmp/upstream-old-file
-
-            curl -sf "https://raw.githubusercontent.com/caffeinelabs/mops/${NEW_SHA}/.agents/skills/mops-cli/${file}" \
-              > /tmp/upstream-new-file 2>/dev/null || > /tmp/upstream-new-file
-
-            DIFF=$(diff /tmp/upstream-old-file /tmp/upstream-new-file || true)
-            if [ -n "$DIFF" ]; then
-              HAS_CHANGES=true
-              {
-                echo "#### \`${file}\`"
-                echo ""
-                echo '<details><summary>Show diff (- old upstream, + new upstream)</summary>'
-                echo ""
-                echo '```diff'
-                echo "$DIFF"
-                echo '```'
-                echo ""
-                echo '</details>'
-                echo ""
-              } >> /tmp/skill-diff-body.md
-            fi
-          done <<< "$ALL_FILES"
-
-          if [ "$HAS_CHANGES" = "true" ]; then
-            cat /tmp/skill-diff-body.md >> /tmp/issue-body.md
           else
-            echo "No changes." >> /tmp/issue-body.md
-            echo "No skill content changes detected between $CURRENT and $LATEST — skipping issue"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
-
-          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
