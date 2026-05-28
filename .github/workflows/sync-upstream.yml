@@ -155,30 +155,54 @@ jobs:
               echo "" >> /tmp/issue-body.md
             fi
 
-            # Also diff reference files for skills that have them
-            if [ "$upstream_name" = "writing-motoko" ]; then
-              curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${SHA}/.agents/skills/${upstream_name}/examples.md" \
-                > /tmp/upstream-${upstream_name}-examples.md 2>/dev/null || {
-                echo "(examples.md not found at this path)" > /tmp/upstream-${upstream_name}-examples.md
-              }
-              REF_DIFF=$(diff skills/${local_name}/references/examples.md /tmp/upstream-${upstream_name}-examples.md || true)
-              if [ -n "$REF_DIFF" ]; then
-                {
-                  echo "### \`${local_name}/references/examples.md\` ← upstream \`${upstream_name}/examples.md\`"
-                  echo ""
-                  echo '<details><summary>Show diff (- ours, + upstream)</summary>'
-                  echo ""
-                  echo '```diff'
-                  echo "$REF_DIFF"
-                  echo '```'
-                  echo ""
-                  echo '</details>'
-                  echo ""
-                } >> /tmp/issue-body.md
-              else
-                echo "### \`${local_name}/references/examples.md\` — no changes" >> /tmp/issue-body.md
-                echo "" >> /tmp/issue-body.md
-              fi
+            # Diff reference files: every .md in our references/ against upstream's skill dir.
+            # Also report any upstream .md files we don't have locally (new reference added upstream).
+            if [ -d "skills/${local_name}/references" ]; then
+              # Fetch upstream's directory listing via GitHub API to detect all .md files
+              UPSTREAM_REF_FILES=$(curl -sf \
+                "https://api.github.com/repos/caffeinelabs/motoko/contents/.agents/skills/${upstream_name}?ref=${SHA}" \
+                -H "Authorization: Bearer $GH_TOKEN" | \
+                python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['name'].endswith('.md') and f['name'] != 'SKILL.md']" 2>/dev/null || true)
+
+              for ref_file in $UPSTREAM_REF_FILES; do
+                curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${SHA}/.agents/skills/${upstream_name}/${ref_file}" \
+                  > /tmp/upstream-${upstream_name}-${ref_file} 2>/dev/null || continue
+                local_ref="skills/${local_name}/references/${ref_file}"
+                if [ -f "$local_ref" ]; then
+                  REF_DIFF=$(diff "$local_ref" /tmp/upstream-${upstream_name}-${ref_file} || true)
+                  if [ -n "$REF_DIFF" ]; then
+                    {
+                      echo "### \`${local_name}/references/${ref_file}\` ← upstream \`${upstream_name}/${ref_file}\`"
+                      echo ""
+                      echo '<details><summary>Show diff (- ours, + upstream)</summary>'
+                      echo ""
+                      echo '```diff'
+                      echo "$REF_DIFF"
+                      echo '```'
+                      echo ""
+                      echo '</details>'
+                      echo ""
+                    } >> /tmp/issue-body.md
+                  else
+                    echo "### \`${local_name}/references/${ref_file}\` — no changes" >> /tmp/issue-body.md
+                    echo "" >> /tmp/issue-body.md
+                  fi
+                else
+                  # Upstream has a reference file we don't — surface it as new
+                  {
+                    echo "### \`${local_name}/references/${ref_file}\` — **NEW upstream file** (not present locally)"
+                    echo ""
+                    echo '<details><summary>Show upstream content</summary>'
+                    echo ""
+                    echo '```markdown'
+                    cat /tmp/upstream-${upstream_name}-${ref_file}
+                    echo '```'
+                    echo ""
+                    echo '</details>'
+                    echo ""
+                  } >> /tmp/issue-body.md
+                fi
+              done
             fi
           done
 

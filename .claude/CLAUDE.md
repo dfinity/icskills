@@ -120,7 +120,7 @@ diff skills/<skill-name>/SKILL.md /tmp/upstream.md
 | `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `SKILL.md` (no refs) |
 | `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.2 | `59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352` | `SKILL.md` (no refs) |
 
-All upstream file paths are relative to `.agents/skills/<upstream-skill-name>/`.
+All upstream file paths are relative to `.agents/skills/<upstream-skill-name>/`. The sync workflow automatically diffs all `.md` files in a skill's `references/` directory against the upstream skill directory and surfaces any new upstream files in the issue body.
 
 **Release-only policy**: Only sync from tagged releases. Never apply changes from `main`/`master` between releases — those are unreleased and may be experimental or unstable.
 
@@ -131,7 +131,7 @@ When a new version of an upstream repo is released: (1) get the new commit SHA, 
 When syncing a skill from a new upstream release, verify all of these before committing:
 
 - [ ] **Upstream comment updated** — Tag, Commit (full SHA), Last synced date, Sections owned
-- [ ] **Reference files synced** — For skills with reference files (see table above), also diff and apply changes from upstream's reference files. For `motoko`: diff `references/examples.md` against `.agents/skills/writing-motoko/examples.md` at the new commit.
+- [ ] **Reference files synced** — For skills with a `references/` directory, diff every `.md` file against the corresponding file in upstream's skill directory. Also check whether upstream has added any new `.md` files not yet present locally — the sync issue body will flag these as "NEW upstream file" if the workflow detected them.
 - [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
 - [ ] **Icskills-owned sections preserved** — Sections listed in "Sections owned by icskills" are NOT overwritten from upstream
