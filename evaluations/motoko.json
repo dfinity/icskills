@@ -6,7 +6,7 @@
       "name": "Simple actor with counter",
       "prompt": "Write a Motoko canister with a counter that can be incremented and queried.",
       "expected_behaviors": [
-        "Uses plain `actor`, NOT `persistent actor` (flag-based approach), OR uses `persistent actor` and notes the `--default-persistent-actors` flag",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor` (no flag needed for the explicit keyword)",
         "Uses `var` for the counter, NOT `stable var`",
         "Increment function is `public func` returning `async`",
         "Query function uses `public query func`",
@@ -117,7 +117,7 @@
       "prompt": "Write a Motoko mixin file `mixins/Auth.mo` for user registration and profile lookup. It takes a `users : List.List<User>` parameter and has two public functions. Then show the minimal actor snippet that includes it. No mops.toml, no deploy steps.",
       "expected_behaviors": [
         "Produces a separate mixin file using `mixin(users : List.List<User>) { ... }` syntax",
-        "Public functions in the mixin use `public shared ({ caller }) func`",
+        "Update functions in the mixin use `public shared ({ caller }) func`; read-only functions may use `public query func`",
         "The actor uses plain `actor` with `include AuthMixin(users)` (or `persistent actor` if no flag)",
         "Passes the List to the mixin, NOT a plain `var` primitive",
         "Does NOT put public methods directly in the actor body — they come from the mixin"
