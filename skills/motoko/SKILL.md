@@ -10,13 +10,16 @@ metadata:
 
 <!-- Upstream: https://github.com/caffeinelabs/motoko
      Tag: 1.8.2  Commit: f45204bc75c8e0ed5198fd2fe7265679af71814a
-     File: .agents/skills/writing-motoko/SKILL.md
+     Files: .agents/skills/writing-motoko/SKILL.md
+            .agents/skills/writing-motoko/examples.md → references/examples.md
      Last synced: 2026-05-28
      Sections owned by icskills (do not overwrite from upstream):
-     Prerequisites, Canister Environment Variables,
-     Pitfalls (upstream has 2 items; icskills adds items 3–6),
-     Common Compile Error Patterns (icskills adds IC-specific rows),
-     Additional References (different links from upstream) -->
+     - Prerequisites (entire section — mops.toml config, mops check --fix, mops-cli cross-ref)
+     - Canister Environment Variables (entire section — Runtime.envVar pattern)
+     - Pitfalls items 3–6: non-stable mo:base types | Text.join order |
+       List.get vs List.at | M0064 null-break outside do?{}
+     - Common Compile Error Patterns: extra rows for M0170/M0009/M0072/M0064/M0145
+     - Additional References: links differ from upstream -->
 
 # Motoko Language
 

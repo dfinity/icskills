@@ -154,6 +154,32 @@ jobs:
               echo "### \`${local_name}\` — no changes" >> /tmp/issue-body.md
               echo "" >> /tmp/issue-body.md
             fi
+
+            # Also diff reference files for skills that have them
+            if [ "$upstream_name" = "writing-motoko" ]; then
+              curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${SHA}/.agents/skills/${upstream_name}/examples.md" \
+                > /tmp/upstream-${upstream_name}-examples.md 2>/dev/null || {
+                echo "(examples.md not found at this path)" > /tmp/upstream-${upstream_name}-examples.md
+              }
+              REF_DIFF=$(diff skills/${local_name}/references/examples.md /tmp/upstream-${upstream_name}-examples.md || true)
+              if [ -n "$REF_DIFF" ]; then
+                {
+                  echo "### \`${local_name}/references/examples.md\` ← upstream \`${upstream_name}/examples.md\`"
+                  echo ""
+                  echo '<details><summary>Show diff (- ours, + upstream)</summary>'
+                  echo ""
+                  echo '```diff'
+                  echo "$REF_DIFF"
+                  echo '```'
+                  echo ""
+                  echo '</details>'
+                  echo ""
+                } >> /tmp/issue-body.md
+              else
+                echo "### \`${local_name}/references/examples.md\` — no changes" >> /tmp/issue-body.md
+                echo "" >> /tmp/issue-body.md
+              fi
+            fi
           done
 
       - name: Open sync issue
