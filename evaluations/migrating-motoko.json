@@ -60,7 +60,6 @@
       "prompt": "I need to migrate my Motoko canister's state on upgrade. Can I use `system func preupgrade()` to save state to a stable variable and restore it in `postupgrade()`?",
       "expected_behaviors": [
         "Redirects to `(with migration = ...)` syntax instead",
-        "Explains that `preupgrade`/`postupgrade` are not needed for data migration in modern Motoko (persistent actors auto-persist state)",
         "Does NOT provide a `preupgrade`/`postupgrade` implementation"
       ]
     },

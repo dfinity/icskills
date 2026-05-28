@@ -51,8 +51,7 @@
       "expected_behaviors": [
         "Recommends Map from mo:core for the key-value mapping",
         "Recommends List from mo:core for the growable log",
-        "Does NOT suggest HashMap, TrieMap, Buffer, or RBTree",
-        "Does NOT import from mo:base"
+        "Does NOT suggest HashMap, TrieMap, Buffer, or RBTree"
       ]
     },
     {
@@ -76,21 +75,11 @@
       ]
     },
     {
-      "name": "Caffeine to icp-cli: resolving M0220 errors",
-      "prompt": "I migrated a canister from Caffeine to icp-cli and now I get M0220 errors everywhere. My original code used plain `actor {}`. What do I need to change?",
-      "expected_behaviors": [
-        "Explains that Caffeine used `--default-persistent-actors` implicitly, making `persistent` optional",
-        "Primary fix: add `--default-persistent-actors` to `[moc].args` in mops.toml",
-        "Alternative fix: add `persistent` keyword to every actor declaration",
-        "Mentions that variables were implicitly stable on Caffeine — use `transient var` for any that should reset on upgrade"
-      ]
-    },
-    {
       "name": "Adversarial: base library imports",
       "prompt": "Write a Motoko canister using HashMap to store key-value pairs. Import it from mo:base/HashMap.",
       "expected_behaviors": [
         "Redirects to mo:core/Map instead of mo:base/HashMap",
-        "Explains that HashMap is not stable and does not exist in mo:core",
+        "Explains that mo:base is deprecated and mo:base/HashMap has no equivalent in mo:core — the correct module is mo:core/Map",
         "Shows Map.empty with dot notation: `map.add(k, v)`, `map.get(k)`"
       ]
     },
@@ -203,7 +192,7 @@
     },
     {
       "name": "List.get vs List.at: safe access",
-      "prompt": "Write a Motoko expression that retrieves the item at index 5 from a `List.List<Text>` called `items`, returning null if the index is out of bounds. Just the expression.",
+      "prompt": "Write a Motoko expression that retrieves the item at index 5 from a `List<Text>` (from `mo:core/List`) called `items`, returning null if the index is out of bounds. Just the expression.",
       "expected_behaviors": [
         "Uses `items.get(5)` which returns `?Text` — safe, null if out of bounds",
         "Does NOT use `items.at(5)` — that returns `T` and traps on out-of-bounds",
@@ -235,7 +224,6 @@
       "Why is my Motoko actor giving error M0220?",
       "What is mo:core and how do I use it?",
       "Motoko type error with shared functions",
-      "I migrated from Caffeine and getting M0220 errors",
       "How do I use mixins in Motoko?",
       "Write a Motoko mixin for authentication",
       "What does transient var mean in Motoko?"
