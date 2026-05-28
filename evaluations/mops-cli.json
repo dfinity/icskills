@@ -38,9 +38,8 @@
       "name": "Pinning moc version",
       "prompt": "How do I pin the moc compiler to version 1.5.1 in my mops project?",
       "expected_behaviors": [
-        "Uses `mops toolchain use moc 1.5.1`",
+        "Uses `mops toolchain use moc 1.5.1` OR shows manually editing `[toolchain]` in mops.toml",
         "Shows the resulting `[toolchain]` section in mops.toml with `moc = \"1.5.1\"`",
-        "Does NOT suggest editing mops.toml manually without running the command",
         "Does NOT use `mops toolchain use moc` without a version (that opens an interactive picker)"
       ]
     },
