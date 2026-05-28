@@ -80,11 +80,14 @@ Every skill that tracks upstream content must have this comment block at the top
 ```html
 <!-- Upstream: https://github.com/<org>/<repo>
      Tag: <tag>  Commit: <full-sha>
-     File: <path-to-upstream-skill-file>
+     Files: .agents/skills/<upstream-name>/SKILL.md
+            .agents/skills/<upstream-name>/<file>.md → references/<file>.md
      Last synced: YYYY-MM-DD
      Sections owned by icskills (do not overwrite from upstream):
-     <comma-separated list of sections that icskills extends or differs> -->
+     <list of sections or files that icskills extends or differs> -->
 ```
+
+If a skill has no additional reference files, use `File:` (singular) and omit the second line. When the upstream SKILL.md references files that live within the upstream skill's folder (e.g. `examples.md`), list each with `→ references/<file>.md` to show the icskills path. icskills always places such files under `references/` regardless of how upstream organises them.
 
 Always use the **full commit SHA** of the tag, not just the tag name. Annotated tags require a two-step dereference (tag object → commit SHA).
 
@@ -104,12 +107,22 @@ COMMIT_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/$TAG_SH
 ### Checking for upstream changes
 
 ```bash
-# Fetch upstream skill file at the new commit
-curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
+# Fetch upstream SKILL.md at the new commit
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>/SKILL.md" > /tmp/upstream.md
 
 # Compare: '-' lines are in our file but not upstream; '+' lines are new in upstream
 diff skills/<skill-name>/SKILL.md /tmp/upstream.md
 ```
+
+Also check any files referenced from the upstream SKILL.md that live within the upstream skill's folder (e.g. `examples.md`). These map to our `references/` directory:
+
+```bash
+# Example for a referenced file
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>/examples.md" > /tmp/upstream-examples.md
+diff skills/<skill-name>/references/examples.md /tmp/upstream-examples.md
+```
+
+To find what files upstream references, read the upstream SKILL.md's "Additional Resources" / "Additional References" section and look for relative links.
 
 ### Current upstream sources
 
@@ -131,7 +144,7 @@ When a new version of an upstream repo is released: (1) get the new commit SHA, 
 When syncing a skill from a new upstream release, verify all of these before committing:
 
 - [ ] **Upstream comment updated** — Tag, Commit (full SHA), Last synced date, Sections owned
-- [ ] **Reference files synced** — For skills with a `references/` directory, diff every `.md` file against the corresponding file in upstream's skill directory. Also check whether upstream has added any new `.md` files not yet present locally — the sync issue body will flag these as "NEW upstream file" if the workflow detected them.
+- [ ] **Reference files synced** — Check the upstream SKILL.md for any files it references that live within the upstream skill's folder. Diff each against our `references/` directory (icskills always places such files there, regardless of how upstream organises them). Also check whether upstream now references a file we don't have yet — the sync issue body will flag these as "NEW upstream file" if the workflow detected them.
 - [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
 - [ ] **Icskills-owned sections preserved** — Sections listed in "Sections owned by icskills" are NOT overwritten from upstream
