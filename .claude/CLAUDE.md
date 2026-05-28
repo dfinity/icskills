@@ -96,43 +96,51 @@ COMMIT_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/$TAG_SH
 
 ### Checking for upstream changes
 
-Get the commit SHA from `.claude/upstream.md` for the skill you are syncing, then diff:
+The diff you care about is **upstream old release vs upstream new release** — what changed in upstream between the two versions. Do NOT diff our local file against upstream; that produces noise from all icskills-owned sections.
+
+Get both commit SHAs: the old one from `.claude/upstream.md`, the new one from the sync issue or by resolving the tag. Then diff all files in the upstream skill folder:
 
 ```bash
-# Read commit SHA from .claude/upstream.md (example for motoko)
-COMMIT=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
+# Old commit SHA from .claude/upstream.md (example for motoko)
+OLD_COMMIT=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
 
-# Fetch upstream SKILL.md at that commit
-curl -s "https://raw.githubusercontent.com/<org>/<repo>/$COMMIT/<path>/SKILL.md" > /tmp/upstream.md
+# New commit SHA — from the sync issue title, or resolve from the tag:
+# TAG_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/ref/tags/<tag>" | python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
+# NEW_COMMIT=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/$TAG_SHA" | python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
 
-# Compare: '-' lines are in our file but not upstream; '+' lines are new in upstream
-diff skills/<skill-name>/SKILL.md /tmp/upstream.md
+# Diff SKILL.md between the two upstream releases
+# '-' lines were removed from upstream; '+' lines were added by upstream
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$OLD_COMMIT/<path>/SKILL.md" > /tmp/upstream-old.md
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$NEW_COMMIT/<path>/SKILL.md" > /tmp/upstream-new.md
+diff /tmp/upstream-old.md /tmp/upstream-new.md
 ```
 
-Also check any files referenced from the upstream SKILL.md that live within the upstream skill's folder (e.g. `examples.md`). These map to our `references/` directory:
+Also diff any other files in the upstream skill folder (any type — not just `.md`):
 
 ```bash
-curl -s "https://raw.githubusercontent.com/<org>/<repo>/$COMMIT/<path>/examples.md" > /tmp/upstream-examples.md
-diff skills/<skill-name>/references/examples.md /tmp/upstream-examples.md
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$OLD_COMMIT/<path>/examples.md" > /tmp/upstream-old-examples.md
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$NEW_COMMIT/<path>/examples.md" > /tmp/upstream-new-examples.md
+diff /tmp/upstream-old-examples.md /tmp/upstream-new-examples.md
 ```
 
-To find what files upstream references, read the upstream SKILL.md's "Additional Resources" section and look for relative links. See `.claude/upstream.md` for the current pinned tags, commit SHAs, file mappings, and icskills-owned sections for all tracked skills.
+Use the GitHub API to list all files in the upstream skill folder at both commits — take the union so additions and removals are both caught. See `.claude/upstream.md` for the current pinned tags, commit SHAs, file mappings, and icskills-owned sections for all tracked skills.
 
 **Release-only policy**: Only sync from tagged releases. Never apply changes from `main`/`master` between releases — those are unreleased and may be experimental or unstable.
 
-When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements **except for sections listed as owned in `.claude/upstream.md`**, (4) update `.claude/upstream.md` with the new tag and SHA.
+When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff upstream old vs upstream new for all files in the skill folder, (3) apply the upstream additions (`+` lines) to our skill file **except for sections listed as owned in `.claude/upstream.md`**, (4) update `.claude/upstream.md` with the new tag and SHA.
 
 ### Agent checklist for upstream sync
 
 When syncing a skill from a new upstream release, verify all of these before committing:
 
 - [ ] **`.claude/upstream.md` updated** — Tag, Commit (full SHA), Last synced date
-- [ ] **Reference files synced** — Check the upstream SKILL.md for any files it references that live within the upstream skill's folder. Diff each against our `references/` directory (icskills always places such files there, regardless of how upstream organises them). Also check whether upstream now references a file we don't have yet — the sync issue body will flag these as "NEW upstream file" if the workflow detected them.
+- [ ] **All upstream skill folder files synced** — The sync issue diffs every file in the upstream skill folder (any type, not just `.md`) between old and new releases. Apply changes to all files that changed. If a file is new in upstream, add it to our `references/` directory. If a file was removed upstream, remove it from `references/` too. icskills always places reference files under `references/` regardless of how upstream organises them.
 - [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
 - [ ] **All upstream additions applied** — Re-read every `> ` line in the diff (lines new in upstream) systematically, including inside code blocks: added/changed inline comments, new sentences, modified expressions. These small changes are easy to miss but often carry clarifications or fixes.
 - [ ] **Icskills-owned sections preserved** — Sections listed as owned in `.claude/upstream.md` are NOT overwritten from upstream
-- [ ] **Icskills-only content audited** — Review every `< ` diff line (content we have that upstream doesn't). Each must be either listed as owned in `.claude/upstream.md` or removed. Any icskills addition not tracked there is a gap — file an upstream issue or add it to the owned list.
+- [ ] **Owned sections audited against upstream additions** — For each owned section, check whether the upstream diff now covers the same content. If upstream ships it, drop the icskills copy and remove the entry from `.claude/upstream.md` to avoid duplicating agent instructions.
+- [ ] **Icskills-only content audited** — Any content we have that is absent from the upstream diff must be either listed as owned in `.claude/upstream.md` or removed. Content not tracked there is a gap — file an upstream issue or add it to the owned list.
 - [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
 - [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
 - [ ] **Evals reviewed** — Check if new upstream content introduces patterns agents would get wrong without the skill. Strong candidates: new commands, changed defaults, renamed APIs, new pitfalls. Add eval cases where the delta is non-trivial.
@@ -148,7 +156,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 
 ### Automated upstream release detection
 
-`.github/workflows/sync-upstream.yml` runs weekly. When a new upstream release is detected it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` containing the raw diff. The workflow does NOT apply changes — it surfaces them for manual review and application.
+`.github/workflows/sync-upstream.yml` runs weekly. When a new upstream release is detected, it diffs every file in the upstream skill folder between the old pinned commit and the new release commit (upstream old vs upstream new — not our local file vs upstream). If any file changed, it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` containing that pure upstream delta. If no files changed, it exits silently — no issue is opened and `.claude/upstream.md` is not updated. The workflow does NOT apply changes — it surfaces them for manual review and application.
 
 **Issue lifecycle:**
 - There is at most one open sync issue per upstream repo at any time (identified by label).
@@ -158,7 +166,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 
 **For humans and agents:** when you see an open issue titled `chore: upstream sync available — <repo> <old> → <new>`:
 1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped.
-2. Re-run the diff commands from the "Checking for upstream changes" section above against the *current* SKILL.md files — the diff in the issue body was computed at issue-open time and may be stale.
+2. Re-run the diff commands from the "Checking for upstream changes" section above (upstream old vs upstream new) — the diff in the issue body was computed at issue-open time and may be stale if main has changed since.
 3. Create a branch `chore/sync-upstream-<upstream-repo>-<new-tag>` (e.g. `chore/sync-upstream-motoko-1.9.0`, `chore/sync-upstream-mops-cli-v2.14.0`), apply changes following the checklist, update `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
