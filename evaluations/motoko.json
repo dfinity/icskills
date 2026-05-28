@@ -59,7 +59,7 @@
       "name": "Option handling pattern",
       "prompt": "Write a Motoko function that looks up a user by ID in a Map and returns a greeting message, or 'not found' if the user doesn't exist.",
       "expected_behaviors": [
-        "Uses switch/case with `case (?value)` and `case null` pattern",
+        "Uses switch/case with `case (?value)` and `case (null)` pattern",
         "Uses dot notation for Map.get: `users.get(id)`",
         "Does NOT use unsafe unwrapping that could trap"
       ]
@@ -137,7 +137,7 @@
       "expected_behaviors": [
         "Uses `{ todo with completed = true }` for the updated record",
         "Does NOT copy fields manually: NOT `{ id = todo.id; title = todo.title; completed = true }`",
-        "Uses `mapInPlace` or `findIndex` + `put` to update the list element"
+        "Uses `mapInPlace` with a conditional to replace the matching record in the list"
       ]
     },
     {
@@ -148,7 +148,7 @@
         "Uses List from mo:core for storing todos",
         "Todo type definition is inside the actor body, not before it",
         "Uses dot notation for all collection operations",
-        "Uses record spread `{ todo with completed = true }` for toggling",
+        "Marks todos as completed via record spread `{ todo with completed = true }` OR direct field mutation `todo.completed := true` (for `var` fields)",
         "Does NOT import from mo:base"
       ]
     },

@@ -38,7 +38,7 @@
       "prompt": "How do I configure mops.toml for enhanced migration on my `backend` canister with migrations in `src/backend/migrations`?",
       "expected_behaviors": [
         "Shows `[canisters.backend.migrations]` section with `chain` path",
-        "Does NOT put `--enhanced-migration` in `[moc].args` — it must be per-canister",
+        "Does NOT manually add `--enhanced-migration` anywhere — mops auto-injects it when `[canisters.<name>.migrations]` is configured",
         "Notes that mops injects `--enhanced-migration` automatically when `[canisters.<name>.migrations]` is configured",
         "Warns not to duplicate `--enhanced-migration` in `[canisters.backend].args`"
       ]

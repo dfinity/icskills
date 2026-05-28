@@ -93,7 +93,7 @@
       "expected_behaviors": [
         "Explains that mo:base is deprecated and should not be used",
         "Recommends importing Map from mo:core: `import Map \"mo:core/Map\"`",
-        "Notes that HashMap from mo:base is not stable and cannot be used in persistent actors",
+        "Notes that mo:base is deprecated overall — mo:base/HashMap is not a valid choice regardless of actor type",
         "Does NOT confirm that mo:base/HashMap is a valid choice"
       ]
     }
@@ -106,13 +106,13 @@
       "How do I pin the moc compiler version?",
       "My mops check is failing, how do I fix it?",
       "What's the mops command to update all dependencies?",
-      "How do I add a new migration file for my Motoko canister?",
+      "My mops check is failing with a migration compatibility hint — how do I add a new migration file?",
       "Set up lintoko in my mops project",
       "How do I run tests with mops?",
       "Configure moc flags for my Motoko canister",
       "My mops.lock file is stale, what do I do?",
       "How do I add a dev dependency with mops?",
-      "How do I run tests in my Motoko project?"
+      "How do I configure the moc toolchain version in mops?"
     ],
     "should_not_trigger": [
       "Write a Motoko persistent actor with a counter",
