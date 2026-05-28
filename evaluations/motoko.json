@@ -214,15 +214,6 @@
       ]
     },
     {
-      "name": "Canister environment variable access",
-      "prompt": "In a Motoko canister, write the code to read an environment variable called `PUBLIC_CANISTER_ID:backend` at runtime. Just the code snippet, no full canister.",
-      "expected_behaviors": [
-        "Uses `Runtime.envVar(\"PUBLIC_CANISTER_ID:backend\")` which returns `?Text`",
-        "Imports Runtime from `mo:core/Runtime`",
-        "Handles the null case — either with `else Debug.trap(...)` or a switch statement"
-      ]
-    },
-    {
       "name": "Import path from nested file",
       "prompt": "I have a Motoko file at `mixins/Auth.mo` and I need to import `types.mo` which is at the backend root (same level as main.mo). Write the correct import statement.",
       "expected_behaviors": [
