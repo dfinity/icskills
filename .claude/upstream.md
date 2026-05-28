@@ -33,7 +33,7 @@ Upstream file paths are relative to `.agents/skills/<upstream-skill-name>/` in t
 - **Last synced:** 2026-05-28
 - **Upstream file:** `.agents/skills/migrating-motoko/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - `## Additional References` — section title and links use icskills names (upstream calls it "Additional Resources")
+  - `## Additional References` — section renamed from upstream's "Additional Resources"; links use icskills skill names (e.g., `motoko` not `writing-motoko`); extra link added: `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup`
 
 ---
 
@@ -45,7 +45,7 @@ Upstream file paths are relative to `.agents/skills/<upstream-skill-name>/` in t
 - **Last synced:** 2026-05-28
 - **Upstream file:** `.agents/skills/migrating-motoko-enhanced/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - `## Additional References` — section title and links use icskills names (upstream calls it "Additional Resources")
+  - `## Additional References` — section renamed from upstream's "Additional Resources"; links use icskills skill names (e.g., `motoko` not `writing-motoko`); extra link added: `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup`
 
 ---
 
