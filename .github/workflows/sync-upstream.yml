@@ -34,23 +34,49 @@ jobs:
           TAG=$(grep 'Tag:' skills/motoko/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Check if update needed
+      - name: Check and manage sync issue
         id: check
         run: |
           LATEST="${{ steps.latest.outputs.tag }}"
           CURRENT="${{ steps.current.outputs.tag }}"
-          BRANCH="infra/sync-motoko-${LATEST}"
+
           if [ "$LATEST" = "$CURRENT" ]; then
             echo "needed=false" >> $GITHUB_OUTPUT
             echo "Already at latest: $CURRENT"
-          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
-            echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Branch $BRANCH already exists — PR likely open, skipping"
-          else
-            echo "needed=true" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-            echo "New release: $LATEST (current: $CURRENT)"
+            exit 0
           fi
+
+          # Ensure label exists (idempotent — safe to run even if label already exists)
+          gh label create "upstream-motoko" --color "BFD4F2" \
+            --description "Upstream sync: caffeinelabs/motoko" 2>/dev/null || true
+
+          # Look for an existing open sync issue for this upstream (per-repo label, no title parsing)
+          OPEN_ISSUE=$(gh issue list \
+            --label "upstream-motoko" \
+            --state open \
+            --limit 1 \
+            --json number,title \
+            --jq 'first // empty')
+
+          if [ -n "$OPEN_ISSUE" ]; then
+            ISSUE_NUM=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['number'])")
+            ISSUE_TITLE=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
+
+            if echo "$ISSUE_TITLE" | grep -qF "$LATEST"; then
+              echo "needed=false" >> $GITHUB_OUTPUT
+              echo "Issue #$ISSUE_NUM already open for $LATEST — skipping"
+              exit 0
+            fi
+
+            # A newer release is out — close the stale issue before opening a fresh one
+            gh issue close "$ISSUE_NUM" \
+              --comment "Superseded: a newer release (\`$LATEST\`) is now available. Closing — a fresh issue will be opened. When syncing, target \`$LATEST\` directly; you do not need to sync through the intermediate release this issue tracked."
+            echo "Closed stale issue #$ISSUE_NUM"
+          fi
+
+          echo "needed=true" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Resolve commit SHA for new release
         if: steps.check.outputs.needed == 'true'
@@ -73,7 +99,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Fetch upstream files and build diff
+      - name: Fetch upstream files and build issue body
         if: steps.check.outputs.needed == 'true'
         run: |
           SHA="${{ steps.sha.outputs.commit }}"
@@ -91,10 +117,18 @@ jobs:
             echo ""
             echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/motoko/commit/${SHA})"
             echo ""
-            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in each"
-            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
+            echo "To sync: create a branch \`chore/sync-upstream-motoko-${LATEST}\`, follow the"
+            echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
+            echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
             echo ""
-          } > /tmp/pr-body.md
+            echo "> **Note:** this diff was computed when the issue was opened. Re-run the diff commands"
+            echo "> from CLAUDE.md against the current SKILL.md files before applying — changes may have"
+            echo "> landed on main since this issue was opened."
+            echo ""
+            echo "**Before applying:** check which sections are listed as \`owned by icskills\`"
+            echo "in each skill's upstream comment block. Do NOT overwrite those sections."
+            echo ""
+          } > /tmp/issue-body.md
 
           for upstream_name in "writing-motoko" "migrating-motoko" "migrating-motoko-enhanced"; do
             local_name="${UPSTREAM_TO_LOCAL[$upstream_name]}"
@@ -107,7 +141,7 @@ jobs:
               {
                 echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
                 echo ""
-                echo '<details><summary>Show diff</summary>'
+                echo '<details><summary>Show diff (- ours, + upstream)</summary>'
                 echo ""
                 echo '```diff'
                 echo "$DIFF"
@@ -115,25 +149,20 @@ jobs:
                 echo ""
                 echo '</details>'
                 echo ""
-              } >> /tmp/pr-body.md
+              } >> /tmp/issue-body.md
             else
-              echo "### \`${local_name}\` — no changes" >> /tmp/pr-body.md
-              echo "" >> /tmp/pr-body.md
+              echo "### \`${local_name}\` — no changes" >> /tmp/issue-body.md
+              echo "" >> /tmp/issue-body.md
             fi
           done
 
-      - name: Create sync PR
+      - name: Open sync issue
         if: steps.check.outputs.needed == 'true'
         run: |
-          BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "pr-automation-bot-public[bot]"
-          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}"
-          git push -u origin "$BRANCH"
-          gh pr create \
-            --title "chore: sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}" \
-            --body-file /tmp/pr-body.md
+          gh issue create \
+            --title "chore: upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            --body-file /tmp/issue-body.md \
+            --label "upstream-motoko"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -165,23 +194,49 @@ jobs:
           TAG=$(grep 'Tag:' skills/mops-cli/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Check if update needed
+      - name: Check and manage sync issue
         id: check
         run: |
           LATEST="${{ steps.latest.outputs.tag }}"
           CURRENT="${{ steps.current.outputs.tag }}"
-          BRANCH="infra/sync-mops-${LATEST}"
+
           if [ "$LATEST" = "$CURRENT" ]; then
             echo "needed=false" >> $GITHUB_OUTPUT
             echo "Already at latest: $CURRENT"
-          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
-            echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Branch $BRANCH already exists — PR likely open, skipping"
-          else
-            echo "needed=true" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-            echo "New release: $LATEST (current: $CURRENT)"
+            exit 0
           fi
+
+          # Ensure label exists (idempotent — safe to run even if label already exists)
+          gh label create "upstream-mops" --color "BFD4F2" \
+            --description "Upstream sync: caffeinelabs/mops" 2>/dev/null || true
+
+          # Look for an existing open sync issue for this upstream (per-repo label, no title parsing)
+          OPEN_ISSUE=$(gh issue list \
+            --label "upstream-mops" \
+            --state open \
+            --limit 1 \
+            --json number,title \
+            --jq 'first // empty')
+
+          if [ -n "$OPEN_ISSUE" ]; then
+            ISSUE_NUM=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['number'])")
+            ISSUE_TITLE=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
+
+            if echo "$ISSUE_TITLE" | grep -qF "$LATEST"; then
+              echo "needed=false" >> $GITHUB_OUTPUT
+              echo "Issue #$ISSUE_NUM already open for $LATEST — skipping"
+              exit 0
+            fi
+
+            # A newer release is out — close the stale issue before opening a fresh one
+            gh issue close "$ISSUE_NUM" \
+              --comment "Superseded: a newer release (\`$LATEST\`) is now available. Closing — a fresh issue will be opened. When syncing, target \`$LATEST\` directly; you do not need to sync through the intermediate release this issue tracked."
+            echo "Closed stale issue #$ISSUE_NUM"
+          fi
+
+          echo "needed=true" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Resolve commit SHA for new release
         if: steps.check.outputs.needed == 'true'
@@ -204,7 +259,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Fetch upstream file and build diff
+      - name: Fetch upstream file and build issue body
         if: steps.check.outputs.needed == 'true'
         run: |
           SHA="${{ steps.sha.outputs.commit }}"
@@ -223,13 +278,21 @@ jobs:
             echo ""
             echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/mops/commit/${SHA})"
             echo ""
-            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in the"
-            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
+            echo "To sync: create a branch \`chore/sync-upstream-mops-${LATEST}\`, follow the"
+            echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
+            echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
+            echo ""
+            echo "> **Note:** this diff was computed when the issue was opened. Re-run the diff commands"
+            echo "> from CLAUDE.md against the current SKILL.md files before applying — changes may have"
+            echo "> landed on main since this issue was opened."
+            echo ""
+            echo "**Before applying:** check which sections are listed as \`owned by icskills\`"
+            echo "in the skill's upstream comment block. Do NOT overwrite those sections."
             echo ""
             echo "### \`mops-cli\`"
             echo ""
             if [ -n "$DIFF" ]; then
-              echo '<details><summary>Show diff</summary>'
+              echo '<details><summary>Show diff (- ours, + upstream)</summary>'
               echo ""
               echo '```diff'
               echo "$DIFF"
@@ -239,19 +302,14 @@ jobs:
             else
               echo "No changes."
             fi
-          } > /tmp/pr-body.md
+          } > /tmp/issue-body.md
 
-      - name: Create sync PR
+      - name: Open sync issue
         if: steps.check.outputs.needed == 'true'
         run: |
-          BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "pr-automation-bot-public[bot]"
-          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}"
-          git push -u origin "$BRANCH"
-          gh pr create \
-            --title "chore: sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}" \
-            --body-file /tmp/pr-body.md
+          gh issue create \
+            --title "chore: upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            --body-file /tmp/issue-body.md \
+            --label "upstream-mops"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

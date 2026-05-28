@@ -91,33 +91,34 @@ Always use the **full commit SHA** of the tag, not just the tag name. Annotated 
 ### Getting a commit SHA for a tag
 
 ```bash
-# Step 1: get tag object SHA and type
+# Step 1: get the tag object SHA
 TAG_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/ref/tags/<tag>" | \
-  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
+  python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
 
-# Step 2: if type is "tag" (annotated), dereference to the commit
-curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/<tag-sha>" | \
-  python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])"
+# Step 2: dereference annotated tag → commit SHA
+# (For lightweight tags type == "commit", so TAG_SHA is already the commit — skip this step)
+COMMIT_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/$TAG_SHA" | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
 ```
 
 ### Checking for upstream changes
 
 ```bash
-# Fetch upstream skill file at a new tag/commit
+# Fetch upstream skill file at the new commit
 curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
 
-# Compare to find what changed
-diff /tmp/upstream.md skills/<skill-name>/SKILL.md
+# Compare: '-' lines are in our file but not upstream; '+' lines are new in upstream
+diff skills/<skill-name>/SKILL.md /tmp/upstream.md
 ```
 
 ### Current upstream sources
 
-| Skill | Upstream repo | Tag | Commit |
-|-------|--------------|-----|--------|
-| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
-| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
-| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` |
-| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.2 | `59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352` |
+| Skill | Upstream repo | Tag | Commit | Upstream file |
+|-------|--------------|-----|--------|---------------|
+| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `.agents/skills/writing-motoko/SKILL.md` |
+| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `.agents/skills/migrating-motoko/SKILL.md` |
+| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `.agents/skills/migrating-motoko-enhanced/SKILL.md` |
+| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.2 | `59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352` | `.agents/skills/mops-cli/SKILL.md` |
 
 **Release-only policy**: Only sync from tagged releases. Never apply changes from `main`/`master` between releases — those are unreleased and may be experimental or unstable.
 
@@ -141,14 +142,23 @@ When syncing a skill from a new upstream release, verify all of these before com
 | Change type | Examples | Rule |
 |-------------|---------|------|
 | **Cross-reference links** | `Load motoko skill`, `Load mops-cli skill` | Always rewrite to icskills skill names; never overwrite from upstream |
-| **Bug fixes to upstream** | Removed `args = ["--enhanced-migration=..."]` from migrating-motoko-enhanced | Keep our fix; consider contributing upstream |
 | **icp-cli / IC-specific additions** | Runtime.envVar, icp-cli deployment notes, M0141/M0145 pitfalls | icskills-owned; do not overwrite |
-| **Style additions** | transient var section, variant tag examples | icskills-owned if not in upstream; otherwise align |
 | **Content shared with upstream** | All patterns, syntax, error tables | Sync from upstream when unchanged |
 
 ### Automated upstream release detection
 
-`.github/workflows/sync-upstream.yml` runs weekly to detect new releases of tracked upstream repos. When a new release is found it opens a PR with the raw upstream diff, so maintainers can review and cherry-pick improvements manually. The workflow does NOT auto-apply changes — it only surfaces the diff.
+`.github/workflows/sync-upstream.yml` runs weekly. When a new upstream release is detected it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` containing the raw diff. The workflow does NOT apply changes — it surfaces them for manual review and application.
+
+**Issue lifecycle:**
+- There is at most one open sync issue per upstream repo at any time (identified by label).
+- If a newer release comes out before the open issue is resolved, the workflow closes the stale issue with a "Superseded" comment and opens a fresh one for the latest release.
+- Always work from the **open** issue — it always points to the latest unsynced release.
+- When the sync is complete, open a PR and close the issue with `Closes #<n>` in the PR body.
+
+**For humans and agents:** when you see an open issue titled `chore: upstream sync available — <repo> <old> → <new>`:
+1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped.
+2. Re-run the diff commands from the "Checking for upstream changes" section above against the *current* SKILL.md files — the diff in the issue body was computed at issue-open time and may be stale.
+3. Create a branch `chore/sync-upstream-<skill>-<new-tag>`, apply changes following the checklist, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
