@@ -15,9 +15,9 @@
     },
     {
       "name": "Actor with Map collection",
-      "prompt": "Write a Motoko canister that stores user profiles (name, email) by ID and supports add, get, and list operations.",
+      "prompt": "Write a Motoko actor body that stores user profiles (name : Text, email : Text) by Nat ID using mo:core/Map, with add, get, and list operations. Just the actor body — no mops.toml or deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` (with --default-persistent-actors assumed) OR `persistent actor`",
+        "Uses `persistent actor` (no mops.toml context — plain `actor` alone would not compile)",
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
         "Creates map with Map.empty<K, V>()",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
@@ -114,7 +114,7 @@
     },
     {
       "name": "Mixin structure",
-      "prompt": "Create a reusable auth mixin for user registration and profile lookup that can be included in a Motoko actor.",
+      "prompt": "Write a Motoko mixin file `mixins/Auth.mo` for user registration and profile lookup. It takes a `users : List.List<User>` parameter and has two public functions. Then show the minimal actor snippet that includes it. No mops.toml, no deploy steps.",
       "expected_behaviors": [
         "Produces a separate mixin file using `mixin(users : List.List<User>) { ... }` syntax",
         "Public functions in the mixin use `public shared ({ caller }) func`",
@@ -142,15 +142,12 @@
     },
     {
       "name": "Full canister with multiple features",
-      "prompt": "Write a Motoko canister for a simple todo app. It should support adding todos with a title, marking them complete, listing all todos, and deleting a todo by ID.",
+      "prompt": "Write a Motoko actor body for a todo app: add todo (title), mark complete by ID, list all todos. Just the actor body — no mops.toml, no types.mo, no deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` (with flag) OR `persistent actor`",
+        "Uses `persistent actor` (no mops.toml context — plain `actor` alone would not compile)",
         "Uses List from mo:core for storing todos",
-        "Type definition for Todo is inside the actor body",
-        "Uses `var` for the ID counter (not `stable var`)",
+        "Todo type definition is inside the actor body, not before it",
         "Uses dot notation for all collection operations",
-        "Query functions use `public query func`",
-        "Update functions use `public func` with `async` return",
         "Uses record spread `{ todo with completed = true }` for toggling",
         "Does NOT import from mo:base"
       ]
