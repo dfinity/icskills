@@ -56,13 +56,14 @@
     },
     {
       "name": "Migration workflow",
-      "prompt": "I changed my Motoko actor's stable state and mops check is now failing with a migration hint. How do I create a new migration called `AddEmailField` for the `backend` canister, and what do I do after deploying?",
+      "prompt": "My mops check is failing with a migration compatibility hint. How do I add a new migration called `AddEmailField` for my `backend` canister that uses enhanced migration?",
       "expected_behaviors": [
-        "Runs `mops migrate new AddEmailField backend` to create the migration",
-        "Mentions editing the generated migration file",
-        "Runs `mops check` to verify the migration resolves the error",
+        "Creates the migration file manually in the migrations directory with a timestamp prefix (e.g. `20250601_000000_AddEmailField.mo`)",
+        "Migration file exports `public func migration({...}) : {...}`",
+        "Runs `mops check --fix` (or `mops check backend`) to verify the migration resolves the error",
         "Runs `mops build` after check passes",
-        "After deploying, runs `mops migrate freeze backend` to move next-migration to the permanent chain",
+        "Does NOT suggest `mops migrate new` (command no longer exists)",
+        "Does NOT suggest `mops migrate freeze` (command no longer exists)",
         "Does NOT suggest adding `--enhanced-migration` to mops.toml manually (mops auto-injects it)"
       ]
     },
@@ -105,7 +106,7 @@
       "How do I pin the moc compiler version?",
       "My mops check is failing, how do I fix it?",
       "What's the mops command to update all dependencies?",
-      "How do I create a new migration with mops migrate?",
+      "How do I add a new migration file for my Motoko canister?",
       "Set up lintoko in my mops project",
       "How do I run tests with mops?",
       "Configure moc flags for my Motoko canister",

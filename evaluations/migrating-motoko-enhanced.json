@@ -57,11 +57,12 @@
       "name": "Workflow with mops",
       "prompt": "Walk me through the full workflow for adding a new field to my Motoko canister using enhanced migration.",
       "expected_behaviors": [
-        "Mentions `mops migrate new <Name>` to create the migration file",
-        "Mentions editing the migration file",
+        "Creates the migration file manually in the migrations directory with a timestamp prefix",
+        "Migration file exports `public func migration({...}) : {...}`",
         "Mentions `mops check --fix` to verify chain consistency",
         "Mentions `mops build` to compile",
-        "Mentions `mops migrate freeze` after successful deployment"
+        "Does NOT mention `mops migrate new` (command no longer exists)",
+        "Does NOT mention `mops migrate freeze` (command no longer exists)"
       ]
     },
     {
@@ -93,7 +94,7 @@
       "How does the migration chain work in Motoko?",
       "Configure mops.toml for enhanced migration",
       "How do I add a field to my canister using the migrations directory?",
-      "Explain mops migrate new and mops migrate freeze",
+      "How do I add a field to my canister with the enhanced migration workflow?",
       "My actor has enhanced migration but I need to rename a field"
     ],
     "should_not_trigger": [
