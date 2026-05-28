@@ -71,17 +71,21 @@ jobs:
         if: steps.skip.outputs.needed == 'true'
         id: diff
         run: |
-          if bash scripts/sync-upstream-check.sh \
-               "caffeinelabs/motoko" \
-               "${{ steps.current.outputs.sha }}" \
-               "${{ steps.sha.outputs.commit }}" \
-               "${{ steps.current.outputs.tag }}" \
-               "${{ steps.latest.outputs.tag }}" \
-               /tmp/issue-body.md; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
+          set +e
+          bash scripts/sync-upstream-check.sh \
+            "caffeinelabs/motoko" \
+            "${{ steps.current.outputs.sha }}" \
+            "${{ steps.sha.outputs.commit }}" \
+            "${{ steps.current.outputs.tag }}" \
+            "${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "has_changes=false" >> $GITHUB_OUTPUT ;;
+            1) echo "has_changes=true" >> $GITHUB_OUTPUT ;;
+            *) exit $rc ;;
+          esac
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -90,8 +94,6 @@ jobs:
         run: |
           bash scripts/sync-upstream-open-issue.sh \
             "upstream-motoko" \
-            "BFD4F2" \
-            "Upstream sync: caffeinelabs/motoko" \
             "upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
             /tmp/issue-body.md
         env:
@@ -181,8 +183,6 @@ jobs:
         run: |
           bash scripts/sync-upstream-open-issue.sh \
             "upstream-mops" \
-            "BFD4F2" \
-            "Upstream sync: caffeinelabs/mops" \
             "upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
             /tmp/issue-body.md
         env:

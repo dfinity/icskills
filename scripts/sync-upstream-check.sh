@@ -19,6 +19,8 @@ CURRENT_TAG="$4"
 LATEST_TAG="$5"
 OUTPUT_FILE="$6"
 
+: "${GH_TOKEN:?GH_TOKEN environment variable is required}"
+
 if [ "$OLD_SHA" = "$NEW_SHA" ]; then
   echo "New tag $LATEST_TAG resolves to the same commit as $CURRENT_TAG — no content changes"
   exit 0

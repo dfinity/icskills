@@ -1,21 +1,17 @@
 #!/usr/bin/env bash
 # Open a sync issue, closing any stale one for the same upstream first.
+# The issue label must already exist in the repository.
 #
 # Usage:
-#   scripts/sync-upstream-open-issue.sh <label> <label-color> <label-description> <title> <body-file>
+#   scripts/sync-upstream-open-issue.sh <label> <title> <body-file>
 #
 # Requires GH_TOKEN in environment.
 
 set -uo pipefail
 
 LABEL="$1"
-LABEL_COLOR="$2"
-LABEL_DESC="$3"
-TITLE="$4"
-BODY_FILE="$5"
-
-gh label create "$LABEL" --color "$LABEL_COLOR" \
-  --description "$LABEL_DESC" 2>/dev/null || true
+TITLE="$2"
+BODY_FILE="$3"
 
 OPEN_ISSUE=$(gh issue list \
   --label "$LABEL" \
