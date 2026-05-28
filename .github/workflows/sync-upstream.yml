@@ -88,37 +88,12 @@ jobs:
       - name: Manage and open sync issue
         if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
         run: |
-          LATEST="${{ steps.latest.outputs.tag }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-
-          gh label create "upstream-motoko" --color "BFD4F2" \
-            --description "Upstream sync: caffeinelabs/motoko" 2>/dev/null || true
-
-          OPEN_ISSUE=$(gh issue list \
-            --label "upstream-motoko" \
-            --state open \
-            --limit 1 \
-            --json number,title \
-            --jq 'first // empty')
-
-          if [ -n "$OPEN_ISSUE" ]; then
-            ISSUE_NUM=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['number'])")
-            ISSUE_TITLE=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
-
-            if echo "$ISSUE_TITLE" | grep -qF "$LATEST"; then
-              echo "Issue #$ISSUE_NUM already open for $LATEST — skipping"
-              exit 0
-            fi
-
-            gh issue close "$ISSUE_NUM" \
-              --comment "Superseded: a newer release (\`$LATEST\`) is now available. Closing — a fresh issue will be opened. When syncing, target \`$LATEST\` directly; you do not need to sync through the intermediate release this issue tracked."
-            echo "Closed stale issue #$ISSUE_NUM"
-          fi
-
-          gh issue create \
-            --title "chore: upstream sync available — caffeinelabs/motoko ${CURRENT} → ${LATEST}" \
-            --body-file /tmp/issue-body.md \
-            --label "upstream-motoko"
+          bash scripts/sync-upstream-open-issue.sh \
+            "upstream-motoko" \
+            "BFD4F2" \
+            "Upstream sync: caffeinelabs/motoko" \
+            "chore: upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -204,36 +179,11 @@ jobs:
       - name: Manage and open sync issue
         if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
         run: |
-          LATEST="${{ steps.latest.outputs.tag }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-
-          gh label create "upstream-mops" --color "BFD4F2" \
-            --description "Upstream sync: caffeinelabs/mops" 2>/dev/null || true
-
-          OPEN_ISSUE=$(gh issue list \
-            --label "upstream-mops" \
-            --state open \
-            --limit 1 \
-            --json number,title \
-            --jq 'first // empty')
-
-          if [ -n "$OPEN_ISSUE" ]; then
-            ISSUE_NUM=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['number'])")
-            ISSUE_TITLE=$(echo "$OPEN_ISSUE" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
-
-            if echo "$ISSUE_TITLE" | grep -qF "$LATEST"; then
-              echo "Issue #$ISSUE_NUM already open for $LATEST — skipping"
-              exit 0
-            fi
-
-            gh issue close "$ISSUE_NUM" \
-              --comment "Superseded: a newer release (\`$LATEST\`) is now available. Closing — a fresh issue will be opened. When syncing, target \`$LATEST\` directly; you do not need to sync through the intermediate release this issue tracked."
-            echo "Closed stale issue #$ISSUE_NUM"
-          fi
-
-          gh issue create \
-            --title "chore: upstream sync available — caffeinelabs/mops ${CURRENT} → ${LATEST}" \
-            --body-file /tmp/issue-body.md \
-            --label "upstream-mops"
+          bash scripts/sync-upstream-open-issue.sh \
+            "upstream-mops" \
+            "BFD4F2" \
+            "Upstream sync: caffeinelabs/mops" \
+            "chore: upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
