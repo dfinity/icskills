@@ -92,7 +92,7 @@ jobs:
             "upstream-motoko" \
             "BFD4F2" \
             "Upstream sync: caffeinelabs/motoko" \
-            "chore: upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            "upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
             /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -183,7 +183,7 @@ jobs:
             "upstream-mops" \
             "BFD4F2" \
             "Upstream sync: caffeinelabs/mops" \
-            "chore: upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            "upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
             /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

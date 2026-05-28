@@ -164,7 +164,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 - Always work from the **open** issue — it always points to the latest unsynced release.
 - When the sync is complete, open a PR and close the issue with `Closes #<n>` in the PR body.
 
-**For humans and agents:** when you see an open issue titled `chore: upstream sync available — <repo> <old> → <new>`:
+**For humans and agents:** when you see an open issue titled `upstream sync available — <repo> <old> → <new>`:
 1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped.
 2. Re-run the diff commands from the "Checking for upstream changes" section above (upstream old vs upstream new) — the diff in the issue body was computed at issue-open time and may be stale if main has changed since.
 3. Create a branch `chore/sync-upstream-<upstream-repo>-<new-tag>` (e.g. `chore/sync-upstream-motoko-1.9.0`, `chore/sync-upstream-mops-cli-v2.14.0`), apply changes following the checklist, update `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
