@@ -30,7 +30,7 @@
       "prompt": "Write a Motoko migration that adds a `zipCode : Text` field (defaulting to empty string) to each record in a Map of users stored in my canister.",
       "expected_behaviors": [
         "Uses `(with migration = ...)` on the actor",
-        "Defines `OldUser` and `NewUser` types inline in the migration module",
+        "Defines `OldUser` type inline in the migration module; `NewUser` (current type) may be imported from `types.mo`",
         "Uses dot notation on the Map: `old.users.map<...>(func(_, u) { { u with zipCode = \"\" } })`",
         "Does NOT import old types from the existing codebase"
       ]

@@ -58,10 +58,8 @@
       "name": "Migration workflow",
       "prompt": "My mops check is failing with a migration compatibility hint. How do I add a new migration called `AddEmailField` for my `backend` canister that uses enhanced migration?",
       "expected_behaviors": [
-        "Creates the migration file manually in the migrations directory with a timestamp prefix (e.g. `20250601_000000_AddEmailField.mo`)",
-        "Migration file exports `public func migration({...}) : {...}`",
         "Runs `mops check --fix` (or `mops check backend`) to verify the migration resolves the error",
-        "Runs `mops build` after check passes",
+        "Runs `mops build` after check passes — NOT before",
         "Does NOT suggest `mops migrate new` (command no longer exists)",
         "Does NOT suggest `mops migrate freeze` (command no longer exists)",
         "Does NOT suggest adding `--enhanced-migration` to mops.toml manually (mops auto-injects it)"
