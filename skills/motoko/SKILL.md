@@ -12,10 +12,10 @@ metadata:
      Tag: 1.8.2  Commit: f45204bc75c8e0ed5198fd2fe7265679af71814a
      File: .agents/skills/writing-motoko/SKILL.md
      Last synced: 2026-05-28
-     Sections owned by icskills (do not overwrite from upstream):
-     M0145 / do?{} / Runtime.envVar / Text.join / List.get vs List.at
-     References owned by icskills (not from upstream, do not delete):
-     references/examples.md, references/control-flow.md, references/type-conversions.md -->
+     Sections owned by icskills (absent from upstream — do not overwrite):
+     Prerequisites, Actors and Persistence, mo:core Standard Library,
+     Compilation Pitfalls (upstream calls it "Pitfalls" and lacks IC-specific items),
+     Canister Environment Variables, Additional References, references/ -->
 
 # Motoko Language
 
