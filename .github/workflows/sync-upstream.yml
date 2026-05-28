@@ -31,7 +31,7 @@ jobs:
       - name: Get current pinned tag
         id: current
         run: |
-          TAG=$(grep 'Tag:' skills/motoko/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          TAG=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Check and manage sync issue
@@ -241,7 +241,7 @@ jobs:
       - name: Get current pinned tag
         id: current
         run: |
-          TAG=$(grep 'Tag:' skills/mops-cli/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          TAG=$(awk '/^## mops-cli$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Check and manage sync issue

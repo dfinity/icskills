@@ -73,23 +73,13 @@ Results are saved to `evaluations/results/` (gitignored). See `evaluations/icp-c
 
 Several skills track content from external upstream repositories. **Do not use git submodules** — we only need a small number of files per repo and submodules complicate every clone.
 
-### Upstream comment format
+### Upstream tracking file
 
-Every skill that tracks upstream content must have this comment block at the top of the SKILL.md body (after frontmatter):
+All sync metadata lives in `.claude/upstream.md` — one entry per tracked skill with the upstream repo, tag, full commit SHA, file mappings, and icskills-owned sections. **Do not put tracking comments inside SKILL.md files.**
 
-```html
-<!-- Upstream: https://github.com/<org>/<repo>
-     Tag: <tag>  Commit: <full-sha>
-     Files: .agents/skills/<upstream-name>/SKILL.md
-            .agents/skills/<upstream-name>/<file>.md → references/<file>.md
-     Last synced: YYYY-MM-DD
-     Sections owned by icskills (do not overwrite from upstream):
-     <list of sections or files that icskills extends or differs> -->
-```
+When syncing a new release, update the **Tag**, **Commit**, and **Last synced** fields for the relevant skill in `.claude/upstream.md`. Always use the **full commit SHA**, not just the tag name. Annotated tags require a two-step dereference (tag object → commit SHA).
 
-If a skill has no additional reference files, use `File:` (singular) and omit the second line. When the upstream SKILL.md references files that live within the upstream skill's folder (e.g. `examples.md`), list each with `→ references/<file>.md` to show the icskills path. icskills always places such files under `references/` regardless of how upstream organises them.
-
-Always use the **full commit SHA** of the tag, not just the tag name. Annotated tags require a two-step dereference (tag object → commit SHA).
+When the upstream SKILL.md references files that live within the upstream skill's folder (e.g. `examples.md`), list each with `→ references/<file>.md` to show the icskills path. icskills always places such files under `references/` regardless of how upstream organises them.
 
 ### Getting a commit SHA for a tag
 
@@ -106,9 +96,14 @@ COMMIT_SHA=$(curl -s "https://api.github.com/repos/<org>/<repo>/git/tags/$TAG_SH
 
 ### Checking for upstream changes
 
+Get the commit SHA from `.claude/upstream.md` for the skill you are syncing, then diff:
+
 ```bash
-# Fetch upstream SKILL.md at the new commit
-curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>/SKILL.md" > /tmp/upstream.md
+# Read commit SHA from .claude/upstream.md (example for motoko)
+COMMIT=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
+
+# Fetch upstream SKILL.md at that commit
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$COMMIT/<path>/SKILL.md" > /tmp/upstream.md
 
 # Compare: '-' lines are in our file but not upstream; '+' lines are new in upstream
 diff skills/<skill-name>/SKILL.md /tmp/upstream.md
@@ -117,49 +112,38 @@ diff skills/<skill-name>/SKILL.md /tmp/upstream.md
 Also check any files referenced from the upstream SKILL.md that live within the upstream skill's folder (e.g. `examples.md`). These map to our `references/` directory:
 
 ```bash
-# Example for a referenced file
-curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>/examples.md" > /tmp/upstream-examples.md
+curl -s "https://raw.githubusercontent.com/<org>/<repo>/$COMMIT/<path>/examples.md" > /tmp/upstream-examples.md
 diff skills/<skill-name>/references/examples.md /tmp/upstream-examples.md
 ```
 
-To find what files upstream references, read the upstream SKILL.md's "Additional Resources" / "Additional References" section and look for relative links.
-
-### Current upstream sources
-
-| Skill | Upstream repo | Tag | Commit | Upstream files |
-|-------|--------------|-----|--------|----------------|
-| `motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `SKILL.md` + `examples.md` → `references/examples.md` |
-| `migrating-motoko` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `SKILL.md` (no refs) |
-| `migrating-motoko-enhanced` | [caffeinelabs/motoko](https://github.com/caffeinelabs/motoko) | 1.8.2 | `f45204bc75c8e0ed5198fd2fe7265679af71814a` | `SKILL.md` (no refs) |
-| `mops-cli` | [caffeinelabs/mops](https://github.com/caffeinelabs/mops) | cli-v2.13.2 | `59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352` | `SKILL.md` (no refs) |
-
-All upstream file paths are relative to `.agents/skills/<upstream-skill-name>/`. The sync workflow automatically diffs all `.md` files in a skill's `references/` directory against the upstream skill directory and surfaces any new upstream files in the issue body.
+To find what files upstream references, read the upstream SKILL.md's "Additional Resources" section and look for relative links. See `.claude/upstream.md` for the current pinned tags, commit SHAs, file mappings, and icskills-owned sections for all tracked skills.
 
 **Release-only policy**: Only sync from tagged releases. Never apply changes from `main`/`master` between releases — those are unreleased and may be experimental or unstable.
 
-When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements **except for sections listed as "owned by icskills"**, (4) update the upstream comment with the new tag and SHA, (5) update the table above.
+When a new version of an upstream repo is released: (1) get the new commit SHA, (2) diff the upstream skill file against what we have, (3) apply non-conflicting improvements **except for sections listed as owned in `.claude/upstream.md`**, (4) update `.claude/upstream.md` with the new tag and SHA.
 
 ### Agent checklist for upstream sync
 
 When syncing a skill from a new upstream release, verify all of these before committing:
 
-- [ ] **Upstream comment updated** — Tag, Commit (full SHA), Last synced date, Sections owned
+- [ ] **`.claude/upstream.md` updated** — Tag, Commit (full SHA), Last synced date
 - [ ] **Reference files synced** — Check the upstream SKILL.md for any files it references that live within the upstream skill's folder. Diff each against our `references/` directory (icskills always places such files there, regardless of how upstream organises them). Also check whether upstream now references a file we don't have yet — the sync issue body will flag these as "NEW upstream file" if the workflow detected them.
 - [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
-- [ ] **Icskills-owned sections preserved** — Sections listed in "Sections owned by icskills" are NOT overwritten from upstream
+- [ ] **All upstream additions applied** — Re-read every `> ` line in the diff (lines new in upstream) systematically, including inside code blocks: added/changed inline comments, new sentences, modified expressions. These small changes are easy to miss but often carry clarifications or fixes.
+- [ ] **Icskills-owned sections preserved** — Sections listed as owned in `.claude/upstream.md` are NOT overwritten from upstream
+- [ ] **Icskills-only content audited** — Review every `< ` diff line (content we have that upstream doesn't). Each must be either listed as owned in `.claude/upstream.md` or removed. Any icskills addition not tracked there is a gap — file an upstream issue or add it to the owned list.
 - [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
 - [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
 - [ ] **Evals reviewed** — Check if new upstream content introduces patterns agents would get wrong without the skill. Strong candidates: new commands, changed defaults, renamed APIs, new pitfalls. Add eval cases where the delta is non-trivial.
-- [ ] **CLAUDE.md table updated** — Update the upstream sources table with new tag and SHA
 
 ### What icskills changes vs upstream
 
-| Change type | Examples | Rule |
-|-------------|---------|------|
-| **Cross-reference links** | `Load motoko skill`, `Load mops-cli skill` | Always rewrite to icskills skill names; never overwrite from upstream |
-| **icp-cli / IC-specific additions** | `Prerequisites` section, `Canister Environment Variables`, Pitfalls 3–6, extra error table rows | icskills-owned; do not overwrite |
-| **Content shared with upstream** | All patterns, syntax, error tables | Sync from upstream when unchanged |
+| Change type | Applies to | Rule |
+|-------------|-----------|------|
+| **Cross-reference links** (`## Additional References`) | All skills | Rewrite to icskills skill names; never overwrite from upstream |
+| **General Motoko pitfalls not yet in upstream** (Pitfalls 3–4: Text.join order, List.get vs List.at; M0064/M0145/M0170 error rows) | `motoko` only | Pitfalls 3–4 + M0145: pending [caffeinelabs/motoko#6156](https://github.com/caffeinelabs/motoko/issues/6156). M0064: pending [caffeinelabs/motoko#6157](https://github.com/caffeinelabs/motoko/issues/6157). Drop each row when its issue merges and is synced. |
+| **Body content** | All skills | Sync from upstream when unchanged |
 
 ### Automated upstream release detection
 
@@ -174,7 +158,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 **For humans and agents:** when you see an open issue titled `chore: upstream sync available — <repo> <old> → <new>`:
 1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped.
 2. Re-run the diff commands from the "Checking for upstream changes" section above against the *current* SKILL.md files — the diff in the issue body was computed at issue-open time and may be stale.
-3. Create a branch `chore/sync-upstream-<skill>-<new-tag>`, apply changes following the checklist, run `npm run validate`, and open a PR that closes the issue.
+3. Create a branch `chore/sync-upstream-<upstream-repo>-<new-tag>` (e.g. `chore/sync-upstream-motoko-1.9.0`, `chore/sync-upstream-mops-cli-v2.14.0`), apply changes following the checklist, update `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
