@@ -31,8 +31,7 @@
       "prompt": "I'm getting this Motoko compiler error: `type error [M0220], this actor or actor class should be declared persistent`. Here's my code:\n\nactor {\n  var count : Nat = 0;\n  public func increment() : async Nat {\n    count += 1;\n    count\n  };\n};",
       "expected_behaviors": [
         "Explains that M0220 occurs when neither `--default-persistent-actors` flag nor `persistent` keyword is present",
-        "Offers fix option 1: add `--default-persistent-actors` to `[moc].args` in mops.toml",
-        "Offers fix option 2: change `actor` to `persistent actor`",
+        "Offers at least one valid fix: add `--default-persistent-actors` to `[moc].args` in mops.toml OR change `actor` to `persistent actor`",
         "Does NOT suggest adding `stable` keyword to variables"
       ]
     },

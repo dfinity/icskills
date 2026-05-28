@@ -40,7 +40,6 @@
       "prompt": "I want to add a new optional field `?Text` to my Motoko actor in the next upgrade. Do I need to write a migration function?",
       "expected_behaviors": [
         "Explains that adding a field is an implicit (compatible) change — no migration function needed",
-        "Mentions that removing fields, changing mutability, and widening types are also implicit",
         "Notes that renaming fields or changing types DO require an explicit migration"
       ]
     },

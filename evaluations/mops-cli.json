@@ -30,8 +30,7 @@
       "expected_behaviors": [
         "Uses `mops check backend` (canister name, NOT a file path like src/backend/main.mo)",
         "Mentions `mops check --fix` for auto-fixing",
-        "Does NOT pass a file path like `mops check src/backend/main.mo`",
-        "Explains that per-canister args from mops.toml are applied automatically when using the canister name"
+        "Does NOT pass a file path like `mops check src/backend/main.mo`"
       ]
     },
     {
