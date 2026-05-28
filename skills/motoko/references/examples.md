@@ -1,8 +1,10 @@
 # Motoko Examples
 
-Complete working examples demonstrating modern Motoko patterns. Assumes `--default-persistent-actors` in mops.toml (see skill prerequisites) — examples use plain `actor {}`.
+Complete working examples demonstrating modern Motoko patterns. All examples verified with moc 1.5.0.
 
-## Principled Multi-File Architecture
+> **Heads-up — enhanced migration:** the actor examples below declare fields with initializers (`let users = List.empty(); var nextId = 0;`). Under `--enhanced-migration`, actor fields **cannot** have initializers — declare them as `var nextId : Nat;` and set initial values in the migration file that introduces them. See the `migrating-motoko-enhanced` skill.
+
+## Principled Architecture
 
 ### types.mo
 
@@ -182,7 +184,7 @@ import Types "types";
 import AuthMixin "mixins/Auth";
 import BlogMixin "mixins/Blog";
 
-actor {
+actor Main {
   let users = List.empty<Types.User>();
   let posts = List.empty<Types.Post>();
 
@@ -193,7 +195,7 @@ actor {
 
 ## Iterator Chaining
 
-`import Array` enables `.find()`, `.any()`, `.all()` on arrays; `import Iter` enables `.map()`, `.filter()` on iterators; `import Bool` enables `.toText()` on booleans.
+Note: `import Array` enables `.find()`, `.any()`, `.all()` on arrays; `import Iter` enables `.map()`, `.filter()` on iterators; `import Bool` enables `.toText()` on booleans; `import Nat` enables `.toText()` on natural numbers.
 
 ```motoko
 import Array "mo:core/Array";
@@ -259,9 +261,36 @@ actor {
 };
 ```
 
-## Shared Type Boundary
+## Timer with Periodic Cleanup
 
-Internal types with mutable fields and stable collections must be converted to shared types at the API boundary:
+```motoko
+import Timer "mo:core/Timer";
+import Time "mo:core/Time";
+import List "mo:core/List";
+
+actor {
+  let logs = List.empty<(Int, Text)>();
+  var timerId : Nat = 0;
+
+  public func startCleanup() : async () {
+    timerId := Timer.recurringTimer<system>(
+      #seconds(3600),
+      func() : async () {
+        let oneHourAgo = Time.now() - 3_600_000_000_000;
+        let recent = logs.filter(func(timestamp, _) { timestamp > oneHourAgo });
+        logs.clear();
+        logs.addAll(recent.values());
+      },
+    );
+  };
+
+  public func stopCleanup() : async () {
+    Timer.cancelTimer(timerId);
+  };
+};
+```
+
+## Shared Type Boundary
 
 ```motoko
 import List "mo:core/List";
@@ -299,7 +328,8 @@ actor {
   public shared ({ caller }) func upload(url : Text) : async Nat {
     let id = photos.size();
     photos.add({
-      id; url;
+      id;
+      url;
       uploadedBy = caller;
       likedBy = Set.empty<Principal>();
       createdAt = Time.now();
@@ -315,76 +345,33 @@ actor {
 
 ## In-Place Mutation Patterns
 
-Use `find` + direct field mutation for `var`-field records. Use `mapInPlace` for immutable record replacement:
+Use `find` + direct field mutation for updating a single item. Use `mapInPlace` when transforming all items:
 
 ```motoko
 import List "mo:core/List";
 
 actor {
-  // var fields — mutate directly via find
-  type Session = { id : Nat; var active : Bool };
-  let sessions = List.empty<Session>();
+  type Todo = { id : Nat; text : Text; var completed : Bool };
 
-  public func deactivate(targetId : Nat) : async Bool {
-    switch (sessions.find(func(s) { s.id == targetId })) {
-      case (?session) { session.active := false; true };
-      case (null) false;
-    };
-  };
-
-  // immutable records — replace via mapInPlace + record spread
-  type Todo = { id : Nat; text : Text; completed : Bool };
   let todos = List.empty<Todo>();
   var nextId : Nat = 0;
 
   public func addTodo(text : Text) : async Nat {
     let id = nextId;
     nextId += 1;
-    todos.add({ id; text; completed = false });
+    todos.add({ id; text; var completed = false });
     id;
   };
 
-  public func completeTodo(targetId : Nat) : async Bool {
-    var found = false;
-    todos.mapInPlace(func(t) {
-      if (t.id == targetId) { found := true; { t with completed = true } } else { t }
-    });
-    found;
-  };
-};
-```
-
-## Timer with Periodic Cleanup
-
-Timer IDs should be `transient var` — timers don't survive upgrades and must be re-registered:
-
-```motoko
-import Timer "mo:core/Timer";
-import Time "mo:core/Time";
-import List "mo:core/List";
-
-actor {
-  let logs = List.empty<(Int, Text)>();
-  transient var timerId : Nat = 0;  // resets on upgrade — timer must be restarted
-
-  public func startCleanup() : async () {
-    timerId := Timer.recurringTimer<system>(
-      #seconds(3600),
-      func() : async () {
-        let oneHourAgo = Time.now() - 3_600_000_000_000;
-        let recent = logs.filter(func(timestamp, _) { timestamp > oneHourAgo });
-        logs.clear();
-        logs.addAll(recent.values());
-      },
-    );
+  public func toggleTodo(targetId : Nat) : async Bool {
+    switch (todos.find(func(t) { t.id == targetId })) {
+      case (?todo) { todo.completed := not todo.completed; true };
+      case (null) false;
+    };
   };
 
-  public func stopCleanup() : async () {
-    Timer.cancelTimer(timerId);
-  };
-
-  public query func getLogs() : async [(Int, Text)] {
-    logs.toArray();
+  public func completeAll() : async () {
+    todos.mapInPlace(func(todo) { { todo with var completed = true } });
   };
 };
 ```

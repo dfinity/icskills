@@ -21,7 +21,7 @@
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
         "Creates map with Map.empty<K, V>()",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
-        "Does NOT pass explicit compare function \u2014 comparator is inferred",
+        "Does NOT pass explicit compare function — comparator is inferred",
         "Type definitions are inside the actor body, not before it",
         "Does NOT use HashMap, TrieMap, or Buffer"
       ]
@@ -82,7 +82,7 @@
         "Explains that Caffeine used `--default-persistent-actors` implicitly, making `persistent` optional",
         "Primary fix: add `--default-persistent-actors` to `[moc].args` in mops.toml",
         "Alternative fix: add `persistent` keyword to every actor declaration",
-        "Mentions that variables were implicitly stable on Caffeine \u2014 use `transient var` for any that should reset on upgrade"
+        "Mentions that variables were implicitly stable on Caffeine — use `transient var` for any that should reset on upgrade"
       ]
     },
     {
@@ -109,7 +109,7 @@
       "expected_behaviors": [
         "Uses `scores.add(name, value)` NOT `Map.add(scores, Text.compare, name, value)`",
         "Uses `scores.get(name)` NOT `Map.get(scores, Text.compare, name)`",
-        "Does NOT pass explicit Text.compare or Nat.compare \u2014 comparator is inferred"
+        "Does NOT pass explicit Text.compare or Nat.compare — comparator is inferred"
       ]
     },
     {
@@ -120,7 +120,7 @@
         "Public functions in the mixin use `public shared ({ caller }) func`",
         "The actor uses plain `actor` with `include AuthMixin(users)` (or `persistent actor` if no flag)",
         "Passes the List to the mixin, NOT a plain `var` primitive",
-        "Does NOT put public methods directly in the actor body \u2014 they come from the mixin"
+        "Does NOT put public methods directly in the actor body — they come from the mixin"
       ]
     },
     {
@@ -128,7 +128,7 @@
       "prompt": "Write a Motoko function that checks whether any user in a List is an admin.",
       "expected_behaviors": [
         "Uses `users.find(func(u) { u.isAdmin }) != null` OR `users.any(func(u) { u.isAdmin })`",
-        "Does NOT use `users.contains(func(u) { u.isAdmin })` \u2014 contains takes equality, not a predicate"
+        "Does NOT use `users.contains(func(u) { u.isAdmin })` — contains takes equality, not a predicate"
       ]
     },
     {
@@ -193,6 +193,42 @@
         "Does NOT use `type` as a field name — it is a reserved keyword in Motoko",
         "Uses an alternative name such as `typ`, `kind`, `assetType`, or `category` instead",
         "Shows a valid compilable type definition"
+      ]
+    },
+    {
+      "name": "Text.join parameter order",
+      "prompt": "Write a Motoko expression that joins the values of a `List.List<Text>` called `names` with `\", \"` as separator. Just the expression, no full canister.",
+      "expected_behaviors": [
+        "Uses `Text.join(names.values(), \", \")` — iterator first, separator second",
+        "Does NOT reverse the arguments: NOT `Text.join(\", \", names.values())`",
+        "Imports `Text` from `mo:core/Text` if it shows imports"
+      ]
+    },
+    {
+      "name": "List.get vs List.at: safe access",
+      "prompt": "Write a Motoko expression that retrieves the item at index 5 from a `List.List<Text>` called `items`, returning null if the index is out of bounds. Just the expression.",
+      "expected_behaviors": [
+        "Uses `items.get(5)` which returns `?Text` — safe, null if out of bounds",
+        "Does NOT use `items.at(5)` — that returns `T` and traps on out-of-bounds",
+        "Result type is `?Text`"
+      ]
+    },
+    {
+      "name": "Canister environment variable access",
+      "prompt": "In a Motoko canister, write the code to read an environment variable called `PUBLIC_CANISTER_ID:backend` at runtime. Just the code snippet, no full canister.",
+      "expected_behaviors": [
+        "Uses `Runtime.envVar(\"PUBLIC_CANISTER_ID:backend\")` which returns `?Text`",
+        "Imports Runtime from `mo:core/Runtime`",
+        "Handles the null case — either with `else Debug.trap(...)` or a switch statement"
+      ]
+    },
+    {
+      "name": "Import path from nested file",
+      "prompt": "I have a Motoko file at `mixins/Auth.mo` and I need to import `types.mo` which is at the backend root (same level as main.mo). Write the correct import statement.",
+      "expected_behaviors": [
+        "Uses relative path `../types` — going up one directory from mixins/",
+        "Does NOT include `.mo` extension: NOT `../types.mo`",
+        "Does NOT use the path from main.mo's perspective: NOT `import Types \"types\"`"
       ]
     }
   ],
