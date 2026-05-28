@@ -17,7 +17,7 @@
       "name": "Local II URL",
       "prompt": "My Internet Identity login works on mainnet but fails locally — the popup never opens. What URL should I use for the local identityProvider? Just the URL and a one-line explanation.",
       "expected_behaviors": [
-        "Local URL uses the well-known II canister ID: http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8000",
+        "Local URL uses the well-known II canister ID: http://id.ai.localhost:8000",
         "Does NOT suggest dynamic lookup via ic_env cookie, environment variables, or dfx commands for the II canister ID — it is a well-known, hardcoded ID"
       ]
     },
@@ -108,6 +108,15 @@
         "Explains that icp0.io and ic0.app produce the same principal — II auto-rewrites icp0.io to ic0.app during delegation",
         "Advises NOT to add derivationOrigin or ii-alternative-origins for this",
         "Suggests the different principal is likely caused by a different passkey or device"
+      ]
+    },
+    {
+      "name": "local vs mainnet II usage",
+      "prompt": "When deploying to the local network, how do I integrate with II?",
+      "expected_behaviors": [
+        "Suggest using mainnet's id.ai because the network launcher after icp-cli 0.2.4 supports verifying mainnet signatures",
+        "Explains that a local instance of internet identity can be deployed by setting `ii: true` in icp.yaml",
+        "Explains that the local instance of internet identity is accessible at http://id.ai.localhost:8000"
       ]
     }
   ],
