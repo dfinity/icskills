@@ -15,9 +15,9 @@
     },
     {
       "name": "Actor with Map collection",
-      "prompt": "Write a Motoko actor body that stores user profiles (name : Text, email : Text) by Nat ID using mo:core/Map, with add, get, and list operations. Just the actor body — no mops.toml or deploy steps.",
+      "prompt": "Write a Motoko actor body that stores user profiles (name : Text, email : Text) by Nat ID using mo:core/Map, with add, get, and list operations. Show the actor body and a minimal mops.toml — no deploy steps.",
       "expected_behaviors": [
-        "Uses `persistent actor` (no mops.toml context — plain `actor` alone would not compile)",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
         "Creates map with Map.empty<K, V>()",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
@@ -142,9 +142,9 @@
     },
     {
       "name": "Full canister with multiple features",
-      "prompt": "Write a Motoko actor body for a todo app: add todo (title), mark complete by ID, list all todos. Just the actor body — no mops.toml, no types.mo, no deploy steps.",
+      "prompt": "Write a Motoko actor body for a todo app: add todo (title), mark complete by ID, list all todos. Show the actor body and a minimal mops.toml — no types.mo, no deploy steps.",
       "expected_behaviors": [
-        "Uses `persistent actor` (no mops.toml context — plain `actor` alone would not compile)",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
         "Uses List from mo:core for storing todos",
         "Todo type definition is inside the actor body, not before it",
         "Uses dot notation for all collection operations",
