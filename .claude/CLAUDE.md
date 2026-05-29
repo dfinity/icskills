@@ -179,7 +179,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 - [ ] **Icskills-only content audited** — Any content we have that is absent from the upstream diff must be either listed as owned in `.claude/upstream.md` or removed. Content not tracked there is a gap — file an upstream issue or add it to the owned list.
 - [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
 - [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
-- [ ] **Evals reviewed** — Check if new upstream content introduces patterns agents would get wrong without the skill. Strong candidates: new commands, changed defaults, renamed APIs, new pitfalls. Add eval cases where the delta is non-trivial.
+- [ ] **Evals reviewed** — Open `evaluations/<skill-name>.json` and apply the same logic as `improve-ic-skill`: (1) add new eval cases for new pitfalls, new commands, changed defaults, or renamed APIs in the upstream diff — these are exactly where agents will hallucinate without updated guidance; (2) run existing evals with `node scripts/evaluate-skills.js <skill-name> --eval <N>` only if the diff modified content an existing eval covers; (3) skip running evals if the changes were purely additive with no overlap with currently tested content. Include eval results in the PR if evals were run or added.
 
 ### What icskills changes vs upstream
 
