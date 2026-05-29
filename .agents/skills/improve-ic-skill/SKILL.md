@@ -73,6 +73,8 @@ Open `evaluations/<skill-name>.json` at the repo root (not inside the skill dire
 
 **If the file doesn't exist yet**, create it as part of this improvement session. A skill being improved is the right moment to seed its first evals. Start lean — 1-2 output_evals covering the most important pitfalls, and 2-3 trigger_evals for the description. Don't try to be comprehensive; a small, accurate eval file beats an overwhelming one that never gets run.
 
+For **upstream sync sessions** where no eval file exists: seed cases directly from the upstream diff — new commands, changed defaults, renamed APIs, and new pitfalls in the diff are exactly where agents will hallucinate without updated guidance. The diff is your best source.
+
 ```bash
 # Verify no eval file exists
 ls evaluations/<skill-name>.json 2>/dev/null || echo "No evals yet — create them"
@@ -157,13 +159,7 @@ Keep prompts tightly scoped — open-ended prompts generate long responses and r
 npm run validate
 ```
 
-If evals changed, run them:
-
-```bash
-node scripts/evaluate-skills.js <skill-name>
-```
-
-The skill is ready for a PR. Include a brief summary of what changed and, if you ran evals, paste the relevant results in a `<details>` block.
+The skill is ready for a PR. Include a brief summary of what changed and, if you ran evals in Step 7, paste the relevant results in a `<details>` block.
 
 ## Upstream-tracked skills
 
