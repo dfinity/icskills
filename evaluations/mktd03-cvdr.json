@@ -1,0 +1,77 @@
+{
+  "skill": "mktd03-cvdr",
+  "description": "Evaluation cases for the mktd03-cvdr skill. Tests whether agents integrate MKTd03 as a bounded ICP Rust canister CVDR protocol, avoid invented APIs, avoid PII preimages, distinguish local replica evidence from mainnet proof, and avoid overclaiming GDPR compliance.",
+
+  "output_evals": [
+    {
+      "name": "Bounded host adapter signature",
+      "prompt": "Show only a Rust function signature for a host adapter that issues an MKTd03 CVDR for a tombstoned profile. No imports, no struct definitions, no comments, no implementation body.",
+      "expected_behaviors": [
+        "Uses bounded protocol inputs such as subject_reference, scope_reference, transition_material, and deletion_state_material",
+        "Does NOT pass raw profile records, display names, bios, emails, or owner principals into the MKTd03 layer",
+        "Does NOT invent a receipt_id parameter",
+        "Keeps application-specific semantics in the host adapter rather than the MKTd03 library"
+      ]
+    },
+    {
+      "name": "Local replica warning",
+      "prompt": "Write exactly one UI warning sentence for an MKTd03 CVDR generated on local dfx. No explanation.",
+      "expected_behaviors": [
+        "States that local replica evidence is demo or development evidence only",
+        "Does NOT describe local certificate material as production cryptographic evidence",
+        "Distinguishes local dfx from IC mainnet or subnet certification"
+      ]
+    },
+    {
+      "name": "PII preimage boundary",
+      "prompt": "List only four kinds of material that are safe candidates for a bounded TinyPress-style MKTd03 CVDR input. No prose.",
+      "expected_behaviors": [
+        "Includes bounded protocol or control inputs such as profile_id, scope reference, tombstoned_at, or fixed tombstone marker",
+        "Does NOT include display_name",
+        "Does NOT include bio",
+        "Does NOT include email, owner principal, posts, comments, or raw frontend payloads"
+      ]
+    },
+    {
+      "name": "No GDPR overclaim",
+      "prompt": "In two sentences, explain whether issuing an MKTd03 CVDR makes an ICP application GDPR compliant.",
+      "expected_behaviors": [
+        "Says that a CVDR can support deletion evidence or audit workflows",
+        "Does NOT claim that issuing a CVDR alone makes an application GDPR compliant",
+        "Mentions that compliance depends on the broader system, data model, retention policy, and operational practice"
+      ]
+    },
+    {
+      "name": "No invented lookup API",
+      "prompt": "A developer says they will store an MKTd03 receipt_id and later call get_receipt_by_receipt_id. Give a brief correction.",
+      "expected_behaviors": [
+        "Warns not to invent MKTd03 APIs",
+        "Says to inspect and use the actual pinned MKTd03 host API",
+        "Mentions that lookup or phase flow may use subject_reference or pending issuance identifiers depending on the pinned API",
+        "Does NOT endorse get_receipt_by_receipt_id as if it exists"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Add cryptographically verifiable deletion receipts to my ICP Rust canister",
+      "Generate a CVDR for a tombstoned user record on ICP",
+      "Integrate MKTd03 into my Internet Computer canister",
+      "How do I produce deletion receipt audit evidence from a sparse Merkle tombstone proof?",
+      "Add verifiable erasure evidence to my ICP app",
+      "Build an MKTd03 adapter for a Rust canister"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login to my Vite frontend",
+      "Use StableBTreeMap to persist canister state across upgrades",
+      "Deploy my canister to mainnet",
+      "Create an ICRC-1 token ledger",
+      "Connect a wallet to my ICP dapp",
+      "Set up a custom domain for my asset canister",
+      "Explain how the Internet Computer works",
+      "Write a generic Rust delete_profile function without deletion receipts"
+    ]
+  }
+}
