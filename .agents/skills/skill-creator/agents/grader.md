@@ -105,7 +105,7 @@ Save results to `{outputs_dir}/../grading.json` (sibling to outputs_dir).
 
 ## Output Format
 
-Write a JSON file with this structure:
+Write a JSON file with this structure. The `expectations` array fields **must** be named exactly `text`, `passed`, and `evidence` — not `name`/`met`/`details` or any other variant. The viewer parses these field names directly and silently shows empty grades if they differ.
 
 ```json
 {
