@@ -6,8 +6,36 @@ Quick validation script for skills - minimal version
 import sys
 import os
 import re
-import yaml
 from pathlib import Path
+
+
+def _parse_simple_yaml(text):
+    """Parse simple YAML frontmatter using stdlib only (no PyYAML dependency).
+    Handles flat key-value pairs and one level of nesting (e.g. metadata: block).
+    Sufficient for SKILL.md frontmatter which never uses complex YAML structures.
+    """
+    result = {}
+    current_key = None
+    for line in text.splitlines():
+        if not line.strip() or line.startswith('#'):
+            continue
+        if line[:1] in (' ', '\t'):
+            # Nested value under current_key
+            stripped = line.strip()
+            if current_key is not None and ': ' in stripped:
+                k, v = stripped.split(': ', 1)
+                if not isinstance(result.get(current_key), dict):
+                    result[current_key] = {}
+                result[current_key][k.strip()] = v.strip().strip('"').strip("'")
+        elif ': ' in line:
+            k, v = line.split(': ', 1)
+            current_key = k.strip()
+            val = v.strip().strip('"').strip("'")
+            result[current_key] = val if val else {}
+        elif line.rstrip().endswith(':'):
+            current_key = line.rstrip()[:-1].strip()
+            result[current_key] = {}
+    return result
 
 def validate_skill(skill_path):
     """Basic validation of a skill"""
@@ -32,11 +60,11 @@ def validate_skill(skill_path):
 
     # Parse YAML frontmatter
     try:
-        frontmatter = yaml.safe_load(frontmatter_text)
+        frontmatter = _parse_simple_yaml(frontmatter_text)
         if not isinstance(frontmatter, dict):
             return False, "Frontmatter must be a YAML dictionary"
-    except yaml.YAMLError as e:
-        return False, f"Invalid YAML in frontmatter: {e}"
+    except Exception as e:
+        return False, f"Invalid frontmatter: {e}"
 
     # Define allowed properties
     ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'}
