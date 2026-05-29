@@ -28,7 +28,23 @@ brew tap agent-ecosystem/homebrew-tap && brew install skill-validator
 
 > **Skills are written for AI agents, not humans.** Every decision — structure, wording, level of detail — should optimize for machine consumption. Be explicit and literal: exact canister IDs, exact function signatures, exact error strings. Do not summarize, hand-wave, or link out when you can inline the information. An agent cannot click a link or interpret vague guidance.
 
-### 1. Create the skill directory
+### 1. Draft the skill with skill-creator
+
+Use the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) to draft your SKILL.md. It guides you through capturing intent, writing content, running test prompts, and iterating on quality — including a description optimization loop that generates 20 trigger queries and scores them automatically.
+
+To use it in Claude Code, load the skill from the URL above and follow the interview prompts. skill-creator handles the general Agent Skills spec fields (`name`, `description`, `license`, `compatibility`) and the body content.
+
+**IC-specific additions required after drafting:** skill-creator does not know about the IC Skills schema. After it produces a draft, manually add the `metadata:` block — these fields are required and will block CI if missing:
+
+```yaml
+metadata:
+  title: "Display Name"    # human-readable name for the site
+  category: CategoryName   # see categories list below
+```
+
+`npm run validate` will catch any missing required fields. See `skills/skill.schema.json` for the full schema.
+
+### 2. Create the skill directory
 
 ```
 skills/<skill-name>/SKILL.md
@@ -39,9 +55,7 @@ Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stabl
 
 Keep the main SKILL.md under 500 lines. Move detailed reference material (migration guides, config examples) to `references/*.md` and reference them from SKILL.md. See `skills/icp-cli/` for an example.
 
-A template is available at `skills/_template/SKILL.md.template` — copy it as your starting point.
-
-### 2. Write the SKILL.md file
+### 3. Write the SKILL.md file
 
 Every skill file has YAML frontmatter followed by a markdown body. The frontmatter is the machine-readable metadata; the body is the agent-consumable content.
 
@@ -122,7 +136,7 @@ Concrete commands to confirm the implementation is correct.
 
 Use whatever headings fit your skill. A security skill might use `## Security Pitfalls`. An architecture skill might use `## Design Mistakes`. A REST API skill might skip `## Deploy & Test` entirely. The goal is clarity, not conformity.
 
-### 3. Validate
+### 4. Validate
 
 ```bash
 npm run validate     # Runs skill-validator + evals file check
@@ -130,7 +144,7 @@ npm run validate     # Runs skill-validator + evals file check
 
 This runs automatically in CI and blocks deployment on errors. Under the hood it runs [`skill-validator check`](https://github.com/agent-ecosystem/skill-validator) (structure, links, content analysis, contamination detection) plus a project-specific check for evaluation files.
 
-### 4. Run LLM quality scoring (recommended)
+### 5. Run LLM quality scoring (recommended)
 
 Before submitting a PR, run LLM scoring locally to check your skill's quality:
 
@@ -140,7 +154,7 @@ skill-validator score evaluate --provider claude-cli skills/<skill-name>
 
 This uses the locally authenticated `claude` CLI — no API key needed. Low novelty scores indicate the skill may restate common knowledge rather than providing genuinely new information. See the [skill-validator docs](https://github.com/agent-ecosystem/skill-validator#score-evaluate) for interpreting scores.
 
-### 5. Add evaluation cases
+### 6. Add evaluation cases
 
 Create `evaluations/<skill-name>.json` with test cases that verify the skill works. The eval file has two sections:
 
@@ -181,15 +195,17 @@ node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals
 
 This sends each prompt to Claude with and without the skill, then has a judge score the output. Results are saved to `evaluations/results/` (gitignored).
 
-**Eval results are required in the PR for new skills** — see [Step 7](#7-submit-a-pr) for the required format.
+**Eval results are required in the PR for new skills** — see [Step 8](#8-submit-a-pr) for the required format.
 
-### 6. That's it — the website auto-discovers skills
+> **Two-phase eval workflow:** skill-creator has its own built-in eval loop (workspace-based, browser viewer, iterative) that's useful during drafting. That is separate from the `evaluations/<skill-name>.json` file you commit here. Use skill-creator's loop to iterate on quality while drafting; the committed eval file is the PR requirement. If you ran skill-creator's description optimization, its 20 trigger queries can seed your `trigger_evals` — convert them to [IC eval format](evaluations/icp-cli.json) rather than starting from scratch.
+
+### 7. That's it — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 
 Stats (skill count, categories) all update automatically.
 
-### 7. Submit a PR
+### 8. Submit a PR
 
 - One skill per PR
 - Include a brief description of what the skill covers and why it's needed
@@ -221,7 +237,7 @@ Stats (skill count, categories) all update automatically.
 4. If you added new evaluation cases, run those evals locally and include the results in the PR
 5. Submit a PR with a summary of what changed
 
-**Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#7-submit-a-pr) above).
+**Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 

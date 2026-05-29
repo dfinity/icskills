@@ -11,7 +11,7 @@ This repository contains agent-readable skill files for the Internet Computer. E
 
 ## Skill File Structure
 
-Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema and `skills/_template/SKILL.md.template` for a ready-to-copy skeleton.
+Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema.
 
 ### Required frontmatter fields
 `name`, `description`, plus `title`, `category` under `metadata:`
@@ -20,7 +20,7 @@ Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/ski
 `license`, `compatibility` (environment requirements — tools, system packages, network access; library deps go in `## Prerequisites`) — validator warns if missing but does not block
 
 ### Body sections
-No rigid structure — organize content to best serve agents. The validator warns (but does not block) if these recommended sections are missing: `What This Is`, `Prerequisites`, `Implementation`. Other commonly useful sections: pitfalls (name it what fits the domain), `Deploy & Test`, `Verify It Works`, `Canister IDs`, `How It Works`.
+No rigid structure — organize content to best serve agents.
 
 ## Build Commands
 
@@ -30,6 +30,24 @@ npm run validate     # Runs skill-validator check + project-specific checks
 npm run dev          # Start Astro dev server
 npm run build        # Astro production build
 ```
+
+## Creating a New Skill
+
+When asked to create a new skill, load the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) and use it to draft the SKILL.md. It handles content, description optimization, and the iterative eval loop.
+
+**After skill-creator produces a draft**, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it:
+
+```yaml
+metadata:
+  title: "Display Name"
+  category: CategoryName   # Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security
+```
+
+Then run `npm run validate` to catch any remaining schema errors.
+
+**Evals — two separate concerns:**
+- skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration during drafting — not committed
+- `evaluations/<skill-name>.json` is the committed artifact required for PRs — create this separately in [IC eval format](../evaluations/icp-cli.json). If skill-creator's description optimization produced trigger queries, convert them to IC format rather than starting from scratch.
 
 ## Workflow
 
