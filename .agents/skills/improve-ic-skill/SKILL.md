@@ -1,0 +1,159 @@
+---
+name: improve-ic-skill
+description: Improve an existing skill in the IC Skills repo (skills.internetcomputer.org). Load this skill whenever asked to improve, fix, update, enhance, review, or add content to an existing skill at skills/<skill-name>/SKILL.md — including adding pitfalls, updating canister IDs, fixing code examples, strengthening the description, or updating evals. Do NOT use for creating a brand-new skill (use skill-creator for that). Trigger examples: "the motoko skill is missing a pitfall", "update icp-cli for the new recipe format", "the ckbtc description is weak", "add an eval for the canister-security skill".
+---
+
+# Improve IC Skill
+
+A token-efficient workflow for improving an existing skill in the IC Skills repo. The guiding principle: **read first, change precisely, verify only what changed.** Evals exist as regression safety nets — run them selectively, not automatically on every pass.
+
+## Step 1 — Understand the skill
+
+Read `skills/<skill-name>/SKILL.md` fully. Check:
+- What it covers and what it's missing
+- Whether it's upstream-tracked: `grep <skill-name> .claude/upstream.md` — if it appears, note which sections are owned by icskills (those cannot be overwritten from upstream)
+- Recent git history: `git log --oneline -5 -- skills/<skill-name>/SKILL.md`
+
+## Step 2 — Validate baseline
+
+```bash
+npm run validate
+```
+
+Fix any errors before making content changes. Warnings are acceptable — don't chase them unless they're relevant to your improvement.
+
+## Step 3 — Identify improvements
+
+Read with fresh eyes. Common high-value areas:
+
+**Pitfalls** — highest-value content; every pitfall documented prevents an agent hallucination. Look for: incorrect usage patterns you know about, error messages agents typically misread, wrong defaults, API gotchas.
+
+**Canister IDs and version numbers** — verify against mainnet and current release tags. Stale IDs silently break agent-generated code.
+
+**Code examples** — verify syntax compiles, APIs still exist, no deprecated patterns.
+
+**Description** — must state what it does, when to use it, AND when NOT to use it. Include specific keywords agents match on. A weak description means the skill never triggers.
+
+**Required frontmatter** — `metadata.title` and `metadata.category` are required by CI. Missing these blocks deployment.
+
+For upstream-tracked skills (`motoko`, `migrating-motoko`, `migrating-motoko-enhanced`, `mops-cli`): read `.claude/upstream.md` carefully. Only modify icskills-owned sections freely; changes to shared content should also be filed upstream.
+
+## Step 4 — Apply improvements
+
+Edit `skills/<skill-name>/SKILL.md`. Stay focused — don't refactor things you weren't asked to touch.
+
+## Step 5 — Validate again
+
+```bash
+npm run validate
+```
+
+Fix any errors. Warnings from unrelated sections are fine to leave.
+
+Optionally run LLM quality scoring if the changes were substantial:
+
+```bash
+skill-validator score evaluate --provider claude-cli skills/<skill-name>
+```
+
+## Step 6 — Check and update evals
+
+Open `evaluations/<skill-name>.json` at the repo root (not inside the skill directory).
+
+**If the file doesn't exist yet**, create it as part of this improvement session. A skill being improved is the right moment to seed its first evals. Start lean — 1-2 output_evals covering the most important pitfalls, and 2-3 trigger_evals for the description. Don't try to be comprehensive; a small, accurate eval file beats an overwhelming one that never gets run.
+
+```bash
+# Verify no eval file exists
+ls evaluations/<skill-name>.json 2>/dev/null || echo "No evals yet — create them"
+```
+
+**If the file exists**, review the existing cases alongside your changes.
+
+**Always update evals when:**
+- You added a new pitfall — pitfalls are exactly where agents hallucinate without guidance; every new pitfall deserves a case
+- You changed a command, API, or canister ID that an existing case now describes incorrectly — fix the case
+- You introduced a new behavior that agents would likely get wrong without explicit guidance
+
+**Keep the suite lean.** Don't add cases for things that are obvious or already well-covered. Each case is a future regression test that costs tokens to run.
+
+## Step 7 — Run existing evals (only when relevant)
+
+Running the existing suite is a regression check — it answers "did I break something that was already tested?" It is separate from adding new cases (Step 6). You can add a new eval case for a new pitfall without running the existing suite at all.
+
+**Run evals when you modified existing tested content:**
+- You changed or removed content that an eval explicitly tests (canister ID, command name, error message)
+- You rewrote a section that several evals cover
+- The description changed significantly — run trigger evals only
+- You're unsure whether a change is safe
+
+**Skip running evals when your changes were purely additive:**
+- New pitfall, new section, new example — nothing you touched is already tested
+
+Check what evals exist before deciding:
+
+```bash
+node scripts/evaluate-skills.js <skill-name> --list
+```
+
+Run only the relevant subset:
+
+```bash
+# Single eval by index (cheapest)
+node scripts/evaluate-skills.js <skill-name> --eval <N>
+
+# Trigger evals only — for description changes
+node scripts/evaluate-skills.js <skill-name> --triggers-only
+
+# Skip baseline to halve token cost when correctness is what matters, not the delta
+node scripts/evaluate-skills.js <skill-name> --eval <N> --no-baseline
+
+# Full suite — only when you made broad changes across the whole skill
+node scripts/evaluate-skills.js <skill-name>
+```
+
+Eval format reference:
+
+```json
+{
+  "output_evals": [
+    {
+      "name": "descriptive name",
+      "prompt": "scoped prompt asking for one thing — specify what to exclude to keep it fast",
+      "expected_behaviors": [
+        "Specific, checkable behavior the model should exhibit",
+        "Another specific behavior"
+      ]
+    }
+  ],
+  "trigger_evals": [
+    {
+      "query": "realistic user prompt that should trigger this skill",
+      "expected_behavior": "should trigger"
+    },
+    {
+      "query": "realistic prompt that looks similar but should NOT trigger this skill",
+      "expected_behavior": "should NOT trigger"
+    }
+  ]
+}
+```
+
+Keep prompts tightly scoped — open-ended prompts generate long responses and risk timeouts. Ask for one thing; explicitly exclude what you don't want ("just the function, no deploy steps").
+
+## Step 8 — Final check
+
+```bash
+npm run validate
+```
+
+If evals changed, run them:
+
+```bash
+node scripts/evaluate-skills.js <skill-name>
+```
+
+The skill is ready for a PR. Include a brief summary of what changed and, if you ran evals, paste the relevant results in a `<details>` block.
+
+## Upstream-tracked skills
+
+Before editing `motoko`, `migrating-motoko`, `migrating-motoko-enhanced`, or `mops-cli`, read `.claude/upstream.md`. It lists which sections are icskills-owned. You can freely improve owned sections. For shared content, improvements should also be filed as issues upstream so they flow back on the next sync.

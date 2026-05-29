@@ -124,7 +124,7 @@ This uses the locally authenticated `claude` CLI — no API key needed. Low nove
 
 ### 6. Add evaluation cases
 
-After the skill-creator session, port test cases from the workspace's `evals/evals.json` to `evaluations/<skill-name>.json` in IC eval format. skill-creator saves every test case and assertion it used there — use them as your source rather than writing from scratch. See `evaluations/icp-cli.json` for a working example of the IC format.
+After the skill-creator session, port test cases from the skill's `evals/evals.json` (at `skills/<skill-name>/evals/evals.json`) to `evaluations/<skill-name>.json` in IC eval format. skill-creator saves every test case and assertion it used there — use them as your source rather than writing from scratch. See `evaluations/icp-cli.json` for a working example of the IC format.
 
 The eval file has two sections:
 
@@ -203,7 +203,7 @@ Stats (skill count, categories) all update automatically.
 
 For non-trivial improvements (content quality, description accuracy, new pitfalls), use the `skill-creator` skill — it is pre-installed in this repo and available automatically in Claude Code. It supports editing and optimizing existing skills, not just creating new ones. Point it at the existing SKILL.md; it will go straight to the eval/iterate loop.
 
-Once the skill-creator session is complete, update `evaluations/<skill-name>.json` to reflect what was learned. skill-creator saves the test cases and assertions it used to `evals/evals.json` in the workspace — use those as your source. Port cases that cover new or changed behaviors to IC eval format; remove or update cases that no longer reflect the skill. Then run the IC evals to confirm the updated skill passes:
+Once the skill-creator session is complete, update `evaluations/<skill-name>.json` to reflect what was learned. skill-creator saves the test cases and assertions it used to `evals/evals.json` in the skill directory — use those as your source. Port cases that cover new or changed behaviors to IC eval format; remove or update cases that no longer reflect the skill. Then run the IC evals to confirm the updated skill passes:
 
 ```bash
 node scripts/evaluate-skills.js <skill-name>

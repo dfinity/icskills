@@ -33,9 +33,16 @@ npm run build        # Astro production build
 
 ## Creating or Improving a Skill
 
-When asked to create a new skill **or** to improve, optimize, or evaluate an existing one, use the `skill-creator` skill — it is pre-installed in this repo at `.agents/skills/skill-creator/` and available automatically in Claude Code. For existing skills, point it at the current SKILL.md — it will go straight to the eval/iterate loop without needing to draft from scratch. It handles content improvement, description optimization, and iterative evals.
+Two skills are available — use the right one:
 
-**For new skills**, after skill-creator produces a draft, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it. For existing skills, verify the block is present and correct.
+- **`improve-ic-skill`** — use for improving an existing skill in this repo. Token-efficient: targeted evals, no subagents, no browser viewer. Knows our toolchain, eval location, and upstream tracking rules. This is the default for any improvement task.
+- **`skill-creator`** — use only for creating a brand-new skill from scratch. Heavier: runs full eval suites with baselines and a browser-based viewer. Good for the initial draft and description optimization of a new skill.
+
+When asked to improve, fix, update, add pitfalls to, or evaluate an existing skill → use `improve-ic-skill`. When asked to create a new skill → use `skill-creator`.
+
+**`skill-creator` is a patched fork.** Our vendored copy at `.agents/skills/skill-creator/` has local fixes for confirmed bugs — see `.agents/skills/skill-creator/PATCHES.md`. Do NOT update it via `npx skills add` — that would silently overwrite the patches. To update intentionally: re-run `npx skills add`, then re-apply every patch from `PATCHES.md`.
+
+**For new skills**, after skill-creator produces a draft, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it.
 
 ```yaml
 metadata:
@@ -49,7 +56,15 @@ Then run `npm run validate` to catch any remaining schema errors.
 - skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration — not committed
 - `evaluations/<skill-name>.json` is the committed artifact kept as a regression safety net — future contributors can run it to check whether a change breaks existing behavior without reconstructing the skill-creator workspace
 
-After any skill-creator session (new or improvement), update `evaluations/<skill-name>.json` from the workspace's `evals/evals.json` — that file contains every test case and assertion skill-creator used. Port cases covering new or changed behaviors to [IC eval format](../evaluations/icp-cli.json); remove or update cases that no longer apply. For description optimization, convert the trigger queries directly to `trigger_evals` entries rather than writing them from scratch.
+After a skill-creator session for a new skill, populate `evaluations/<skill-name>.json` with test cases based on what was learned during the session. For description optimization, convert the trigger queries to `trigger_evals` entries. See [IC eval format](../evaluations/icp-cli.json) for the expected structure.
+
+Then run the full suite via our lightweight runner before opening the PR — this is what goes in the PR description, not skill-creator's internal results:
+
+```bash
+node scripts/evaluate-skills.js <skill-name>
+```
+
+The PR description must include both the output eval and trigger eval results (with-skill vs baseline) so reviewers can see the actual behavior delta.
 
 ## Workflow
 
