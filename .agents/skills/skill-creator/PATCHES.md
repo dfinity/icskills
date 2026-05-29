@@ -40,7 +40,7 @@ Installed on: 2026-05-29
 
 **Problem:** SKILL.md said to use `--static` when `webbrowser.open()` is not available or "the environment has no display." In Claude Code (VS Code extension, desktop app), `webbrowser.open()` works correctly. `--static` generates a `file://` URL; browsers block certain JS APIs for `file://` pages, causing outputs not to render — same visible symptom as Patch 1 but a different root cause.
 
-**Fix:** Clarified that Claude Code should always use server mode. `--static` is only for truly headless environments (Cowork, CI, remote server with no display).
+**Fix:** Clarified that Claude Code should always use server mode. `--static` is only for truly headless environments (Cowork — Anthropic's browser-based coding environment — CI, or a remote server with no graphical display).
 
 ---
 

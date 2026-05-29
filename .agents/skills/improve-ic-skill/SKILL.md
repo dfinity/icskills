@@ -159,7 +159,7 @@ Keep prompts tightly scoped — open-ended prompts generate long responses and r
 npm run validate
 ```
 
-The skill is ready for a PR. Include a brief summary of what changed and, if you ran evals in Step 7, paste the relevant results in a `<details>` block.
+The skill is ready for a PR. Include a brief summary of what changed and, if you ran evals in Step 7, paste the relevant results collapsed in a `<details>` block (see [Submit a PR](../../../CONTRIBUTING.md) for the exact format).
 
 ## Upstream-tracked skills
 
