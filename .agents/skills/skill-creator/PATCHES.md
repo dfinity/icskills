@@ -5,7 +5,8 @@ This copy of skill-creator diverges from the upstream Anthropic release. Do NOT 
 To update intentionally: re-run `npx skills add`, then manually re-apply each patch listed here.
 
 Upstream repo: https://github.com/anthropics/skills/tree/main/skills/skill-creator
-Installed from: see git log for `.agents/skills/skill-creator/`
+Installed from commit: `b0cbd3df1533b396d281a6886d5132f623393a9c` (2026-03-06 — last substantive change to skill-creator content)
+Installed on: 2026-05-29
 
 ---
 
