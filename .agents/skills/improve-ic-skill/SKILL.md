@@ -5,7 +5,18 @@ description: Improve an existing skill in the IC Skills repo (skills.internetcom
 
 # Improve IC Skill
 
-A token-efficient workflow for improving an existing skill in the IC Skills repo. The guiding principle: **read first, change precisely, verify only what changed.** Evals exist as regression safety nets — run them selectively, not automatically on every pass.
+A token-efficient workflow for improving an existing skill in the IC Skills repo. The guiding principle: **understand the problem first, change precisely, verify only what changed.** Evals exist as regression safety nets — run them selectively, not automatically on every pass.
+
+## Step 0 — Understand the problem before touching anything
+
+Do not read the skill file, do not run any commands, do not make any changes until you know:
+
+1. **What is the specific issue?** (e.g. "canister ID X is stale", "missing pitfall about Y", "description doesn't trigger on Z", "code example uses deprecated API W")
+2. **Why does it matter?** (e.g. "agents generate broken code", "skill never triggers for this use case", "upstream sync added a new command we don't cover")
+
+If the request is vague ("improve the motoko skill", "the ckbtc skill feels weak") — ask before proceeding. A single focused question is better than a wasted improvement pass. Example: "What specific issue should I focus on? I want to make sure I'm solving the right problem."
+
+If the reason is clear from context (e.g. a GitHub issue body, an upstream diff, a specific error report) — proceed directly to Step 1.
 
 ## Step 1 — Understand the skill
 
