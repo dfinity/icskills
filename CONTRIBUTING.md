@@ -169,7 +169,7 @@ This sends each prompt to Claude with and without the skill, then has a judge sc
 
 > **Two-phase eval workflow:** skill-creator has its own built-in eval loop (workspace-based, browser viewer, iterative) that's useful during drafting. That is separate from the `evaluations/<skill-name>.json` file you commit here. Use skill-creator's loop to iterate on quality while drafting; the committed eval file is kept as a regression safety net — so future contributors can check whether a change breaks existing behavior without having to reconstruct the skill-creator workspace. If you ran skill-creator's description optimization, its 20 trigger queries can seed your `trigger_evals` — convert them to [IC eval format](evaluations/icp-cli.json) rather than starting from scratch.
 
-### 7. That's it — the website auto-discovers skills
+### 7. No site edits needed — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 

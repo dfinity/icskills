@@ -74,11 +74,7 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
 
-After any skill change, review `evaluations/<skill-name>.json` for cases affected by the change and update them. Running the suite to verify is recommended, especially when eval cases changed:
-
-```bash
-node scripts/evaluate-skills.js <skill-name>
-```
+After any skill change, review `evaluations/<skill-name>.json` for cases affected by the change and update them. Running the suite to verify is recommended, especially when eval cases changed — see `## Evaluations` below for the full command reference and flags.
 
 New pitfalls and non-obvious behaviors are strong candidates for new eval cases — especially adversarial ones where an agent would likely get it wrong without the skill.
 
@@ -203,7 +199,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 **For humans and agents:** when you see an open issue titled `upstream sync available — <repo> <old> → <new>`:
 1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped. Resolve the new tag to a full commit SHA using the commands in "Getting a commit SHA for a tag" above.
 2. The issue body contains the upstream diff (old commit vs new commit) for every affected skill. Read it directly — it is deterministic and does not go stale. To re-run it yourself, use the diff commands from "Checking for upstream changes" above against every skill that tracks this upstream repo (listed in `.claude/upstream.md`).
-3. Create **one branch** covering all affected skills — `chore/sync-upstream-<upstream-repo>-<new-tag>` (e.g. `chore/sync-upstream-motoko-1.9.0`, `chore/sync-upstream-mops-cli-v2.14.0`). Load the `improve-ic-skill` skill — upstream sync is an improvement task and that skill knows our toolchain, eval location, and owned-section rules. Apply changes to all affected skills following the checklist, update all corresponding entries in `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
+3. Create **one branch** covering all affected skills — `chore/sync-upstream-<skill-name>-<new-tag>` where `<skill-name>` is the IC skill name (e.g. `motoko`, `mops-cli`). When multiple skills share the same upstream repo, combine them: `chore/sync-upstream-motoko-1.9.0` for a single skill, `chore/sync-upstream-motoko-1.9.0-mops-cli-v2.14.0` when both are updated together. Load the `improve-ic-skill` skill — upstream sync is an improvement task and that skill knows our toolchain, eval location, and owned-section rules. Apply changes to all affected skills following the checklist, update all corresponding entries in `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
@@ -254,14 +250,9 @@ skills/skill.schema.json      # JSON Schema for frontmatter
 scripts/lib/parse-skill.js    # Shared parsing utilities
 scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
 src/                           # Astro site source
-  data/skills.ts              # Build-time skill loader
-  data/constants.ts           # Static data (frameworks list)
-  data/site.ts                # Site URL and base path config
+  lib/skills.ts               # Build-time skill loader
+  lib/site.ts                 # Site URL and base path config
   layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
-  layouts/SiteLayout.astro    # Shared header/nav/footer for main pages
-  components/BrowseTab.tsx    # Preact island: search + skill grid
-  components/GetStartedTab.tsx # Preact island: get started / install + endpoints
-  components/SkillHeader.tsx  # Preact island: skill detail header
   pages/index.astro           # Browse page
   pages/how-it-works/         # How it works page (fully static)
   pages/get-started/           # Get started page (install + endpoints)
