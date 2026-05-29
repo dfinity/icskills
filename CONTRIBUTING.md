@@ -227,6 +227,35 @@ The website auto-generates from SKILL.md frontmatter — no need to edit any sou
 
 ---
 
+## Upstream-tracked Skills
+
+Some skills mirror content from external upstream repositories (currently `caffeinelabs/motoko` and `caffeinelabs/mops`). These skills track a specific release tag and are updated manually when a new release lands.
+
+### How it works
+
+A weekly GitHub Actions workflow checks for new releases on each tracked upstream. When it finds one, it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` with:
+- The old → new release tag in the title
+- A diff of the upstream file against our current version
+
+**There is always at most one open sync issue per upstream repo.** If a newer release comes out before the issue is resolved, the workflow closes the stale issue (with a "Superseded" comment) and opens a fresh one for the latest release.
+
+### Handling a sync issue
+
+1. Find the open issue labelled `upstream-motoko` or `upstream-mops`
+2. Note the target release tag in the title (always the *latest* release — skip any intermediate ones)
+3. Re-run the diff locally against the current files — the issue body diff may be stale if other changes landed on `main` since the issue was opened:
+   ```bash
+   curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
+   diff skills/<skill-name>/SKILL.md /tmp/upstream.md
+   ```
+4. Apply changes following the [Upstream Sync Strategy](.claude/CLAUDE.md#upstream-sync-strategy) in `.claude/CLAUDE.md` — in particular, preserve any sections listed as "owned by icskills" in the skill's upstream comment block
+5. Run `npm run validate`
+6. Open a PR that closes the issue with `Closes #<n>` in the PR body
+
+The full sync checklist (version numbers, evals, compatibility, owned sections, etc.) is in `.claude/CLAUDE.md`.
+
+---
+
 ## Skill Writing Guidelines
 
 - **Write for agents, not humans.** Be explicit. State exact canister IDs, exact function signatures, exact error messages.

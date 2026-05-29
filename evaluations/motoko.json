@@ -6,7 +6,7 @@
       "name": "Simple actor with counter",
       "prompt": "Write a Motoko canister with a counter that can be incremented and queried.",
       "expected_behaviors": [
-        "Uses plain `actor`, NOT `persistent actor` (flag-based approach), OR uses `persistent actor` and notes the `--default-persistent-actors` flag",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor` (no flag needed for the explicit keyword)",
         "Uses `var` for the counter, NOT `stable var`",
         "Increment function is `public func` returning `async`",
         "Query function uses `public query func`",
@@ -15,13 +15,13 @@
     },
     {
       "name": "Actor with Map collection",
-      "prompt": "Write a Motoko canister that stores user profiles (name, email) by ID and supports add, get, and list operations.",
+      "prompt": "Write a Motoko actor body that stores user profiles (name : Text, email : Text) by Nat ID using mo:core/Map, with add, get, and list operations. Show the actor body and a minimal mops.toml — no deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` (with --default-persistent-actors assumed) OR `persistent actor`",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
         "Creates map with Map.empty<K, V>()",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
-        "Does NOT pass explicit compare function \u2014 comparator is inferred",
+        "Does NOT pass explicit compare function — comparator is inferred",
         "Type definitions are inside the actor body, not before it",
         "Does NOT use HashMap, TrieMap, or Buffer"
       ]
@@ -31,8 +31,7 @@
       "prompt": "I'm getting this Motoko compiler error: `type error [M0220], this actor or actor class should be declared persistent`. Here's my code:\n\nactor {\n  var count : Nat = 0;\n  public func increment() : async Nat {\n    count += 1;\n    count\n  };\n};",
       "expected_behaviors": [
         "Explains that M0220 occurs when neither `--default-persistent-actors` flag nor `persistent` keyword is present",
-        "Offers fix option 1: add `--default-persistent-actors` to `[moc].args` in mops.toml",
-        "Offers fix option 2: change `actor` to `persistent actor`",
+        "Offers at least one valid fix: add `--default-persistent-actors` to `[moc].args` in mops.toml OR change `actor` to `persistent actor`",
         "Does NOT suggest adding `stable` keyword to variables"
       ]
     },
@@ -51,15 +50,14 @@
       "expected_behaviors": [
         "Recommends Map from mo:core for the key-value mapping",
         "Recommends List from mo:core for the growable log",
-        "Does NOT suggest HashMap, TrieMap, Buffer, or RBTree",
-        "Does NOT import from mo:base"
+        "Does NOT suggest HashMap, TrieMap, Buffer, or RBTree"
       ]
     },
     {
       "name": "Option handling pattern",
       "prompt": "Write a Motoko function that looks up a user by ID in a Map and returns a greeting message, or 'not found' if the user doesn't exist.",
       "expected_behaviors": [
-        "Uses switch/case with `case (?value)` and `case null` pattern",
+        "Uses switch/case with `case (?value)` and `case (null)` pattern",
         "Uses dot notation for Map.get: `users.get(id)`",
         "Does NOT use unsafe unwrapping that could trap"
       ]
@@ -76,21 +74,11 @@
       ]
     },
     {
-      "name": "Caffeine to icp-cli: resolving M0220 errors",
-      "prompt": "I migrated a canister from Caffeine to icp-cli and now I get M0220 errors everywhere. My original code used plain `actor {}`. What do I need to change?",
-      "expected_behaviors": [
-        "Explains that Caffeine used `--default-persistent-actors` implicitly, making `persistent` optional",
-        "Primary fix: add `--default-persistent-actors` to `[moc].args` in mops.toml",
-        "Alternative fix: add `persistent` keyword to every actor declaration",
-        "Mentions that variables were implicitly stable on Caffeine \u2014 use `transient var` for any that should reset on upgrade"
-      ]
-    },
-    {
       "name": "Adversarial: base library imports",
       "prompt": "Write a Motoko canister using HashMap to store key-value pairs. Import it from mo:base/HashMap.",
       "expected_behaviors": [
         "Redirects to mo:core/Map instead of mo:base/HashMap",
-        "Explains that HashMap is not stable and does not exist in mo:core",
+        "Explains that mo:base is deprecated and recommends mo:core/Map as the correct module",
         "Shows Map.empty with dot notation: `map.add(k, v)`, `map.get(k)`"
       ]
     },
@@ -109,18 +97,18 @@
       "expected_behaviors": [
         "Uses `scores.add(name, value)` NOT `Map.add(scores, Text.compare, name, value)`",
         "Uses `scores.get(name)` NOT `Map.get(scores, Text.compare, name)`",
-        "Does NOT pass explicit Text.compare or Nat.compare \u2014 comparator is inferred"
+        "Does NOT pass explicit Text.compare or Nat.compare — comparator is inferred"
       ]
     },
     {
       "name": "Mixin structure",
-      "prompt": "Create a reusable auth mixin for user registration and profile lookup that can be included in a Motoko actor.",
+      "prompt": "Write a Motoko mixin file `mixins/Auth.mo` for user registration and profile lookup. It takes a `users : List.List<User>` parameter and has two public functions. Then show the minimal actor snippet that includes it. No mops.toml, no deploy steps.",
       "expected_behaviors": [
         "Produces a separate mixin file using `mixin(users : List.List<User>) { ... }` syntax",
-        "Public functions in the mixin use `public shared ({ caller }) func`",
+        "Update functions in the mixin use `public shared ({ caller }) func`; read-only functions may use `public query func`",
         "The actor uses plain `actor` with `include AuthMixin(users)` (or `persistent actor` if no flag)",
         "Passes the List to the mixin, NOT a plain `var` primitive",
-        "Does NOT put public methods directly in the actor body \u2014 they come from the mixin"
+        "Does NOT put public methods directly in the actor body — they come from the mixin"
       ]
     },
     {
@@ -128,7 +116,7 @@
       "prompt": "Write a Motoko function that checks whether any user in a List is an admin.",
       "expected_behaviors": [
         "Uses `users.find(func(u) { u.isAdmin }) != null` OR `users.any(func(u) { u.isAdmin })`",
-        "Does NOT use `users.contains(func(u) { u.isAdmin })` \u2014 contains takes equality, not a predicate"
+        "Does NOT use `users.contains(func(u) { u.isAdmin })` — contains takes equality, not a predicate"
       ]
     },
     {
@@ -137,21 +125,18 @@
       "expected_behaviors": [
         "Uses `{ todo with completed = true }` for the updated record",
         "Does NOT copy fields manually: NOT `{ id = todo.id; title = todo.title; completed = true }`",
-        "Uses `mapInPlace` or `findIndex` + `put` to update the list element"
+        "Uses `mapInPlace` with a conditional to replace the matching record in the list"
       ]
     },
     {
       "name": "Full canister with multiple features",
-      "prompt": "Write a Motoko canister for a simple todo app. It should support adding todos with a title, marking them complete, listing all todos, and deleting a todo by ID.",
+      "prompt": "Write a Motoko actor body for a todo app: add todo (title), mark complete by ID, list all todos. Show the actor body and a minimal mops.toml — no types.mo, no deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` (with flag) OR `persistent actor`",
+        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
         "Uses List from mo:core for storing todos",
-        "Type definition for Todo is inside the actor body",
-        "Uses `var` for the ID counter (not `stable var`)",
+        "Todo type definition is inside the actor body, not before it",
         "Uses dot notation for all collection operations",
-        "Query functions use `public query func`",
-        "Update functions use `public func` with `async` return",
-        "Uses record spread `{ todo with completed = true }` for toggling",
+        "Marks todos as completed via record spread `{ todo with completed = true }` OR direct field mutation `todo.completed := true` (for `var` fields)",
         "Does NOT import from mo:base"
       ]
     },
@@ -185,6 +170,42 @@
         "Explains that main.mo should only hold state bindings and mixin includes — no public methods",
         "Does NOT produce a single-file actor with all logic inline"
       ]
+    },
+    {
+      "name": "Reserved keyword as field name",
+      "prompt": "Define a Motoko record type for an asset with fields: id (Nat), name (Text), and type (Text). Just show the type definition.",
+      "expected_behaviors": [
+        "Does NOT use `type` as a field name — it is a reserved keyword in Motoko",
+        "Uses an alternative name such as `typ`, `kind`, `assetType`, or `category` instead",
+        "Shows a valid compilable type definition"
+      ]
+    },
+    {
+      "name": "Text.join parameter order",
+      "prompt": "Write a Motoko expression that joins the values of a `List.List<Text>` called `names` with `\", \"` as separator. Just the expression, no full canister.",
+      "expected_behaviors": [
+        "Calls Text.join with the iterator as the first argument and the separator as the second: Text.join(names.values(), sep)",
+        "Does NOT reverse the arguments — separator must NOT come first",
+        "Imports `Text` from `mo:core/Text` if it shows imports"
+      ]
+    },
+    {
+      "name": "List.get vs List.at: safe access",
+      "prompt": "Write a Motoko expression that retrieves the item at index 5 from a `List<Text>` (from `mo:core/List`) called `items`, returning null if the index is out of bounds. Just the expression.",
+      "expected_behaviors": [
+        "Uses `items.get(5)` which returns `?Text` — safe, null if out of bounds",
+        "Does NOT use `items.at(5)` — that returns `T` and traps on out-of-bounds",
+        "Result type is `?Text`"
+      ]
+    },
+    {
+      "name": "Import path from nested file",
+      "prompt": "I have a Motoko file at `mixins/Auth.mo` and I need to import `types.mo` which is at the backend root (same level as main.mo). Write the correct import statement.",
+      "expected_behaviors": [
+        "Uses relative path `../types` — going up one directory from mixins/",
+        "Does NOT include `.mo` extension: NOT `../types.mo`",
+        "Does NOT use the path from main.mo's perspective: NOT `import Types \"types\"`"
+      ]
     }
   ],
   "trigger_evals": {
@@ -202,7 +223,6 @@
       "Why is my Motoko actor giving error M0220?",
       "What is mo:core and how do I use it?",
       "Motoko type error with shared functions",
-      "I migrated from Caffeine and getting M0220 errors",
       "How do I use mixins in Motoko?",
       "Write a Motoko mixin for authentication",
       "What does transient var mean in Motoko?"

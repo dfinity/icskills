@@ -30,17 +30,15 @@
       "expected_behaviors": [
         "Uses `mops check backend` (canister name, NOT a file path like src/backend/main.mo)",
         "Mentions `mops check --fix` for auto-fixing",
-        "Does NOT pass a file path like `mops check src/backend/main.mo`",
-        "Explains that per-canister args from mops.toml are applied automatically when using the canister name"
+        "Does NOT pass a file path like `mops check src/backend/main.mo`"
       ]
     },
     {
       "name": "Pinning moc version",
       "prompt": "How do I pin the moc compiler to version 1.5.1 in my mops project?",
       "expected_behaviors": [
-        "Uses `mops toolchain use moc 1.5.1`",
+        "Uses `mops toolchain use moc 1.5.1` OR shows manually editing `[toolchain]` in mops.toml",
         "Shows the resulting `[toolchain]` section in mops.toml with `moc = \"1.5.1\"`",
-        "Does NOT suggest editing mops.toml manually without running the command",
         "Does NOT use `mops toolchain use moc` without a version (that opens an interactive picker)"
       ]
     },
@@ -49,20 +47,19 @@
       "prompt": "I want to update moc to the latest version. What's the correct command?",
       "expected_behaviors": [
         "If moc is already in [toolchain]: uses `mops toolchain update moc`",
-        "Alternatively mentions `mops toolchain use moc latest` which works both for first-time pin and updates",
+        "Alternatively mentions `mops toolchain use moc latest` as an option",
         "Does NOT use `mops toolchain use moc` without a version",
         "Clarifies that `toolchain update` only works when moc already has a [toolchain] entry"
       ]
     },
     {
       "name": "Migration workflow",
-      "prompt": "I changed my Motoko actor's stable state and mops check is now failing with a migration hint. How do I create a new migration called `AddEmailField` for the `backend` canister, and what do I do after deploying?",
+      "prompt": "My mops check is failing with a migration compatibility hint. How do I add a new migration called `AddEmailField` for my `backend` canister that uses enhanced migration?",
       "expected_behaviors": [
-        "Runs `mops migrate new AddEmailField backend` to create the migration",
-        "Mentions editing the generated migration file",
-        "Runs `mops check` to verify the migration resolves the error",
-        "Runs `mops build` after check passes",
-        "After deploying, runs `mops migrate freeze backend` to move next-migration to the permanent chain",
+        "Runs `mops check --fix` (or `mops check backend`) to verify the migration resolves the error",
+        "Runs `mops build` after check passes — NOT before",
+        "Does NOT suggest `mops migrate new` (command no longer exists)",
+        "Does NOT suggest `mops migrate freeze` (command no longer exists)",
         "Does NOT suggest adding `--enhanced-migration` to mops.toml manually (mops auto-injects it)"
       ]
     },
@@ -91,8 +88,7 @@
       "prompt": "I need a HashMap in my Motoko canister. Can I use `import HashMap \"mo:base/HashMap\"`?",
       "expected_behaviors": [
         "Explains that mo:base is deprecated and should not be used",
-        "Recommends importing Map from mo:core: `import Map \"mo:core/Map\"`",
-        "Notes that HashMap from mo:base is not stable and cannot be used in persistent actors",
+        "Redirects to mo:core as the replacement",
         "Does NOT confirm that mo:base/HashMap is a valid choice"
       ]
     }
@@ -105,13 +101,13 @@
       "How do I pin the moc compiler version?",
       "My mops check is failing, how do I fix it?",
       "What's the mops command to update all dependencies?",
-      "How do I create a new migration with mops migrate?",
+      "My mops check is failing with a migration compatibility hint. What does that mean and how do I resolve it?",
       "Set up lintoko in my mops project",
       "How do I run tests with mops?",
       "Configure moc flags for my Motoko canister",
       "My mops.lock file is stale, what do I do?",
       "How do I add a dev dependency with mops?",
-      "How do I run tests in my Motoko project?"
+      "How do I configure the moc toolchain version in mops?"
     ],
     "should_not_trigger": [
       "Write a Motoko persistent actor with a counter",

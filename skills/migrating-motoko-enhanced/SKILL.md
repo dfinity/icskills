@@ -2,34 +2,22 @@
 name: migrating-motoko-enhanced
 description: "Enhanced multi-step migration for Motoko actors using a migrations/ directory and --enhanced-migration flag. Use when upgrading canister state across multiple deployments, writing migration files, changing actor field types, or managing a migration chain. For a single one-shot migration, use migrating-motoko instead."
 license: Apache-2.0
-compatibility: "moc >= 1.2.0"
+compatibility: "moc >= 1.7.0, core >= 2.5.0"
 metadata:
   title: Motoko Enhanced Migration
   category: Motoko
 ---
 
-<!-- Upstream: https://github.com/caffeinelabs/motoko
-     Tag: 1.7.0  Commit: 1e65e26346b35927869dda044bb76763627c2c57
-     File: .agents/skills/migrating-motoko-enhanced/SKILL.md
-     Last synced: 2026-05-04
-     Sections owned by icskills (do not overwrite from upstream):
-     mops.toml Setup (removed redundant --enhanced-migration from [canisters.backend].args — upstream had a bug),
-     Additional References (uses icskills skill names: motoko, migrating-motoko, mops-cli) -->
-
 # Enhanced Multi-Migration
 
 Manage canister state evolution through a chain of migration modules. Each migration captures one logical change (add, rename, drop, transform a field) and the compiler verifies the entire chain is consistent.
 
-## What This Is
-
-The `--enhanced-migration` flag enables a `migrations/` directory where each file is one upgrade step. The compiler type-checks the full chain on every `mops check`, ensuring state transformations are coherent. Use `mops migrate new` / `mops migrate freeze` to manage the chain — see the `mops-cli` skill for those commands.
-
 ## When to Use
 
-- Adding, removing, or renaming persistent actor fields across multiple deployments
+- Adding, removing, or renaming persistent actor fields
 - Changing a field's type
-- Restructuring state with a verifiable audit trail
-- Project already uses mops with `[canisters.<name>.migrations]` configured
+- Restructuring state across canister upgrades
+- Project has `[canisters.<name>.migrations]` configured in `mops.toml`
 
 ## Critical Rules
 
@@ -39,33 +27,9 @@ The `--enhanced-migration` flag enables a `migrations/` directory where each fil
 - Each migration file exports `public func migration({...}) : {...}`
 - Files are applied in **lexicographic order** — use timestamp prefixes
 
-## mops.toml Setup
-
-```toml
-[toolchain]
-moc = "1.7.0"
-
-[dependencies]
-core = "2.3.1"
-
-[moc]
-args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
-
-[canisters.backend]
-main = "src/backend/main.mo"
-
-[canisters.backend.migrations]
-chain = "src/backend/migrations"
-next = "src/backend/next-migration"
-check-limit = 1
-build-limit = 100
-```
-
-Do NOT add `--enhanced-migration` to `[moc].args` — it must be per-canister. When `[canisters.<name>.migrations]` is configured, mops injects `--enhanced-migration` automatically; do not duplicate it in `[canisters.<name>].args`.
-
 ## Directory Layout
 
-```
+```text
 backend/
 ├── main.mo
 ├── types.mo
@@ -79,13 +43,17 @@ backend/
 
 ## Actor Syntax
 
-With enhanced migration, actor variables have **no initializers** — values come from the chain:
+With enhanced migration, actor variables have no initializer:
 
 ```motoko
 actor {
   var name : Text;       // value comes from migration chain
   var balance : Nat;     // likewise
   let frozen : Bool;     // let bindings can also be uninitialized
+
+  public func greet() : async Text {
+    "Hello, " # name # "! Balance: " # debug_show balance;
+  };
 };
 ```
 
@@ -111,7 +79,7 @@ module {
 | Input only       | Field consumed and removed from state |
 | Neither          | Field carried through unchanged |
 
-Example: given state `{a : Nat; b : Text; c : Bool}` and migration:
+Given state `{a : Nat; b : Text; c : Bool}` and migration:
 
 ```motoko
 module {
@@ -125,7 +93,7 @@ module {
 - `b`: consumed (removed)
 - `c`: carried through unchanged
 - `d`: newly introduced
-- Result state: `{a : Int; c : Bool; d : Float}`
+- Result: `{a : Int; c : Bool; d : Float}`
 
 ## Common Patterns
 
@@ -164,6 +132,7 @@ module {
 ### Change a field's type
 
 ```motoko
+// migrations/20250301_000000_CountToInt.mo
 module {
   public func migration(old : { count : Nat }) : { count : Int } {
     { count = old.count }
@@ -174,6 +143,7 @@ module {
 ### Rename a field
 
 ```motoko
+// migrations/20250401_000000_RenameHeader.mo
 module {
   public func migration(old : { header : Text }) : { title : Text } {
     { title = old.header }
@@ -184,6 +154,7 @@ module {
 ### Remove a field
 
 ```motoko
+// migrations/20250501_000000_DropEmail.mo
 module {
   public func migration(_ : { email : Text }) : {} {
     {}
@@ -194,6 +165,7 @@ module {
 ### Transform data (split a field)
 
 ```motoko
+// migrations/20250601_000000_SplitName.mo
 import Text "mo:core/Text";
 
 module {
@@ -229,8 +201,11 @@ module {
     : { var tasks : Map.Map<Nat, NewTask> } {
     let tasks = old.tasks.map<Nat, OldTask, NewTask>(
       func(_, task) {
-        { id = task.id; title = task.title;
-          var status = if (task.completed) { #completed } else { #pending } }
+        {
+          id = task.id;
+          title = task.title;
+          var status = if (task.completed) { #completed } else { #pending };
+        }
       }
     );
     { var tasks }
@@ -238,52 +213,142 @@ module {
 }
 ```
 
+### Add field to each record in a Map
+
+```motoko
+import Map "mo:core/Map";
+
+module {
+  type OldUser = { name : Text; email : Text };
+  type NewUser = { name : Text; email : Text; bio : Text };
+
+  public func migration(old : { users : Map.Map<Nat, OldUser> })
+    : { users : Map.Map<Nat, NewUser> } {
+    let users = old.users.map<Nat, OldUser, NewUser>(
+      func(_, u) { { u with bio = "" } }
+    );
+    { users }
+  }
+}
+```
+
 ## How Migrations Compose
 
-The compiler verifies each migration's input is compatible with the state produced by all preceding migrations.
+Migrations form a chain. The compiler verifies each migration's input is compatible with the state produced by all preceding migrations.
 
-| Migration     | Input            | Output                           | Effect                      |
-| ------------- | ---------------- | -------------------------------- | --------------------------- |
-| `Init`        | `{}`             | `{name : Text; balance : Nat}`   | Initializes both fields     |
-| `AddProfile`  | `{}`             | `{profile : Text}`               | Adds a new field            |
-| `RenameField` | `{name : Text}`  | `{displayName : Text}`           | Renames name → displayName  |
+| Migration     | Input            | Output                           | Effect                    |
+| ------------- | ---------------- | -------------------------------- | ------------------------- |
+| `Init`        | `{}`             | `{name : Text; balance : Nat}`  | Initializes both fields   |
+| `AddProfile`  | `{}`             | `{profile : Text}`              | Adds a new field          |
+| `RenameField` | `{name : Text}`  | `{displayName : Text}`          | Renames name → displayName|
 
 After the full chain: `{displayName : Text; balance : Nat; profile : Text}`. The actor must declare fields compatible with this final state.
 
+## Lifecycle Example: Todo App
+
+Shows how patterns combine across four deployments.
+
+```motoko
+// migrations/20250101_000000_Init.mo
+module {
+  public func migration(_ : {}) : { var nextId : Nat } {
+    { var nextId = 0 }
+  }
+}
+```
+
+```motoko
+// migrations/20250201_000000_AddTasks.mo
+import Map "mo:core/Map";
+module {
+  type Task = { id : Nat; text : Text; completed : Bool };
+  public func migration(_ : {}) : { tasks : Map.Map<Nat, Task> } {
+    { tasks = Map.empty<Nat, Task>() }
+  }
+}
+```
+
+```motoko
+// migrations/20250301_000000_TaskStatus.mo — transform Bool → variant
+import Map "mo:core/Map";
+module {
+  type OldTask = { id : Nat; text : Text; completed : Bool };
+  type NewTask = { id : Nat; text : Text; status : { #pending; #inProgress; #completed } };
+  public func migration(old : { tasks : Map.Map<Nat, OldTask> })
+    : { tasks : Map.Map<Nat, NewTask> } {
+    let tasks = old.tasks.map<Nat, OldTask, NewTask>(
+      func(_, task) {
+        { id = task.id; text = task.text;
+          status = if (task.completed) #completed else #pending }
+      }
+    );
+    { tasks }
+  }
+}
+```
+
+```motoko
+// migrations/20250401_000000_AddDueDate.mo — add field to each record
+import Map "mo:core/Map";
+module {
+  type Status = { #pending; #inProgress; #completed };
+  type OldTask = { id : Nat; text : Text; status : Status };
+  type NewTask = { id : Nat; text : Text; status : Status; due : Int };
+  public func migration(old : { tasks : Map.Map<Nat, OldTask> })
+    : { tasks : Map.Map<Nat, NewTask> } {
+    let tasks = old.tasks.map<Nat, OldTask, NewTask>(
+      func(_, task) { { task with due = 0 } }
+    );
+    { tasks }
+  }
+}
+```
+
+Final state: `{ var nextId : Nat; tasks : Map.Map<Nat, { id : Nat; text : Text; status : { #pending; #inProgress; #completed }; due : Int }> }`
+
 ## Runtime Behavior
 
-- **Fresh deploy**: all migrations run in order
-- **Upgrade**: only not-yet-applied migrations run
+- On **fresh deploy**: all migrations run in order
+- On **upgrade**: only not-yet-applied migrations run (already-applied are skipped)
 - **Fast-forward**: safe to skip intermediate deployments — all unapplied migrations run sequentially
 - If a migration traps, the upgrade is aborted and the canister stays on the old version
 
-## Workflow with mops
+## mops.toml Setup
 
-```bash
-mops migrate new AddEmail         # create next migration file
-# edit the new migration file
-mops check --fix                  # verify chain consistency
-mops build                        # compile
-# deploy
-mops migrate freeze               # move to permanent chain after successful deploy
+```toml
+[moc]
+args = ["--default-persistent-actors"]
+
+[canisters.backend]
+main = "src/backend/main.mo"
+
+[canisters.backend.migrations]
+chain = "src/backend/migrations"
 ```
 
-See the `mops-cli` skill for full `mops migrate` command reference.
+When `[canisters.<name>.migrations]` is configured, mops auto-injects `--enhanced-migration` into check/build/check-stable. Do **not** add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.
+
+`--enhanced-orthogonal-persistence` is on by default.
+
+Then `mops check --fix` and `mops build` work as usual. Add new migration files directly under `migrations/` with timestamp prefixes.
 
 ## Restrictions
 
 - Cannot combine `--enhanced-migration` with inline `(with migration = ...)`
+- Requires enhanced orthogonal persistence
 - Actor variables must not have initializers
 - Actor body must be static (no top-level side effects except `<system>` calls)
-- Final migration chain output must match the actor's declared fields
+- State after each migration must be compatible with the next migration's input
+- Final state must match the actor's declared fields
+- Fields in last migration's output not declared in the actor are rejected
 
 ## Checklist
 
 - [ ] `migrations/` directory exists next to actor source
-- [ ] First migration initializes all fields (empty input `{}`)
+- [ ] First migration initializes all fields (`Init.mo` with empty input)
 - [ ] Files named with timestamp prefixes for correct ordering
 - [ ] Each file exports `public func migration({...}) : {...}`
-- [ ] Actor variables declared **without** initializers
+- [ ] Actor variables declared without initializers
 - [ ] `[canisters.<name>.migrations]` configured in `mops.toml` (mops injects `--enhanced-migration`)
 - [ ] Run `mops check --fix` to verify chain consistency
 - [ ] Run `mops build` to compile
@@ -292,4 +357,4 @@ See the `mops-cli` skill for full `mops migrate` command reference.
 
 - Load `motoko` for general Motoko language reference and mo:core APIs
 - Load `migrating-motoko` for inline migration without `--enhanced-migration`
-- Load `mops-cli` for `mops migrate new`, `mops migrate freeze`, and toolchain setup
+- Load `mops-cli` for `mops check`, `mops build`, and toolchain setup

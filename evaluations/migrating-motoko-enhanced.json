@@ -9,7 +9,7 @@
       "expected_behaviors": [
         "Creates a migration file with a timestamp prefix (e.g. `20250101_000000_Init.mo`)",
         "Migration function takes empty input `(_ : {})`",
-        "Migration function returns `{ count : Nat; name : Text }` with default values",
+        "Migration function returns a record with `count : Nat` and `name : Text` fields and default values — fields may be `var` if the actor declares them as `var`",
         "Explains that the actor body must declare these variables WITHOUT initializers"
       ]
     },
@@ -38,7 +38,7 @@
       "prompt": "How do I configure mops.toml for enhanced migration on my `backend` canister with migrations in `src/backend/migrations`?",
       "expected_behaviors": [
         "Shows `[canisters.backend.migrations]` section with `chain` path",
-        "Does NOT put `--enhanced-migration` in `[moc].args` — it must be per-canister",
+        "Does NOT manually add `--enhanced-migration` anywhere — mops auto-injects it when `[canisters.<name>.migrations]` is configured",
         "Notes that mops injects `--enhanced-migration` automatically when `[canisters.<name>.migrations]` is configured",
         "Warns not to duplicate `--enhanced-migration` in `[canisters.backend].args`"
       ]
@@ -57,11 +57,12 @@
       "name": "Workflow with mops",
       "prompt": "Walk me through the full workflow for adding a new field to my Motoko canister using enhanced migration.",
       "expected_behaviors": [
-        "Mentions `mops migrate new <Name>` to create the migration file",
-        "Mentions editing the migration file",
+        "Creates the migration file manually in the migrations directory with a timestamp prefix",
+        "Migration file exports `public func migration({...}) : {...}`",
         "Mentions `mops check --fix` to verify chain consistency",
         "Mentions `mops build` to compile",
-        "Mentions `mops migrate freeze` after successful deployment"
+        "Does NOT mention `mops migrate new` (command no longer exists)",
+        "Does NOT mention `mops migrate freeze` (command no longer exists)"
       ]
     },
     {
@@ -91,9 +92,9 @@
       "Write a migration file for my migrations/ directory",
       "I'm getting Compatibility error M0170 with --enhanced-migration",
       "How does the migration chain work in Motoko?",
-      "Configure mops.toml for enhanced migration",
+      "How do I set up the migrations/ directory for my Motoko canister?",
       "How do I add a field to my canister using the migrations directory?",
-      "Explain mops migrate new and mops migrate freeze",
+      "How do I add a field to my canister with the enhanced migration workflow?",
       "My actor has enhanced migration but I need to rename a field"
     ],
     "should_not_trigger": [

@@ -2,28 +2,17 @@
 name: migrating-motoko
 description: "Inline actor migration for Motoko canisters using `(with migration = ...)` syntax. Use when upgrading canister state, renaming fields, changing field types, or restructuring actor state without the --enhanced-migration flag. For multi-step migration chains, use migrating-motoko-enhanced instead."
 license: Apache-2.0
-compatibility: "moc >= 1.2.0"
+compatibility: "moc >= 1.2.0, core >= 2.5.0"
 metadata:
   title: Motoko Inline Migration
   category: Motoko
 ---
 
-<!-- Upstream: https://github.com/caffeinelabs/motoko
-     Tag: 1.7.0  Commit: 1e65e26346b35927869dda044bb76763627c2c57
-     File: .agents/skills/migrating-motoko/SKILL.md
-     Last synced: 2026-05-04
-     Sections owned by icskills (do not overwrite from upstream):
-     Additional References (uses icskills skill names: motoko, mops-cli) -->
-
 # Inline Actor Migration
 
 Migrate actor state across canister upgrades using a migration expression attached to the actor. Each upgrade has at most one migration function.
 
-**For multi-step migration with a `migrations/` directory**, load `migrating-motoko-enhanced` instead.
-
-## What This Is
-
-The `(with migration = ...)` syntax lets you transform actor state during an upgrade — rename fields, change types, split or merge values. The migration runs exactly once per upgrade; on fresh install, the actor's initializers run normally.
+**For multi-migration with a `migrations/` directory**, load `migrating-motoko-enhanced` instead.
 
 ## When to Use
 
@@ -81,7 +70,7 @@ actor { ... };
 
 ## Migration Function Rules
 
-- Type: `func (old : { ... }) : { ... }` — local, non-generic; both records must use persistable types (no functions or mutable arrays)
+- Type: `func (old : { ... }) : { ... }` — local, non-generic, both records must use persistable types (no functions or mutable arrays)
 - **Domain**: old actor fields (names and types from the previous version)
 - **Codomain**: new actor fields (must exist in the new actor with compatible types)
 - Runs **only on upgrade** — on fresh install, initializers run normally
@@ -173,6 +162,8 @@ var status = if (task.completed) #completed else #pending;
 
 ### Rename a field
 
+Consume old name, produce new name:
+
 ```motoko
 func(old : { var state : Int }) : { var value : Int } {
   { var value = old.state }
@@ -185,11 +176,11 @@ Consume it in the input, omit from output. Compiler warns — ensure the loss is
 
 ## Checklist
 
-- [ ] Decide: implicit (compatible change) or explicit (migration function needed)
+- [ ] Decide: implicit (compatible change) or explicit (migration function)
 - [ ] If explicit: define old types inline in `migration.mo`
 - [ ] Migration type: `func (old : RecordIn) : RecordOut` with persistable types
 - [ ] Attach with `(with migration = Migration.run)` before the actor
-- [ ] Do NOT use `preupgrade`/`postupgrade` for data migration
+- [ ] Do not use `preupgrade`/`postupgrade` for data migration
 - [ ] Verify with `mops check --fix` and `mops build`
 
 ## Additional References

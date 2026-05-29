@@ -28,32 +28,26 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Get current pinned tag
+      - name: Get current pinned tag and commit SHA
         id: current
         run: |
-          TAG=$(grep 'Tag:' skills/motoko/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          TAG=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
+          SHA=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Check if update needed
-        id: check
+      - name: Skip if already at latest
+        id: skip
         run: |
-          LATEST="${{ steps.latest.outputs.tag }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          BRANCH="infra/sync-motoko-${LATEST}"
-          if [ "$LATEST" = "$CURRENT" ]; then
+          if [ "${{ steps.latest.outputs.tag }}" = "${{ steps.current.outputs.tag }}" ]; then
             echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Already at latest: $CURRENT"
-          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
-            echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Branch $BRANCH already exists — PR likely open, skipping"
+            echo "Already at latest: ${{ steps.current.outputs.tag }}"
           else
             echo "needed=true" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-            echo "New release: $LATEST (current: $CURRENT)"
           fi
 
       - name: Resolve commit SHA for new release
-        if: steps.check.outputs.needed == 'true'
+        if: steps.skip.outputs.needed == 'true'
         id: sha
         run: |
           TAG="${{ steps.latest.outputs.tag }}"
@@ -73,67 +67,35 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Fetch upstream files and build diff
-        if: steps.check.outputs.needed == 'true'
+      - name: Compute upstream diff and build issue body
+        if: steps.skip.outputs.needed == 'true'
+        id: diff
         run: |
-          SHA="${{ steps.sha.outputs.commit }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          LATEST="${{ steps.latest.outputs.tag }}"
+          set +e
+          bash scripts/sync-upstream-check.sh \
+            "caffeinelabs/motoko" \
+            "${{ steps.current.outputs.sha }}" \
+            "${{ steps.sha.outputs.commit }}" \
+            "${{ steps.current.outputs.tag }}" \
+            "${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "has_changes=false" >> $GITHUB_OUTPUT ;;
+            1) echo "has_changes=true" >> $GITHUB_OUTPUT ;;
+            *) exit $rc ;;
+          esac
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-          declare -A UPSTREAM_TO_LOCAL=(
-            ["writing-motoko"]="motoko"
-            ["migrating-motoko"]="migrating-motoko"
-            ["migrating-motoko-enhanced"]="migrating-motoko-enhanced"
-          )
-
-          {
-            echo "## Upstream diff: caffeinelabs/motoko \`${CURRENT}\` → \`${LATEST}\`"
-            echo ""
-            echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/motoko/commit/${SHA})"
-            echo ""
-            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in each"
-            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
-            echo ""
-          } > /tmp/pr-body.md
-
-          for upstream_name in "writing-motoko" "migrating-motoko" "migrating-motoko-enhanced"; do
-            local_name="${UPSTREAM_TO_LOCAL[$upstream_name]}"
-            curl -sf "https://raw.githubusercontent.com/caffeinelabs/motoko/${SHA}/.agents/skills/${upstream_name}/SKILL.md" \
-              > /tmp/upstream-${upstream_name}.md 2>/dev/null || {
-              echo "(skill not found at this path)" > /tmp/upstream-${upstream_name}.md
-            }
-            DIFF=$(diff skills/${local_name}/SKILL.md /tmp/upstream-${upstream_name}.md || true)
-            if [ -n "$DIFF" ]; then
-              {
-                echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
-                echo ""
-                echo '<details><summary>Show diff</summary>'
-                echo ""
-                echo '```diff'
-                echo "$DIFF"
-                echo '```'
-                echo ""
-                echo '</details>'
-                echo ""
-              } >> /tmp/pr-body.md
-            else
-              echo "### \`${local_name}\` — no changes" >> /tmp/pr-body.md
-              echo "" >> /tmp/pr-body.md
-            fi
-          done
-
-      - name: Create sync PR
-        if: steps.check.outputs.needed == 'true'
+      - name: Manage and open sync issue
+        if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
         run: |
-          BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "pr-automation-bot-public[bot]"
-          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}"
-          git push -u origin "$BRANCH"
-          gh pr create \
-            --title "chore: sync check — caffeinelabs/motoko ${{ steps.latest.outputs.tag }}" \
-            --body-file /tmp/pr-body.md
+          bash scripts/sync-upstream-open-issue.sh \
+            "upstream-motoko" \
+            "upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -159,32 +121,26 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Get current pinned tag
+      - name: Get current pinned tag and commit SHA
         id: current
         run: |
-          TAG=$(grep 'Tag:' skills/mops-cli/SKILL.md | head -1 | sed 's/.*Tag: \([^ ]*\).*/\1/')
+          TAG=$(awk '/^## mops-cli$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
+          SHA=$(awk '/^## mops-cli$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Check if update needed
-        id: check
+      - name: Skip if already at latest
+        id: skip
         run: |
-          LATEST="${{ steps.latest.outputs.tag }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          BRANCH="infra/sync-mops-${LATEST}"
-          if [ "$LATEST" = "$CURRENT" ]; then
+          if [ "${{ steps.latest.outputs.tag }}" = "${{ steps.current.outputs.tag }}" ]; then
             echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Already at latest: $CURRENT"
-          elif git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1; then
-            echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Branch $BRANCH already exists — PR likely open, skipping"
+            echo "Already at latest: ${{ steps.current.outputs.tag }}"
           else
             echo "needed=true" >> $GITHUB_OUTPUT
-            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-            echo "New release: $LATEST (current: $CURRENT)"
           fi
 
       - name: Resolve commit SHA for new release
-        if: steps.check.outputs.needed == 'true'
+        if: steps.skip.outputs.needed == 'true'
         id: sha
         run: |
           TAG="${{ steps.latest.outputs.tag }}"
@@ -204,54 +160,34 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-      - name: Fetch upstream file and build diff
-        if: steps.check.outputs.needed == 'true'
+      - name: Compute upstream diff and build issue body
+        if: steps.skip.outputs.needed == 'true'
+        id: diff
         run: |
-          SHA="${{ steps.sha.outputs.commit }}"
-          CURRENT="${{ steps.current.outputs.tag }}"
-          LATEST="${{ steps.latest.outputs.tag }}"
+          set +e
+          bash scripts/sync-upstream-check.sh \
+            "caffeinelabs/mops" \
+            "${{ steps.current.outputs.sha }}" \
+            "${{ steps.sha.outputs.commit }}" \
+            "${{ steps.current.outputs.tag }}" \
+            "${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "has_changes=false" >> $GITHUB_OUTPUT ;;
+            1) echo "has_changes=true" >> $GITHUB_OUTPUT ;;
+            *) exit $rc ;;
+          esac
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-          curl -sf "https://raw.githubusercontent.com/caffeinelabs/mops/${SHA}/.agents/skills/mops-cli/SKILL.md" \
-            > /tmp/upstream-mops-cli.md 2>/dev/null || {
-            echo "(skill not found at this path)" > /tmp/upstream-mops-cli.md
-          }
-
-          DIFF=$(diff skills/mops-cli/SKILL.md /tmp/upstream-mops-cli.md || true)
-
-          {
-            echo "## Upstream diff: caffeinelabs/mops \`${CURRENT}\` → \`${LATEST}\`"
-            echo ""
-            echo "Commit: [\`${SHA:0:12}\`](https://github.com/caffeinelabs/mops/commit/${SHA})"
-            echo ""
-            echo "**Review instructions:** check which sections are listed as \`owned by icskills\` in the"
-            echo "skill's upstream comment block before applying changes. Do NOT overwrite those sections."
-            echo ""
-            echo "### \`mops-cli\`"
-            echo ""
-            if [ -n "$DIFF" ]; then
-              echo '<details><summary>Show diff</summary>'
-              echo ""
-              echo '```diff'
-              echo "$DIFF"
-              echo '```'
-              echo ""
-              echo '</details>'
-            else
-              echo "No changes."
-            fi
-          } > /tmp/pr-body.md
-
-      - name: Create sync PR
-        if: steps.check.outputs.needed == 'true'
+      - name: Manage and open sync issue
+        if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
         run: |
-          BRANCH="${{ steps.check.outputs.branch }}"
-          git config user.name "pr-automation-bot-public[bot]"
-          git config user.email "pr-automation-bot-public[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git commit --allow-empty -m "chore: upstream sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}"
-          git push -u origin "$BRANCH"
-          gh pr create \
-            --title "chore: sync check — caffeinelabs/mops ${{ steps.latest.outputs.tag }}" \
-            --body-file /tmp/pr-body.md
+          bash scripts/sync-upstream-open-issue.sh \
+            "upstream-mops" \
+            "upstream sync available — caffeinelabs/mops ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

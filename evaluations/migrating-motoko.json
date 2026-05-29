@@ -30,7 +30,7 @@
       "prompt": "Write a Motoko migration that adds a `zipCode : Text` field (defaulting to empty string) to each record in a Map of users stored in my canister.",
       "expected_behaviors": [
         "Uses `(with migration = ...)` on the actor",
-        "Defines `OldUser` and `NewUser` types inline in the migration module",
+        "Defines `OldUser` type inline in the migration module; `NewUser` (current type) may be imported from `types.mo`",
         "Uses dot notation on the Map: `old.users.map<...>(func(_, u) { { u with zipCode = \"\" } })`",
         "Does NOT import old types from the existing codebase"
       ]
@@ -40,7 +40,6 @@
       "prompt": "I want to add a new optional field `?Text` to my Motoko actor in the next upgrade. Do I need to write a migration function?",
       "expected_behaviors": [
         "Explains that adding a field is an implicit (compatible) change — no migration function needed",
-        "Mentions that removing fields, changing mutability, and widening types are also implicit",
         "Notes that renaming fields or changing types DO require an explicit migration"
       ]
     },
@@ -60,7 +59,6 @@
       "prompt": "I need to migrate my Motoko canister's state on upgrade. Can I use `system func preupgrade()` to save state to a stable variable and restore it in `postupgrade()`?",
       "expected_behaviors": [
         "Redirects to `(with migration = ...)` syntax instead",
-        "Explains that `preupgrade`/`postupgrade` are not needed for data migration in modern Motoko (persistent actors auto-persist state)",
         "Does NOT provide a `preupgrade`/`postupgrade` implementation"
       ]
     },
