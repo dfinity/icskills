@@ -234,7 +234,7 @@ Some skills mirror content from external upstream repositories (currently `caffe
 
 A weekly GitHub Actions workflow checks for new releases on each tracked upstream. When it finds one, it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` with:
 - The old → new release tag in the title
-- A diff of the upstream file against our current version
+- A diff of the upstream file between the old and new release (not against our local file)
 
 **There is always at most one open sync issue per upstream repo.** If a newer release comes out before the issue is resolved, the workflow closes the stale issue (with a "Superseded" comment) and opens a fresh one for the latest release.
 
@@ -242,12 +242,8 @@ A weekly GitHub Actions workflow checks for new releases on each tracked upstrea
 
 1. Find the open issue labelled `upstream-motoko` or `upstream-mops`
 2. Note the target release tag in the title (always the *latest* release — skip any intermediate ones)
-3. Re-run the diff locally against the current files — the issue body diff may be stale if other changes landed on `main` since the issue was opened:
-   ```bash
-   curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
-   diff skills/<skill-name>/SKILL.md /tmp/upstream.md
-   ```
-4. Apply changes following the [Upstream Sync Strategy](.claude/CLAUDE.md#upstream-sync-strategy) in `.claude/CLAUDE.md` — in particular, preserve any sections listed as "owned by icskills" in the skill's upstream comment block
+3. Re-run the diff locally if needed — use the commands in the [Upstream Sync Strategy](.claude/CLAUDE.md#upstream-sync-strategy) to diff upstream old vs upstream new (do NOT diff our local file against upstream — that produces noise from icskills-owned sections)
+4. Apply changes following the Upstream Sync Strategy in `.claude/CLAUDE.md` — in particular, preserve any sections listed as owned in `.claude/upstream.md`
 5. Run `npm run validate`
 6. Open a PR that closes the issue with `Closes #<n>` in the PR body
 
