@@ -236,7 +236,6 @@ rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png
 ```
 skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
-skills/_template/              # Legacy template — for reference only; use skill-creator to draft new skills
 scripts/lib/parse-skill.js    # Shared parsing utilities
 scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
 src/                           # Astro site source
