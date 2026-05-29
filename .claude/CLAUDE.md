@@ -47,7 +47,7 @@ Then run `npm run validate` to catch any remaining schema errors.
 
 **Evals — two separate concerns:**
 - skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration — not committed
-- `evaluations/<skill-name>.json` is the committed artifact required for PRs
+- `evaluations/<skill-name>.json` is the committed artifact kept as a regression safety net — future contributors can run it to check whether a change breaks existing behavior without reconstructing the skill-creator workspace
 
 After any skill-creator session (new or improvement), update `evaluations/<skill-name>.json` from the workspace's `evals/evals.json` — that file contains every test case and assertion skill-creator used. Port cases covering new or changed behaviors to [IC eval format](../evaluations/icp-cli.json); remove or update cases that no longer apply. For description optimization, convert the trigger queries directly to `trigger_evals` entries rather than writing them from scratch.
 
