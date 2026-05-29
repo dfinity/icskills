@@ -33,7 +33,7 @@ npm run build        # Astro production build
 
 ## Creating or Improving a Skill
 
-When asked to create a new skill **or** to improve, optimize, or evaluate an existing one, load the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) and use it. For existing skills, point it at the current SKILL.md — it will go straight to the eval/iterate loop without needing to draft from scratch. It handles content improvement, description optimization, and iterative evals.
+When asked to create a new skill **or** to improve, optimize, or evaluate an existing one, use the `skill-creator` skill — it is pre-installed in this repo at `.agents/skills/skill-creator/` and available automatically in Claude Code. For existing skills, point it at the current SKILL.md — it will go straight to the eval/iterate loop without needing to draft from scratch. It handles content improvement, description optimization, and iterative evals.
 
 **For new skills**, after skill-creator produces a draft, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it. For existing skills, verify the block is present and correct.
 
@@ -203,6 +203,8 @@ This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com
 
 Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security. New categories are allowed — the validator warns but does not block.
 
+To add a new category, update three files: the description string in `skills/skill.schema.json`, the `KNOWN_CATEGORIES` array in `scripts/check-project.js`, and the `CATEGORY_ORDER` array in `src/lib/skills.ts`.
+
 ## Brand Guidelines
 
 When making any changes to the website (`src/`, `public/`, or any file that affects what is served at `https://skills.internetcomputer.org/`), you MUST read and follow the brand skills before writing any copy, choosing colors, or applying design tokens:
@@ -234,7 +236,7 @@ rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png
 ```
 skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
-skills/_template/              # Skeleton for new skills
+skills/_template/              # Legacy template — for reference only; use skill-creator to draft new skills
 scripts/lib/parse-skill.js    # Shared parsing utilities
 scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
 src/                           # Astro site source

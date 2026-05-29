@@ -30,9 +30,7 @@ brew tap agent-ecosystem/homebrew-tap && brew install skill-validator
 
 ### 1. Draft the skill with skill-creator
 
-Use the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) to draft your SKILL.md. It guides you through capturing intent, writing content, running test prompts, and iterating on quality — including a description optimization loop that generates 20 trigger queries and scores them automatically.
-
-To use it in Claude Code, load the skill from the URL above and follow the interview prompts. skill-creator handles the general Agent Skills spec fields (`name`, `description`, `license`, `compatibility`) and the body content.
+Use the `skill-creator` skill to draft your SKILL.md — it is pre-installed in this repo (`.agents/skills/skill-creator/`) and available automatically in Claude Code. It guides you through capturing intent, writing content, running test prompts, and iterating on quality — including a description optimization loop that generates 20 trigger queries and scores them automatically. skill-creator handles the general Agent Skills spec fields (`name`, `description`, `license`, `compatibility`) and the body content.
 
 **IC-specific additions required after drafting:** skill-creator does not know about the IC Skills schema. After it produces a draft, manually add the `metadata:` block — these fields are required and will block CI if missing:
 
@@ -55,7 +53,7 @@ Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stabl
 
 Keep the main SKILL.md under 500 lines. Move detailed reference material (migration guides, config examples) to `references/*.md` and reference them from SKILL.md. See `skills/icp-cli/` for an example.
 
-### 3. Write the SKILL.md file
+### 3. Review and finalize the SKILL.md
 
 Every skill file has YAML frontmatter followed by a markdown body. The frontmatter is the machine-readable metadata; the body is the agent-consumable content.
 
@@ -126,12 +124,14 @@ This uses the locally authenticated `claude` CLI — no API key needed. Low nove
 
 ### 6. Add evaluation cases
 
-Create `evaluations/<skill-name>.json` with test cases that verify the skill works. The eval file has two sections:
+After the skill-creator session, port test cases from the workspace's `evals/evals.json` to `evaluations/<skill-name>.json` in IC eval format. skill-creator saves every test case and assertion it used there — use them as your source rather than writing from scratch. See `evaluations/icp-cli.json` for a working example of the IC format.
+
+The eval file has two sections:
 
 - **`output_evals`** — realistic prompts with expected behaviors a judge can check
-- **`trigger_evals`** — queries that should/shouldn't activate the skill
+- **`trigger_evals`** — queries that should/shouldn't activate the skill (seed these from skill-creator's description optimization output)
 
-See `evaluations/icp-cli.json` for a working example. Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
+Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
 
 #### Writing eval prompts
 
@@ -201,7 +201,7 @@ Stats (skill count, categories) all update automatically.
 
 ## Updating an Existing Skill
 
-For non-trivial improvements (content quality, description accuracy, new pitfalls), use the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — it supports editing and optimizing existing skills, not just creating new ones. Load the skill and point it at the existing SKILL.md; it will go straight to the eval/iterate loop.
+For non-trivial improvements (content quality, description accuracy, new pitfalls), use the `skill-creator` skill — it is pre-installed in this repo and available automatically in Claude Code. It supports editing and optimizing existing skills, not just creating new ones. Point it at the existing SKILL.md; it will go straight to the eval/iterate loop.
 
 Once the skill-creator session is complete, update `evaluations/<skill-name>.json` to reflect what was learned. skill-creator saves the test cases and assertions it used to `evals/evals.json` in the workspace — use those as your source. Port cases that cover new or changed behaviors to IC eval format; remove or update cases that no longer reflect the skill. Then run the IC evals to confirm the updated skill passes:
 
@@ -217,7 +217,7 @@ For small fixes (typos, canister ID updates, corrected code):
    ```bash
    node scripts/evaluate-skills.js <skill-name>
    ```
-4. Optionally run LLM scoring (see step 5 above)
+4. Optionally run LLM scoring (see [Run LLM quality scoring](#5-run-llm-quality-scoring-recommended))
 5. Submit a PR with a summary of what changed, including eval results if any cases changed
 
 **Eval results for skill improvements:** Running and including eval results is recommended but not required. If you do include results, only provide results for the cases you changed or added — not the full suite. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
@@ -262,7 +262,7 @@ The full sync checklist (version numbers, evals, compatibility, owned sections, 
 - **Code must be copy-paste correct.** Agents will use your code blocks directly. Test everything.
 - **Annotate all code blocks** with language identifiers (` ```motoko `, ` ```rust `, ` ```bash `, etc.).
 - **Include canister IDs and URLs** for both local and mainnet environments.
-- **Keep it flat.** One file per skill. No nested directories, no images, no external dependencies.
+- **Keep it flat.** One file per skill. No images or external dependencies. The only permitted subdirectory is `references/` for large reference material linked from SKILL.md.
 - **Don't duplicate other skills.** If another skill covers a pattern in depth (e.g., `canister-security` for access control and async safety), reference it by name in your pitfalls instead of inlining the pattern. This keeps maintenance centralized and ensures agents get the authoritative version. The `description` field is the primary mechanism agents use to discover related skills — cross-references in pitfalls serve as secondary hints.
 
 ## Categories
