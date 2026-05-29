@@ -31,9 +31,9 @@ npm run dev          # Start Astro dev server
 npm run build        # Astro production build
 ```
 
-## Creating a New Skill
+## Creating or Improving a Skill
 
-When asked to create a new skill, load the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) and use it to draft the SKILL.md. It handles content, description optimization, and the iterative eval loop.
+When asked to create a new skill **or** to improve, optimize, or evaluate an existing one, load the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) and use it. For existing skills, point it at the current SKILL.md — it will go straight to the eval/iterate loop without needing to draft from scratch. It handles content improvement, description optimization, and iterative evals.
 
 **After skill-creator produces a draft**, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it:
 

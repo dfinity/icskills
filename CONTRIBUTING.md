@@ -231,9 +231,13 @@ Stats (skill count, categories) all update automatically.
 
 ## Updating an Existing Skill
 
+For non-trivial improvements (content quality, description accuracy, new pitfalls), use the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — it supports editing and optimizing existing skills, not just creating new ones. Load the skill and point it at the existing SKILL.md; it will go straight to the eval/iterate loop.
+
+For small fixes (typos, canister ID updates, corrected code):
+
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
-3. Optionally run LLM scoring (see step 4 above)
+3. Optionally run LLM scoring (see step 5 above)
 4. If you added new evaluation cases, run those evals locally and include the results in the PR
 5. Submit a PR with a summary of what changed
 
