@@ -233,13 +233,22 @@ Stats (skill count, categories) all update automatically.
 
 For non-trivial improvements (content quality, description accuracy, new pitfalls), use the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) — it supports editing and optimizing existing skills, not just creating new ones. Load the skill and point it at the existing SKILL.md; it will go straight to the eval/iterate loop.
 
+Once the skill-creator session is complete, update `evaluations/<skill-name>.json` to reflect what was learned. skill-creator saves the test cases and assertions it used to `evals/evals.json` in the workspace — use those as your source. Port cases that cover new or changed behaviors to IC eval format; remove or update cases that no longer reflect the skill. Then run the IC evals to confirm the updated skill passes:
+
+```bash
+node scripts/evaluate-skills.js <skill-name>
+```
+
 For small fixes (typos, canister ID updates, corrected code):
 
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
-3. Optionally run LLM scoring (see step 5 above)
-4. If you added new evaluation cases, run those evals locally and include the results in the PR
-5. Submit a PR with a summary of what changed
+3. Review `evaluations/<skill-name>.json` — update any cases affected by the change, then run the suite:
+   ```bash
+   node scripts/evaluate-skills.js <skill-name>
+   ```
+4. Optionally run LLM scoring (see step 5 above)
+5. Submit a PR with a summary of what changed, including eval results if any cases changed
 
 **Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
 

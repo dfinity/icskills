@@ -46,8 +46,10 @@ metadata:
 Then run `npm run validate` to catch any remaining schema errors.
 
 **Evals — two separate concerns:**
-- skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration during drafting — not committed
-- `evaluations/<skill-name>.json` is the committed artifact required for PRs — create this separately in [IC eval format](../evaluations/icp-cli.json). If skill-creator's description optimization produced trigger queries, convert them to IC format rather than starting from scratch.
+- skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration — not committed
+- `evaluations/<skill-name>.json` is the committed artifact required for PRs
+
+After any skill-creator session (new or improvement), update `evaluations/<skill-name>.json` from the workspace's `evals/evals.json` — that file contains every test case and assertion skill-creator used. Port cases covering new or changed behaviors to [IC eval format](../evaluations/icp-cli.json); remove or update cases that no longer apply. For description optimization, convert the trigger queries directly to `trigger_evals` entries rather than writing them from scratch.
 
 ## Workflow
 
@@ -57,7 +59,13 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
 
-When adding new behaviors, commands, or pitfalls to a skill, also consider whether the `evaluations/<skill-name>.json` file needs new eval cases to cover them. New pitfalls and non-obvious behaviors are strong candidates for evals — especially adversarial ones where an agent would likely get it wrong without the skill.
+After any skill change — including small fixes — review `evaluations/<skill-name>.json` for cases affected by the change, update them, and run the suite before opening a PR:
+
+```bash
+node scripts/evaluate-skills.js <skill-name>
+```
+
+New pitfalls and non-obvious behaviors are strong candidates for new eval cases — especially adversarial ones where an agent would likely get it wrong without the skill.
 
 **PR eval requirements:**
 - **New skill:** run the full suite (`node scripts/evaluate-skills.js <skill-name>`) and include both output eval and trigger eval results in the PR description. PRs without eval results are not accepted.
