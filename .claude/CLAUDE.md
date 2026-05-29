@@ -35,7 +35,7 @@ npm run build        # Astro production build
 
 When asked to create a new skill **or** to improve, optimize, or evaluate an existing one, load the [Anthropic `skill-creator` skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator) and use it. For existing skills, point it at the current SKILL.md — it will go straight to the eval/iterate loop without needing to draft from scratch. It handles content improvement, description optimization, and iterative evals.
 
-**After skill-creator produces a draft**, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it:
+**For new skills**, after skill-creator produces a draft, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it. For existing skills, verify the block is present and correct.
 
 ```yaml
 metadata:
@@ -59,7 +59,7 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
 
-After any skill change — including small fixes — review `evaluations/<skill-name>.json` for cases affected by the change, update them, and run the suite before opening a PR:
+After any skill change, review `evaluations/<skill-name>.json` for cases affected by the change and update them. Running the suite to verify is recommended, especially when eval cases changed:
 
 ```bash
 node scripts/evaluate-skills.js <skill-name>
@@ -69,7 +69,7 @@ New pitfalls and non-obvious behaviors are strong candidates for new eval cases 
 
 **PR eval requirements:**
 - **New skill:** run the full suite (`node scripts/evaluate-skills.js <skill-name>`) and include both output eval and trigger eval results in the PR description. PRs without eval results are not accepted.
-- **Skill improvement with new evals:** run only the new eval cases and include both with-skill and baseline results.
+- **Skill improvement:** running and including eval results is recommended but not required. If included, provide only the cases you changed or added.
 - Always wrap eval output in a collapsed `<details>` block in the PR description.
 
 ## LLM Quality Scoring

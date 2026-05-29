@@ -88,6 +88,8 @@ See `skills/skill.schema.json` for the formal schema. This format aligns with th
 
 #### Writing a good `description`
 
+skill-creator's description optimization loop handles this automatically — the guidance below is a reference for manual review.
+
 The `description` field is how agents decide whether to load your skill. A weak description means agents won't find your skill when they need it.
 
 **Do:** State what the skill does, when to use it, AND when NOT to use it. Include specific keywords that help agents match tasks. The "Do NOT use for..." clause prevents overtriggering — agents loading your skill when a similar-but-wrong one matches.
@@ -102,39 +104,7 @@ description: "ckBTC integration guide."
 
 #### Body sections
 
-The body has **no rigid structure requirements** — organize content in whatever way best serves agents for your skill's domain. That said, most skills benefit from these sections:
-
-```markdown
-# Skill Title
-
-## What This Is
-Brief explanation of the technology. 2-3 sentences max.
-
-## Prerequisites
-- Language-specific libraries, SDKs, and crate/package versions
-- Any non-tool requirements (funded identity, NNS neuron, etc.)
-- Note: Environment requirements (CLI tools, system packages) go in frontmatter `compatibility`, not here
-
-## Canister IDs                        <!-- when skill uses external canisters -->
-| Environment | Canister | ID |
-|-------------|----------|-----|
-| Mainnet | ... | `...` |
-
-## Common Pitfalls                     <!-- highest-value section — name it what fits -->
-1. **Pitfall name.** Explanation of what goes wrong and why.
-
-## Implementation
-### Subsection per approach
-Code blocks with working, tested examples.
-
-## Deploy & Test
-Step-by-step commands to deploy locally and on mainnet.
-
-## Verify It Works
-Concrete commands to confirm the implementation is correct.
-```
-
-Use whatever headings fit your skill. A security skill might use `## Security Pitfalls`. An architecture skill might use `## Design Mistakes`. A REST API skill might skip `## Deploy & Test` entirely. The goal is clarity, not conformity.
+No rigid structure — skill-creator decides what sections make sense for your content. See existing skills like `skills/icp-cli/` for examples of how IC skills are organized.
 
 ### 4. Validate
 
@@ -209,7 +179,7 @@ Stats (skill count, categories) all update automatically.
 
 - One skill per PR
 - Include a brief description of what the skill covers and why it's needed
-- Include LLM scoring output in your PR description if you ran it locally (see step 4)
+- Include LLM scoring output in your PR description if you ran it locally (see step 5)
 - Make sure the SKILL.md is tested — code examples should compile and deploy
 - **Eval results are required.** Run the full evaluation suite locally and paste the results into the PR description. Both output evals and trigger evals must be included. PRs without eval results will not be accepted.
 - **Collapse the results** using a `<details>` block to keep the PR description readable:
@@ -243,14 +213,14 @@ For small fixes (typos, canister ID updates, corrected code):
 
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
-3. Review `evaluations/<skill-name>.json` — update any cases affected by the change, then run the suite:
+3. If any evaluation cases in `evaluations/<skill-name>.json` are affected by the change, update them. Running the suite to verify is recommended:
    ```bash
    node scripts/evaluate-skills.js <skill-name>
    ```
 4. Optionally run LLM scoring (see step 5 above)
 5. Submit a PR with a summary of what changed, including eval results if any cases changed
 
-**Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
+**Eval results for skill improvements:** Running and including eval results is recommended but not required. If you do include results, only provide results for the cases you changed or added — not the full suite. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
