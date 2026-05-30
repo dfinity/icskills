@@ -5,7 +5,7 @@ This copy of skill-creator diverges from the upstream Anthropic release. Do NOT 
 To update intentionally: re-run `npx skills add`, then manually re-apply each patch listed here.
 
 Upstream repo: https://github.com/anthropics/skills/tree/main/skills/skill-creator
-Upstream commit vendored: `b0cbd3df1533b396d281a6886d5132f623393a9c` (upstream last changed: 2026-03-06)
+Upstream commit SHA: `b0cbd3df1533b396d281a6886d5132f623393a9c` (last changed upstream: 2026-03-06)
 Vendored into this repo on: 2026-05-29
 
 ---
