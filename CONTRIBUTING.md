@@ -241,7 +241,7 @@ A weekly GitHub Actions workflow checks for new releases on each tracked upstrea
 5. Run `npm run validate`
 6. Open a PR that closes the issue with `Closes #<n>` in the PR body
 
-The full sync checklist (version numbers, evals, compatibility, owned sections, etc.) is in `.claude/CLAUDE.md`.
+The full sync checklist (version numbers, evals, compatibility, owned sections, etc.) is in `.claude/CLAUDE.md`. Load the `improve-ic-skill` skill for this work — it knows the toolchain, eval location, and owned-section rules. Follow the branch naming convention in `.claude/CLAUDE.md` step 3.
 
 ---
 

@@ -64,7 +64,7 @@ Then run the full suite via our lightweight runner before opening the PR — thi
 node scripts/evaluate-skills.js <skill-name>
 ```
 
-The PR description must include both the output eval and trigger eval results (with-skill vs baseline) so reviewers can see the actual behavior delta.
+For new skills, the PR description must include both the output eval and trigger eval results (with-skill vs baseline) so reviewers can see the actual behavior delta.
 
 ## Workflow
 
@@ -184,7 +184,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 | **Cross-reference links** (`## Additional References`) | All skills | Section renamed from upstream's "Additional Resources". Rewrite skill name links to icskills names; never overwrite from upstream. |
 | **Extra `mops-cli` cross-reference** | `migrating-motoko`, `migrating-motoko-enhanced` | Extra link `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup` added to `## Additional References` — not in upstream, do not remove on sync. |
 | **General Motoko pitfalls not yet in upstream** (Pitfalls 3–4: Text.join order, List.get vs List.at; M0064/M0145/M0170 error rows) | `motoko` only | Pitfalls 3–4 + M0145: pending [caffeinelabs/motoko#6156](https://github.com/caffeinelabs/motoko/issues/6156). M0064: pending [caffeinelabs/motoko#6157](https://github.com/caffeinelabs/motoko/issues/6157). Drop each row when its issue merges and is synced. |
-| **Body content** | All skills | Sync from upstream when unchanged |
+| **Body content** | All skills | Not icskills-owned — apply upstream changes normally |
 
 ### Automated upstream release detection
 
