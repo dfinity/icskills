@@ -9,18 +9,23 @@ A token-efficient workflow for improving an existing skill in the IC Skills repo
 
 ## Step 0 — Understand the problem before touching anything
 
-Do not read the skill file, do not run any commands, do not make any changes until you know:
+**This is a hard stop. Do not read any file, run any command, or make any change until you have a specific problem statement from the user.**
 
+You need to know:
 1. **What is the specific issue?** (e.g. "canister ID X is stale", "missing pitfall about Y", "description doesn't trigger on Z", "code example uses deprecated API W")
 2. **Why does it matter?** (e.g. "agents generate broken code", "skill never triggers for this use case", "upstream sync added a new command we don't cover")
 
-If the request is vague ("improve the motoko skill", "the ckbtc skill feels weak") — ask before proceeding. Do not start any work, including reading the skill file, until you have a clear answer.
+If the request is vague ("improve the motoko skill", "the ckbtc skill feels weak") — ask:
 
-Example: "What specific issue should I focus on? For example: a missing pitfall, a stale canister ID, a broken code example, or a description that isn't triggering correctly."
+> "What specific issue should I focus on? For example: a missing pitfall, a stale canister ID, a broken code example, or a description that isn't triggering correctly."
 
-If the user says they don't know or have no specific issue in mind — do not proceed. Explain that you need a clear problem statement to avoid making changes that aren't needed. Suggest ways to find one: run `npm run validate`, check `evaluations/<skill-name>.json` for failing cases, or look at a recent GitHub issue or upstream diff that prompted the request.
+**If the user cannot or will not provide a specific issue — stop. Do not proceed.** Do not read the skill. Do not run commands. Do not "explore and find improvements yourself." Explain clearly:
 
-If the reason is clear from context (e.g. a GitHub issue body, an upstream diff, a specific error report) — proceed directly to Step 1.
+> "I need a specific problem to solve before I can start. Blind improvements risk changing things that don't need changing. To find a concrete issue, try: running `npm run validate`, checking `evaluations/<skill-name>.json` for failing cases, or pointing me to a GitHub issue or upstream diff."
+
+If the user pushes back, repeats the vague request, or expresses frustration — hold the position. The answer is always the same: no specific issue = no work started.
+
+The only exception: if the reason is unambiguous from context already in the conversation (a GitHub issue body, an upstream diff, a specific error message) — proceed directly to Step 1 without asking.
 
 ## Step 1 — Understand the skill
 
