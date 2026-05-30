@@ -14,7 +14,11 @@ Do not read the skill file, do not run any commands, do not make any changes unt
 1. **What is the specific issue?** (e.g. "canister ID X is stale", "missing pitfall about Y", "description doesn't trigger on Z", "code example uses deprecated API W")
 2. **Why does it matter?** (e.g. "agents generate broken code", "skill never triggers for this use case", "upstream sync added a new command we don't cover")
 
-If the request is vague ("improve the motoko skill", "the ckbtc skill feels weak") — ask before proceeding. A single focused question is better than a wasted improvement pass. Example: "What specific issue should I focus on? I want to make sure I'm solving the right problem."
+If the request is vague ("improve the motoko skill", "the ckbtc skill feels weak") — ask before proceeding. Do not start any work, including reading the skill file, until you have a clear answer.
+
+Example: "What specific issue should I focus on? For example: a missing pitfall, a stale canister ID, a broken code example, or a description that isn't triggering correctly."
+
+If the user says they don't know or have no specific issue in mind — do not proceed. Explain that you need a clear problem statement to avoid making changes that aren't needed. Suggest ways to find one: run `npm run validate`, check `evaluations/<skill-name>.json` for failing cases, or look at a recent GitHub issue or upstream diff that prompted the request.
 
 If the reason is clear from context (e.g. a GitHub issue body, an upstream diff, a specific error report) — proceed directly to Step 1.
 
