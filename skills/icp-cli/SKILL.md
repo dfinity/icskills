@@ -17,29 +17,11 @@ Before generating any `icp` command not explicitly documented here, run `icp --h
 
 ## Installation
 
-**Recommended (npm)** — requires [Node.js](https://nodejs.org/) >= 22:
 ```bash
 npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 ```
 
-`ic-wasm` is required when using official recipes (`@dfinity/rust`, `@dfinity/motoko`, `@dfinity/asset-canister`) — they depend on it for optimization and metadata embedding.
-
-**Alternative methods:**
-```bash
-# Homebrew (macOS/Linux)
-brew install icp-cli
-brew install ic-wasm
-
-# Shell script (macOS/Linux/WSL)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/icp-cli/releases/latest/download/icp-cli-installer.sh | sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/ic-wasm/releases/latest/download/ic-wasm-installer.sh | sh
-```
-
-**Verify:**
-```bash
-icp --version
-ic-wasm --version
-```
+`ic-wasm` is required when using official recipes (`@dfinity/rust`, `@dfinity/motoko`, `@dfinity/asset-canister`) — they depend on it for optimization and metadata embedding. Requires [Node.js](https://nodejs.org/) >= 22. Also available via Homebrew and shell script installer — see the [icp-cli releases](https://github.com/dfinity/icp-cli/releases).
 
 **Linux note:** On minimal installs, you may need system libraries: `sudo apt-get install -y libdbus-1-3 libssl3 ca-certificates` (Ubuntu/Debian) or `sudo dnf install -y dbus-libs openssl ca-certificates` (Fedora/RHEL).
 
@@ -77,22 +59,7 @@ ic-wasm --version
      type: "@dfinity/rust@v3.2.0"
    ```
 
-4. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use them instead of writing shell commands:
-   ```yaml
-   # Unnecessary — use a recipe instead
-   build:
-     steps:
-       - type: script
-         commands:
-           - cargo build --target wasm32-unknown-unknown --release
-           - cp target/.../backend.wasm "$ICP_WASM_OUTPUT_PATH"
-
-   # Preferred
-   recipe:
-     type: "@dfinity/rust@v3.2.0"
-     configuration:
-       package: backend
-   ```
+4. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use `recipe: { type: "@dfinity/rust@v3.2.0", configuration: { package: backend } }` instead of writing shell commands in `build.steps`.
 
 5. **Not committing `.icp/data/` to version control.** Mainnet canister IDs are stored in `.icp/data/mappings/<environment>.ids.json`. Losing this file means losing the mapping between canister names and on-chain IDs. Always commit `.icp/data/` — never delete it. Add `.icp/cache/` to `.gitignore` (it is ephemeral and rebuilt automatically).
 
