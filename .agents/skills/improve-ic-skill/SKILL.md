@@ -1,6 +1,6 @@
 ---
 name: improve-ic-skill
-description: Improve an existing skill in the IC Skills repo (skills.internetcomputer.org). Load this skill whenever asked to improve, fix, update, enhance, review, or add content to an existing skill at skills/<skill-name>/SKILL.md — including adding pitfalls, updating canister IDs, fixing code examples, strengthening the description, or updating evals. Do NOT use for creating a brand-new skill (use skill-creator for that). Trigger examples: "the motoko skill is missing a pitfall", "update icp-cli for the new recipe format", "the ckbtc description is weak", "add an eval for the canister-security skill".
+description: 'Improve an existing skill in the IC Skills repo (skills.internetcomputer.org). Load this skill whenever asked to improve, fix, update, enhance, review, or add content to an existing skill at skills/<skill-name>/SKILL.md — including adding pitfalls, updating canister IDs, fixing code examples, strengthening the description, or updating evals. Do NOT use for creating a brand-new skill (use skill-creator for that). Trigger examples: "the motoko skill is missing a pitfall", "update icp-cli for the new recipe format", "the ckbtc description is weak", "add an eval for the canister-security skill".'
 ---
 
 # Improve IC Skill
