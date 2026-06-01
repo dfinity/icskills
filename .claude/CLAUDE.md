@@ -11,7 +11,7 @@ This repository contains agent-readable skill files for the Internet Computer. E
 
 ## Skill File Structure
 
-Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema and `skills/_template/SKILL.md.template` for a ready-to-copy skeleton.
+Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema.
 
 ### Required frontmatter fields
 `name`, `description`, plus `title`, `category` under `metadata:`
@@ -20,7 +20,7 @@ Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/ski
 `license`, `compatibility` (environment requirements — tools, system packages, network access; library deps go in `## Prerequisites`) — validator warns if missing but does not block
 
 ### Body sections
-No rigid structure — organize content to best serve agents. The validator warns (but does not block) if these recommended sections are missing: `What This Is`, `Prerequisites`, `Implementation`. Other commonly useful sections: pitfalls (name it what fits the domain), `Deploy & Test`, `Verify It Works`, `Canister IDs`, `How It Works`.
+No rigid structure — organize content to best serve agents.
 
 ## Build Commands
 
@@ -31,6 +31,41 @@ npm run dev          # Start Astro dev server
 npm run build        # Astro production build
 ```
 
+## Creating or Improving a Skill
+
+Two skills are available — use the right one:
+
+- **`improve-ic-skill`** — use for improving an existing skill in this repo. Token-efficient: targeted evals, no subagents, no browser viewer. Knows our toolchain, eval location, and upstream tracking rules. This is the default for any improvement task.
+- **`skill-creator`** — use only for creating a brand-new skill from scratch. Heavier: runs full eval suites with baselines and a browser-based viewer. Good for the initial draft and description optimization of a new skill.
+
+When asked to improve, fix, update, add pitfalls to, or evaluate an existing skill → use `improve-ic-skill`. When asked to create a new skill → use `skill-creator`.
+
+**`skill-creator` is a patched fork.** Our vendored copy at `.agents/skills/skill-creator/` has local fixes for confirmed bugs — see `.agents/skills/skill-creator/PATCHES.md`. Do NOT update it via `npx skills add` — that would silently overwrite the patches. To update intentionally: re-run `npx skills add`, then re-apply every patch from `PATCHES.md`.
+
+**For new skills**, after skill-creator produces a draft, add the IC-specific `metadata:` block — skill-creator does not produce this and CI will reject the skill without it.
+
+```yaml
+metadata:
+  title: "Display Name"
+  category: CategoryName   # Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security
+```
+
+Then run `npm run validate` to catch any remaining schema errors.
+
+**Evals — two separate concerns:**
+- skill-creator's internal eval loop (workspace-based, viewer, iterative) is for quality iteration — not committed
+- `evaluations/<skill-name>.json` is the committed artifact kept as a regression safety net — future contributors can run it to check whether a change breaks existing behavior without reconstructing the skill-creator workspace
+
+After a skill-creator session for a new skill, populate `evaluations/<skill-name>.json` with test cases based on what was learned during the session. For description optimization, convert the trigger queries to `trigger_evals` entries. See [IC eval format](../evaluations/icp-cli.json) for the expected structure.
+
+Then run the full suite via our lightweight runner before opening the PR — this is what goes in the PR description, not skill-creator's internal results:
+
+```bash
+node scripts/evaluate-skills.js <skill-name>
+```
+
+For new skills, the PR description must include both the output eval and trigger eval results (with-skill vs baseline) so reviewers can see the actual behavior delta.
+
 ## Workflow
 
 After modifying any SKILL.md file, ALWAYS run:
@@ -39,11 +74,13 @@ npm run validate     # Fix all errors before committing. Warnings are acceptable
 ```
 Validate uses [skill-validator](https://github.com/agent-ecosystem/skill-validator) for structure, links, content analysis, and contamination checks. It runs in CI and blocks deployment on errors.
 
-When adding new behaviors, commands, or pitfalls to a skill, also consider whether the `evaluations/<skill-name>.json` file needs new eval cases to cover them. New pitfalls and non-obvious behaviors are strong candidates for evals — especially adversarial ones where an agent would likely get it wrong without the skill.
+After any skill change, review `evaluations/<skill-name>.json` for cases affected by the change and update them. Running the suite to verify is recommended, especially when eval cases changed — see `## Evaluations` below for the full command reference and flags.
+
+New pitfalls and non-obvious behaviors are strong candidates for new eval cases — especially adversarial ones where an agent would likely get it wrong without the skill.
 
 **PR eval requirements:**
 - **New skill:** run the full suite (`node scripts/evaluate-skills.js <skill-name>`) and include both output eval and trigger eval results in the PR description. PRs without eval results are not accepted.
-- **Skill improvement with new evals:** run only the new eval cases and include both with-skill and baseline results.
+- **Skill improvement:** running and including eval results is recommended but not required. If included, provide only the cases you changed or added.
 - Always wrap eval output in a collapsed `<details>` block in the PR description.
 
 ## LLM Quality Scoring
@@ -132,13 +169,13 @@ When syncing a skill from a new upstream release, verify all of these before com
 - [ ] **All upstream skill folder files synced** — The sync issue diffs every file in the upstream skill folder (any type, not just `.md`) between old and new releases. Apply changes to all files that changed. If a file is new in upstream, add it to our `references/` directory. If a file was removed upstream, remove it from `references/` too. icskills always places reference files under `references/` regardless of how upstream organises them.
 - [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
-- [ ] **All upstream additions applied** — Re-read every `> ` line in the diff (lines new in upstream) systematically, including inside code blocks: added/changed inline comments, new sentences, modified expressions. These small changes are easy to miss but often carry clarifications or fixes.
+- [ ] **All upstream additions applied** — Re-read every `+` line in the diff (lines new in upstream) systematically, including inside code blocks: added/changed inline comments, new sentences, modified expressions. These small changes are easy to miss but often carry clarifications or fixes.
 - [ ] **Icskills-owned sections preserved** — Sections listed as owned in `.claude/upstream.md` are NOT overwritten from upstream
 - [ ] **Owned sections audited against upstream additions** — For each owned section, check whether the upstream diff now covers the same content. If upstream ships it, drop the icskills copy and remove the entry from `.claude/upstream.md` to avoid duplicating agent instructions.
 - [ ] **Icskills-only content audited** — Any content we have that is absent from the upstream diff must be either listed as owned in `.claude/upstream.md` or removed. Content not tracked there is a gap — file an upstream issue or add it to the owned list.
 - [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
 - [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
-- [ ] **Evals reviewed** — Check if new upstream content introduces patterns agents would get wrong without the skill. Strong candidates: new commands, changed defaults, renamed APIs, new pitfalls. Add eval cases where the delta is non-trivial.
+- [ ] **Evals reviewed** — Open `evaluations/<skill-name>.json` and apply the same logic as any improvement: (1) add new eval cases for new pitfalls, new commands, changed defaults, or renamed APIs in the diff — these are exactly where agents will hallucinate without updated guidance; (2) run existing evals with `node scripts/evaluate-skills.js <skill-name> --eval <N>` only if the diff modified content an existing eval covers; (3) skip running evals if the changes were purely additive. Running and including eval results is recommended but not required — if included, collapse in a `<details>` block.
 
 ### What icskills changes vs upstream
 
@@ -147,7 +184,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 | **Cross-reference links** (`## Additional References`) | All skills | Section renamed from upstream's "Additional Resources". Rewrite skill name links to icskills names; never overwrite from upstream. |
 | **Extra `mops-cli` cross-reference** | `migrating-motoko`, `migrating-motoko-enhanced` | Extra link `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup` added to `## Additional References` — not in upstream, do not remove on sync. |
 | **General Motoko pitfalls not yet in upstream** (Pitfalls 3–4: Text.join order, List.get vs List.at; M0064/M0145/M0170 error rows) | `motoko` only | Pitfalls 3–4 + M0145: pending [caffeinelabs/motoko#6156](https://github.com/caffeinelabs/motoko/issues/6156). M0064: pending [caffeinelabs/motoko#6157](https://github.com/caffeinelabs/motoko/issues/6157). Drop each row when its issue merges and is synced. |
-| **Body content** | All skills | Sync from upstream when unchanged |
+| **Body content** | All skills | Not icskills-owned — apply upstream changes normally |
 
 ### Automated upstream release detection
 
@@ -162,7 +199,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 **For humans and agents:** when you see an open issue titled `upstream sync available — <repo> <old> → <new>`:
 1. Note the `→ <new>` tag — that is the target release, regardless of what intermediate releases may have been skipped. Resolve the new tag to a full commit SHA using the commands in "Getting a commit SHA for a tag" above.
 2. The issue body contains the upstream diff (old commit vs new commit) for every affected skill. Read it directly — it is deterministic and does not go stale. To re-run it yourself, use the diff commands from "Checking for upstream changes" above against every skill that tracks this upstream repo (listed in `.claude/upstream.md`).
-3. Create **one branch** covering all affected skills — `chore/sync-upstream-<upstream-repo>-<new-tag>` (e.g. `chore/sync-upstream-motoko-1.9.0`, `chore/sync-upstream-mops-cli-v2.14.0`). Apply changes to all affected skills following the checklist, update all corresponding entries in `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
+3. Create **one branch** covering all affected skills — `chore/sync-upstream-<repo>-<new-tag>` where `<repo>` is the upstream repo's short name (e.g. `motoko` for `caffeinelabs/motoko`, `mops-cli` for `caffeinelabs/mops`). When two upstream repos are synced in the same branch, combine: `chore/sync-upstream-motoko-1.9.0-mops-cli-v2.14.0`. Load the `improve-ic-skill` skill — upstream sync is an improvement task and that skill knows our toolchain, eval location, and owned-section rules. Apply changes to all affected skills following the checklist, update all corresponding entries in `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
 
@@ -176,6 +213,8 @@ This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com
 ## Categories
 
 Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security. New categories are allowed — the validator warns but does not block.
+
+To add a new category, update three files: the description string in `skills/skill.schema.json`, the `KNOWN_CATEGORIES` array in `scripts/check-project.js`, and the `CATEGORY_ORDER` array in `src/lib/skills.ts`.
 
 ## Brand Guidelines
 
@@ -208,18 +247,12 @@ rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png
 ```
 skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
-skills/_template/              # Skeleton for new skills
 scripts/lib/parse-skill.js    # Shared parsing utilities
 scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
 src/                           # Astro site source
-  data/skills.ts              # Build-time skill loader
-  data/constants.ts           # Static data (frameworks list)
-  data/site.ts                # Site URL and base path config
+  lib/skills.ts               # Build-time skill loader
+  lib/site.ts                 # Site URL and base path config
   layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
-  layouts/SiteLayout.astro    # Shared header/nav/footer for main pages
-  components/BrowseTab.tsx    # Preact island: search + skill grid
-  components/GetStartedTab.tsx # Preact island: get started / install + endpoints
-  components/SkillHeader.tsx  # Preact island: skill detail header
   pages/index.astro           # Browse page
   pages/how-it-works/         # How it works page (fully static)
   pages/get-started/           # Get started page (install + endpoints)

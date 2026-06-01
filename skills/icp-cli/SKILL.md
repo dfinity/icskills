@@ -164,6 +164,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     ```bash
     icp network stop --project-root-override /path/to/other-project
     ```
+    To run both networks at once instead of stopping one — e.g. parallel git worktrees — set `gateway.port: 0` so each gets a free port. See "Parallel local networks (git worktrees)" under How It Works.
 
     **Scenario B — a non-icp service holds the port.** Configure an alternate port in `icp.yaml` and read the actual URLs dynamically via `icp network status --json` rather than hardcoding localhost:8000:
     ```yaml
@@ -255,6 +256,32 @@ environments:
         compute_allocation: 20
         freezing_threshold: 7776000
 ```
+
+### Parallel local networks (git worktrees)
+
+Local networks are project-local — keyed by project root (Pitfall 9). Separate git worktrees of the same repo are separate project roots, so each worktree can run its own independent local network. This lets multiple agents or branches build and deploy in parallel without interfering. The only obstacle is the gateway port: every worktree defaults to `8000`, so the second `icp network start` fails with a port conflict.
+
+Set the managed network's gateway port to `0` so the OS assigns a free ephemeral port per worktree:
+
+```yaml
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      port: 0   # 0 = OS picks a free port — avoids collisions across worktrees
+```
+
+`icp network start -d` prints the chosen port (`Network started on port 58157`). To recover it afterward — for tests, scripts, or another agent — query the running network and read `gateway_url`:
+
+```bash
+icp network start -d
+icp network status --json
+# -> { "managed": true, "api_url": "http://localhost:58157/", "gateway_url": "http://localhost:58157/", ... }
+
+icp network status --json | jq -r '.gateway_url'   # http://localhost:58157/
+```
+
+Never hardcode `localhost:8000` when using `port: 0` — the port changes on every start, so read `gateway_url` (or `api_url`) from `icp network status --json` each time. To target a specific worktree's network from outside its directory, pass the global `--project-root-override <path>` flag (e.g. `icp network status --json --project-root-override /path/to/worktree`).
 
 ### Install Modes
 

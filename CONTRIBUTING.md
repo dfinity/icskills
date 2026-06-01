@@ -28,7 +28,21 @@ brew tap agent-ecosystem/homebrew-tap && brew install skill-validator
 
 > **Skills are written for AI agents, not humans.** Every decision — structure, wording, level of detail — should optimize for machine consumption. Be explicit and literal: exact canister IDs, exact function signatures, exact error strings. Do not summarize, hand-wave, or link out when you can inline the information. An agent cannot click a link or interpret vague guidance.
 
-### 1. Create the skill directory
+### 1. Draft the skill with skill-creator
+
+Use the `skill-creator` skill to draft your SKILL.md — it is pre-installed in this repo (`.agents/skills/skill-creator/`) and available automatically in Claude Code. It guides you through capturing intent, writing content, running test prompts, and iterating on quality — including a description optimization loop that generates 20 trigger queries and scores them automatically. skill-creator handles the general Agent Skills spec fields (`name`, `description`, `license`, `compatibility`) and the body content.
+
+**IC-specific additions required after drafting:** skill-creator does not know about the IC Skills schema. After it produces a draft, manually add the `metadata:` block — these fields are required and will block CI if missing:
+
+```yaml
+metadata:
+  title: "Display Name"    # human-readable name for the site
+  category: CategoryName   # see categories list below
+```
+
+`npm run validate` will catch any missing required fields. See `skills/skill.schema.json` for the full schema.
+
+### 2. Create the skill directory
 
 ```
 skills/<skill-name>/SKILL.md
@@ -39,9 +53,7 @@ Use a short, lowercase, hyphenated name (e.g., `ckbtc`, `https-outcalls`, `stabl
 
 Keep the main SKILL.md under 500 lines. Move detailed reference material (migration guides, config examples) to `references/*.md` and reference them from SKILL.md. See `skills/icp-cli/` for an example.
 
-A template is available at `skills/_template/SKILL.md.template` — copy it as your starting point.
-
-### 2. Write the SKILL.md file
+### 3. Review and finalize the SKILL.md
 
 Every skill file has YAML frontmatter followed by a markdown body. The frontmatter is the machine-readable metadata; the body is the agent-consumable content.
 
@@ -74,6 +86,8 @@ See `skills/skill.schema.json` for the formal schema. This format aligns with th
 
 #### Writing a good `description`
 
+skill-creator's description optimization loop handles this automatically — the guidance below is a reference for manual review.
+
 The `description` field is how agents decide whether to load your skill. A weak description means agents won't find your skill when they need it.
 
 **Do:** State what the skill does, when to use it, AND when NOT to use it. Include specific keywords that help agents match tasks. The "Do NOT use for..." clause prevents overtriggering — agents loading your skill when a similar-but-wrong one matches.
@@ -88,41 +102,9 @@ description: "ckBTC integration guide."
 
 #### Body sections
 
-The body has **no rigid structure requirements** — organize content in whatever way best serves agents for your skill's domain. That said, most skills benefit from these sections:
+No rigid structure — skill-creator decides what sections make sense for your content. See existing skills like `skills/icp-cli/` for examples of how IC skills are organized.
 
-```markdown
-# Skill Title
-
-## What This Is
-Brief explanation of the technology. 2-3 sentences max.
-
-## Prerequisites
-- Language-specific libraries, SDKs, and crate/package versions
-- Any non-tool requirements (funded identity, NNS neuron, etc.)
-- Note: Environment requirements (CLI tools, system packages) go in frontmatter `compatibility`, not here
-
-## Canister IDs                        <!-- when skill uses external canisters -->
-| Environment | Canister | ID |
-|-------------|----------|-----|
-| Mainnet | ... | `...` |
-
-## Common Pitfalls                     <!-- highest-value section — name it what fits -->
-1. **Pitfall name.** Explanation of what goes wrong and why.
-
-## Implementation
-### Subsection per approach
-Code blocks with working, tested examples.
-
-## Deploy & Test
-Step-by-step commands to deploy locally and on mainnet.
-
-## Verify It Works
-Concrete commands to confirm the implementation is correct.
-```
-
-Use whatever headings fit your skill. A security skill might use `## Security Pitfalls`. An architecture skill might use `## Design Mistakes`. A REST API skill might skip `## Deploy & Test` entirely. The goal is clarity, not conformity.
-
-### 3. Validate
+### 4. Validate
 
 ```bash
 npm run validate     # Runs skill-validator + evals file check
@@ -130,7 +112,7 @@ npm run validate     # Runs skill-validator + evals file check
 
 This runs automatically in CI and blocks deployment on errors. Under the hood it runs [`skill-validator check`](https://github.com/agent-ecosystem/skill-validator) (structure, links, content analysis, contamination detection) plus a project-specific check for evaluation files.
 
-### 4. Run LLM quality scoring (recommended)
+### 5. Run LLM quality scoring (recommended)
 
 Before submitting a PR, run LLM scoring locally to check your skill's quality:
 
@@ -140,14 +122,16 @@ skill-validator score evaluate --provider claude-cli skills/<skill-name>
 
 This uses the locally authenticated `claude` CLI — no API key needed. Low novelty scores indicate the skill may restate common knowledge rather than providing genuinely new information. See the [skill-validator docs](https://github.com/agent-ecosystem/skill-validator#score-evaluate) for interpreting scores.
 
-### 5. Add evaluation cases
+### 6. Add evaluation cases
 
-Create `evaluations/<skill-name>.json` with test cases that verify the skill works. The eval file has two sections:
+After the skill-creator session, populate `evaluations/<skill-name>.json` with test cases based on what was learned during the session. Use the prompts and assertions you developed while iterating as your source. See `evaluations/icp-cli.json` for a working example of the IC format.
+
+The eval file has two sections:
 
 - **`output_evals`** — realistic prompts with expected behaviors a judge can check
-- **`trigger_evals`** — queries that should/shouldn't activate the skill
+- **`trigger_evals`** — queries that should/shouldn't activate the skill (seed these from skill-creator's description optimization output)
 
-See `evaluations/icp-cli.json` for a working example. Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
+Aim for every pitfall in your skill to have at least one eval covering it — pitfalls are where agents hallucinate most.
 
 #### Writing eval prompts
 
@@ -181,19 +165,21 @@ node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals
 
 This sends each prompt to Claude with and without the skill, then has a judge score the output. Results are saved to `evaluations/results/` (gitignored).
 
-**Eval results are required in the PR for new skills** — see [Step 7](#7-submit-a-pr) for the required format.
+**Eval results are required in the PR for new skills** — see [Step 8](#8-submit-a-pr) for the required format.
 
-### 6. That's it — the website auto-discovers skills
+> **Two-phase eval workflow:** skill-creator has its own built-in eval loop (workspace-based, browser viewer, iterative) that's useful during drafting. That is separate from the `evaluations/<skill-name>.json` file you commit here. Use skill-creator's loop to iterate on quality while drafting; the committed eval file is kept as a regression safety net — so future contributors can check whether a change breaks existing behavior without having to reconstruct the skill-creator workspace. If you ran skill-creator's description optimization, its 20 trigger queries can seed your `trigger_evals` — convert them to [IC eval format](evaluations/icp-cli.json) rather than starting from scratch.
+
+### 7. No site edits needed — the website auto-discovers skills
 
 The website is automatically generated from the SKILL.md frontmatter at build time. You do **not** need to edit any source file. Astro reads all `skills/*/SKILL.md` files, parses their frontmatter, and generates the site pages, `llms.txt`, discovery endpoints, and other files.
 
 Stats (skill count, categories) all update automatically.
 
-### 7. Submit a PR
+### 8. Submit a PR
 
 - One skill per PR
 - Include a brief description of what the skill covers and why it's needed
-- Include LLM scoring output in your PR description if you ran it locally (see step 4)
+- Include LLM scoring output in your PR description if you ran it locally (see step 5)
 - Make sure the SKILL.md is tested — code examples should compile and deploy
 - **Eval results are required.** Run the full evaluation suite locally and paste the results into the PR description. Both output evals and trigger evals must be included. PRs without eval results will not be accepted.
 - **Collapse the results** using a `<details>` block to keep the PR description readable:
@@ -215,13 +201,20 @@ Stats (skill count, categories) all update automatically.
 
 ## Updating an Existing Skill
 
+For non-trivial improvements (content quality, description accuracy, new pitfalls), use the `improve-ic-skill` skill — it is pre-installed in this repo and available automatically in Claude Code. It guides you through a token-efficient improvement workflow: validate first, identify what to improve, apply changes, update evals, and verify only what changed.
+
+For small fixes (typos, canister ID updates, corrected code):
+
 1. Edit the `SKILL.md` content
 2. Run `npm run validate`
-3. Optionally run LLM scoring (see step 4 above)
-4. If you added new evaluation cases, run those evals locally and include the results in the PR
-5. Submit a PR with a summary of what changed
+3. If any evaluation cases in `evaluations/<skill-name>.json` are affected by the change, update them. Running the suite to verify is recommended:
+   ```bash
+   node scripts/evaluate-skills.js <skill-name>
+   ```
+4. Optionally run LLM scoring (see [Run LLM quality scoring](#5-run-llm-quality-scoring-recommended))
+5. Submit a PR with a summary of what changed, including eval results if any cases changed
 
-**Eval results for skill improvements:** If you added new eval cases, you only need to provide results for those new cases — not the full suite. Both the with-skill and baseline (without-skill) results must be included. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#7-submit-a-pr) above).
+**Eval results for skill improvements:** Running and including eval results is recommended but not required. If you do include results, only provide results for the cases you changed or added — not the full suite. Collapse them in the PR description using a `<details>` block (see [Submit a PR](#8-submit-a-pr) above).
 
 The website auto-generates from SKILL.md frontmatter — no need to edit any source files.
 
@@ -235,7 +228,7 @@ Some skills mirror content from external upstream repositories (currently `caffe
 
 A weekly GitHub Actions workflow checks for new releases on each tracked upstream. When it finds one, it opens a GitHub issue labelled `upstream-motoko` or `upstream-mops` with:
 - The old → new release tag in the title
-- A diff of the upstream file against our current version
+- A diff of the upstream file between the old and new release (not against our local file)
 
 **There is always at most one open sync issue per upstream repo.** If a newer release comes out before the issue is resolved, the workflow closes the stale issue (with a "Superseded" comment) and opens a fresh one for the latest release.
 
@@ -243,16 +236,12 @@ A weekly GitHub Actions workflow checks for new releases on each tracked upstrea
 
 1. Find the open issue labelled `upstream-motoko` or `upstream-mops`
 2. Note the target release tag in the title (always the *latest* release — skip any intermediate ones)
-3. Re-run the diff locally against the current files — the issue body diff may be stale if other changes landed on `main` since the issue was opened:
-   ```bash
-   curl -s "https://raw.githubusercontent.com/<org>/<repo>/<commit>/<path>" > /tmp/upstream.md
-   diff skills/<skill-name>/SKILL.md /tmp/upstream.md
-   ```
-4. Apply changes following the [Upstream Sync Strategy](.claude/CLAUDE.md#upstream-sync-strategy) in `.claude/CLAUDE.md` — in particular, preserve any sections listed as "owned by icskills" in the skill's upstream comment block
+3. Re-run the diff locally if needed — use the commands in the [Upstream Sync Strategy](.claude/CLAUDE.md#upstream-sync-strategy) to diff upstream old vs upstream new (do NOT diff our local file against upstream — that produces noise from icskills-owned sections)
+4. Apply changes following the Upstream Sync Strategy in `.claude/CLAUDE.md` — in particular, preserve any sections listed as owned in `.claude/upstream.md`
 5. Run `npm run validate`
 6. Open a PR that closes the issue with `Closes #<n>` in the PR body
 
-The full sync checklist (version numbers, evals, compatibility, owned sections, etc.) is in `.claude/CLAUDE.md`.
+The full sync checklist (version numbers, evals, compatibility, owned sections, etc.) is in `.claude/CLAUDE.md`. Load the `improve-ic-skill` skill for this work — it knows the toolchain, eval location, and owned-section rules. Follow the branch naming convention in `.claude/CLAUDE.md` step 3.
 
 ---
 
@@ -263,7 +252,7 @@ The full sync checklist (version numbers, evals, compatibility, owned sections, 
 - **Code must be copy-paste correct.** Agents will use your code blocks directly. Test everything.
 - **Annotate all code blocks** with language identifiers (` ```motoko `, ` ```rust `, ` ```bash `, etc.).
 - **Include canister IDs and URLs** for both local and mainnet environments.
-- **Keep it flat.** One file per skill. No nested directories, no images, no external dependencies.
+- **Keep it flat.** One file per skill. No images or external dependencies. The only permitted subdirectory is `references/` for large reference material linked from SKILL.md.
 - **Don't duplicate other skills.** If another skill covers a pattern in depth (e.g., `canister-security` for access control and async safety), reference it by name in your pitfalls instead of inlining the pattern. This keeps maintenance centralized and ensures agents get the authoritative version. The `description` field is the primary mechanism agents use to discover related skills — cross-references in pitfalls serve as secondary hints.
 
 ## Categories

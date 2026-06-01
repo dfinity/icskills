@@ -13,3 +13,8 @@ lighthouse-*
 evaluations/results/
 .score_cache
 _drafts
+
+# skill-creator artifacts
+skills/*-workspace/
+**/__pycache__/
+skills-lock.json
