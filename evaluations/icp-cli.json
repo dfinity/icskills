@@ -211,6 +211,17 @@
       ]
     },
     {
+      "name": "Parallel local networks across git worktrees",
+      "prompt": "I'm running two agents on the same icp-cli project in separate git worktrees, and both need a local network running at the same time. Starting the second fails with a port conflict on 8000. How do I run both at once? Just the icp.yaml config and the command to find each network's port — no deploy steps.",
+      "expected_behaviors": [
+        "Sets gateway.port to 0 in the managed local network config so the OS assigns a free ephemeral port per worktree",
+        "Explains that local networks are project-local, so each worktree runs its own independent network",
+        "Uses 'icp network status --json' (reading gateway_url or api_url) to look up each network's actual assigned port",
+        "Does NOT invent a non-existent command such as 'icp network config'",
+        "Does NOT hardcode localhost:8000 or tell the user to stop one of the networks"
+      ]
+    },
+    {
       "name": "Scripted project creation in CI",
       "prompt": "What is the correct icp new command to scaffold a Rust project non-interactively in CI? Just the command, no deploy steps.",
       "expected_behaviors": [
