@@ -27,10 +27,20 @@
       "name": "Asset canister recipe setup",
       "prompt": "Show me the icp.yaml configuration for a frontend asset canister with a Vite build step. Just the YAML and the deploy command, no .ic-assets.json5 or programmatic upload code.",
       "expected_behaviors": [
-        "Shows icp.yaml with @dfinity/asset-canister recipe and version pin",
+        "Shows icp.yaml with @dfinity/asset-canister recipe pinned to v2.2.0 or later",
         "Includes build commands (npm install, npm run build)",
         "Specifies the output directory (e.g., dir: dist)",
         "Uses icp deploy commands, NOT dfx deploy"
+      ]
+    },
+    {
+      "name": "Adversarial: removed type: assets sync step",
+      "prompt": "My icp.yaml has a sync step using `type: assets` with `dirs: [dist]` to upload my frontend, but icp-cli now refuses to load it, complaining the assets sync step type is no longer supported. Show me the corrected sync configuration — just the YAML.",
+      "expected_behaviors": [
+        "Explains that the built-in type: assets sync step is no longer supported / has been removed",
+        "Recommends the @dfinity/asset-canister@v2.2.0 recipe, which generates a plugin-based sync step automatically",
+        "If writing a manual sync step, uses type: plugin (with a sync_plugin.wasm url + sha256) or type: script",
+        "Does NOT reintroduce type: assets in the corrected YAML"
       ]
     },
     {
