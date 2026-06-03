@@ -1,9 +1,9 @@
 ---
-name: setup-ic-skills
+name: autosync-ic-skills
 description: One-time installer that makes a Claude Code project keep its Internet Computer skills up to date automatically. Sets up a SessionStart hook plus a sync script so .claude/skills/ always mirrors the latest skills published at skills.internetcomputer.org. Use when a user wants to install, bootstrap, or enable "always-latest" Internet Computer / IC / ICP / Motoko skills in a project, or pastes the link to this skill. This is a one-time setup action, not ongoing IC knowledge — after it runs, the installed hook keeps skills current on every session. Do NOT use for IC coding questions themselves — this only configures auto-updating skills.
 license: Apache-2.0
 metadata:
-  title: Setup IC Skills
+  title: Automatically Sync Latest IC Skills
   category: Infrastructure
 ---
 
