@@ -1,7 +1,6 @@
 {
   "skill": "internet-identity",
   "description": "Evaluation cases for the internet-identity skill. Tests whether agents produce correct II auth integration code, avoid top-level await, and handle local vs mainnet environments correctly.",
-
   "output_evals": [
     {
       "name": "No top-level await in frontend code",
@@ -87,7 +86,7 @@
         "Requests verified_email (not just email) for access-gating use cases",
         "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
         "Explains that verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — that is what makes verified_email trustworthy for authorisation",
-        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — either via an explicit `msg_caller_info_signer()` check (Rust) or via `mo:core/CallerAttributes` with the `trusted_attribute_signers` env var configured (Motoko) — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
+        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — either via an explicit `msg_caller_info_signer()` check (Rust) or via the `mo:identity-attributes` mixin with `trusted_attribute_signers` and `frontend_origins` configured (Motoko) — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
         "Does NOT recommend reading the email field as a substitute for verified_email"
       ]
     },
@@ -118,9 +117,19 @@
         "Explains that a local instance of internet identity can be deployed by setting `ii: true` in icp.yaml",
         "Explains that the local instance of internet identity is accessible at http://id.ai.localhost:8000"
       ]
+    },
+    {
+      "name": "Motoko backend uses the identity-attributes library",
+      "prompt": "In my Motoko backend, how do I verify Internet Identity attribute bundles and read the user verified email? Show the backend setup, including icp.yaml.",
+      "expected_behaviors": [
+        "Recommends the mo:identity-attributes mixin (include IdentityAttributes({ onVerified ... })), not a hand-rolled ICRC-3 decode",
+        "Does NOT hand-write lookupText/lookupBlob helpers or manually decode the ICRC-3 Value::Map in Motoko",
+        "Configures both trusted_attribute_signers AND frontend_origins environment variables in icp.yaml",
+        "Explains the mixin injects _internet_identity_sign_in_start and _internet_identity_sign_in_finish and runs onVerified only on a bundle that passed signer, origin, nonce, and freshness checks",
+        "Reads the email from the resolved attrs (sourced from the verified_email key), and requests verified_email on the frontend"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
