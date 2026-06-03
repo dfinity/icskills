@@ -92,7 +92,7 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-NEW_NAMES="$(jq -r '.[].name' "$TMP_INDEX")"
+NEW_NAMES="$(jq -r '.skills[].name' "$TMP_INDEX")"
 
 # --- Prune: drop previously-managed skills that are no longer in the index. ---
 if [ -f "$MANIFEST" ]; then
@@ -106,12 +106,13 @@ if [ -f "$MANIFEST" ]; then
 fi
 
 # --- Download every skill's files (overwrite == always latest). ---
-jq -c '.[]' "$TMP_INDEX" | while IFS= read -r entry; do
+jq -c '.skills[]' "$TMP_INDEX" | while IFS= read -r entry; do
   name="$(jq -r '.name' <<<"$entry")"
   [ -n "$name" ] && [ "$name" != "null" ] || continue
   mkdir -p "$DEST/$name"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
+    mkdir -p "$(dirname "$DEST/$name/$f")"   # files may live in subdirs (e.g. scripts/)
     if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$DEST/$name/$f"; then
       echo "[ic-skills] warning: failed to fetch $name/$f" >&2
     fi
@@ -119,8 +120,8 @@ jq -c '.[]' "$TMP_INDEX" | while IFS= read -r entry; do
 done
 
 # --- Record managed skill names for the next prune pass. ---
-jq '[.[].name]' "$TMP_INDEX" > "$MANIFEST"
-echo "[ic-skills] synced $(jq 'length' "$TMP_INDEX") Internet Computer skills into $DEST" >&2
+jq '[.skills[].name]' "$TMP_INDEX" > "$MANIFEST"
+echo "[ic-skills] synced $(jq '.skills | length' "$TMP_INDEX") Internet Computer skills into $DEST" >&2
 ```
 
 ## Step 2 — Register the SessionStart hook (idempotently)
