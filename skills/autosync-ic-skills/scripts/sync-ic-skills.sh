@@ -125,6 +125,7 @@ if [ $((added + updated + removed)) -gt 0 ]; then
   jq -n --arg msg "$summary" '{
     systemMessage: $msg,
     hookSpecificOutput: {
+      reloadSkills: true,
       hookEventName: "SessionStart",
       additionalContext: $msg
     }
