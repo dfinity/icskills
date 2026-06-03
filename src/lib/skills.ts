@@ -5,6 +5,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -115,6 +116,31 @@ export async function getSkillFiles(skill: Skill): Promise<string[]> {
   const skillDir = path.dirname(path.resolve(process.cwd(), rel));
   const allFiles = await collectFiles(skillDir, skillDir);
   return ['SKILL.md', ...allFiles.filter((f) => f !== 'SKILL.md').sort()];
+}
+
+/**
+ * Per-skill aggregate content hash, published in .well-known/skills/index.json so
+ * consumers can detect which skills changed without downloading every file.
+ *
+ * Returns "sha256:<hex>" over the skill's files. The input is built from each served
+ * file (the same set getSkillFiles returns) sorted by path, contributing:
+ *     <relative-path> "\n" <sha256-hex of file bytes> "\n"
+ * Hashing path + per-file digest (rather than concatenating raw bytes) makes the
+ * result order-independent and sensitive to renames. The hash definition is part of
+ * the public contract — consumers key off it — so it must stay stable.
+ */
+export async function getSkillHash(skill: Skill): Promise<string> {
+  const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
+  const skillDir = path.dirname(path.resolve(process.cwd(), rel));
+  const files = (await getSkillFiles(skill)).slice().sort();
+
+  const agg = crypto.createHash('sha256');
+  for (const f of files) {
+    const bytes = await fs.readFile(path.join(skillDir, f));
+    const fileHash = crypto.createHash('sha256').update(bytes).digest('hex');
+    agg.update(`${f}\n${fileHash}\n`);
+  }
+  return `sha256:${agg.digest('hex')}`;
 }
 
 export interface SkillFileEntry {
