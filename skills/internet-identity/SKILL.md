@@ -441,10 +441,9 @@ fn verified_attributes() -> Result<Vec<(String, Icrc3Value)>, String> {
 
 #[update]
 fn _internet_identity_sign_in_finish() -> SignInResult {
-    let caller = msg_caller();
-    if caller == Principal::anonymous() {
-        return SignInResult::Err("Anonymous caller not allowed".to_string());
-    }
+    // No separate anonymous check: verified_attributes rejects any call without a
+    // trusted II bundle, which already excludes anonymous and unwrapped callers.
+    // (Anonymous rejection for ordinary methods lives in the canister-security skill.)
     let entries = match verified_attributes() {
         Ok(entries) => entries,
         Err(e) => return SignInResult::Err(e),
@@ -454,6 +453,7 @@ fn _internet_identity_sign_in_finish() -> SignInResult {
     let Some(email) = lookup_text(&entries, "verified_email") else {
         return SignInResult::Err("Missing verified_email".to_string());
     };
+    let caller = msg_caller();
     let name = lookup_text(&entries, "name");
     // e.g. persist a profile keyed by `caller` here.
     let _ = (caller, email, name);
