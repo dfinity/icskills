@@ -73,6 +73,34 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 | Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | All skills with descriptions and discovery links |
 | Skill page | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page for humans |
 
+### Change detection — the `hash` field
+
+Each skill entry in [`index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) carries a `hash`:
+
+```jsonc
+{
+  "name": "asset-canister",
+  "url": "https://.../asset-canister/SKILL.md",
+  "files": ["SKILL.md"],
+  "hash": "sha256:f3ee5a3e…"   // per-skill aggregate content hash
+}
+```
+
+**What it is.** A `sha256:<hex>` digest over all of the skill's served files. It is
+computed from each file's path plus the sha256 of its bytes, sorted by path — so it
+changes whenever any file in the skill changes (including `references/` and `scripts/`
+files), and is sensitive to renames. It is **not** tied to a git commit; it is a pure
+content hash of what the server actually serves.
+
+**What it's for.** Detecting *which* skills changed from a single fetch of `index.json`,
+without downloading and hashing every file yourself. Store the `{name: hash}` map, and on
+the next fetch re-download only the skills whose `hash` differs (or are new), and prune
+those no longer listed. This is the basis for the differential sync in the
+[`autosync-ic-skills`](skills/autosync-ic-skills/SKILL.md) skill.
+
+**What it's not for.** It is not a version number or changelog signal — it carries no
+ordering or human meaning, only equality. Compare hashes for equality; do not parse them.
+
 ## Evaluations
 
 Each skill can have an evaluation file at `evaluations/<skill-name>.json` that tests whether agents produce correct output with the skill loaded. Evals compare agent output with and without the skill, using an LLM judge to score expected behaviors.

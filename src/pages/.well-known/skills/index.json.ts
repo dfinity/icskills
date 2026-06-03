@@ -3,7 +3,7 @@
 // https://github.com/cloudflare/agent-skills-discovery-rfc
 import type { APIRoute } from 'astro';
 import { absUrl } from '../../../lib/site';
-import { getAllSkills, getSkillFiles } from '../../../lib/skills';
+import { getAllSkills, getSkillFiles, getSkillHash } from '../../../lib/skills';
 
 export const GET: APIRoute = async () => {
   const skills = await getAllSkills();
@@ -15,6 +15,7 @@ export const GET: APIRoute = async () => {
         description: s.data.description,
         url: absUrl(`/.well-known/skills/${s.data.name}/SKILL.md`),
         files: await getSkillFiles(s),
+        hash: await getSkillHash(s),
       })),
     ),
   };

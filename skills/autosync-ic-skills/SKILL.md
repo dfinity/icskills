@@ -18,13 +18,17 @@ needs this link again — the installed `SessionStart` hook does the work from t
 
 ## What you will create
 
-1. `.claude/sync-ic-skills.sh` — mirrors the live skill index into `.claude/skills/`.
+1. `.claude/sync-ic-skills.sh` — a **differential** sync script that mirrors the live
+   skill index into `.claude/skills/`.
 2. A `SessionStart` hook in `.claude/settings.json` that runs that script.
 3. An immediate first run, so skills are present right away.
 
-The sync is a **mirror**: it always re-downloads the current skills, so it picks up
-new skills, updated versions of existing skills, and removals — with no version
-metadata required on the server side.
+The script is a **differential mirror**. It fetches the discovery index once and
+compares each skill's published `hash` against a stored manifest, re-downloading only
+the skills that actually changed (and pruning ones removed upstream). Unchanged skills
+are skipped with no per-file downloads, and the script stays silent unless something
+changed. If the server does not publish a `hash` for a skill, the script falls back to
+re-downloading it every run, so it remains correct either way.
 
 ## Important: tell the user what to expect
 
@@ -60,69 +64,33 @@ command -v jq   >/dev/null 2>&1 && echo "jq: ok"   || echo "jq: MISSING"
   (it exits cleanly with a warning when `jq` is absent), and they can install `jq`
   later and the next session will sync.
 
-## Step 1 — Write the sync script
+## Step 1 — Download the sync script
 
-Create `.claude/sync-ic-skills.sh` with **exactly** this content:
+The script is published as a file alongside this skill, so you fetch it verbatim rather
+than transcribing it (this guarantees byte-exact content). Create the `.claude` directory
+and download it:
 
 ```bash
-#!/usr/bin/env bash
-# sync-ic-skills.sh — mirror the latest Internet Computer skills into .claude/skills/
-# Idempotent and offline-safe. Only skills this script installed are ever pruned,
-# so your own local skills are never touched.
-set -euo pipefail
-
-BASE="https://skills.internetcomputer.org/.well-known/skills"
-INDEX_URL="$BASE/index.json"
-DEST=".claude/skills"
-MANIFEST="$DEST/.ic-managed.json"   # tracks which skills this script manages
-
-mkdir -p "$DEST"
-
-# --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
-TMP_INDEX="$(mktemp)"
-trap 'rm -f "$TMP_INDEX"' EXIT
-if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
-  echo "[ic-skills] could not reach $INDEX_URL — keeping cached skills" >&2
-  exit 0
-fi
-
-# --- jq is required to parse the index. If absent, warn and exit without failing. ---
-if ! command -v jq >/dev/null 2>&1; then
-  echo "[ic-skills] 'jq' not found — install jq to enable IC skill sync" >&2
-  exit 0
-fi
-
-NEW_NAMES="$(jq -r '.skills[].name' "$TMP_INDEX")"
-
-# --- Prune: drop previously-managed skills that are no longer in the index. ---
-if [ -f "$MANIFEST" ]; then
-  while IFS= read -r old; do
-    [ -n "$old" ] || continue
-    if ! grep -qxF "$old" <<<"$NEW_NAMES"; then
-      rm -rf "${DEST:?}/$old"
-      echo "[ic-skills] pruned removed skill: $old" >&2
-    fi
-  done < <(jq -r '.[]?' "$MANIFEST" 2>/dev/null || true)
-fi
-
-# --- Download every skill's files (overwrite == always latest). ---
-jq -c '.skills[]' "$TMP_INDEX" | while IFS= read -r entry; do
-  name="$(jq -r '.name' <<<"$entry")"
-  [ -n "$name" ] && [ "$name" != "null" ] || continue
-  mkdir -p "$DEST/$name"
-  while IFS= read -r f; do
-    [ -n "$f" ] || continue
-    mkdir -p "$(dirname "$DEST/$name/$f")"   # files may live in subdirs (e.g. scripts/)
-    if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$DEST/$name/$f"; then
-      echo "[ic-skills] warning: failed to fetch $name/$f" >&2
-    fi
-  done < <(jq -r '.files[]?' <<<"$entry")
-done
-
-# --- Record managed skill names for the next prune pass. ---
-jq '[.skills[].name]' "$TMP_INDEX" > "$MANIFEST"
-echo "[ic-skills] synced $(jq '.skills | length' "$TMP_INDEX") Internet Computer skills into $DEST" >&2
+mkdir -p .claude
+curl -fsSL https://skills.internetcomputer.org/.well-known/skills/autosync-ic-skills/scripts/sync-ic-skills.sh \
+  -o .claude/sync-ic-skills.sh
 ```
+
+Do **not** hand-write or paraphrase the script — always fetch the published copy so the
+sync logic stays correct as it is updated upstream.
+
+**What the script does** (for the user's awareness):
+
+- Fetches `https://skills.internetcomputer.org/.well-known/skills/index.json` once.
+- For each skill, compares the published `hash` against `.claude/skills/.ic-managed.json`
+  (a `{ "<skill>": "<hash>" }` manifest of skills it manages) and re-downloads only the
+  skills whose hash changed or are new.
+- Prunes skills it previously installed that are no longer in the index.
+- Prints a one-line `added / updated / removed` summary only when something changed;
+  otherwise it is silent.
+- Degrades gracefully: exits cleanly (keeping cached skills) if the network is down or
+  `jq` is missing, and falls back to re-downloading skills the server publishes no
+  `hash` for.
 
 ## Step 2 — Register the SessionStart hook (idempotently)
 
@@ -164,7 +132,7 @@ bash .claude/sync-ic-skills.sh
 
 - Confirm `.claude/skills/` now contains skill directories (e.g. `motoko`,
   `asset-canister`, `internet-identity`, …) each with a `SKILL.md`.
-- Confirm `.claude/skills/.ic-managed.json` lists the synced skill names.
+- Confirm `.claude/skills/.ic-managed.json` maps each synced skill name to its hash.
 - Tell the user: how many skills were installed, that the `SessionStart` hook is in
   place, and that they'll be prompted to trust the hook before it auto-runs next
   session. From then on, their IC skills refresh automatically every session.
@@ -173,10 +141,11 @@ bash .claude/sync-ic-skills.sh
 
 - **Safe to re-run.** Re-invoking this skill or the script is idempotent: the hook is
   not duplicated, and only skills tracked in `.ic-managed.json` are ever pruned.
-- **No server-side versioning needed.** Because the script re-mirrors current content,
-  it captures new skills, new versions, and removals automatically. If the index later
-  adds `sha256`/`version` fields, the script can be upgraded to a differential sync,
-  but that is not required for correctness.
+- **Differential by hash.** The script keys off the per-skill `hash` field in the
+  discovery index, so a normal session that touches nothing downloads only `index.json`
+  and exits silently. Skills are re-downloaded only when their hash changes. Migrating
+  from an older version of this script (whose manifest was a bare name array) is handled
+  automatically on the next run.
 - **Optional mid-session refresh.** For very long-running sessions, the user can also
   run `bash .claude/sync-ic-skills.sh` manually, or schedule it (e.g. via `/loop` or a
   cron routine) — but the SessionStart hook covers the normal case.
