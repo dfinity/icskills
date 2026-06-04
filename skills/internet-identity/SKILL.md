@@ -437,7 +437,6 @@ fn verified_attributes() -> Result<Vec<(String, Icrc3Value)>, String> {
 
 #[update]
 fn _internet_identity_sign_in_finish() -> SignInResult {
-    // verified_attributes already rejects anonymous and untrusted callers.
     let entries = match verified_attributes() {
         Ok(entries) => entries,
         Err(e) => return SignInResult::Err(e),
