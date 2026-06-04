@@ -44,7 +44,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 8. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
 
-9. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` matches an action it actually started. Have the backend mint and return the nonce from `_internet_identity_sign_in_start` (the `mo:identity-attributes` mixin provides it in Motoko; you write it in Rust), and check it against the bundle's implicit fields when the user calls `_internet_identity_sign_in_finish`.
+9. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` is one it actually issued. Have the backend mint and return the nonce from `_internet_identity_sign_in_start` (the `mo:identity-attributes` mixin provides it in Motoko; you write it in Rust), and check it against the bundle's implicit fields when the user calls `_internet_identity_sign_in_finish`.
 
 10. **Reading attribute data without verifying the signer.** The IC verifies the signature, not the identity of the signer — any canister can produce a valid bundle. The trusted signer is `rdmx6-jaaaa-aaaaa-aaadq-cai` (Internet Identity). The check looks different per language:
     - **Motoko**: use the `mo:identity-attributes` mixin. `include IdentityAttributes({ onVerified })` verifies the signer, origin, nonce, and freshness for you and runs `onVerified` only on a bundle that passes — configure `trusted_attribute_signers` and `frontend_origins` in `icp.yaml` (see "Backend: Reading Identity Attributes"). Don't hand-roll the ICRC-3 decode or the signer check on top of `mo:core/CallerAttributes` unless you need behavior the library doesn't cover.
@@ -232,7 +232,7 @@ async function signInWithAttributes(authClient, canisterId, idl) {
 ```
 
 Each signed bundle carries three implicit fields the backend MUST verify:
-- `implicit:nonce` — matches the canister-issued nonce, preventing replay across actions and users.
+- `implicit:nonce` — matches a single-use nonce the canister issued and consumes on sign-in, so a captured bundle cannot be replayed.
 - `implicit:origin` — the frontend origin, preventing a malicious dapp from forwarding bundles to a different backend.
 - `implicit:issued_at_timestamp_ns` — issuance time, letting the canister reject stale bundles even when the nonce is still valid.
 
