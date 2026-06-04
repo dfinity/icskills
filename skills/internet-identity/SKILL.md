@@ -288,7 +288,7 @@ persistent actor {
 
   // Injects _internet_identity_sign_in_start / _internet_identity_sign_in_finish.
   // onVerified runs only on a bundle that passed the signer, origin, nonce, and
-  // freshness checks. Map's compare is an implicit parameter (moc 1.6.0).
+  // freshness checks.
   include IdentityAttributes({
     onVerified = func(caller, attrs) {
       Map.add(profiles, caller, attrs);
