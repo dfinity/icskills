@@ -455,9 +455,7 @@ fn _internet_identity_sign_in_finish() -> SignInResult {
 }
 ```
 
-#### Storing the nonce
-
-`_internet_identity_sign_in_start` mints the nonce; store it server-side and consume it in `_internet_identity_sign_in_finish` so a bundle cannot be replayed. Use a short freshness window so abandoned attempts age out. The Motoko library keeps this store internally; the Rust example keeps it in heap memory, which resets on upgrade, so persist it in stable memory if you want in-flight sign-ins to survive upgrades — see the **stable-memory** skill.
+The `thread_local` above keeps consumed nonces in heap memory, which resets on upgrade; use stable memory if you want in-flight sign-ins to survive upgrades — see the **stable-memory** skill. Keep the freshness window short so abandoned attempts age out.
 
 ### Backend: Access Control
 
