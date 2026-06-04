@@ -339,9 +339,7 @@ const TRUSTED_ORIGIN: &str = "https://your-app.icp0.io";
 const FRESHNESS_NS: u64 = 300_000_000_000; // 5 minutes
 
 thread_local! {
-    // Nonces issued by sign_in_start, consumed by sign_in_finish. Keyed by the
-    // nonce itself — start is anonymous, so there is no caller to key by.
-    // Heap memory; see the "Storing the nonce" note below.
+    // Nonces issued by sign_in_start and consumed by sign_in_finish.
     static PENDING_NONCES: RefCell<HashSet<Vec<u8>>> = RefCell::new(HashSet::new());
 }
 
@@ -389,8 +387,6 @@ fn lookup_nat<'a>(entries: &'a [(String, Icrc3Value)], key: &str) -> Option<&'a 
 // Mint a fresh nonce. The frontend calls this anonymously before sign-in.
 #[update]
 async fn _internet_identity_sign_in_start() -> Vec<u8> {
-    // 32 bytes of IC randomness. raw_rand lives at
-    // ic_cdk::management_canister::raw_rand in ic-cdk >= 0.18.
     let nonce = ic_cdk::management_canister::raw_rand()
         .await
         .expect("raw_rand failed");
@@ -441,9 +437,7 @@ fn verified_attributes() -> Result<Vec<(String, Icrc3Value)>, String> {
 
 #[update]
 fn _internet_identity_sign_in_finish() -> SignInResult {
-    // No separate anonymous check: verified_attributes rejects any call without a
-    // trusted II bundle, which already excludes anonymous and unwrapped callers.
-    // (Anonymous rejection for ordinary methods lives in the canister-security skill.)
+    // verified_attributes already rejects anonymous and untrusted callers.
     let entries = match verified_attributes() {
         Ok(entries) => entries,
         Err(e) => return SignInResult::Err(e),
@@ -464,7 +458,7 @@ fn _internet_identity_sign_in_finish() -> SignInResult {
 
 #### Storing the nonce
 
-`_internet_identity_sign_in_start` mints the nonce; store it server-side keyed by the nonce itself (start is anonymous, so there is no caller to key by) and consume it in `_internet_identity_sign_in_finish` so a bundle cannot be replayed. Both the Motoko library and the Rust example above keep this store in transient/heap memory, recreated empty on upgrade — fine given the short freshness window, since any dropped nonce was about to expire anyway. Persist it in stable memory if you want in-flight sign-ins to survive upgrades — see the **stable-memory** skill.
+`_internet_identity_sign_in_start` mints the nonce; store it server-side and consume it in `_internet_identity_sign_in_finish` so a bundle cannot be replayed. Use a short freshness window so abandoned attempts age out. The Motoko library keeps this store internally; the Rust example keeps it in heap memory, which resets on upgrade, so persist it in stable memory if you want in-flight sign-ins to survive upgrades — see the **stable-memory** skill.
 
 ### Backend: Access Control
 
