@@ -291,12 +291,12 @@ persistent actor {
   // freshness checks.
   include IdentityAttributes({
     onVerified = func(caller, attrs) {
-      Map.add(profiles, caller, attrs);
+      profiles.add(caller, attrs);
     };
   });
 
   public query func getProfile(caller : Principal) : async ?Profile {
-    Map.get(profiles, caller)
+    profiles.get(caller)
   };
 };
 ```
@@ -454,8 +454,6 @@ fn _internet_identity_sign_in_finish() -> SignInResult {
     SignInResult::Ok
 }
 ```
-
-The `thread_local` above keeps consumed nonces in heap memory, which resets on upgrade; use stable memory if you want in-flight sign-ins to survive upgrades — see the **stable-memory** skill. Keep the freshness window short so abandoned attempts age out.
 
 ### Backend: Access Control
 
