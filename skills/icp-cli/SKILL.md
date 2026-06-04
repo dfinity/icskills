@@ -217,7 +217,7 @@ Source Code → [Build] → WASM → [Deploy] → Running Canister → [Sync] �
 `icp deploy` runs all three phases in sequence:
 1. **Build** — Compile canisters to WASM (via recipes or explicit build steps)
 2. **Deploy** — Create canisters (if new), apply settings, install WASM
-3. **Sync** — Post-deployment operations via `script` or `plugin` steps (e.g., uploading assets). Asset uploading is not built into the CLI: the `@dfinity/asset-canister@v2.2.0` recipe supplies a `plugin` sync step that uploads the `dir` contents. The legacy built-in `type: assets` step is removed in icp-cli 1.0.0 — see the `asset-canister` skill.
+3. **Sync** — Post-deployment operations via `script` or `plugin` steps (e.g., uploading assets). Asset uploading is not built into the CLI: the `@dfinity/asset-canister@v2.2.0` recipe supplies a `plugin` sync step that uploads the `dir` contents. The legacy built-in `type: assets` step is removed in icp-cli 0.3.0 — see the `asset-canister` skill.
 
 Run phases separately for more control:
 ```bash
