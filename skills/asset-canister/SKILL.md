@@ -2,7 +2,7 @@
 name: asset-canister
 description: "Deploy frontend assets to the IC. Covers certified assets, SPA routing with .ic-assets.json5, content encoding, and programmatic uploads. Use when hosting a frontend, deploying static files, or setting up SPA routing on IC. Do NOT use for canister-level code patterns or custom domain setup — use custom-domains instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.2.2, Node.js >= 22"
+compatibility: "icp-cli >= 0.2.7, Node.js >= 22"
 metadata:
   title: Asset Canister
   category: Frontend
@@ -49,6 +49,18 @@ Access patterns:
 
 9. **Downgrading the asset canister WASM version.** Upgrading a canister to an older WASM version can fail with "Cannot parse header" panics if the stable memory format changed between versions. Prefer the `@dfinity/asset-canister` recipe over `type: pre-built` with a manually specified WASM URL — the recipe loads the latest asset canister version automatically if not explicitly specified in `configuration.version`. If you must pin a version, ensure it matches or exceeds the version currently deployed on-chain. If a downgrade is intentional, use reinstall mode (`icp deploy --mode reinstall`) instead of upgrade — this wipes stable memory and all uploaded assets.
 
+10. **Using the removed `type: assets` sync step.** icp-cli **0.3.0 removes the built-in `type: assets` sync step** — asset uploading is no longer part of the CLI core. A manifest that still uses it fails to load: *"icp-cli no longer supports the `assets` sync step type. Switch to a `script` or `plugin` sync step."* The fix is to use the `@dfinity/asset-canister@v2.2.0` recipe (shown below), which generates a `plugin`-based sync step automatically. **Recipe versions ≤ `v2.1.0` generate the old `type: assets` step and break on 0.3.0** — pin `v2.2.0` or later. Sync plugins are supported since icp-cli `0.2.7`, so adopting `v2.2.0` now (well before 0.3.0) makes the transition seamless. If you write a sync step by hand instead of using the recipe, use `type: plugin` (pointing at the certified-assets `sync_plugin.wasm` release artifact with its `sha256`) or `type: script`:
+
+    ```yaml
+    sync:
+      steps:
+        - type: plugin
+          url: https://github.com/dfinity/certified-assets/releases/download/migration-v2.2.0-209d688/sync_plugin.wasm
+          sha256: 297c2ef05680d47ac70688d6cebed9bc3a41b2302f400739f894f4f413e6a5ee
+          dirs:
+            - dist
+    ```
+
 ## Implementation
 
 ### icp.yaml Configuration
@@ -57,7 +69,7 @@ Access patterns:
 canisters:
   - name: frontend
     recipe:
-      type: "@dfinity/asset-canister@v2.1.0"
+      type: "@dfinity/asset-canister@v2.2.0"
       configuration:
         dir: dist
         build:
