@@ -385,8 +385,19 @@ const backendId = canisterEnv?.["PUBLIC_CANISTER_ID:backend"];
   import Runtime "mo:core/Runtime";
   let otherId = Runtime.envVar("PUBLIC_CANISTER_ID:other_canister");
   ```
+Note: variables are only updated for canisters at deploy time. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
 
-Note: variables are only updated for canisters being deployed. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
+### Using the cli with a web identity
+
+Users can link a web identity and use it with icp-cli. This is This is useful to make calls to a canister from the cli using the same identity you would get by logging in through the web UI.
+
+```
+# Sign in as your NNS identity
+icp identity link web nns-identity --app nns.ic0.app
+
+# Sign in as your OISY identity
+icp identity link web oisy-identity --app oisy.com
+```
 
 ## Additional References
 
