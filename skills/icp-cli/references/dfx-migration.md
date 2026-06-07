@@ -93,7 +93,7 @@ Steps:
 |----------|----------|
 | `"type": "rust"` | `recipe.type: "@dfinity/rust@v3.2.0"` |
 | `"type": "motoko"` | `recipe.type: "@dfinity/motoko@v4.1.0"` |
-| `"type": "assets"` | `recipe.type: "@dfinity/asset-canister@v2.2.0"` |
+| `"type": "assets"` | `recipe.type: "@dfinity/asset-canister@v2.2.1"` |
 | `"package": "X"` | `recipe.configuration.package: X` |
 | `"candid": "X"` | `recipe.configuration.candid: X` |
 | `"main": "X"` | `recipe.configuration.main: X` |
