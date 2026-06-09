@@ -284,13 +284,12 @@ Open a PR that adds one entry to [`community/index.json`](community/index.json):
   "name": "your-skill-name",
   "title": "Your Skill Title",
   "description": "One or two sentences: what it does and when an agent should load it.",
-  "category": "DeFi",
   "maintainer": "Your Org Name",
   "github": "https://github.com/your-org/your-repo/tree/main/skills/your-skill",
   "added": "YYYY-MM-DD"
 }
 ```
 
-Use one of the [known categories](#categories). The `description` should match or be condensed from the `description` field in your `SKILL.md`.
+The `description` should match or be condensed from the `description` field in your `SKILL.md`.
 
 **No eval results required.** Community skill PRs are lightweight: one JSON entry, a reachable maintainer, and a working link to a valid `SKILL.md`.
