@@ -143,7 +143,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
     When `mops.toml` is not found, `mops build` fails because it cannot locate the project configuration. When `mops.toml` exists but is missing the matching `[canisters.<name>]` entry, see Pitfall 17.
 
-16. **Misunderstanding Candid file generation with recipes.** For `@icp-sdk/bindgen`, a `.did` file must exist on disk. Where to configure it depends on the recipe:
+16. **Misunderstanding Candid file generation with recipes.** Binding generation tools (e.g. `@icp-sdk/bindgen`) require a `.did` file at a known path on disk. Where to configure it depends on the recipe:
 
     **Rust** — `candid` goes inside `recipe.configuration` in `icp.yaml`:
     - If **specified**: the file must already exist. The recipe uses it as-is and does not generate one.
@@ -158,13 +158,13 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
     **Motoko (v5 recipe)** — `mops build` auto-generates the `.did` to `.mops/.build/<name>.did`.
 
-    - **No bindgen** — nothing to do. The generated `.did` in `.mops/.build/` is sufficient; do not commit it.
-    - **With bindgen** — commit a `.did` at a stable path and keep it in sync:
+    - **No binding generation needed** — nothing to do. The generated `.did` in `.mops/.build/` is sufficient; do not commit it.
+    - **Binding generation needed** — commit a `.did` at a stable path and keep it in sync:
       ```bash
       mops build backend
       cp .mops/.build/backend.did backend/backend.did
       ```
-      Point bindgen's `didFile` at `backend/backend.did`. **After any interface change, re-run both commands** — `mops build` always writes to `.mops/.build/` and does not update the committed file automatically.
+      Point the binding tool's config (e.g. `@icp-sdk/bindgen`'s `didFile`) at `backend/backend.did`. **After any interface change, re-run both commands** — `mops build` always writes to `.mops/.build/` and does not update the committed file automatically.
 
 17. **Missing or mismatched `[canisters]` key in `mops.toml`.** The `@dfinity/motoko@v5+` recipe calls `mops build <canister-name>`, where the name comes from the `name` field in `icp.yaml`. `mops build` requires a matching `[canisters.<name>]` entry in `mops.toml`. If the entry is absent or the key does not exactly match (including casing), the build fails with:
     ```
