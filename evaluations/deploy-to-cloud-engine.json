@@ -1,0 +1,80 @@
+{
+  "skill": "deploy-to-cloud-engine",
+  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), ask for the console origin and subnet id instead of guessing, and avoid the documented pitfalls.",
+
+  "output_evals": [
+    {
+      "name": "Deploy a built project to a cloud engine",
+      "prompt": "My ICP app already builds. How do I deploy it to my cloud engine? Just the steps and commands, no canister code.",
+      "expected_behaviors": [
+        "States that it needs the console origin and the engine's subnet id, and asks for them if not provided (does not guess)",
+        "Links the CLI with `icp identity link web <name> --auth <console-origin>`",
+        "Notes the user must complete the Internet Identity sign-in in the browser",
+        "Sets the identity as default with `icp default <name>` using the same name",
+        "Deploys with `icp deploy -e ic --subnet <subnet-id>`",
+        "Does NOT use dfx commands"
+      ]
+    },
+    {
+      "name": "Just the link command",
+      "prompt": "Give me only the command to link my icp CLI to my cloud engine console at https://opencloud.org. No deploy steps.",
+      "expected_behaviors": [
+        "Produces `icp identity link web <your-identity-name> --auth https://opencloud.org` (a chosen local name plus the exact console origin)",
+        "Mentions a browser tab opens and the user completes the Internet Identity sign-in there",
+        "Does NOT invent a different flag than --auth for the origin",
+        "Does NOT use dfx"
+      ]
+    },
+    {
+      "name": "Adversarial: wrong --auth origin",
+      "prompt": "I linked with `icp identity link web admin --auth https://example.com`, but my engine console is opencloud.org, and now `icp deploy` says I'm not authorized on the engine. Why?",
+      "expected_behaviors": [
+        "Identifies that --auth must match the console origin the user signs in with (https://opencloud.org), not an unrelated URL",
+        "Explains the mismatched origin derived a different principal that does not administer the engine",
+        "Tells the user to relink with `icp identity link web <name> --auth https://opencloud.org`",
+        "Does NOT attribute the failure to insufficient cycles or a wrong subnet id"
+      ]
+    },
+    {
+      "name": "Adversarial: guessing the subnet id",
+      "prompt": "Just deploy my app to my cloud engine for me, I don't know the subnet id.",
+      "expected_behaviors": [
+        "Does NOT invent or hardcode a subnet id",
+        "Tells the user the subnet id is on the engine's App Center / Applications page in the console and asks for it",
+        "Only then runs `icp deploy -e ic --subnet <subnet-id>`"
+      ]
+    },
+    {
+      "name": "Adversarial: dfx to the engine",
+      "prompt": "Can I just run `dfx deploy --network ic` to push my app to my cloud engine?",
+      "expected_behaviors": [
+        "Corrects the user: this ecosystem uses icp, not dfx",
+        "Explains the engine needs the CLI linked to the console identity first (`icp identity link web <name> --auth <console-origin>`)",
+        "Gives the correct deploy: `icp deploy -e ic --subnet <subnet-id>`",
+        "Does NOT endorse the dfx command or the --network flag"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I deploy this app to my cloud engine?",
+      "Push my canisters to my OpenCloud engine",
+      "Link the icp CLI to my engine console",
+      "Deploy to my engine on a specific subnet",
+      "How do I authorize the icp CLI for my cloud engine?",
+      "Ship this project to my cloud engine",
+      "My agent should deploy straight to my engine"
+    ],
+    "should_not_trigger": [
+      "Deploy my canister to mainnet",
+      "Set up icp.yaml for my Rust canister",
+      "Add Internet Identity login to my frontend",
+      "How does stable memory work in Rust canisters?",
+      "Implement an ICRC-1 token transfer",
+      "Generate TypeScript bindings for my canister",
+      "Add access control to my Motoko canister"
+    ]
+  }
+}
