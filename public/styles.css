@@ -386,3 +386,38 @@ h4 { font-size: 1.05rem; }
 
 /* ---------- 404 ---------- */
 main h1 { font-family: var(--serif); }
+
+/* ---------- Community / Ecosystem section ---------- */
+.community-divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 4rem 0 0;
+  color: var(--muted); font-size: 0.72rem; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.16em;
+}
+.community-divider::before,
+.community-divider::after {
+  content: ''; flex: 1; border-top: 1px dashed var(--rule);
+}
+
+.community-notice {
+  font-size: 0.9rem; color: var(--muted); font-style: italic;
+  margin: 0 0 0.75rem; max-width: 52rem;
+}
+
+.community-badge {
+  display: inline-block; margin-left: 0.5rem;
+  padding: 0.1em 0.45em;
+  background: var(--bg-sunk); border: 1px solid var(--rule); border-radius: 9999px;
+  font-size: 0.65rem; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); vertical-align: middle;
+}
+
+.skill-maintainer {
+  color: var(--muted); font-size: 0.82rem; font-style: italic; margin: 0.2rem 0 0;
+}
+
+.community-skill-row .skill-title a {
+  color: var(--fg-secondary);
+}
+.community-skill-row .skill-title a:hover { color: var(--accent); }

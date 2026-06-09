@@ -262,3 +262,35 @@ Use an existing category when possible. The validator warns on unknown categorie
 Current categories: **Auth**, **Core**, **DeFi**, **Frontend**, **Governance**, **Infrastructure**, **Integration**, **Motoko**, **Security**
 
 To add a new category: update the description string in `skills/skill.schema.json`, the `KNOWN_CATEGORIES` array in `scripts/check-project.js`, and the `CATEGORY_ORDER` array in `src/lib/skills.ts`.
+
+---
+
+## Adding a Community Skill
+
+Community skills are maintained by third parties and linked from `skills.internetcomputer.org` under the **Ecosystem** section. DFINITY curates the list but does not own or maintain the skill content.
+
+### Requirements
+
+1. The skill must exist at a public GitHub URL and follow the [Agent Skills spec](https://agentskills.io/specification) — a valid `SKILL.md` with `name` and `description` frontmatter.
+2. The maintainer must be reachable: a GitHub org or a contact listed in the repository.
+3. The linked file must be stable. If the URL goes dead and is not fixed within a reasonable time, the entry will be removed.
+
+### How to add
+
+Open a PR that adds one entry to [`community/index.json`](community/index.json):
+
+```json
+{
+  "name": "your-skill-name",
+  "title": "Your Skill Title",
+  "description": "One or two sentences: what it does and when an agent should load it.",
+  "category": "DeFi",
+  "maintainer": "Your Org Name",
+  "github": "https://github.com/your-org/your-repo/tree/main/skills/your-skill",
+  "added": "YYYY-MM-DD"
+}
+```
+
+Use one of the [known categories](#categories). The `description` should match or be condensed from the `description` field in your `SKILL.md`.
+
+**No eval results required.** Community skill PRs are lightweight: one JSON entry, a reachable maintainer, and a working link to a valid `SKILL.md`.

@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../lib/site';
 import { getAllSkills, getSkillsByCategory, skillUrl, skillMarkdownUrl } from '../lib/skills';
+import communitySkills from '../../community/index.json';
 
 const all = await getAllSkills();
 const grouped = await getSkillsByCategory();
@@ -96,6 +97,37 @@ const collectionLd = {
       </ul>
     </section>
   ))}
+
+  {communitySkills.length > 0 && (
+    <div class="community-divider" aria-hidden="true"><span>Ecosystem</span></div>
+
+    <section class="category community-section" id="category-ecosystem" aria-labelledby="cat-h-ecosystem">
+      <div class="cat-head">
+        <h2 id="cat-h-ecosystem">Ecosystem Skills</h2>
+        <span class="count">{communitySkills.length} skill{communitySkills.length === 1 ? '' : 's'}</span>
+      </div>
+      <p class="community-notice">
+        Community-maintained skills for the ICP ecosystem. These skills are published and kept up to date by their respective authors — not by DFINITY. Hosted on GitHub; no discovery endpoint provided.
+      </p>
+      <ul class="skill-list">
+        {communitySkills.map((s) => (
+          <li class="skill-row community-skill-row" data-skill-id={s.name}>
+            <div class="skill-title">
+              <a href={s.github} target="_blank" rel="noopener noreferrer">{s.title}</a>
+              <span class="community-badge">community</span>
+            </div>
+            <div>
+              <p class="skill-desc">{s.description}</p>
+              <p class="skill-maintainer">by {s.maintainer}</p>
+            </div>
+            <div class="skill-links">
+              <a href={s.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
 </BaseLayout>
 
 <script is:inline define:vars={{ promptText }}>

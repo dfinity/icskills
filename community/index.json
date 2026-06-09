@@ -1,0 +1,11 @@
+[
+  {
+    "name": "liquidium-sdk-integration",
+    "title": "Liquidium SDK Integration",
+    "description": "Authless instant-loan flow, market data, and profile-based lending via @liquidium/client on the Internet Computer. Covers LiquidiumClient setup, instantLoans, accounts, lending, positions, and quote modules.",
+    "category": "DeFi",
+    "maintainer": "Liquidium Inc",
+    "github": "https://github.com/Liquidium-Inc/liquidium-sdk/tree/main/skills/liquidium-sdk-integration",
+    "added": "2026-06-09"
+  }
+]
