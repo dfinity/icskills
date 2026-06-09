@@ -122,6 +122,16 @@
       ]
     },
     {
+      "name": "Adversarial: missing [canisters] section in mops.toml for Motoko v5",
+      "prompt": "I set up a new Motoko canister with the @dfinity/motoko@v5.0.0 recipe. My icp.yaml has the canister named 'backend'. I have a mops.toml with [toolchain] but no [canisters] section. When I run icp build I get: 'No Motoko canisters found in mops.toml configuration'. What's wrong? Just the fix, no deploy steps.",
+      "expected_behaviors": [
+        "Identifies that mops.toml is missing the [canisters.backend] section required by the v5 recipe",
+        "Shows adding [canisters.backend] with a main field pointing to the .mo entry point",
+        "Explains that the key (backend) must exactly match the canister name in icp.yaml",
+        "Does NOT suggest adding main or candid inside recipe.configuration in icp.yaml"
+      ]
+    },
+    {
       "name": "Staging and production environments",
       "prompt": "I want to deploy my project to both a staging and production environment on mainnet, with different settings for each. How?",
       "expected_behaviors": [
@@ -137,19 +147,20 @@
       "expected_behaviors": [
         "Uses icp (not dfx) commands throughout",
         "Configuration file is icp.yaml, NOT dfx.json",
-        "Motoko canister uses @dfinity/motoko recipe with a version pin",
+        "Motoko canister uses @dfinity/motoko@v5.0.0 recipe with NO recipe.configuration block in icp.yaml",
         "Mentions installing ic-mops (npm i -g ic-mops)",
-        "Shows a mops.toml file with a [toolchain] section specifying a concrete moc version (e.g., moc = \"1.3.0\")",
-        "Does NOT leave the moc version as a placeholder like <version>"
+        "Shows a mops.toml with a [toolchain] section specifying a concrete moc version (not a placeholder like <version>)",
+        "Shows a [canisters.backend] section in mops.toml with the main field pointing to the .mo entry point",
+        "Does NOT put main or candid inside recipe.configuration in icp.yaml"
       ]
     },
     {
       "name": "Full-stack Motoko hello-world with React frontend",
       "prompt": "Build me a hello-world ICP dapp with a Motoko backend and a React frontend. The frontend should call a greet function on the backend. Show me the full project setup including icp.yaml, TypeScript bindings, and dev server config.",
       "expected_behaviors": [
-        "icp.yaml has Motoko backend with @dfinity/motoko recipe (version-pinned) and asset canister for frontend (version-pinned)",
-        "Shows mops.toml with [toolchain] section and a concrete moc version",
-        "Shows how to generate the .did file and specifies candid in the recipe config so bindgen can find it",
+        "icp.yaml has Motoko backend with @dfinity/motoko@v5.0.0 (no recipe.configuration block) and asset canister for frontend (version-pinned)",
+        "Shows mops.toml with [toolchain] section (concrete moc version) and [canisters.backend] section with main field",
+        "Shows how to generate the .did file using 'mops build backend && cp .mops/.build/backend.did <path>' and explains that after interface changes the copy must be re-run manually",
         "Uses @icp-sdk/bindgen (>= 0.3.0) Vite plugin with correct didFile path pointing to the committed .did file",
         "Uses @icp-sdk/core (>= 5.0.0) — does NOT use a 0.x or 1.x version",
         "Uses ./src/bindings as outDir (not per-canister subdirectories) so imports are clean (e.g., ./bindings/backend)",

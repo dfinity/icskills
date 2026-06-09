@@ -28,12 +28,15 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 ## Prerequisites
 
 - For Rust canisters: `rustup target add wasm32-unknown-unknown`
-- For Motoko canisters: `npm i -g ic-mops` and a `mops.toml` at the project root with the Motoko compiler version:
+- For Motoko canisters: `npm i -g ic-mops` and a `mops.toml` at the project root with the Motoko compiler version and a `[canisters]` entry:
   ```toml
   [toolchain]
-  moc = "1.3.0"
+  moc = "1.9.0"
+
+  [canisters.backend]
+  main = "src/backend/main.mo"
   ```
-  The `@dfinity/motoko` recipe uses this to resolve the compiler. Without `mops.toml`, the recipe fails because `moc` is not found. Templates include `mops.toml` automatically; for manual projects, create it before running `icp build`.
+  The `@dfinity/motoko@v5+` recipe compiles via `mops build <canister-name>`. The canister name in `icp.yaml` must exactly match a key in `[canisters]` — a missing or mismatched key causes `mops build` to fail with `No Motoko canisters found in mops.toml configuration` (see Pitfall 17). Without `mops.toml`, the recipe fails because `mops` is not found. Templates include `mops.toml` automatically; for manual projects, create it before running `icp build`. Load `mops-cli` for `[canisters]` configuration options, dependency management, and `mops build` details.
 
 ## Common Pitfalls
 
@@ -138,27 +141,42 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     - **Inline canisters** (defined directly in `icp.yaml`): build cwd is the project root. Place `mops.toml` at the project root next to `icp.yaml`. A `mops.toml` in `src/backend/` will not be found.
     - **Path-based canisters** (referenced via `canisters/*` or `./my-canister`, each with its own `canister.yaml`): build cwd is the canister directory. Place `mops.toml` in each canister's directory for per-canister dependencies and compiler versions, or omit it to fall back to a shared `mops.toml` in a parent directory.
 
-    When `mops.toml` is not found, `mops toolchain bin moc` outputs an error instead of a path, causing a cryptic `sh: Error:: command not found` build failure.
+    When `mops.toml` is not found, `mops build` fails because it cannot locate the project configuration. When `mops.toml` exists but is missing the matching `[canisters.<name>]` entry, see Pitfall 17.
 
-16. **Misunderstanding Candid file generation with recipes.** When using the Rust or Motoko recipe:
-    - If `candid` is **specified**: the file must already exist (checked in or manually created). The recipe uses it as-is and does **not** generate one.
-    - If `candid` is **omitted**: the recipe auto-generates the `.did` file from the compiled WASM (via `candid-extractor` for Rust, `moc` for Motoko). The generated file is placed in the build cache, not at a predictable project path.
+16. **Misunderstanding Candid file generation with recipes.** Binding generation tools (e.g. `@icp-sdk/bindgen`) require a `.did` file at a known path on disk. Where to configure it depends on the recipe:
 
-    For projects that need a `.did` file on disk (e.g., for `@icp-sdk/bindgen`), the recommended pattern is: generate the `.did` file once, commit it, and specify `candid` in the recipe config. To generate it manually:
+    **Rust** — `candid` goes inside `recipe.configuration` in `icp.yaml`:
+    - If **specified**: the file must already exist. The recipe uses it as-is and does not generate one.
+    - If **omitted**: the recipe auto-generates the `.did` via `candid-extractor` into the build cache (no predictable project path).
 
-    **Rust** — build the WASM first, then extract the Candid interface:
+    To generate and commit it, then add `candid: backend/backend.did` inside `recipe.configuration`:
     ```bash
     cargo install candid-extractor  # one-time setup
     icp build backend
     candid-extractor target/wasm32-unknown-unknown/release/backend.wasm > backend/backend.did
     ```
 
-    **Motoko** — use `moc` directly with the `--idl` flag:
-    ```bash
-    $(mops toolchain bin moc) --idl $(mops sources) -o backend/backend.did backend/app.mo
+    **Motoko (v5 recipe)** — `mops build` auto-generates the `.did` to `.mops/.build/<name>.did`.
+
+    - **No binding generation needed** — nothing to do. The generated `.did` in `.mops/.build/` is sufficient; do not commit it.
+    - **Binding generation needed** — commit a `.did` at a stable path and keep it in sync:
+      ```bash
+      mops build backend
+      cp .mops/.build/backend.did backend/backend.did
+      ```
+      Point the binding tool's config (e.g. `@icp-sdk/bindgen`'s `didFile`) at `backend/backend.did`. **After any interface change, re-run both commands** — `mops build` always writes to `.mops/.build/` and does not update the committed file automatically.
+
+17. **Missing or mismatched `[canisters]` key in `mops.toml`.** The `@dfinity/motoko@v5+` recipe calls `mops build <canister-name>`, where the name comes from the `name` field in `icp.yaml`. `mops build` requires a matching `[canisters.<name>]` entry in `mops.toml`. If the entry is absent or the key does not exactly match (including casing), the build fails with:
+    ```
+    No Motoko canisters found in mops.toml configuration
+    ```
+    Add the matching entry — the key must equal the `name:` value in `icp.yaml`:
+    ```toml
+    [canisters.backend]
+    main = "src/backend/main.mo"
     ```
 
-17. **Port 8000 already in use when starting the local network.** Two scenarios:
+18. **Port 8000 already in use when starting the local network.** Two scenarios:
 
     **Scenario A — another icp-cli project holds the port.** Stop that project's network using `--project-root-override` (a global flag available on all commands):
     ```bash
@@ -178,12 +196,12 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     icp network status --json  # returns gateway URL, replica URL, etc.
     ```
 
-18. **`icp new` hangs in CI without `--silent`.** Without `--define` flags, `icp new` launches an interactive prompt that blocks indefinitely in non-interactive environments. Always pass `--subfolder`, `--define`, and `--silent` for scripted use:
+19. **`icp new` hangs in CI without `--silent`.** Without `--define` flags, `icp new` launches an interactive prompt that blocks indefinitely in non-interactive environments. Always pass `--subfolder`, `--define`, and `--silent` for scripted use:
     ```bash
     icp new my-project --subfolder rust --define project_name=my-project --silent
     ```
 
-19. **Using the anonymous identity on mainnet.** The local network seeds all managed identities — including the anonymous identity, which is the default — with ICP and cycles on start, so local development works out of the box with no identity or cycles setup required. On mainnet this does not apply, and the anonymous identity should never be used: it is shared by anyone, meaning ICP sent to it is publicly accessible and canisters deployed under it are uncontrolled.
+20. **Using the anonymous identity on mainnet.** The local network seeds all managed identities — including the anonymous identity, which is the default — with ICP and cycles on start, so local development works out of the box with no identity or cycles setup required. On mainnet this does not apply, and the anonymous identity should never be used: it is shared by anyone, meaning ICP sent to it is publicly accessible and canisters deployed under it are uncontrolled.
 
     Before deploying to mainnet, switch to a named identity:
     ```bash
@@ -307,15 +325,26 @@ canisters:
 
 ### Motoko canister
 
+The v5 recipe delegates compilation to `mops build`. Canister configuration (`main`, `candid`, `args`) moves from `icp.yaml` to `mops.toml`:
+
 ```yaml
+# icp.yaml
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: src/backend/main.mo
-        candid: backend.did  # optional — if specified, file must exist (auto-generated when omitted)
+      type: "@dfinity/motoko@v5.0.0"
 ```
+```toml
+# mops.toml
+[toolchain]
+moc = "1.9.0"
+
+[canisters.backend]
+main = "src/backend/main.mo"
+candid = "backend.did"  # optional — auto-generated to .mops/.build/ when omitted
+```
+
+The canister name (`backend`) must exactly match between `icp.yaml` and `mops.toml`. No `recipe.configuration` block is needed in `icp.yaml`.
 
 ### Asset canister (frontend)
 
@@ -358,7 +387,7 @@ canisters:
 | Recipe | Type string | Required config | Optional config |
 |--------|------------|-----------------|-----------------|
 | Rust | `@dfinity/rust@v3.2.0` | `package` | `candid`, `locked`, `shrink`, `compress` |
-| Motoko | `@dfinity/motoko@v4.1.0` | `main` | `candid`, `args`, `shrink`, `compress` |
+| Motoko | `@dfinity/motoko@v5.0.0` | — | `shrink`, `compress`, `metadata` |
 | Asset | `@dfinity/asset-canister@v2.2.1` | `dir` | `build`, `version` |
 | Prebuilt | `@dfinity/prebuilt@v1.0.0` | `wasm` | `sha256`, `candid`, `shrink`, `compress` |
 
