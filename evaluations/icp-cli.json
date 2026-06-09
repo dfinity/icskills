@@ -160,7 +160,7 @@
       "expected_behaviors": [
         "icp.yaml has Motoko backend with @dfinity/motoko@v5.0.0 (no recipe.configuration block) and asset canister for frontend (version-pinned)",
         "Shows mops.toml with [toolchain] section (concrete moc version) and [canisters.backend] section with main field",
-        "Shows how to generate the .did file using 'mops build backend && cp .mops/.build/backend.did ...' and specifies candid in mops.toml [canisters.backend], NOT in icp.yaml recipe.configuration",
+        "Shows how to generate the .did file using 'mops build backend && cp .mops/.build/backend.did <path>' and explains that after interface changes the copy must be re-run manually",
         "Uses @icp-sdk/bindgen (>= 0.3.0) Vite plugin with correct didFile path pointing to the committed .did file",
         "Uses @icp-sdk/core (>= 5.0.0) — does NOT use a 0.x or 1.x version",
         "Uses ./src/bindings as outDir (not per-canister subdirectories) so imports are clean (e.g., ./bindings/backend)",

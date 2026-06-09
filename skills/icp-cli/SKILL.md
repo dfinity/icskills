@@ -156,12 +156,15 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     candid-extractor target/wasm32-unknown-unknown/release/backend.wasm > backend/backend.did
     ```
 
-    **Motoko (v5 recipe)** — `candid` goes in `mops.toml` under `[canisters.<name>]`, **not** in `recipe.configuration`. `mops build` auto-generates the `.did` to `.mops/.build/<name>.did`. To commit a `.did` file for bindgen:
-    ```bash
-    mops build backend
-    cp .mops/.build/backend.did backend/backend.did
-    ```
-    Then add `candid = "backend/backend.did"` under `[canisters.backend]` in `mops.toml`.
+    **Motoko (v5 recipe)** — `mops build` auto-generates the `.did` to `.mops/.build/<name>.did`.
+
+    - **No bindgen** — nothing to do. The generated `.did` in `.mops/.build/` is sufficient; do not commit it.
+    - **With bindgen** — commit a `.did` at a stable path and keep it in sync:
+      ```bash
+      mops build backend
+      cp .mops/.build/backend.did backend/backend.did
+      ```
+      Point bindgen's `didFile` at `backend/backend.did`. **After any interface change, re-run both commands** — `mops build` always writes to `.mops/.build/` and does not update the committed file automatically.
 
 17. **Missing or mismatched `[canisters]` key in `mops.toml`.** The `@dfinity/motoko@v5+` recipe calls `mops build <canister-name>`, where the name comes from the `name` field in `icp.yaml`. `mops build` requires a matching `[canisters.<name>]` entry in `mops.toml`. If the entry is absent or the key does not exactly match (including casing), the build fails with:
     ```
