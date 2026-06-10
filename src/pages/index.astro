@@ -124,12 +124,13 @@ const collectionLd = {
               <div>
                 <p class="skill-desc">{s.description}</p>
                 <p class="skill-maintainer">by {s.maintainer}</p>
+                <button class="community-install-btn" data-command={installCmd}>
+                  <code class="community-install-code">$ {installCmd}</code>
+                  <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </button>
               </div>
               <div class="skill-links">
-                <button class="community-install-btn" data-command={installCmd} title={installCmd}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                  <span>Install</span>
-                </button>
                 <a href={s.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
               </div>
             </li>
@@ -162,11 +163,8 @@ const collectionLd = {
       btn.addEventListener('click', function () {
         var cmd = btn.getAttribute('data-command');
         navigator.clipboard.writeText(cmd).catch(function () {});
-        var span = btn.querySelector('span');
-        if (!span) return;
-        var orig = span.textContent;
-        span.textContent = 'Copied!';
-        setTimeout(function () { span.textContent = orig; }, 2000);
+        btn.classList.add('copied');
+        setTimeout(function () { btn.classList.remove('copied'); }, 2000);
       });
     });
   })();

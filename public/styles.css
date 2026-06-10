@@ -423,9 +423,23 @@ main h1 { font-family: var(--serif); }
 .community-skill-row .skill-title a:hover { color: var(--accent); }
 
 .community-install-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
   background: none; border: none; cursor: pointer; padding: 0;
-  color: var(--muted); font-family: inherit;
-  font-size: 0.86rem; font-variant: all-small-caps; letter-spacing: 0.06em;
-  display: inline-flex; align-items: center; gap: 0.3rem;
+  margin-top: 0.55rem; color: var(--muted); font-family: inherit;
+  font-size: inherit; text-align: left;
 }
-.community-install-btn:hover { color: var(--accent); }
+.community-install-btn:hover .community-install-code {
+  border-color: var(--accent); color: var(--fg);
+}
+.community-install-btn:hover svg { color: var(--accent); }
+
+.community-install-code {
+  font-family: var(--mono); font-size: 0.82rem;
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 0.2em 0.55em; border-radius: 4px;
+  border: 1px solid var(--rule);
+}
+
+.community-install-btn .icon-check { display: none; color: var(--accent); }
+.community-install-btn.copied .icon-copy { display: none; }
+.community-install-btn.copied .icon-check { display: inline; }
