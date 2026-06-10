@@ -428,9 +428,6 @@ main h1 { font-family: var(--serif); }
   margin-top: 0.55rem; color: var(--muted); font-family: inherit;
   font-size: inherit; text-align: left;
 }
-.community-install-btn:hover .community-install-code {
-  border-color: var(--accent); color: var(--fg);
-}
 .community-install-btn:hover svg { color: var(--accent); }
 
 .community-install-code {
