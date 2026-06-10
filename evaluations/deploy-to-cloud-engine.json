@@ -1,16 +1,16 @@
 {
   "skill": "deploy-to-cloud-engine",
-  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), ask for the console origin and subnet id instead of guessing, and avoid the documented pitfalls.",
+  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, and avoid the documented pitfalls.",
 
   "output_evals": [
     {
       "name": "Deploy a built project to a cloud engine",
       "prompt": "My ICP app already builds. How do I deploy it to my cloud engine? Just the steps and commands, no canister code.",
       "expected_behaviors": [
-        "States that it needs the console origin and the engine's subnet id, and asks for them if not provided (does not guess)",
+        "Uses `https://opencloud.org` as the default console origin, stating it and offering an override, and asks for the engine's subnet id if not provided (does not guess it)",
         "Links the CLI with `icp identity link web <name> --auth <console-origin>`",
         "Notes the user must complete the Internet Identity sign-in in the browser",
-        "Sets the identity as default with `icp default <name>` using the same name",
+        "Sets the identity as default with `icp identity default <name>` using the same name",
         "Deploys with `icp deploy -e ic --subnet <subnet-id>`",
         "Does NOT use dfx commands"
       ]
@@ -33,6 +33,16 @@
         "Explains the mismatched origin derived a different principal that does not administer the engine",
         "Tells the user to relink with `icp identity link web <name> --auth https://opencloud.org`",
         "Does NOT attribute the failure to insufficient cycles or a wrong subnet id"
+      ]
+    },
+    {
+      "name": "Override: non-default console origin",
+      "prompt": "I sign in to my engine console at https://console.other-engine.dev, not opencloud.org. Link my icp CLI and deploy my built app to subnet abc12-3defg.",
+      "expected_behaviors": [
+        "Uses the user's console origin in the link command: `icp identity link web <name> --auth https://console.other-engine.dev`",
+        "Does NOT substitute the default https://opencloud.org once the user has named a different console",
+        "Deploys with `icp deploy -e ic --subnet abc12-3defg`",
+        "Does NOT use dfx"
       ]
     },
     {
