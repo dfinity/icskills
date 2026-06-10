@@ -2,7 +2,7 @@
 name: deploy-to-cloud-engine
 description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), and running `icp deploy` against that subnet. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, or linking the icp CLI to an engine console. Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing canister code."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.1.0, a cloud engine console account, a browser for the Internet Identity sign-in"
+compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
   title: Deploy to Cloud Engine
   category: Infrastructure
@@ -37,21 +37,38 @@ Record both so you do not re-ask within the session.
 
 ## Step 1 — Link the CLI to your engine identity (once per machine)
 
-The CLI must sign as the **same identity that administers the engine** — that is the principal you log in to the console with. Run this, substituting a name the user picks (any local label, reused in the commands below):
+The CLI must sign as the **same identity that administers the engine** — that is the principal you log in to the console with.
+
+First check what already exists:
+
+```bash
+icp identity list      # names + principals; * marks the active identity
+```
+
+The list does **not** show which console (if any) an identity was linked against — that cannot be determined from the CLI. Decide like this:
+
+- **Only `anonymous` (or plain local identities) listed** — no web-linked identity exists; run the link command below.
+- **An identity the user recognizes as their engine identity** (by name or principal) — set it active (below) and skip to Step 2.
+- **Unsure** — ask the user, or simply relink under a new name; linking again is cheap and safe.
+
+To link, run this, substituting a name the user picks (any local label, reused in the commands below):
 
 ```bash
 icp identity link web <your-identity-name> --auth <console-origin>
 ```
 
-- Use `https://opencloud.org` as `<console-origin>` unless the user named a different console.
-- This opens a **browser tab**. The **user** completes the Internet Identity sign-in there. Wait for them to confirm before continuing — you cannot complete the sign-in for them.
+- Use `https://opencloud.org` as `<console-origin>` unless the user named a different console. Never omit `--auth`: the flag has a built-in default (`https://id.ai`) that is **not** your console and silently derives the wrong principal.
+- The command first waits at a **"Press Enter to log in"** prompt before anything happens. Run it interactively when you can; in a non-interactive shell (e.g. a background process) supply the Enter keypress (pipe an empty line), or it stalls with no browser ever opening.
+- After Enter it opens a **browser tab**. The **user** completes the Internet Identity sign-in there. Wait for them to confirm before continuing — you cannot complete the sign-in for them.
 - `--auth` must be the **exact** console origin (scheme + host), e.g. `https://opencloud.org`. A mismatched origin derives a *different* principal, and the engine will reject the deploy as unauthorized.
-- This is a **one-time, per-machine** step. If the machine is already linked, skip to Step 2.
+- This is a **one-time, per-machine** step.
 
-Then make it the active identity:
+Then make it the active identity and verify:
 
 ```bash
 icp identity default <your-identity-name>
+icp identity default     # prints the active identity name
+icp identity principal   # prints the principal the deploy will sign as
 ```
 
 ## Step 2 — Deploy to the engine's subnet
@@ -70,13 +87,14 @@ icp deploy -e ic --subnet <subnet-id>
 ## Step 3 — Verify
 
 - The `icp deploy` output reports the deployed canister ids.
-- The canisters appear on the engine's **Applications** page in the console.
+- The canisters appear on the engine's **Applications** page in the console; each canister's detail view offers an "Open in browser" link.
+- A frontend (asset) canister is served at `https://<frontend-canister-id>.icp0.io`.
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
 
 ## Common Pitfalls
 
-1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished.
+1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt (see Step 1).
 2. **Wrong `--auth` origin.** Using any URL other than the console origin the user signs in with derives a different principal, and the engine rejects the deploy as not authorized. Relink with the exact console URL. If the deploy is rejected as unauthorized after linking against the default `https://opencloud.org`, ask the user for the exact URL they sign in with and relink.
 3. **Guessing the subnet id.** Never invent it — the deploy fails or targets the wrong subnet. It is on the engine's App Center / Applications page; ask the user.
 4. **Assuming a fixed identity name.** `<your-identity-name>` is a local label the user chooses (do not hardcode a value like `my-engine-admin`). Use the **same** name in `icp identity link web`, `icp identity default`, and any later command.

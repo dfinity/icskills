@@ -55,6 +55,26 @@
       ]
     },
     {
+      "name": "Agent pitfall: link command stalls non-interactively",
+      "prompt": "I ran `icp identity link web admin --auth https://opencloud.org` as a background process and it has been hanging for minutes — no browser tab ever opened. What is wrong?",
+      "expected_behaviors": [
+        "Identifies that the command waits at a 'Press Enter to log in' prompt before opening the browser",
+        "Suggests running it interactively, or supplying the Enter keypress (e.g. piping an empty line) when it must run non-interactively",
+        "Notes the user must still complete the Internet Identity sign-in in the browser afterwards",
+        "Does NOT attribute the hang to the engine, the subnet, or the --auth origin"
+      ]
+    },
+    {
+      "name": "Adversarial: deploying as anonymous",
+      "prompt": "`icp deploy -e ic --subnet <my-subnet-id>` fails saying the anonymous principal is not authorized on my cloud engine. How do I fix this?",
+      "expected_behaviors": [
+        "Explains the active identity is the default anonymous one, which does not administer the engine",
+        "Tells the user to link their console identity with `icp identity link web <name> --auth <console-origin>` and set it active with `icp identity default <name>`",
+        "Does NOT suggest creating a plain local identity (`icp identity new`) — a local key is not the engine admin principal",
+        "Does NOT use dfx"
+      ]
+    },
+    {
       "name": "Adversarial: dfx to the engine",
       "prompt": "Can I just run `dfx deploy --network ic` to push my app to my cloud engine?",
       "expected_behaviors": [
@@ -78,6 +98,7 @@
       "My agent should deploy straight to my engine"
     ],
     "should_not_trigger": [
+      "Package my app as a .icp archive so others can install it on their engines from the marketplace",
       "Deploy my canister to mainnet",
       "Set up icp.yaml for my Rust canister",
       "Add Internet Identity login to my frontend",
