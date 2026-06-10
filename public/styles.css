@@ -383,8 +383,7 @@ h4 { font-size: 1.05rem; }
   .prose pre { padding: 0.75rem 0.85rem; font-size: 0.85em; }
   .prose table { font-size: 0.85rem; display: block; overflow-x: auto; }
 
-  /* Community section */
-  .community-notice { font-size: 0.82rem; }
+  /* Community section — no overrides needed */
 }
 
 /* ---------- 404 ---------- */
@@ -403,8 +402,17 @@ main h1 { font-family: var(--serif); }
 }
 
 .community-notice {
-  font-size: 0.9rem; color: var(--muted); font-style: italic;
-  margin: 0 0 0.75rem; max-width: 52rem;
+  display: flex; gap: 0.75rem; align-items: flex-start;
+  margin: 0 0 1.5rem; padding: 0.9rem 1.1rem;
+  border-left: 3px solid var(--rule-strong);
+  background: var(--bg-sunk); border-radius: 0 6px 6px 0;
+  max-width: 52rem;
+}
+.community-notice-icon {
+  font-size: 1rem; line-height: 1.55; flex-shrink: 0; color: var(--fg-secondary);
+}
+.community-notice p {
+  margin: 0; font-size: 0.95rem; color: var(--fg-secondary);
 }
 
 .community-badge {
