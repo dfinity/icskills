@@ -114,6 +114,16 @@ node scripts/evaluate-skills.js <skill-name> --triggers-only     # Trigger evals
 
 Results are saved to `evaluations/results/` (gitignored). See [CONTRIBUTING.md](CONTRIBUTING.md#4-add-evaluation-cases) for how to write eval cases and prompts.
 
+## Community Skills
+
+Third-party skills for the ICP ecosystem, maintained by their respective authors. These appear in the **Ecosystem** section on the skills site, clearly separated from DFINITY-maintained skills.
+
+| Skill | Maintainer | Description |
+|-------|------------|-------------|
+| [Liquidium SDK Integration](https://github.com/Liquidium-Inc/liquidium-sdk/tree/main/skills/liquidium-sdk-integration) | Liquidium Inc | Authless instant-loan flow, market data, and profile-based lending via `@liquidium/client` on ICP. |
+
+Community skills are not maintained by DFINITY. To propose a community skill, see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-community-skill).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.

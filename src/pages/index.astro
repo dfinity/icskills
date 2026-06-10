@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, absUrl } from '../lib/site';
 import { getAllSkills, getSkillsByCategory, skillUrl, skillMarkdownUrl } from '../lib/skills';
+import communitySkills from '../../community/index.json';
 
 const all = await getAllSkills();
 const grouped = await getSkillsByCategory();
@@ -96,6 +97,49 @@ const collectionLd = {
       </ul>
     </section>
   ))}
+
+  {communitySkills.length > 0 && (
+    <div class="community-divider" aria-hidden="true"><span>Ecosystem</span></div>
+
+    <section class="category community-section" id="category-ecosystem" aria-labelledby="cat-h-ecosystem">
+      <div class="cat-head">
+        <h2 id="cat-h-ecosystem">Ecosystem Skills</h2>
+        <span class="count">{communitySkills.length} skill{communitySkills.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="community-notice" role="note">
+        <span class="community-notice-icon" aria-hidden="true">⚠</span>
+        <p>Not maintained, reviewed, or verified by DFINITY Foundation. Use at your own risk.</p>
+      </div>
+      <ul class="skill-list">
+        {communitySkills.map((s) => {
+          const skillsPath = s.github
+            .replace('https://github.com/', '')
+            .replace(/\/tree\/[^/]+/, '');
+          const installCmd = `npx skills add ${skillsPath}`;
+          return (
+            <li class="skill-row community-skill-row" data-skill-id={s.name}>
+              <div class="skill-title">
+                <a href={s.github} target="_blank" rel="noopener noreferrer">{s.title}</a>
+                <span class="community-badge">community</span>
+              </div>
+              <div>
+                <p class="skill-desc">{s.description}</p>
+                <p class="skill-maintainer">by {s.maintainer}</p>
+                <button class="community-install-btn" data-command={installCmd}>
+                  <code class="community-install-code">$ {installCmd}</code>
+                  <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </button>
+              </div>
+              <div class="skill-links">
+                <a href={s.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  )}
 </BaseLayout>
 
 <script is:inline define:vars={{ promptText }}>
@@ -110,6 +154,19 @@ const collectionLd = {
       setTimeout(function () {
         label.textContent = original;
       }, 3000);
+    });
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('.community-install-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cmd = btn.getAttribute('data-command');
+        navigator.clipboard.writeText(cmd).catch(function () {});
+        btn.classList.add('copied');
+        setTimeout(function () { btn.classList.remove('copied'); }, 2000);
+      });
     });
   })();
 </script>

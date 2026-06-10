@@ -382,7 +382,75 @@ h4 { font-size: 1.05rem; }
   /* Prose */
   .prose pre { padding: 0.75rem 0.85rem; font-size: 0.85em; }
   .prose table { font-size: 0.85rem; display: block; overflow-x: auto; }
+
+  /* Community section — no overrides needed */
 }
 
 /* ---------- 404 ---------- */
 main h1 { font-family: var(--serif); }
+
+/* ---------- Community / Ecosystem section ---------- */
+.community-divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 4rem 0 0;
+  color: var(--muted); font-size: 0.72rem; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.16em;
+}
+.community-divider::before,
+.community-divider::after {
+  content: ''; flex: 1; border-top: 1px dashed var(--rule);
+}
+
+.community-notice {
+  display: flex; gap: 0.75rem; align-items: flex-start;
+  margin: 0 0 1.5rem; padding: 0.9rem 1.1rem;
+  border-left: 3px solid var(--rule-strong);
+  background: var(--bg-sunk); border-radius: 0 6px 6px 0;
+}
+.community-notice-icon {
+  font-size: 1rem; line-height: 1.55; flex-shrink: 0; color: var(--fg-secondary);
+}
+.community-notice p {
+  margin: 0; font-size: 0.95rem; color: var(--fg-secondary);
+}
+
+.community-badge {
+  display: inline-block; margin-left: 0.5rem;
+  padding: 0.1em 0.45em;
+  background: var(--bg-sunk); border: 1px solid var(--rule); border-radius: 9999px;
+  font-size: 0.65rem; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); vertical-align: middle;
+}
+
+.skill-maintainer {
+  color: var(--muted); font-size: 0.82rem; font-style: italic; margin: 0.2rem 0 0;
+}
+
+.community-skill-row .skill-title a {
+  color: var(--fg-secondary);
+}
+.community-skill-row .skill-title a:hover { color: var(--accent); }
+
+.community-skill-row > div { min-width: 0; }
+
+.community-install-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  background: none; border: none; cursor: pointer; padding: 0;
+  margin-top: 0.55rem; color: var(--muted); font-family: inherit;
+  font-size: inherit; text-align: left; width: 100%;
+}
+.community-install-btn:hover svg { color: var(--accent); }
+
+.community-install-code {
+  font-family: var(--mono); font-size: 0.82rem;
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 0.2em 0.55em; border-radius: 4px;
+  border: 1px solid var(--rule);
+  white-space: nowrap; overflow-x: auto; display: block;
+  max-width: 100%;
+}
+
+.community-install-btn .icon-check { display: none; color: var(--accent); }
+.community-install-btn.copied .icon-copy { display: none; }
+.community-install-btn.copied .icon-check { display: inline; }
