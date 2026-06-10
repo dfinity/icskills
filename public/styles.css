@@ -385,7 +385,6 @@ h4 { font-size: 1.05rem; }
 
   /* Community section */
   .community-notice { font-size: 0.82rem; }
-  .community-install-btn { width: 100%; }
 }
 
 /* ---------- 404 ---------- */
@@ -426,11 +425,13 @@ main h1 { font-family: var(--serif); }
 }
 .community-skill-row .skill-title a:hover { color: var(--accent); }
 
+.community-skill-row > div { min-width: 0; }
+
 .community-install-btn {
   display: inline-flex; align-items: center; gap: 0.45rem;
   background: none; border: none; cursor: pointer; padding: 0;
   margin-top: 0.55rem; color: var(--muted); font-family: inherit;
-  font-size: inherit; text-align: left;
+  font-size: inherit; text-align: left; width: 100%;
 }
 .community-install-btn:hover svg { color: var(--accent); }
 
