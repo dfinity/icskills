@@ -382,6 +382,10 @@ h4 { font-size: 1.05rem; }
   /* Prose */
   .prose pre { padding: 0.75rem 0.85rem; font-size: 0.85em; }
   .prose table { font-size: 0.85rem; display: block; overflow-x: auto; }
+
+  /* Community section */
+  .community-notice { font-size: 0.82rem; }
+  .community-install-btn { width: 100%; }
 }
 
 /* ---------- 404 ---------- */
@@ -435,6 +439,8 @@ main h1 { font-family: var(--serif); }
   background: var(--code-bg); color: var(--code-fg);
   padding: 0.2em 0.55em; border-radius: 4px;
   border: 1px solid var(--rule);
+  white-space: nowrap; overflow-x: auto; display: block;
+  max-width: 100%;
 }
 
 .community-install-btn .icon-check { display: none; color: var(--accent); }
