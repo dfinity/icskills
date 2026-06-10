@@ -406,7 +406,6 @@ main h1 { font-family: var(--serif); }
   margin: 0 0 1.5rem; padding: 0.9rem 1.1rem;
   border-left: 3px solid var(--rule-strong);
   background: var(--bg-sunk); border-radius: 0 6px 6px 0;
-  max-width: 52rem;
 }
 .community-notice-icon {
   font-size: 1rem; line-height: 1.55; flex-shrink: 0; color: var(--fg-secondary);
