@@ -110,21 +110,31 @@ const collectionLd = {
         Community-maintained skills for the ICP ecosystem. These skills are published and kept up to date by their respective authors — not by DFINITY. Hosted on GitHub; no discovery endpoint provided.
       </p>
       <ul class="skill-list">
-        {communitySkills.map((s) => (
-          <li class="skill-row community-skill-row" data-skill-id={s.name}>
-            <div class="skill-title">
-              <a href={s.github} target="_blank" rel="noopener noreferrer">{s.title}</a>
-              <span class="community-badge">community</span>
-            </div>
-            <div>
-              <p class="skill-desc">{s.description}</p>
-              <p class="skill-maintainer">by {s.maintainer}</p>
-            </div>
-            <div class="skill-links">
-              <a href={s.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
-            </div>
-          </li>
-        ))}
+        {communitySkills.map((s) => {
+          const skillsPath = s.github
+            .replace('https://github.com/', '')
+            .replace(/\/tree\/[^/]+/, '');
+          const installCmd = `npx skills add ${skillsPath}`;
+          return (
+            <li class="skill-row community-skill-row" data-skill-id={s.name}>
+              <div class="skill-title">
+                <a href={s.github} target="_blank" rel="noopener noreferrer">{s.title}</a>
+                <span class="community-badge">community</span>
+              </div>
+              <div>
+                <p class="skill-desc">{s.description}</p>
+                <p class="skill-maintainer">by {s.maintainer}</p>
+              </div>
+              <div class="skill-links">
+                <button class="community-install-btn" data-command={installCmd} title={installCmd}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  <span>Install</span>
+                </button>
+                <a href={s.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   )}
@@ -142,6 +152,22 @@ const collectionLd = {
       setTimeout(function () {
         label.textContent = original;
       }, 3000);
+    });
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('.community-install-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cmd = btn.getAttribute('data-command');
+        navigator.clipboard.writeText(cmd).catch(function () {});
+        var span = btn.querySelector('span');
+        if (!span) return;
+        var orig = span.textContent;
+        span.textContent = 'Copied!';
+        setTimeout(function () { span.textContent = orig; }, 2000);
+      });
     });
   })();
 </script>

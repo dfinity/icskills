@@ -421,3 +421,11 @@ main h1 { font-family: var(--serif); }
   color: var(--fg-secondary);
 }
 .community-skill-row .skill-title a:hover { color: var(--accent); }
+
+.community-install-btn {
+  background: none; border: none; cursor: pointer; padding: 0;
+  color: var(--muted); font-family: inherit;
+  font-size: 0.86rem; font-variant: all-small-caps; letter-spacing: 0.06em;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.community-install-btn:hover { color: var(--accent); }
