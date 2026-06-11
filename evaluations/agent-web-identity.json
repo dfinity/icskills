@@ -39,7 +39,7 @@
       "name": "Expired delegation recovery",
       "prompt": "Canister calls signed with my linked identity 'agent-nns-20260611' worked this morning but now fail with signature/delegation expiry errors. What happened, and what's the fix?",
       "expected_behaviors": [
-        "Explains the delegation is time-limited (default 8 hours) and has expired",
+        "Explains the delegation is time-limited and has expired",
         "Recommends 'icp identity reauth agent-nns-20260611' to refresh the delegation",
         "Mentions the user must complete the browser sign-in again",
         "Does NOT suggest exporting key material or creating a fresh default identity as the fix"
@@ -52,6 +52,15 @@
         "Calls the public whoami canister ivcos-eqaaa-aaaab-qablq-cai on mainnet",
         "Passes --identity agent-nns-20260611 explicitly on the call",
         "Compares the returned principal against the principal the app shows the user when signed in, asking the user to confirm"
+      ]
+    },
+    {
+      "name": "Adversarial: nonexistent TTL flag",
+      "prompt": "I'm linking my Oisy identity for a quick experiment and want the delegation to expire after 30 minutes. Is this right: 'icp identity link web agent-oisy --app oisy.com --ttl 30'? One short answer.",
+      "expected_behaviors": [
+        "Says the command is wrong because icp identity link web has no --ttl (or any TTL) flag, so it would fail",
+        "Explains the delegation lifetime is set by the identity provider during sign-in, not by the CLI",
+        "Recommends removing the identity (icp identity remove) when the experiment is done instead of relying on a short expiry"
       ]
     },
     {

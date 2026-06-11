@@ -68,8 +68,10 @@ key of the user's II identity is never exposed.
    will NOT match the user's principal in the target app. Pass the app's bare
    domain (no scheme, port, or path), e.g. `--app oisy.com`.
 
-7. **Expired delegations.** Delegations are time-limited (default 8 hours;
-   `--ttl` is in minutes). When calls start failing with signature/expiry
+7. **Expired delegations.** Delegations are time-limited; the lifetime is set
+   by the identity provider during sign-in. `icp identity link web` has NO
+   flag to control it — do not invent one (e.g. `--ttl`; 0.3.x rejects it and
+   the whole command fails). When calls start failing with signature/expiry
    errors, run `icp identity reauth <NAME>` — the user must sign in again as
    the same identity.
 
@@ -86,7 +88,7 @@ NAME="agent-<app>-$(date +%Y%m%d-%H%M)"
 # 2. Start the link flow IN THE BACKGROUND (keeps the localhost
 #    listener alive while the user signs in). Use your harness's
 #    background-execution mode if it has one; in a plain shell:
-icp identity link web "$NAME" --app <APP_DOMAIN> --ttl 60 \
+icp identity link web "$NAME" --app <APP_DOMAIN> \
   > "/tmp/icp-link-$NAME.log" 2>&1 &
 
 # 3. Read the command's output (the log file above), find the printed
@@ -119,7 +121,9 @@ match the principal the app shows the user when they are signed in to
   blank check for that app.
 - Other than the whoami verification, ask the user explicitly before every
   state-changing canister call made with the linked identity.
-- Keep `--ttl` short for experiments (e.g. 60 minutes).
+- The delegation's lifetime is decided by the identity provider, not the CLI
+  — there is no flag to shorten it. When the task is done, don't wait for
+  expiry: remove the identity.
 - Never export, print, or log the identity's key material; leave it in the
   CLI's default keyring storage.
 - When done, remind the user of the identity name and how to remove it:
