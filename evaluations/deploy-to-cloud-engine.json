@@ -1,6 +1,6 @@
 {
   "skill": "deploy-to-cloud-engine",
-  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, and avoid the documented pitfalls.",
+  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters, and avoid the documented pitfalls.",
 
   "output_evals": [
     {
@@ -83,6 +83,28 @@
         "Gives the correct deploy: `icp deploy -e ic --subnet <subnet-id>`",
         "Does NOT endorse the dfx command or the --network flag"
       ]
+    },
+    {
+      "name": "Name the app in the engine console",
+      "prompt": "I deployed my app to my cloud engine but in the console it shows up as bare canister principals. How do I make it appear as one named app with a clear backend and frontend?",
+      "expected_behaviors": [
+        "Explains the console reads canister environment variables and sets them via `settings.environment_variables` in each canister.yaml (or under the canister entries in icp.yaml)",
+        "Sets the SAME `__META_PROJECT` value (the app name) on every canister so they group into one named app",
+        "Sets a per-canister `__META_NAME` label (e.g. Backend, Frontend)",
+        "Marks the entry-point/frontend canister with `__META_MAIN_CANISTER: \"true\"` for the Open button and public URL",
+        "Notes these merge with the auto-injected `PUBLIC_CANISTER_ID:*` variables and are applied on `icp deploy` (re-deploy to apply)",
+        "Does NOT claim canisters have a built-in name field or invent a different mechanism (e.g. a WASM metadata section or an `icp canister rename` command)"
+      ]
+    },
+    {
+      "name": "Adversarial: named app but no Open button",
+      "prompt": "I set __META_PROJECT and __META_NAME on both my canisters and the app is named in the console now, but there is no Open button. What did I miss?",
+      "expected_behaviors": [
+        "Identifies that one canister must carry `__META_MAIN_CANISTER` set to the exact string \"true\" (the frontend / entry point)",
+        "Notes it is matched as the literal string \"true\" (not a boolean or \"True\"), and exactly one canister should be marked",
+        "Tells the user to set it and re-run `icp deploy` so the setting is applied",
+        "Does NOT attribute the missing button to the subnet, the identity, or the --auth origin"
+      ]
     }
   ],
 
@@ -95,7 +117,9 @@
       "Deploy to my engine on a specific subnet",
       "How do I authorize the icp CLI for my cloud engine?",
       "Ship this project to my cloud engine",
-      "My agent should deploy straight to my engine"
+      "My agent should deploy straight to my engine",
+      "Make my deployed app show up with a name in the cloud engine console",
+      "Label my backend and frontend canisters in the engine console instead of bare principal ids"
     ],
     "should_not_trigger": [
       "Package my app as a .icp archive so others can install it on their engines from the marketplace",
