@@ -56,7 +56,7 @@
     },
     {
       "name": "Adversarial: nonexistent TTL flag",
-      "prompt": "I'm linking my Oisy identity for a quick experiment and want the delegation to expire after 30 minutes. Is this right: 'icp identity link web agent-oisy --app oisy.com --ttl 30'? One short answer.",
+      "prompt": "I'm linking my Oisy identity for a quick experiment and want it to stop being usable after about 30 minutes. Is this right: 'icp identity link web agent-oisy --app oisy.com --ttl 30'? If not, what should I do instead? Keep it short.",
       "expected_behaviors": [
         "Says the command is wrong because icp identity link web has no --ttl (or any TTL) flag, so it would fail",
         "Explains the delegation lifetime is set by the identity provider during sign-in, not by the CLI",
