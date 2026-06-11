@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), and running `icp deploy` against that subnet. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, or linking the icp CLI to an engine console. Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing canister code."
+description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), running `icp deploy` against that subnet, and tagging the canisters with `__META_*` environment variables so the engine console shows a named app with labelled backend/frontend canisters. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, linking the icp CLI to an engine console, or giving a deployed app a name in the console. Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing canister code."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
@@ -71,7 +71,54 @@ icp identity default     # prints the active identity name
 icp identity principal   # prints the principal the deploy will sign as
 ```
 
-## Step 2 — Deploy to the engine's subnet
+## Step 2 — Name the app in the console (recommended)
+
+By default, CLI-deployed canisters appear on the engine console's Applications page as bare rows labelled only by their principal id. Three **canister environment variables** make the console group them into a single named application with readable per-canister labels and an "Open" button. Set them once in your project config:
+
+- `__META_PROJECT` — the application name. Canisters that share the **same** value are grouped into one named app, so set an identical value on every canister of the app.
+- `__META_NAME` — the per-canister display label (e.g. `Backend`, `Frontend`).
+- `__META_MAIN_CANISTER` — the literal string `"true"` on the single entry-point canister (usually the frontend/asset canister). That canister gets the "Open" button and the app's public URL.
+
+Set them under each canister's `settings.environment_variables` — this is valid alongside a recipe. With per-canister `canister.yaml` files:
+
+```yaml
+# frontend/canister.yaml
+name: frontend
+recipe:
+  type: "@dfinity/asset-canister@v2.2.1"
+  configuration:
+    build:
+      - npm install
+      - npm run build
+    dir: dist
+settings:
+  environment_variables:
+    __META_PROJECT: "My App"
+    __META_NAME: "Frontend"
+    __META_MAIN_CANISTER: "true"
+```
+
+```yaml
+# backend/canister.yaml
+name: backend
+recipe:
+  type: "@dfinity/motoko@v4.1.0"
+  configuration:
+    main: src/main.mo
+settings:
+  environment_variables:
+    __META_PROJECT: "My App"
+    __META_NAME: "Backend"
+```
+
+For a single inline `icp.yaml` (canisters defined there directly), put the same `settings.environment_variables` block under each canister entry instead.
+
+Notes:
+- icp-cli **merges** these with the `PUBLIC_CANISTER_ID:<name>` variables it injects automatically at deploy time — the asset canister keeps serving and the app keeps working. (Verified against icp-cli 0.3.0.)
+- All values are strings; `__META_MAIN_CANISTER` must be the exact string `"true"`.
+- They are applied during `icp deploy` (the "Setting environment variables" step). After deploy, confirm with `icp canister settings show <name> -e ic`.
+
+## Step 3 — Deploy to the engine's subnet
 
 From the project root:
 
@@ -84,10 +131,11 @@ icp deploy -e ic --subnet <subnet-id>
 
 **Alternative — packaged upload.** If the project is distributed as a built `.icp` package and a direct `icp deploy` is not available, upload the bundle on the console's App Center via **"Upload a custom app"** instead.
 
-## Step 3 — Verify
+## Step 4 — Verify
 
 - The `icp deploy` output reports the deployed canister ids.
 - The canisters appear on the engine's **Applications** page in the console; each canister's detail view offers an "Open in browser" link.
+- If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows.
 - A frontend (asset) canister is served at `https://<frontend-canister-id>.icp0.io`.
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
@@ -100,6 +148,8 @@ Report the deployed canister ids (and the frontend URL, if any) back to the user
 4. **Assuming a fixed identity name.** `<your-identity-name>` is a local label the user chooses (do not hardcode a value like `my-engine-admin`). Use the **same** name in `icp identity link web`, `icp identity default`, and any later command.
 5. **Deploying with the anonymous identity.** The default local identity is anonymous and is not the engine admin. You must link and `icp identity default <your-identity-name>` first.
 6. **Using `dfx`.** This ecosystem uses `icp`, never `dfx`. See the `icp-cli` skill.
+7. **Skipping the app metadata.** Without `__META_PROJECT` (Step 2), the canisters still deploy and work but render as bare, unnamed principal rows in the console. Setting `__META_*` is what produces a named app with labelled canisters and an "Open" button.
+8. **Wrong `__META_MAIN_CANISTER` value.** It is matched as the exact string `"true"`. A boolean, `"True"`, or marking more than one canister means no (or the wrong) "Open" button. Mark exactly one entry-point canister.
 
 ## Related Skills
 
