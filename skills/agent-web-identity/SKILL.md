@@ -45,9 +45,13 @@ key of the user's II identity is never exposed.
 2. **The link command waits for an Enter keypress before doing anything.** On
    0.3.x it first prints `Press Enter to log in at https://id.ai/cli` and
    blocks reading stdin; only after that does it start the flow and try to
-   open the browser. In a background or non-interactive run, redirect stdin
-   from `/dev/null` — EOF counts as the keypress. Without the redirect, a
-   plain-shell `&` background job hangs on the prompt forever.
+   open the browser. In a background or non-interactive run, **pipe an actual
+   newline into it** (`printf '\n' | icp identity link web ...`). Do NOT
+   redirect from `/dev/null`: a bare EOF does **not** satisfy the prompt on
+   0.3.2 — the command sits on `Press Enter to log in` and never starts the
+   flow, so you waste the first attempt and have to restart, prompting the
+   user twice. Feed the newline on the first try and the flow starts
+   immediately.
 
 3. **Don't assume the browser opened.** Sandboxed or non-interactive shells
    often can't launch a GUI browser. Read the command's output: if a full
@@ -73,7 +77,10 @@ key of the user's II identity is never exposed.
    create a fresh identity per session: check `icp identity list`, then pick
    a unique name prefixed with the agent's name, e.g.
    `claude-<app>-<YYYYMMDD-HHMM>` → `claude-oisy-20260611-1530`. Never
-   overwrite an existing identity.
+   overwrite an existing identity. `icp identity list` is read-only context
+   for picking a free name — never delete, rename, reauth, or otherwise
+   modify any identity you did not create this session, even ones with the
+   agent's own prefix left over from a previous run. Operate only on `$NAME`.
 
 7. **Wrong principal because `--app` was omitted.** Without `--app`, the
    provider uses its default derivation origin and the resulting principal
@@ -108,10 +115,13 @@ NAME="claude-<app>-$(date +%Y%m%d-%H%M)"
 # 2. Start the link flow IN THE BACKGROUND (keeps the localhost
 #    listener alive while the user signs in). Use your harness's
 #    background-execution mode if it has one; in a plain shell:
-icp identity link web "$NAME" --app <APP_DOMAIN> \
-  < /dev/null > "/tmp/icp-link-$NAME.log" 2>&1 &
-# stdin from /dev/null answers the "Press Enter to log in" prompt
-# with EOF — without it the background job hangs on the prompt
+printf '\n' | icp identity link web "$NAME" --app <APP_DOMAIN> \
+  > "/tmp/icp-link-$NAME.log" 2>&1 &
+# Pipe a real newline to answer the "Press Enter to log in" prompt.
+# Do NOT use `< /dev/null`: on 0.3.2 a bare EOF does not satisfy the
+# prompt, so the command hangs and you'd have to restart it — which
+# prompts the user a second time. The newline starts the flow on the
+# first try.
 
 # 3. Read the command's output (the log file above). After the Enter
 #    prompt it tries to open the user's browser; if a sign-in URL is
@@ -147,12 +157,15 @@ match the principal the app shows the user when they are signed in to
 - Other than the whoami verification, ask the user explicitly before every
   state-changing canister call made with the linked identity.
 - The delegation's lifetime is decided by the identity provider, not the CLI
-  — there is no flag to shorten it. When the task is done, don't wait for
-  expiry: remove the identity.
+  — there is no flag to shorten it.
 - Never export, print, or log the identity's key material; leave it in the
   CLI's default keyring storage.
 - Keep output to the minimum. When a step succeeds, don't echo command output
   or narrate progress — surface only what needs the user: the sign-in URL,
   confirmation requests, errors, and the final verified principal.
-- When done, remind the user of the identity name and how to remove it:
-  `icp identity remove <NAME>`.
+- When done, do NOT delete the linked identity on your own initiative — the
+  user may want to reuse the live delegation for follow-up calls. Ask the
+  user whether to clean it up, and only on their confirmation run
+  `icp identity delete <NAME>` (the subcommand is `delete`; `remove` is not a
+  valid subcommand on 0.3.x). If they decline, just remind them of the
+  identity name and that command so they can remove it later.
