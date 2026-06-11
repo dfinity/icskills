@@ -1,0 +1,89 @@
+{
+  "skill": "agent-web-identity",
+  "description": "Evaluation cases for the agent-web-identity skill. Tests whether agents correctly run the `icp identity link web` flow (app-specific principal via --app, background execution, URL relay), handle the first-run CLI access toggle, avoid default-identity and name-reuse pitfalls, verify with the whoami canister, and recover from expired delegations.",
+
+  "output_evals": [
+    {
+      "name": "Link flow for an app",
+      "prompt": "You are an AI agent with shell access on my laptop. I want you to sign in to oisy.com with my Internet Identity so you can make canister calls as my Oisy principal. Show me the exact linking steps and what I have to do — just the linking, no canister calls afterwards.",
+      "expected_behaviors": [
+        "Uses 'icp identity link web' (not dfx, not a generic OAuth flow)",
+        "Passes --app oisy.com so the delegation is for the app-specific principal",
+        "Picks a fresh, unique identity name and checks 'icp identity list' first instead of reusing an existing name",
+        "Runs the link command in the background (or otherwise keeps it alive) because it blocks until sign-in completes",
+        "Relays the printed https://id.ai/cli#... sign-in URL to the user rather than assuming a browser opened",
+        "Mentions the first-run case: the user may need to enable CLI access in II settings and the flow must then be restarted"
+      ]
+    },
+    {
+      "name": "First-run CLI access disabled",
+      "prompt": "I ran 'icp identity link web agent-oisy --app oisy.com', opened the sign-in link in my browser, and Internet Identity shows a screen saying CLI access is disabled for my identity. Is the setup broken? What do I do now?",
+      "expected_behaviors": [
+        "Explains this is the expected first-run path, not an error or broken setup",
+        "Tells the user to enable the CLI access toggle for their identity in Internet Identity settings",
+        "Says to restart the link flow from scratch to get a fresh sign-in URL",
+        "Explains that the previous sign-in URL is single-use / dead (nonce and localhost listener are gone), so reusing or refreshing it will not work"
+      ]
+    },
+    {
+      "name": "Adversarial: wrong principal because --app was omitted",
+      "prompt": "I linked an identity with 'icp identity link web agent-oisy' and signed in fine, but when I call the backend the principal doesn't match the principal I see when I'm logged in to oisy.com in my browser. Why? Just the diagnosis and fix.",
+      "expected_behaviors": [
+        "Identifies that --app was omitted from the link command",
+        "Explains that without --app the provider uses its default derivation origin, so the principal differs from the user's principal in the target app",
+        "Fix passes the app's bare domain: --app oisy.com (no scheme, port, or path)",
+        "Makes clear the user must complete a new sign-in (re-link), not that the existing identity can be patched locally"
+      ]
+    },
+    {
+      "name": "Expired delegation recovery",
+      "prompt": "Canister calls signed with my linked identity 'agent-nns-20260611' worked this morning but now fail with signature/delegation expiry errors. What's the fix? Just the fix.",
+      "expected_behaviors": [
+        "Explains the delegation is time-limited (default 8 hours) and has expired",
+        "Recommends 'icp identity reauth agent-nns-20260611' to refresh the delegation",
+        "Mentions the user must complete the browser sign-in again",
+        "Does NOT suggest exporting key material or creating a fresh default identity as the fix"
+      ]
+    },
+    {
+      "name": "Verify the linked identity",
+      "prompt": "I just linked the identity 'agent-nns-20260611' for nns.ic0.app using icp identity link web. How do I verify the link worked and that it acts as the right principal? Just the verification step.",
+      "expected_behaviors": [
+        "Calls the public whoami canister ivcos-eqaaa-aaaab-qablq-cai on mainnet",
+        "Passes --identity agent-nns-20260611 explicitly on the call",
+        "Compares the returned principal against the principal the app shows the user when signed in, asking the user to confirm"
+      ]
+    },
+    {
+      "name": "Adversarial: setting the linked identity as default",
+      "prompt": "Now that the link succeeded, should I just set 'agent-oisy-20260611' as my default icp identity so every later command uses it automatically? One short answer.",
+      "expected_behaviors": [
+        "Says no — do not change the default identity settings",
+        "Recommends passing --identity agent-oisy-20260611 explicitly on every command that should act as the user",
+        "Mentions a reason: relying on defaults risks signing with the wrong principal (or polluting the user's existing setup)"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Log in to oisy.com with my Internet Identity so you can act on my behalf",
+      "Sign in to the NNS dapp from the terminal and make calls as my principal",
+      "How can an AI agent get a delegation from Internet Identity?",
+      "Use icp identity link web to authenticate as my app principal",
+      "I want Claude to make authorized canister calls as me on nns.ic0.app",
+      "My linked II delegation expired, how do I reauth?",
+      "Let the CLI act as my Oisy wallet principal"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login to my React frontend",
+      "How do I integrate II sign-in into my dapp?",
+      "Create a new identity for mainnet deployment",
+      "How do I deploy my canister to mainnet?",
+      "Implement ICRC-1 token transfer in my canister",
+      "Set up wallet integration for my dapp's users",
+      "How does the Internet Identity passkey flow work under the hood?"
+    ]
+  }
+}
