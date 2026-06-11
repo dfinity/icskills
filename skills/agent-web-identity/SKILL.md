@@ -84,12 +84,15 @@ icp identity list
 NAME="agent-<app>-$(date +%Y%m%d-%H%M)"
 
 # 2. Start the link flow IN THE BACKGROUND (keeps the localhost
-#    listener alive while the user signs in)
-icp identity link web "$NAME" --app <APP_DOMAIN> --ttl 60
+#    listener alive while the user signs in). Use your harness's
+#    background-execution mode if it has one; in a plain shell:
+icp identity link web "$NAME" --app <APP_DOMAIN> --ttl 60 \
+  > "/tmp/icp-link-$NAME.log" 2>&1 &
 
-# 3. Relay the printed https://id.ai/cli#... URL to the user; wait for
-#    them to confirm sign-in (first run may require enabling CLI access
-#    in II settings — restart from step 2 with a fresh URL if so)
+# 3. Read the command's output (the log file above), find the printed
+#    https://id.ai/cli#... URL, and relay it to the user; wait for them
+#    to confirm sign-in (first run may require enabling CLI access in
+#    II settings — restart from step 2 with a fresh URL if so)
 
 # 4. Confirm the identity was created
 icp identity list

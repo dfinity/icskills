@@ -37,7 +37,7 @@
     },
     {
       "name": "Expired delegation recovery",
-      "prompt": "Canister calls signed with my linked identity 'agent-nns-20260611' worked this morning but now fail with signature/delegation expiry errors. What's the fix? Just the fix.",
+      "prompt": "Canister calls signed with my linked identity 'agent-nns-20260611' worked this morning but now fail with signature/delegation expiry errors. What happened, and what's the fix?",
       "expected_behaviors": [
         "Explains the delegation is time-limited (default 8 hours) and has expired",
         "Recommends 'icp identity reauth agent-nns-20260611' to refresh the delegation",
