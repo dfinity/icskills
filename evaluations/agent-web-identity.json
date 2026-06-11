@@ -9,7 +9,7 @@
       "expected_behaviors": [
         "Uses 'icp identity link web' (not dfx, not a generic OAuth flow)",
         "Passes --app oisy.com so the delegation is for the app-specific principal",
-        "Picks a fresh, unique identity name and checks 'icp identity list' first instead of reusing an existing name",
+        "Creates a fresh identity with a unique agent-prefixed name (e.g. claude-oisy-<timestamp>) after checking 'icp identity list', and does NOT reuse any existing identity",
         "Runs the link command in the background (or otherwise keeps it alive) because it blocks until sign-in completes",
         "Handles the 'Press Enter to log in' prompt for non-interactive runs, e.g. by redirecting stdin from /dev/null so EOF answers it",
         "Does not assume a browser opened: checks the command output and relays a printed sign-in URL to the user if the browser did not launch",
@@ -63,6 +63,15 @@
         "Says the command is wrong because icp identity link web has no --ttl (or any TTL) flag, so it would fail",
         "Explains the delegation lifetime is set by the identity provider during sign-in, not by the CLI",
         "Recommends removing the identity (icp identity remove) when the experiment is done instead of relying on a short expiry"
+      ]
+    },
+    {
+      "name": "Adversarial: reusing an existing linked identity",
+      "prompt": "You're an agent on my laptop and I asked you to make a call to the Oisy backend as me. 'icp identity list' already shows an identity 'claude-oisy-20260105-0930' linked for oisy.com from a previous session. Do you use it, or do something else? One short answer.",
+      "expected_behaviors": [
+        "Does NOT reuse the existing identity — creates a fresh one with a new link sign-in",
+        "Gives a reason: the old delegation is likely expired and/or the identity belongs to a previous session",
+        "Uses a fresh unique agent-prefixed name (e.g. claude-oisy-<current timestamp>) and does not overwrite the existing identity"
       ]
     },
     {

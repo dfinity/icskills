@@ -67,9 +67,13 @@ key of the user's II identity is never exposed.
    Never depend on project or global default identity settings, and never
    change them.
 
-6. **Reusing or overwriting identity names.** Generate a fresh, unique name
-   (e.g. `agent-<app>-<YYYYMMDD-HHMM>`), and check `icp identity list` first.
-   Never overwrite an existing identity.
+6. **Reusing or overwriting identities.** Never reuse an existing identity,
+   even if `icp identity list` already shows one linked for the same app — its
+   delegation may be expired and it belongs to whoever created it. Always
+   create a fresh identity per session: check `icp identity list`, then pick
+   a unique name prefixed with the agent's name, e.g.
+   `claude-<app>-<YYYYMMDD-HHMM>` → `claude-oisy-20260611-1530`. Never
+   overwrite an existing identity.
 
 7. **Wrong principal because `--app` was omitted.** Without `--app`, the
    provider uses its default derivation origin and the resulting principal
@@ -96,9 +100,10 @@ Generalized flow for linking the user into `<APP_DOMAIN>` (e.g. `oisy.com`,
 `nns.ic0.app`):
 
 ```bash
-# 1. Pick a fresh name; confirm it doesn't exist
+# 1. Pick a fresh name (never reuse an existing identity, even one
+#    already linked for this app); confirm it doesn't exist
 icp identity list
-NAME="agent-<app>-$(date +%Y%m%d-%H%M)"
+NAME="claude-<app>-$(date +%Y%m%d-%H%M)"
 
 # 2. Start the link flow IN THE BACKGROUND (keeps the localhost
 #    listener alive while the user signs in). Use your harness's
@@ -146,5 +151,8 @@ match the principal the app shows the user when they are signed in to
   expiry: remove the identity.
 - Never export, print, or log the identity's key material; leave it in the
   CLI's default keyring storage.
+- Keep output to the minimum. When a step succeeds, don't echo command output
+  or narrate progress — surface only what needs the user: the sign-in URL,
+  confirmation requests, errors, and the final verified principal.
 - When done, remind the user of the identity name and how to remove it:
   `icp identity remove <NAME>`.
