@@ -11,7 +11,8 @@
         "Passes --app oisy.com so the delegation is for the app-specific principal",
         "Picks a fresh, unique identity name and checks 'icp identity list' first instead of reusing an existing name",
         "Runs the link command in the background (or otherwise keeps it alive) because it blocks until sign-in completes",
-        "Relays the printed https://id.ai/cli#... sign-in URL to the user rather than assuming a browser opened",
+        "Handles the 'Press Enter to log in' prompt for non-interactive runs, e.g. by redirecting stdin from /dev/null so EOF answers it",
+        "Does not assume a browser opened: checks the command output and relays a printed sign-in URL to the user if the browser did not launch",
         "Mentions the first-run case: the user may need to enable CLI access in II settings and the flow must then be restarted"
       ]
     },
@@ -51,6 +52,7 @@
       "expected_behaviors": [
         "Calls the public whoami canister ivcos-eqaaa-aaaab-qablq-cai on mainnet",
         "Passes --identity agent-nns-20260611 explicitly on the call",
+        "Passes the empty Candid arguments '()' explicitly so the call does not fall into the interactive argument prompt",
         "Compares the returned principal against the principal the app shows the user when signed in, asking the user to confirm"
       ]
     },
@@ -61,6 +63,15 @@
         "Says the command is wrong because icp identity link web has no --ttl (or any TTL) flag, so it would fail",
         "Explains the delegation lifetime is set by the identity provider during sign-in, not by the CLI",
         "Recommends removing the identity (icp identity remove) when the experiment is done instead of relying on a short expiry"
+      ]
+    },
+    {
+      "name": "Adversarial: canister call auto-cancelled without arguments",
+      "prompt": "My script ran \"icp canister call --identity agent-oisy --network ic ivcos-eqaaa-aaaab-qablq-cai whoami\" and the output was \"Do you want to send this message? [y/N] User cancelled.\" — but I never typed anything. Why, and what's the fix? One short answer.",
+      "expected_behaviors": [
+        "Explains that omitting call arguments makes icp canister call open an interactive prompt, which auto-cancels in a non-interactive shell",
+        "Fix is to pass the arguments explicitly, i.e. append '()' for the zero-argument whoami method",
+        "Does NOT suggest piping 'y' into the prompt or running with a TTY as the primary fix"
       ]
     },
     {

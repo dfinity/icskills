@@ -42,38 +42,53 @@ key of the user's II identity is never exposed.
    scratch** — the previous sign-in URL is single-use (its nonce and localhost
    listener are dead). Plan for two rounds on first use.
 
-2. **The link command does not open a browser from an agent shell.** Sandboxed
-   or non-interactive shells often can't launch a GUI browser. Never assume it
-   opened: read the command's output, find the printed sign-in URL
-   (`https://id.ai/cli#...`), and show it to the user to open themselves. If
-   no URL is printed, report that — do not construct one by guessing.
+2. **The link command waits for an Enter keypress before doing anything.** On
+   0.3.x it first prints `Press Enter to log in at https://id.ai/cli` and
+   blocks reading stdin; only after that does it start the flow and try to
+   open the browser. In a background or non-interactive run, redirect stdin
+   from `/dev/null` — EOF counts as the keypress. Without the redirect, a
+   plain-shell `&` background job hangs on the prompt forever.
 
-3. **The command blocks until sign-in completes and gets killed by tool
+3. **Don't assume the browser opened.** Sandboxed or non-interactive shells
+   often can't launch a GUI browser. Read the command's output: if a full
+   sign-in URL is printed, show it to the user to open themselves. If the
+   output shows neither a browser launch nor a URL, report that — do not
+   construct a URL by guessing, and ask the user whether a browser window
+   appeared.
+
+4. **The command blocks until sign-in completes and gets killed by tool
    timeouts.** Run `icp identity link web` as a background task, then wait for
    the user to confirm they finished signing in before checking the result.
    The command must also be able to bind a localhost port; if a sandbox blocks
    this, ask the user before rerunning unsandboxed.
 
-4. **Relying on the default identity signs with the wrong principal.** Every
+5. **Relying on the default identity signs with the wrong principal.** Every
    `icp` command acting as the user must pass `--identity <NAME>` explicitly.
    Never depend on project or global default identity settings, and never
    change them.
 
-5. **Reusing or overwriting identity names.** Generate a fresh, unique name
+6. **Reusing or overwriting identity names.** Generate a fresh, unique name
    (e.g. `agent-<app>-<YYYYMMDD-HHMM>`), and check `icp identity list` first.
    Never overwrite an existing identity.
 
-6. **Wrong principal because `--app` was omitted.** Without `--app`, the
+7. **Wrong principal because `--app` was omitted.** Without `--app`, the
    provider uses its default derivation origin and the resulting principal
    will NOT match the user's principal in the target app. Pass the app's bare
    domain (no scheme, port, or path), e.g. `--app oisy.com`.
 
-7. **Expired delegations.** Delegations are time-limited; the lifetime is set
+8. **Expired delegations.** Delegations are time-limited; the lifetime is set
    by the identity provider during sign-in. `icp identity link web` has NO
    flag to control it — do not invent one (e.g. `--ttl`; 0.3.x rejects it and
    the whole command fails). When calls start failing with signature/expiry
    errors, run `icp identity reauth <NAME>` — the user must sign in again as
    the same identity.
+
+9. **Canister calls without explicit arguments auto-cancel.** When call
+   arguments are omitted, `icp canister call` opens an interactive prompt to
+   build the arguments and confirm sending (`Do you want to send this
+   message? [y/N]`), which immediately cancels in a non-interactive shell
+   (`User cancelled.`). Always pass arguments explicitly — including the
+   empty tuple `'()'` for zero-argument methods like `whoami`.
 
 ## Implementation
 
@@ -89,12 +104,15 @@ NAME="agent-<app>-$(date +%Y%m%d-%H%M)"
 #    listener alive while the user signs in). Use your harness's
 #    background-execution mode if it has one; in a plain shell:
 icp identity link web "$NAME" --app <APP_DOMAIN> \
-  > "/tmp/icp-link-$NAME.log" 2>&1 &
+  < /dev/null > "/tmp/icp-link-$NAME.log" 2>&1 &
+# stdin from /dev/null answers the "Press Enter to log in" prompt
+# with EOF — without it the background job hangs on the prompt
 
-# 3. Read the command's output (the log file above), find the printed
-#    https://id.ai/cli#... URL, and relay it to the user; wait for them
-#    to confirm sign-in (first run may require enabling CLI access in
-#    II settings — restart from step 2 with a fresh URL if so)
+# 3. Read the command's output (the log file above). After the Enter
+#    prompt it tries to open the user's browser; if a sign-in URL is
+#    printed instead, relay it to the user. Wait for them to confirm
+#    sign-in (first run may require enabling CLI access in II settings
+#    — restart from step 2 if so)
 
 # 4. Confirm the identity was created
 icp identity list
@@ -106,11 +124,13 @@ Call the public whoami canister as the linked identity:
 
 ```bash
 icp canister call --identity "$NAME" --network ic \
-  ivcos-eqaaa-aaaab-qablq-cai whoami
+  ivcos-eqaaa-aaaab-qablq-cai whoami '()'
 ```
 
 (Adapt flags to the installed CLI version — see `icp canister call --help` —
-but always keep the explicit `--identity`.) The returned principal should
+but always keep the explicit `--identity` and the explicit `'()'` arguments;
+omitting the arguments triggers an interactive prompt that auto-cancels in
+non-interactive shells, see Pitfall 9.) The returned principal should
 match the principal the app shows the user when they are signed in to
 `<APP_DOMAIN>`; ask the user to confirm.
 
