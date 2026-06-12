@@ -75,8 +75,10 @@ key of the user's II identity is never exposed.
    even if `icp identity list` already shows one linked for the same app — its
    delegation may be expired and it belongs to whoever created it. Always
    create a fresh identity per session: check `icp identity list`, then pick
-   a unique name prefixed with the agent's name, e.g.
-   `claude-<app>-<YYYYMMDD-HHMM>` → `claude-oisy-20260611-1530`. Never
+   a unique name prefixed with the agent's own identifier,
+   `<agent>-<app>-<YYYYMMDD-HHMM>` — e.g. `claude-oisy-20260611-1530` for
+   Claude, `cursor-oisy-...` for Cursor; use `agent-` if no identifier is
+   known. Never
    overwrite an existing identity. `icp identity list` is read-only context
    for picking a free name — never delete, rename, reauth, or otherwise
    modify any identity you did not create this session, even ones with the
@@ -110,7 +112,9 @@ Generalized flow for linking the user into `<APP_DOMAIN>` (e.g. `oisy.com`,
 # 1. Pick a fresh name (never reuse an existing identity, even one
 #    already linked for this app); confirm it doesn't exist
 icp identity list
-NAME="claude-<app>-$(date +%Y%m%d-%H%M)"
+NAME="agent-<app>-$(date +%Y%m%d-%H%M)"
+# substitute your own agent prefix for "agent" if known,
+# e.g. claude-oisy-20260611-1530, cursor-oisy-...
 
 # 2. Start the link flow IN THE BACKGROUND (keeps the localhost
 #    listener alive while the user signs in). Use your harness's
