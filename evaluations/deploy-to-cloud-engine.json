@@ -16,8 +16,8 @@
       ]
     },
     {
-      "name": "Just the link command",
-      "prompt": "Give me only the command to link my icp CLI to my cloud engine console at https://opencloud.org. No deploy steps.",
+      "name": "Link command and what to expect",
+      "prompt": "Give me the command to link my icp CLI to my cloud engine console at https://opencloud.org, and what to expect when I run it. No deploy steps.",
       "expected_behaviors": [
         "Produces `icp identity link web <your-identity-name> --auth https://opencloud.org` (a chosen local name plus the exact console origin)",
         "Mentions a browser tab opens and the user completes the Internet Identity sign-in there",
@@ -59,7 +59,7 @@
       "prompt": "I ran `icp identity link web admin --auth https://opencloud.org` as a background process and it has been hanging for minutes — no browser tab ever opened. What is wrong?",
       "expected_behaviors": [
         "Identifies that the command waits at a 'Press Enter to log in' prompt before opening the browser",
-        "Suggests running it interactively, or supplying the Enter keypress (e.g. piping an empty line) when it must run non-interactively",
+        "Suggests running it interactively, or piping a real newline (`printf '\\n' | icp identity link web ...`) when it must run non-interactively — and does NOT suggest redirecting stdin from /dev/null",
         "Notes the user must still complete the Internet Identity sign-in in the browser afterwards",
         "Does NOT attribute the hang to the engine, the subnet, or the --auth origin"
       ]
@@ -102,7 +102,7 @@
       "expected_behaviors": [
         "Identifies that one canister must carry `__META_MAIN_CANISTER` set to the exact string \"true\" (the frontend / entry point)",
         "Notes it is matched as the literal string \"true\" (not a boolean or \"True\"), and exactly one canister should be marked",
-        "Tells the user to set it and re-run `icp deploy` so the setting is applied",
+        "Tells the user to set it and re-deploy by explicitly naming the `icp deploy` command (not just saying 'redeploy')",
         "Does NOT attribute the missing button to the subnet, the identity, or the --auth origin"
       ]
     }

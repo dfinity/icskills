@@ -32,7 +32,7 @@ Record both so you do not re-ask within the session.
 
 ## Prerequisites
 
-- `icp` on `$PATH`. Install with `npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm` (requires Node.js >= 22), or see the [icp-cli releases](https://github.com/dfinity/icp-cli/releases). Some preview builds ship as `demo-icp`; prefer `icp` and fall back to `demo-icp`. Verify with `icp --version`.
+- `icp` on `$PATH` — see the **`icp-cli`** skill to install. Verify with `icp --version` (this skill's commands are verified against 0.3.0).
 - A project that already builds. If it does not build or package yet, set that up first (see the `icp-cli` skill), then return here.
 
 ## Step 1 — Link the CLI to your engine identity (once per machine)
@@ -51,14 +51,20 @@ The list does **not** show which console (if any) an identity was linked against
 - **An identity the user recognizes as their engine identity** (by name or principal) — set it active (below) and skip to Step 2.
 - **Unsure** — ask the user, or simply relink under a new name; linking again is cheap and safe.
 
-To link, run this, substituting a name the user picks (any local label, reused in the commands below):
+To link, run this, substituting a name the user picks — `<your-identity-name>` is any local label, not a fixed value (do not hardcode something like `my-engine-admin`); reuse the **same** name in every command below:
 
 ```bash
 icp identity link web <your-identity-name> --auth <console-origin>
 ```
 
 - Use `https://opencloud.org` as `<console-origin>` unless the user named a different console. Never omit `--auth`: the flag has a built-in default (`https://id.ai`) that is **not** your console and silently derives the wrong principal.
-- The command first waits at a **"Press Enter to log in"** prompt before anything happens. Run it interactively when you can; in a non-interactive shell (e.g. a background process) supply the Enter keypress (pipe an empty line), or it stalls with no browser ever opening.
+- The command first waits at a **"Press Enter to log in"** prompt before anything happens. Run it interactively when you can; in a non-interactive shell (e.g. a background process) pipe a real newline:
+
+  ```bash
+  printf '\n' | icp identity link web <your-identity-name> --auth <console-origin>
+  ```
+
+  Do **not** redirect stdin from `/dev/null` — the bare EOF does not satisfy the prompt, and the command sits on "Press Enter to log in" indefinitely with no browser ever opening.
 - After Enter it opens a **browser tab**. The **user** completes the Internet Identity sign-in there. Wait for them to confirm before continuing — you cannot complete the sign-in for them.
 - `--auth` must be the **exact** console origin (scheme + host), e.g. `https://opencloud.org`. A mismatched origin derives a *different* principal, and the engine will reject the deploy as unauthorized.
 - This is a **one-time, per-machine** step.
@@ -111,7 +117,25 @@ settings:
     __META_NAME: "Backend"
 ```
 
-For a single inline `icp.yaml` (canisters defined there directly), put the same `settings.environment_variables` block under each canister entry instead.
+For a single inline `icp.yaml` (canisters defined there directly), put the same `settings.environment_variables` block under each canister entry. Note the inline form: `canisters` is an **array** of `{name, recipe, settings}` items, not a map keyed by canister name:
+
+```yaml
+# icp.yaml — canisters defined inline
+canisters:
+  - name: frontend
+    recipe: # … as in the canister.yaml example above
+    settings:
+      environment_variables:
+        __META_PROJECT: "My App"
+        __META_NAME: "Frontend"
+        __META_MAIN_CANISTER: "true"
+  - name: backend
+    recipe: # … as in the canister.yaml example above
+    settings:
+      environment_variables:
+        __META_PROJECT: "My App"
+        __META_NAME: "Backend"
+```
 
 Notes:
 - icp-cli **merges** these with the `PUBLIC_CANISTER_ID:<name>` variables it injects automatically at deploy time — the asset canister keeps serving and the app keeps working. (Verified against icp-cli 0.3.0.)
@@ -142,14 +166,13 @@ Report the deployed canister ids (and the frontend URL, if any) back to the user
 
 ## Common Pitfalls
 
-1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt (see Step 1).
+1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt — relaunch with a piped newline, `printf '\n' | icp identity link web …`, never `< /dev/null` (see Step 1).
 2. **Wrong `--auth` origin.** Using any URL other than the console origin the user signs in with derives a different principal, and the engine rejects the deploy as not authorized. Relink with the exact console URL. If the deploy is rejected as unauthorized after linking against the default `https://opencloud.org`, ask the user for the exact URL they sign in with and relink.
 3. **Guessing the subnet id.** Never invent it — the deploy fails or targets the wrong subnet. It is on the engine's App Center / Applications page; ask the user.
-4. **Assuming a fixed identity name.** `<your-identity-name>` is a local label the user chooses (do not hardcode a value like `my-engine-admin`). Use the **same** name in `icp identity link web`, `icp identity default`, and any later command.
-5. **Deploying with the anonymous identity.** The default local identity is anonymous and is not the engine admin. You must link and `icp identity default <your-identity-name>` first.
-6. **Using `dfx`.** This ecosystem uses `icp`, never `dfx`. See the `icp-cli` skill.
-7. **Skipping the app metadata.** Without `__META_PROJECT` (Step 2), the canisters still deploy and work but render as bare, unnamed principal rows in the console. Setting `__META_*` is what produces a named app with labelled canisters and an "Open" button.
-8. **Wrong `__META_MAIN_CANISTER` value.** It is matched as the exact string `"true"`. A boolean, `"True"`, or marking more than one canister means no (or the wrong) "Open" button. Mark exactly one entry-point canister.
+4. **Deploying with the anonymous identity.** The default local identity is anonymous and is not the engine admin. You must link and `icp identity default <your-identity-name>` first.
+5. **Using `dfx`.** This ecosystem uses `icp`, never `dfx`. The correct sequence is `icp identity link web <name> --auth <console-origin>` (Step 1), then `icp deploy -e ic --subnet <subnet-id>` (Step 3). See the `icp-cli` skill.
+6. **Skipping the app metadata.** Without `__META_PROJECT` (Step 2), the canisters still deploy and work but render as bare, unnamed principal rows in the console. Setting `__META_*` is what produces a named app with labelled canisters and an "Open" button.
+7. **Wrong `__META_MAIN_CANISTER` value.** It is matched as the exact string `"true"`. A boolean, `"True"`, or marking more than one canister means no (or the wrong) "Open" button. Mark exactly one entry-point canister.
 
 ## Related Skills
 
