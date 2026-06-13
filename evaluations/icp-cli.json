@@ -1,7 +1,6 @@
 {
   "skill": "icp-cli",
   "description": "Evaluation cases for the icp-cli skill. Tests whether agents produce correct icp-cli commands and configuration instead of legacy dfx equivalents, avoid documented pitfalls, and know when to consult reference files.",
-
   "output_evals": [
     {
       "name": "New project setup",
@@ -251,9 +250,18 @@
         "Mentions that a new identity will need to be funded with ICP or cycles before it can deploy",
         "Presents identity switch and balance check as required prerequisites before running icp deploy -e ic, not optional suggestions"
       ]
+    },
+    {
+      "name": "Adversarial: bundling a project into an .icp package",
+      "prompt": "Using icp-cli, what command packages my project into a self-contained .icp bundle I can deploy on a machine without the Rust toolchain, and how do I deploy from it? Give the commands and any important caveats — no project setup steps.",
+      "expected_behaviors": [
+        "Uses `icp project bundle --output <path>` as the bundling command",
+        "Notes the command is experimental and hidden from `icp --help` output but works",
+        "Deploys by extracting the archive (tar -xzf) and running `icp deploy` from the extracted directory",
+        "Does NOT invent commands like `icp bundle`, `icp package`, or `dfx` equivalents"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
     "should_trigger": [
@@ -270,7 +278,9 @@
       "How do I set up output_env_file for my canister IDs?",
       "Generate TypeScript declarations for my canister",
       "Configure Vite dev server for local IC development",
-      "Build a hello-world dapp with Motoko and React"
+      "Build a hello-world dapp with Motoko and React",
+      "Bundle my Internet Computer project into a .icp package I can share",
+      "How do I package my canister project so it deploys without a build toolchain?"
     ],
     "should_not_trigger": [
       "Add access control to my Motoko canister",
