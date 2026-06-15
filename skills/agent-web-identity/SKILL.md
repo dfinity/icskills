@@ -83,6 +83,13 @@ key of the user's II identity is never exposed.
    for picking a free name — never delete, rename, reauth, or otherwise
    modify any identity you did not create this session, even ones with the
    agent's own prefix left over from a previous run. Operate only on `$NAME`.
+   Why per-session and not one reused identity per app: `--app` derives the
+   *same* app principal for a given II identity, so a fresh identity grants no
+   extra authority isolation — the point is **provenance and blast radius**.
+   A per-session identity keeps `icp identity list` auditable (which session
+   created which live delegation), lets cleanup delete exactly that one, and
+   avoids a shared identity where another session's `reauth` silently mutates
+   a delegation this session is mid-task with.
 
 7. **Wrong principal because `--app` was omitted.** Without `--app`, the
    provider uses its default derivation origin and the resulting principal
