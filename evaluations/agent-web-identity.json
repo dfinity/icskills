@@ -1,0 +1,143 @@
+{
+  "skill": "agent-web-identity",
+  "description": "Evaluation cases for the agent-web-identity skill. Tests whether agents correctly run the `icp identity link web` flow (app-specific principal via --app, background execution, URL relay), handle the first-run CLI access toggle, avoid default-identity and name-reuse pitfalls, verify with the whoami canister, and recover from expired delegations.",
+
+  "output_evals": [
+    {
+      "name": "Link flow core mechanics",
+      "prompt": "How do I link a new icp CLI identity for oisy.com in the background, with the Enter prompt handled non-interactively, and what do I do if no browser opens? Just the commands — do not run anything.",
+      "expected_behaviors": [
+        "Uses 'icp identity link web' with --app oisy.com (not dfx, not a generic OAuth flow)",
+        "Creates a fresh identity with a unique agent-prefixed name (e.g. agent-oisy-<timestamp> or claude-oisy-<timestamp>) after checking 'icp identity list'",
+        "Runs the link command in the background (or otherwise keeps it alive) and pipes an actual newline into it (e.g. printf '\\n' | icp identity link web ...), NOT stdin from /dev/null",
+        "Does not assume a browser opened: checks the command output and relays a printed sign-in URL to the user if the browser did not launch"
+      ]
+    },
+    {
+      "name": "Identity hygiene with existing identities",
+      "prompt": "You're an agent about to link a web identity for oisy.com on my machine. 'icp identity list' shows 'alice-main' and 'claude-oisy-20260105-0930' left over from an earlier session. How do you pick the new identity's name, and what do you do with the existing identities? Just naming and identity handling — no link commands.",
+      "expected_behaviors": [
+        "Picks a fresh, unique agent-prefixed timestamped name and does NOT reuse 'claude-oisy-20260105-0930'",
+        "Treats 'icp identity list' as read-only context: does not delete, rename, reauth, or otherwise modify 'alice-main' or the leftover identity",
+        "Does not overwrite any existing identity"
+      ]
+    },
+    {
+      "name": "First-run CLI access disabled",
+      "prompt": "I ran 'icp identity link web agent-oisy --app oisy.com', opened the sign-in link in my browser, and Internet Identity shows a screen saying CLI access is disabled for my identity. Is the setup broken? What do I do now?",
+      "expected_behaviors": [
+        "Explains this is the expected first-run path, not an error or broken setup",
+        "Tells the user to enable the CLI access toggle for their identity in Internet Identity settings",
+        "Says to restart the link flow from scratch to get a fresh sign-in URL",
+        "Explains that the previous sign-in URL is single-use / dead (nonce and localhost listener are gone), so reusing or refreshing it will not work"
+      ]
+    },
+    {
+      "name": "Adversarial: wrong principal because --app was omitted",
+      "prompt": "I linked an identity with 'icp identity link web agent-oisy' and signed in fine, but when I call the backend the principal doesn't match the principal I see when I'm logged in to oisy.com in my browser. Why? Just the diagnosis and fix.",
+      "expected_behaviors": [
+        "Identifies that --app was omitted from the link command",
+        "Explains that without --app the provider uses its default derivation origin, so the principal differs from the user's principal in the target app",
+        "Fix passes the app's bare domain: --app oisy.com (no scheme, port, or path)",
+        "Makes clear the user must complete a new sign-in (re-link), not that the existing identity can be patched locally"
+      ]
+    },
+    {
+      "name": "Expired delegation recovery",
+      "prompt": "Canister calls signed with my linked identity 'agent-nns-20260611' worked this morning but now fail with signature/delegation expiry errors. What happened, and what's the fix?",
+      "expected_behaviors": [
+        "Explains the delegation is time-limited and has expired",
+        "Recommends 'icp identity reauth agent-nns-20260611' to refresh the delegation",
+        "Mentions the user must complete the browser sign-in again",
+        "Does NOT suggest exporting key material or creating a fresh default identity as the fix"
+      ]
+    },
+    {
+      "name": "Verify the linked identity",
+      "prompt": "I just linked the identity 'agent-nns-20260611' for nns.ic0.app using icp identity link web. How do I verify the link worked and that it acts as the right principal? Just the verification step.",
+      "expected_behaviors": [
+        "Calls the public whoami canister ivcos-eqaaa-aaaab-qablq-cai on mainnet",
+        "Passes --identity agent-nns-20260611 explicitly on the call",
+        "Passes the empty Candid arguments '()' explicitly so the call does not fall into the interactive argument prompt",
+        "Compares the returned principal against the principal the app shows the user when signed in, asking the user to confirm"
+      ]
+    },
+    {
+      "name": "Adversarial: nonexistent TTL flag",
+      "prompt": "I'm linking my Oisy identity for a quick experiment and want it to stop being usable after about 30 minutes. Is this right: 'icp identity link web agent-oisy --app oisy.com --ttl 30'? If not, what should I do instead? Keep it short.",
+      "expected_behaviors": [
+        "Says the command is wrong because icp identity link web has no --ttl (or any TTL) flag, so it would fail",
+        "Explains the delegation lifetime is set by the identity provider during sign-in, not by the CLI",
+        "Recommends deleting the identity with 'icp identity delete <NAME>' (the subcommand is 'delete', not 'remove') when the experiment is done instead of relying on a short expiry"
+      ]
+    },
+    {
+      "name": "Adversarial: reusing an existing linked identity",
+      "prompt": "You're an agent on my laptop and I asked you to make a call to the Oisy backend as me. 'icp identity list' already shows an identity 'claude-oisy-20260105-0930' linked for oisy.com from a previous session. Do you use it, or do something else? One short answer.",
+      "expected_behaviors": [
+        "Does NOT reuse the existing identity — creates a fresh one with a new link sign-in",
+        "Gives a reason: the old delegation is likely expired and/or the identity belongs to a previous session",
+        "Uses a fresh unique agent-prefixed name (e.g. claude-oisy-<current timestamp>) and does not overwrite the existing identity"
+      ]
+    },
+    {
+      "name": "Adversarial: canister call auto-cancelled without arguments",
+      "prompt": "My script ran \"icp canister call --identity agent-oisy --network ic ivcos-eqaaa-aaaab-qablq-cai whoami\" and the output was \"Do you want to send this message? [y/N] User cancelled.\" — but I never typed anything. Why, and what's the fix? One short answer.",
+      "expected_behaviors": [
+        "Explains that omitting call arguments makes icp canister call open an interactive prompt, which auto-cancels in a non-interactive shell",
+        "Fix is to pass the arguments explicitly, i.e. append '()' for the zero-argument whoami method",
+        "Does NOT suggest piping 'y' into the prompt or running with a TTY as the primary fix"
+      ]
+    },
+    {
+      "name": "Adversarial: setting the linked identity as default",
+      "prompt": "Now that the link succeeded, should I just set 'agent-oisy-20260611' as my default icp identity so every later command uses it automatically? One short answer.",
+      "expected_behaviors": [
+        "Says no — do not change the default identity settings",
+        "Recommends passing --identity agent-oisy-20260611 explicitly on every command that should act as the user",
+        "Mentions a reason: relying on defaults risks signing with the wrong principal (or polluting the user's existing setup)"
+      ]
+    },
+    {
+      "name": "Stale identity cleanup offer at session start",
+      "prompt": "You're an agent about to link a web identity for oisy.com. 'icp identity list' shows 'alice-main', 'claude-oisy-20260105-0930', and 'claude-oisy-20260210-1445' — three identities. The last two are from past sessions of yours. What do you do with those stale identities before creating a new one? One short answer.",
+      "expected_behaviors": [
+        "Offers to clean up the stale agent-prefixed identities ('claude-oisy-20260105-0930' and 'claude-oisy-20260210-1445') before proceeding",
+        "Does NOT delete them unilaterally — asks the user to confirm which ones to remove",
+        "Uses 'icp identity delete <NAME>' for each deletion (not 'remove', not bulk delete)",
+        "Does not touch 'alice-main' — only offers to clean up the agent-prefixed identities from past sessions"
+      ]
+    },
+    {
+      "name": "Adversarial: cleaning up the temporary identity after a task",
+      "prompt": "You're an agent that just finished checking my Oisy balance with the identity 'claude-oisy-20260611-2356' you created this session. You're about to wrap up. What do you do with that identity? One short answer.",
+      "expected_behaviors": [
+        "Does NOT delete the temporary identity automatically — asks the user first whether to clean it up or keep it",
+        "If deleting, uses 'icp identity delete <NAME>' (the subcommand is 'delete', not 'remove')",
+        "Only operates on the identity it created this session; does not touch any other identity in 'icp identity list'"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Log in to oisy.com with my Internet Identity so you can act on my behalf",
+      "Sign in to the NNS dapp from the terminal and make calls as my principal",
+      "How can an AI agent get a delegation from Internet Identity?",
+      "Use icp identity link web to authenticate as my app principal",
+      "I want Claude to make authorized canister calls as me on nns.ic0.app",
+      "My linked II delegation expired, how do I reauth?",
+      "Let the CLI act as my Oisy wallet principal"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login to my React frontend",
+      "How do I integrate II sign-in into my dapp?",
+      "Create a new identity for mainnet deployment",
+      "How do I deploy my canister to mainnet?",
+      "Implement ICRC-1 token transfer in my canister",
+      "Set up wallet integration for my dapp's users",
+      "How does the Internet Identity passkey flow work under the hood?"
+    ]
+  }
+}
