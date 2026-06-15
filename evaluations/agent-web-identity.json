@@ -5,7 +5,7 @@
   "output_evals": [
     {
       "name": "Link flow core mechanics",
-      "prompt": "You are an AI agent with shell access on my laptop. Link a new identity for oisy.com with the icp CLI so you can sign canister calls as my Oisy principal. Show just the commands to create and start the link and what you do with the sign-in URL — no verification, no canister calls, no first-run setup.",
+      "prompt": "How do I link a new icp CLI identity for oisy.com in the background, with the Enter prompt handled non-interactively, and what do I do if no browser opens? Just the commands — do not run anything.",
       "expected_behaviors": [
         "Uses 'icp identity link web' with --app oisy.com (not dfx, not a generic OAuth flow)",
         "Creates a fresh identity with a unique agent-prefixed name (e.g. agent-oisy-<timestamp> or claude-oisy-<timestamp>) after checking 'icp identity list'",
