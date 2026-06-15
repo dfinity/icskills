@@ -91,6 +91,12 @@ key of the user's II identity is never exposed.
    avoids a shared identity where another session's `reauth` silently mutates
    a delegation this session is mid-task with.
 
+   When scanning `icp identity list` to pick a name, if you see multiple stale
+   agent-prefixed identities for the same app from past sessions (e.g. several
+   `claude-oisy-*` entries), offer to clean them up before proceeding: present
+   the list, wait for the user to confirm each one, then delete them with
+   `icp identity delete <NAME>`. Never delete without explicit confirmation.
+
 7. **Wrong principal because `--app` was omitted.** Without `--app`, the
    provider uses its default derivation origin and the resulting principal
    will NOT match the user's principal in the target app. Pass the app's bare
@@ -180,3 +186,9 @@ match the principal the app shows the user when they are signed in to
   `icp identity delete <NAME>` (the subcommand is `delete`; `remove` is not a
   valid subcommand on 0.3.x). If they decline, just remind them of the
   identity name and that command so they can remove it later.
+- At the start of a session, when `icp identity list` reveals accumulated
+  stale agent-prefixed identities from past sessions (e.g. multiple
+  `claude-oisy-*` entries), offer to delete them before creating a new one.
+  Present the list to the user, wait for confirmation, and delete only the
+  approved ones with `icp identity delete <NAME>` — never in bulk, never
+  without confirmation.
