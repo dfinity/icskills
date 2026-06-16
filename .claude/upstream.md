@@ -52,8 +52,8 @@ Upstream file paths are relative to `.agents/skills/<upstream-skill-name>/` in t
 ## mops-cli
 
 - **Upstream:** https://github.com/caffeinelabs/mops
-- **Tag:** cli-v2.13.2
-- **Commit:** 59d4c5f264ec4276bbe03d3df2d81fe3cd0e6352
-- **Last synced:** 2026-05-28
+- **Tag:** cli-v2.14.0
+- **Commit:** d448cdf90991c3164cafd8b6d1b39f433ad820b1
+- **Last synced:** 2026-06-16
 - **Upstream file:** `.agents/skills/mops-cli/SKILL.md`
 - **icskills-owned sections:** none — body is 1:1 with upstream; only frontmatter differs

@@ -74,6 +74,16 @@
       ]
     },
     {
+      "name": "Replica tests pocket-ic pin",
+      "prompt": "I'm adding replica-mode tests (actor files / `// @testmode replica`) to my mops project and `mops test --mode replica` prints a warning about the dfx replica. How do I configure mops so it doesn't fall back to the deprecated dfx replica? Just the config change.",
+      "expected_behaviors": [
+        "Explains the warning is because `pocket-ic` is not pinned in `[toolchain]`, so mops falls back to the deprecated dfx replica",
+        "Pins `pocket-ic` in the `[toolchain]` section of mops.toml (e.g. `pocket-ic = \"12.0.0\"`) OR uses `mops toolchain use pocket-ic 12.0.0`",
+        "Pins a specific pocket-ic version rather than `latest` (latest may resolve to a version the bundled pic-js client doesn't support)",
+        "Notes the same pin also applies to `mops bench` and `mops watch`"
+      ]
+    },
+    {
       "name": "Adversarial: file path to mops check",
       "prompt": "I want to type-check my canister. My main file is at src/backend/main.mo. I'll run: mops check src/backend/main.mo. Is that right?",
       "expected_behaviors": [
