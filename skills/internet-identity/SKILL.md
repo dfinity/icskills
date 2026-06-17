@@ -311,7 +311,7 @@ canisters:
         # II backend principal (required). List your local II principal too if tests run against it.
         trusted_attribute_signers: "rdmx6-jaaaa-aaaaa-aaadq-cai"
         # Allowed frontend origins, comma-separated (required).
-        frontend_origins: "https://your-app.icp0.io"
+        frontend_origins: "https://your-app.icp.net"
         # Trusted SSO domains, comma-separated (optional; omit to reject all sso:* keys).
         trusted_sso_domains: "your-org.com"
 ```
@@ -335,7 +335,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 
 const II_PRINCIPAL: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
-const TRUSTED_ORIGIN: &str = "https://your-app.icp0.io";
+const TRUSTED_ORIGIN: &str = "https://your-app.icp.net";
 const FRESHNESS_NS: u64 = 300_000_000_000; // 5 minutes
 
 thread_local! {

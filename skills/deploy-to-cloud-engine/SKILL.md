@@ -160,7 +160,7 @@ icp deploy -e ic --subnet <subnet-id>
 - The `icp deploy` output reports the deployed canister ids.
 - The canisters appear on the engine's **Applications** page in the console; each canister's detail view offers an "Open in browser" link.
 - If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows.
-- A frontend (asset) canister is served at `https://<frontend-canister-id>.icp0.io`.
+- A frontend (asset) canister is served at `https://<frontend-canister-id>.icp.net`.
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
 
