@@ -335,8 +335,11 @@ compiler-error pitfalls that an agent will otherwise hallucinate.
 
 ## The frontend
 
-Create the frontend files from
-[`references/frontend-template.md`](references/frontend-template.md). The essentials:
+**Fetch this skill's companion reference file** —
+[`references/frontend-template.md`](references/frontend-template.md), which sits next to
+this `SKILL.md` (i.e. `…/skills/caffeine-app/references/frontend-template.md`) — and create
+the frontend files from it; it holds the verified `package.json`, the Vite/Tailwind/Biome
+configs, `main.tsx`, and the worked `useActor(createActor)` backend call. The essentials:
 
 - The entry point `src/frontend/src/main.tsx` wraps the app in
   `InternetIdentityProvider` (from `@caffeineai/core-infrastructure`) and a TanStack
