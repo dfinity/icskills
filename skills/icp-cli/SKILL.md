@@ -447,17 +447,12 @@ const backendId = canisterEnv?.["PUBLIC_CANISTER_ID:backend"];
   ```
 Note: variables are only updated for canisters at deploy time. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
 
-### Using the cli with a web identity
+### Web identity flows
 
-Users can link a web identity and use it with icp-cli. This is This is useful to make calls to a canister from the cli using the same identity you would get by logging in through the web UI.
+Two specialized skills cover `icp identity link web`. Load the right one for the task — both document the stdin "Press Enter" block, the browser sign-in step, and their flag-specific pitfalls:
 
-```
-# Sign in as your NNS identity
-icp identity link web nns-identity --app nns.ic0.app
-
-# Sign in as your OISY identity
-icp identity link web oisy-identity --app oisy.com
-```
+- `deploy-to-cloud-engine` — link the CLI to a cloud engine console with `--auth <console-origin>`, then deploy to the engine's subnet
+- `agent-web-identity` — obtain a delegation for an app-specific principal with `--app <domain>`, then make canister calls as the user
 
 ## Additional References
 
