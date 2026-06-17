@@ -11,10 +11,17 @@ function getContentType(path: string): string {
 
 export async function getStaticPaths() {
   const entries = await getSkillFileEntries();
-  return entries.map((e) => ({
-    params: { slug: e.name, path: e.path },
-    props: { content: e.content, filePath: e.path },
-  }));
+  // This route already lives under `references/`, so the catch-all `[...path]`
+  // must be the path *relative to* `references/`. Passing the full `references/<...>`
+  // path doubles the segment, emitting `/skills/<slug>/references/references/<...>`
+  // and 404ing the documented `/skills/<slug>/references/<...>` URL.
+  const prefix = 'references/';
+  return entries
+    .filter((e) => e.path.startsWith(prefix))
+    .map((e) => ({
+      params: { slug: e.name, path: e.path.slice(prefix.length) },
+      props: { content: e.content, filePath: e.path },
+    }));
 }
 
 export const GET: APIRoute = ({ props }) => {
