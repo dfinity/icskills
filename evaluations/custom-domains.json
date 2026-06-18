@@ -61,6 +61,15 @@
       ]
     },
     {
+      "name": "HttpAgent host in a Node.js local script",
+      "prompt": "I have a Node.js script that talks to my canister on a local replica at http://127.0.0.1:4943 using HttpAgent from @icp-sdk/core. I did not set host. It keeps hitting mainnet instead of my local replica. Why, and what's the fix? Keep it brief.",
+      "expected_behaviors": [
+        "Explains that in Node.js there is no window.location, so an omitted host defaults to https://icp-api.io (mainnet)",
+        "Fix is to set host explicitly to the local replica URL, e.g. http://127.0.0.1:4943",
+        "Does NOT claim the agent auto-detects the local replica in Node.js"
+      ]
+    },
+    {
       "name": "Domain update flow",
       "prompt": "I want to point my existing custom domain to a different canister. What do I need to do? Just the steps.",
       "expected_behaviors": [

@@ -40,7 +40,7 @@ Custom domains work at the boundary node level — they map a domain to any cani
 
 7. **Not explicitly registering the domain.** DNS configuration alone is not enough. You must call `POST /custom-domains/v1/CUSTOM_DOMAIN` to start registration. It is not automatic.
 
-8. **Pointing `HttpAgent`'s `host` at your custom domain.** You usually do not need to set `host` at all. When `host` is omitted, a recent `HttpAgent` (`@icp-sdk/core`) defaults to the local replica for `localhost`/`127.0.0.1` origins and to `https://icp-api.io` (the mainnet API boundary nodes) for every other origin — including custom domains and `icp.net`. The actual mistake is forcing `host` to your custom domain (or `window.location.origin`): that domain serves only the HTTP gateway, not `/api/v2`, so canister calls fail. Leave `host` unset, or set it explicitly to `https://icp-api.io` — never the gateway domain.
+8. **Setting `HttpAgent`'s `host` to your custom domain.** `host` is the **API endpoint**, not the domain your frontend is served from. Your custom domain (like `icp.net` or `ic0.app`) is the HTTP gateway — it does not serve `/api/v2`, so pointing `host` at it (or at `window.location.origin`) makes canister calls fail. For a mainnet frontend you usually do not need to set `host` at all: a recent `@icp-sdk/core` `HttpAgent` resolves an omitted `host` to `https://icp-api.io` (the mainnet API boundary nodes) on custom domains and `icp.net`. Leave it unset, or set it explicitly to `https://icp-api.io` — never the gateway domain. The exceptions where you *must* set `host` (local development in Node.js, and non-mainnet/custom networks) are in **HttpAgent Configuration** below.
 
 9. **Forgetting alternative origins for Internet Identity.** II principals depend on the origin domain. Switching from a canister URL to a custom domain changes principals. Configure `.well-known/ii-alternative-origins` to keep the same principals. See the `internet-identity` skill.
 
@@ -178,19 +178,38 @@ curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 
 ## HttpAgent Configuration
 
-You usually do not need to set `host`. When `host` is omitted, a recent `HttpAgent` defaults to the local replica for `localhost`/`127.0.0.1` origins and to `https://icp-api.io` (the mainnet API boundary nodes) for every other origin — including custom domains and `icp.net`. Do **not** point `host` at your custom domain: it serves only the HTTP gateway, not `/api/v2`, so calls would fail.
+`HttpAgent`'s `host` is the **API endpoint** the agent sends `/api/v2` calls to — it is *not* the domain your frontend is served from. The two are different: your frontend is served by the HTTP **gateway** (`icp.net`, `ic0.app`, or your custom domain), while canister calls go to the **API boundary nodes** (`https://icp-api.io` on mainnet). A gateway domain does not serve `/api/v2`.
+
+### What an omitted `host` resolves to
+
+When you do not pass `host`, a recent `@icp-sdk/core` `HttpAgent` picks the endpoint automatically:
+
+| Where the code runs | Resolved API host |
+|---|---|
+| Browser on `*.localhost` / `*.127.0.0.1` | the local replica (same origin) |
+| Browser on `*.ic0.app` / `*.icp0.io` | `https://ic0.app` / `https://icp0.io` (legacy gateways that also serve the API) |
+| Browser on a custom domain, `*.icp.net`, or anything else | `https://icp-api.io` |
+| Node.js (no `window.location`) | `https://icp-api.io` |
+
+### What to do
+
+- **Mainnet — browser frontend** (served from `icp.net`, a custom domain, or legacy `ic0.app`/`icp0.io`): **leave `host` unset.** It resolves to `https://icp-api.io` (or an equivalent API-serving gateway) automatically. Optionally set `host: "https://icp-api.io"` to be explicit. **Never** set `host` to your custom domain or `window.location.origin` — that is the gateway, not the API, and calls will fail.
+- **Mainnet — Node.js** (scripts, SSR, backends): leave `host` unset or set `host: "https://icp-api.io"`. Both reach mainnet.
+- **Local development — browser on `*.localhost`**: leave `host` unset; it auto-detects the local replica.
+- **Local development — Node.js**: you **must** set `host` to your local replica URL (e.g. `http://127.0.0.1:4943`). With `host` omitted there is no `window.location` to detect localhost, so it defaults to `https://icp-api.io` (mainnet) — wrong target.
+- **A non-mainnet / custom network** (self-hosted replica, testnet, private boundary nodes): you **must** set `host` to that network's API endpoint. The omitted-`host` default of `https://icp-api.io` points at mainnet, not your network.
 
 ```typescript
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-// host omitted → local replica on localhost origins, https://icp-api.io elsewhere
+// Mainnet (browser or Node.js): host omitted → resolves to https://icp-api.io
 const agent = await HttpAgent.create();
-```
 
-In Node.js there is no `window.location` to detect the origin, so an omitted `host` always resolves to `https://icp-api.io`. Set `host` to your local replica URL when talking to a local network; for mainnet you can leave it unset or set it explicitly to the API endpoint (never the gateway):
+// Local development in Node.js: you MUST set host (no window to auto-detect)
+const localAgent = await HttpAgent.create({ host: "http://127.0.0.1:4943" });
 
-```typescript
-const agent = await HttpAgent.create({ host: "https://icp-api.io" });
+// Custom / non-mainnet network: point host at that network's API endpoint
+const customNetworkAgent = await HttpAgent.create({ host: "https://my-network-api.example" });
 ```
 
 ## Deploy & Test
