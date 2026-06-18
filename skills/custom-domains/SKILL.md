@@ -40,7 +40,7 @@ Custom domains work at the boundary node level — they map a domain to any cani
 
 7. **Not explicitly registering the domain.** DNS configuration alone is not enough. You must call `POST /custom-domains/v1/CUSTOM_DOMAIN` to start registration. It is not automatic.
 
-8. **Not setting `host` in HttpAgent on custom domains.** When serving from a custom domain, the `HttpAgent` cannot automatically infer the IC API host like it can on `icp.net`. You must set `host: "https://icp-api.io"` explicitly for mainnet.
+8. **Pointing `HttpAgent`'s `host` at your custom domain.** You usually do not need to set `host` at all. When `host` is omitted, a recent `HttpAgent` (`@icp-sdk/core`) defaults to the local replica for `localhost`/`127.0.0.1` origins and to `https://icp-api.io` (the mainnet API boundary nodes) for every other origin — including custom domains and `icp.net`. The actual mistake is forcing `host` to your custom domain (or `window.location.origin`): that domain serves only the HTTP gateway, not `/api/v2`, so canister calls fail. Leave `host` unset, or set it explicitly to `https://icp-api.io` — never the gateway domain.
 
 9. **Forgetting alternative origins for Internet Identity.** II principals depend on the origin domain. Switching from a canister URL to a custom domain changes principals. Configure `.well-known/ii-alternative-origins` to keep the same principals. See the `internet-identity` skill.
 
@@ -178,14 +178,19 @@ curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 
 ## HttpAgent Configuration
 
-On custom domains, the agent cannot auto-detect the IC API host. Set it explicitly:
+You usually do not need to set `host`. When `host` is omitted, a recent `HttpAgent` defaults to the local replica for `localhost`/`127.0.0.1` origins and to `https://icp-api.io` (the mainnet API boundary nodes) for every other origin — including custom domains and `icp.net`. Do **not** point `host` at your custom domain: it serves only the HTTP gateway, not `/api/v2`, so calls would fail.
 
 ```typescript
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-const isProduction = process.env.NODE_ENV === "production";
-const host = isProduction ? "https://icp-api.io" : undefined;
-const agent = await HttpAgent.create({ host });
+// host omitted → local replica on localhost origins, https://icp-api.io elsewhere
+const agent = await HttpAgent.create();
+```
+
+In Node.js there is no `window.location` to detect the origin, so an omitted `host` always resolves to `https://icp-api.io`. Set `host` to your local replica URL when talking to a local network; for mainnet you can leave it unset or set it explicitly to the API endpoint (never the gateway):
+
+```typescript
+const agent = await HttpAgent.create({ host: "https://icp-api.io" });
 ```
 
 ## Deploy & Test

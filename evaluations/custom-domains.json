@@ -53,11 +53,11 @@
     },
     {
       "name": "HttpAgent host configuration",
-      "prompt": "My IC frontend works fine on icp.net but API calls fail when I access it through my custom domain. What's wrong? Just the fix.",
+      "prompt": "My IC frontend's canister calls fail when it's served from my custom domain, though they work on icp.net. I set the HttpAgent host to my custom domain. What's wrong? Just the fix.",
       "expected_behaviors": [
-        "Identifies that HttpAgent cannot auto-detect the IC API host on custom domains",
-        "Shows setting host to https://icp-api.io for mainnet",
-        "Shows HttpAgent.create({ host }) or equivalent configuration"
+        "Identifies that the custom domain serves only the HTTP gateway, not the /api/v2 API endpoint, so host must not point at it",
+        "Says to leave host unset (it defaults to https://icp-api.io off-localhost) or set it explicitly to https://icp-api.io",
+        "Does NOT recommend setting host to the custom domain or window.location.origin"
       ]
     },
     {
