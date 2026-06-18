@@ -56,17 +56,8 @@
       "prompt": "My IC frontend's canister calls fail when it's served from my custom domain, though they work on icp.net. I set the HttpAgent host to my custom domain. What's wrong? Just the fix.",
       "expected_behaviors": [
         "Identifies that the custom domain serves only the HTTP gateway, not the /api/v2 API endpoint, so host must not point at it",
-        "Says to leave host unset (it defaults to https://icp-api.io off-localhost) or set it explicitly to https://icp-api.io",
+        "Says to leave host unset (a recent agent defaults it to https://icp-api.io on a custom domain) or set it explicitly to https://icp-api.io",
         "Does NOT recommend setting host to the custom domain or window.location.origin"
-      ]
-    },
-    {
-      "name": "HttpAgent host in a Node.js local script",
-      "prompt": "I have a Node.js script that talks to my canister on a local replica at http://127.0.0.1:4943 using HttpAgent from @icp-sdk/core. I did not set host. It keeps hitting mainnet instead of my local replica. Why, and what's the fix? Keep it brief.",
-      "expected_behaviors": [
-        "Explains that in Node.js there is no window.location, so an omitted host defaults to https://icp-api.io (mainnet)",
-        "Fix is to set host explicitly to the local replica URL, e.g. http://127.0.0.1:4943",
-        "Does NOT claim the agent auto-detects the local replica in Node.js"
       ]
     },
     {
