@@ -12,7 +12,7 @@ metadata:
 
 ## What This Is
 
-By default, canisters are accessible at `<canister-id>.icp0.io`. The custom domains service lets you serve any canister under your own domain (e.g., `yourdomain.com`). You configure DNS, deploy a domain ownership file to your canister, and register via a REST API. The HTTP gateways then handle TLS certificate provisioning, renewal, and routing automatically.
+By default, canisters are accessible at `<canister-id>.icp.net`. The custom domains service lets you serve any canister under your own domain (e.g., `yourdomain.com`). You configure DNS, deploy a domain ownership file to your canister, and register via a REST API. The HTTP gateways then handle TLS certificate provisioning, renewal, and routing automatically.
 
 Custom domains work at the boundary node level — they map a domain to any canister ID via DNS. This works with any canister that can serve `/.well-known/ic-domains` over HTTP, not just asset canisters. That includes asset canisters, Juno satellites, and custom canisters implementing `http_request`.
 
@@ -40,7 +40,7 @@ Custom domains work at the boundary node level — they map a domain to any cani
 
 7. **Not explicitly registering the domain.** DNS configuration alone is not enough. You must call `POST /custom-domains/v1/CUSTOM_DOMAIN` to start registration. It is not automatic.
 
-8. **Not setting `host` in HttpAgent on custom domains.** When serving from a custom domain, the `HttpAgent` cannot automatically infer the IC API host like it can on `icp0.io`. You must set `host: "https://icp-api.io"` explicitly for mainnet.
+8. **Setting `HttpAgent`'s `host` to your custom domain.** `host` is the **API endpoint** canister calls go to, not the domain your frontend is served from. Your custom domain is the HTTP gateway — it does not serve `/api/v2`, so pointing `host` at it (or at `window.location.origin`) makes calls fail. You do not need to set `host`: a recent `@icp-sdk/core` `HttpAgent` resolves an omitted `host` to `https://icp-api.io` (the mainnet API boundary nodes) on a custom domain. Leave it unset, or set it explicitly to `https://icp-api.io` — never the gateway domain.
 
 9. **Forgetting alternative origins for Internet Identity.** II principals depend on the origin domain. Switching from a canister URL to a custom domain changes principals. Configure `.well-known/ii-alternative-origins` to keep the same principals. See the `internet-identity` skill.
 
@@ -78,14 +78,14 @@ www.example.com
 
 ### Step 3: Deploy
 
-Deploy your canister so that `/.well-known/ic-domains` is accessible at `https://<canister-id>.icp0.io/.well-known/ic-domains`.
+Deploy your canister so that `/.well-known/ic-domains` is accessible at `https://<canister-id>.icp.net/.well-known/ic-domains`.
 
 ### Step 4: Validate
 
 Check DNS records and canister configuration before registering:
 
 ```bash
-curl -sL -X GET "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN/validate" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN/validate" | jq
 ```
 
 Success response:
@@ -116,7 +116,7 @@ If validation fails, common errors and fixes:
 ### Step 5: Register
 
 ```bash
-curl -sL -X POST "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X POST "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 Success response:
@@ -137,7 +137,7 @@ Success response:
 Poll until `registration_status` is `registered`:
 
 ```bash
-curl -sL -X GET "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 Status values: `registering` → `registered` (success), or `failed` (check error message).
@@ -152,13 +152,13 @@ To point an existing custom domain at a different canister:
 2. Notify the service:
 
 ```bash
-curl -sL -X PATCH "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X PATCH "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 3. Check status:
 
 ```bash
-curl -sL -X GET "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 ## Removing a Custom Domain
@@ -167,25 +167,29 @@ curl -sL -X GET "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
 2. Notify the service:
 
 ```bash
-curl -sL -X DELETE "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X DELETE "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 3. Confirm deletion (should return 404):
 
 ```bash
-curl -sL -X GET "https://icp0.io/custom-domains/v1/CUSTOM_DOMAIN" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/CUSTOM_DOMAIN" | jq
 ```
 
 ## HttpAgent Configuration
 
-On custom domains, the agent cannot auto-detect the IC API host. Set it explicitly:
+A frontend served from your custom domain still makes its canister calls through the mainnet **API boundary nodes** (`https://icp-api.io`), not through the domain it is served from. `HttpAgent`'s `host` is that API endpoint — *not* your frontend's origin. The custom domain is the HTTP gateway and does not serve `/api/v2`.
+
+You do not need to set `host`. When it is omitted, a recent `@icp-sdk/core` `HttpAgent` resolves to `https://icp-api.io` on a custom domain (and on `icp.net`). Do **not** point `host` at your custom domain or `window.location.origin` — that is the gateway, so calls would fail.
 
 ```typescript
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-const isProduction = process.env.NODE_ENV === "production";
-const host = isProduction ? "https://icp-api.io" : undefined;
-const agent = await HttpAgent.create({ host });
+// host omitted on a custom domain → resolves to https://icp-api.io
+const agent = await HttpAgent.create();
+
+// equivalent, explicit:
+const agentExplicit = await HttpAgent.create({ host: "https://icp-api.io" });
 ```
 
 ## Deploy & Test
@@ -194,13 +198,13 @@ const agent = await HttpAgent.create({ host });
 # 1. Deploy your canister with the ic-domains file served at /.well-known/ic-domains
 
 # 2. Validate DNS + canister config
-curl -sL -X GET "https://icp0.io/custom-domains/v1/yourdomain.com/validate" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/yourdomain.com/validate" | jq
 
 # 3. Register
-curl -sL -X POST "https://icp0.io/custom-domains/v1/yourdomain.com" | jq
+curl -sL -X POST "https://icp.net/custom-domains/v1/yourdomain.com" | jq
 
 # 4. Poll until registered
-curl -sL -X GET "https://icp0.io/custom-domains/v1/yourdomain.com" | jq
+curl -sL -X GET "https://icp.net/custom-domains/v1/yourdomain.com" | jq
 ```
 
 ## Verify It Works
@@ -217,11 +221,11 @@ dig CNAME _acme-challenge.yourdomain.com
 # Expected: _acme-challenge.yourdomain.com. CNAME _acme-challenge.yourdomain.com.icp2.io.
 
 # 2. Verify ic-domains file is served by the canister
-curl -sL "https://<canister-id>.icp0.io/.well-known/ic-domains"
+curl -sL "https://<canister-id>.icp.net/.well-known/ic-domains"
 # Expected: your domain listed
 
 # 3. Verify registration status is "registered"
-curl -sL -X GET "https://icp0.io/custom-domains/v1/yourdomain.com" | jq '.data.registration_status'
+curl -sL -X GET "https://icp.net/custom-domains/v1/yourdomain.com" | jq '.data.registration_status'
 # Expected: "registered"
 
 # 4. Verify the custom domain serves your canister

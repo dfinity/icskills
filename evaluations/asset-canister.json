@@ -4,6 +4,15 @@
 
   "output_evals": [
     {
+      "name": "Mainnet browser-access domain is icp.net",
+      "prompt": "I deployed my asset (frontend) canister to mainnet. What URL do I open in the browser to view it? Just the URL pattern.",
+      "expected_behaviors": [
+        "Gives the URL as https://<canister-id>.icp.net",
+        "Does NOT use the legacy ic0.app or icp0.io gateway domains",
+        "Does NOT use icp-api.io (that is the API endpoint, not the browser gateway)"
+      ]
+    },
+    {
       "name": "Programmatic asset upload",
       "prompt": "Show me a Node.js script to create an HttpAgent and AssetManager, then upload a single file to my asset canister on the local replica. Keep it minimal — no icp.yaml, no deploy steps.",
       "expected_behaviors": [
@@ -49,7 +58,7 @@
       "expected_behaviors": [
         "Sets shouldFetchRootKey to true ONLY for local development",
         "Explicitly warns that shouldFetchRootKey on mainnet is a security vulnerability",
-        "Uses different host values for local (localhost:8000) vs mainnet (ic0.app or icp-api.io)"
+        "Uses different host values for local (localhost:8000) vs mainnet (icp-api.io)"
       ]
     }
   ],

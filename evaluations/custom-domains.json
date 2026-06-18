@@ -17,9 +17,9 @@
       "name": "Domain registration API",
       "prompt": "I've set up my DNS records and deployed my canister with the ic-domains file. What curl commands do I run to register my custom domain app.example.com? Just the commands.",
       "expected_behaviors": [
-        "Uses the validate endpoint: GET https://icp0.io/custom-domains/v1/app.example.com/validate",
-        "Uses the registration endpoint: POST https://icp0.io/custom-domains/v1/app.example.com",
-        "Uses the status check endpoint: GET https://icp0.io/custom-domains/v1/app.example.com",
+        "Uses the validate endpoint: GET https://icp.net/custom-domains/v1/app.example.com/validate",
+        "Uses the registration endpoint: POST https://icp.net/custom-domains/v1/app.example.com",
+        "Uses the status check endpoint: GET https://icp.net/custom-domains/v1/app.example.com",
         "Does NOT invent non-existent API endpoints or parameters"
       ]
     },
@@ -53,11 +53,11 @@
     },
     {
       "name": "HttpAgent host configuration",
-      "prompt": "My IC frontend works fine on icp0.io but API calls fail when I access it through my custom domain. What's wrong? Just the fix.",
+      "prompt": "My IC frontend's canister calls fail when it's served from my custom domain, though they work on icp.net. I set the HttpAgent host to my custom domain. What's wrong? Just the fix.",
       "expected_behaviors": [
-        "Identifies that HttpAgent cannot auto-detect the IC API host on custom domains",
-        "Shows setting host to https://icp-api.io for mainnet",
-        "Shows HttpAgent.create({ host }) or equivalent configuration"
+        "Identifies that the custom domain serves only the HTTP gateway, not the /api/v2 API endpoint, so host must not point at it",
+        "Says to leave host unset (a recent agent defaults it to https://icp-api.io on a custom domain) or set it explicitly to https://icp-api.io",
+        "Does NOT recommend setting host to the custom domain or window.location.origin"
       ]
     },
     {
@@ -65,7 +65,7 @@
       "prompt": "I want to point my existing custom domain to a different canister. What do I need to do? Just the steps.",
       "expected_behaviors": [
         "Updates the _canister-id TXT record to the new canister ID",
-        "Uses PATCH https://icp0.io/custom-domains/v1/DOMAIN to notify the service",
+        "Uses PATCH https://icp.net/custom-domains/v1/DOMAIN to notify the service",
         "Does NOT say to delete and re-register the domain"
       ]
     },
@@ -74,7 +74,7 @@
       "prompt": "How do I remove a custom domain registration from the IC? Just the steps.",
       "expected_behaviors": [
         "Removes the _canister-id TXT and _acme-challenge CNAME DNS records",
-        "Uses DELETE https://icp0.io/custom-domains/v1/DOMAIN to notify the service",
+        "Uses DELETE https://icp.net/custom-domains/v1/DOMAIN to notify the service",
         "Does NOT suggest only removing DNS records without calling the API"
       ]
     }

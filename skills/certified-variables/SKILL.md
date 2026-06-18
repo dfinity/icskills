@@ -476,7 +476,7 @@ icp canister call backend get '("nonexistent")'
 # Console should NOT show "Certificate verification failed" errors
 
 # 6. For HTTP certification (custom HTTP canister):
-curl -v https://CANISTER_ID.ic0.app/path
+curl -v https://CANISTER_ID.icp.net/path
 # Expected: Response headers include IC-Certificate
 # HTTP gateway verifies the certificate before forwarding to client
 ```

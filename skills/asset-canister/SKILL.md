@@ -26,7 +26,7 @@ Access patterns:
 | Environment | URL Pattern |
 |-------------|-------------|
 | Local | `http://<canister-id>.localhost:8000` |
-| Mainnet | `https://<canister-id>.ic0.app` or `https://<canister-id>.icp0.io` |
+| Mainnet | `https://<canister-id>.icp.net` |
 | Custom domain | `https://yourdomain.com` (with DNS configuration) |
 
 ## Mistakes That Break Your Build
@@ -45,7 +45,7 @@ Access patterns:
 
 7. **Pinning the asset canister Wasm version below `0.30.2`.** The `ic_env` cookie (used by `safeGetCanisterEnv()` from `@icp-sdk/core` to read canister IDs and the root key at runtime) is only served by asset canister Wasm versions >= `0.30.2`. The Wasm version is set via `configuration.version` in the recipe, independently of the recipe version itself. If you pin an older Wasm version, the cookie is silently missing and frontend code relying on `ic_env` will fail. Either omit `configuration.version` (latest is used) or pin to `0.30.2` or later.
 
-8. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `ic0.app` / `icp0.io`, where HTTP gateways verify response integrity) and raw (via `raw.ic0.app` / `raw.icp0.io`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
+8. **Not configuring `allow_raw_access` correctly.** The asset canister has two serving modes: certified (via `icp.net`, where HTTP gateways verify response integrity) and raw (via `raw.icp.net`, where no verification occurs). By default, `allow_raw_access` is `true`, meaning assets are also available on the raw domain. On the raw domain, boundary nodes or a network-level attacker can tamper with response content undetected. Set `"allow_raw_access": false` in `.ic-assets.json5` for any sensitive assets. Only enable raw access when strictly needed.
 
 9. **Downgrading the asset canister WASM version.** Upgrading a canister to an older WASM version can fail with "Cannot parse header" panics if the stable memory format changed between versions. Prefer the `@dfinity/asset-canister` recipe over `type: pre-built` with a manually specified WASM URL — the recipe loads the latest asset canister version automatically if not explicitly specified in `configuration.version`. If you must pin a version, ensure it matches or exceeds the version currently deployed on-chain. If a downgrade is intentional, use reinstall mode (`icp deploy --mode reinstall`) instead of upgrade — this wipes stable memory and all uploaded assets.
 
@@ -155,7 +155,7 @@ import { readFileSync, readdirSync } from "fs";
 // For browser frontends, use rootKey from safeGetCanisterEnv() instead (see
 // the internet-identity skill or icp-cli/references/binding-generation.md).
 const LOCAL_REPLICA = "http://localhost:8000";
-const MAINNET = "https://ic0.app";
+const MAINNET = "https://icp-api.io";
 const host = LOCAL_REPLICA; // Change to MAINNET for production
 
 async function manageAssets() {
@@ -291,7 +291,7 @@ icp canister call frontend http_request '(record {
 
 # 5. Open in browser
 # Local:   http://<frontend-canister-id>.localhost:8000
-# Mainnet: https://<frontend-canister-id>.ic0.app
+# Mainnet: https://<frontend-canister-id>.icp.net
 
 # 6. Get canister ID
 icp canister id frontend
