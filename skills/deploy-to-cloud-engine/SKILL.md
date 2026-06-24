@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), running `icp deploy` against that subnet, and tagging the canisters with `__META_*` environment variables so the engine console shows a named app with labelled backend/frontend canisters. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, linking the icp CLI to an engine console, or giving a deployed app a name in the console. Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing canister code."
+description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), running `icp deploy` against that subnet, and tagging the canisters with `__META_*` environment variables so the engine console shows a named app with labelled backend/frontend canisters and an app icon. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, linking the icp CLI to an engine console, or giving a deployed app a name or icon in the console. Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing canister code."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
@@ -77,13 +77,17 @@ icp identity default     # prints the active identity name
 icp identity principal   # prints the principal the deploy will sign as
 ```
 
-## Step 2 — Name the app in the console (recommended)
+## Step 2 — Name the app (and give it an icon) in the console (recommended)
 
-By default, CLI-deployed canisters appear on the engine console's Applications page as bare rows labelled only by their principal id. Three **canister environment variables** make the console group them into a single named application with readable per-canister labels and an "Open" button. Set them once in your project config:
+By default, CLI-deployed canisters appear on the engine console's Applications page as bare rows labelled only by their principal id. A set of **canister environment variables** makes the console group them into a single named application with readable per-canister labels, an "Open" button, and an icon. Set them once in your project config:
 
 - `__META_PROJECT` — the application name. Canisters that share the **same** value are grouped into one named app, so set an identical value on every canister of the app.
 - `__META_NAME` — the per-canister display label (e.g. `Backend`, `Frontend`).
-- `__META_MAIN_CANISTER` — the literal string `"true"` on the single entry-point canister (usually the frontend/asset canister). That canister gets the "Open" button and the app's public URL.
+- `__META_MAIN_CANISTER` — the literal string `"true"` on exactly one canister (the entry point, usually the frontend/asset canister). This marks the app's **main canister**: the console reads `__META_BASE_URL` and `__META_ICON_PATH` only from it, and the "Open" button targets it.
+- `__META_BASE_URL` — an **absolute `https://` URL**, set on the main canister (e.g. the frontend canister's URL `https://<frontend-canister-id>.icp.net`, or a custom domain). When present and valid, it is the URL the "Open" button opens; when absent or not `https`, the "Open" button falls back to the main canister's gateway URL. It is also the base that `__META_ICON_PATH` resolves against.
+- `__META_ICON_PATH` — the path to the app icon, resolved against `__META_BASE_URL` to form the icon the console renders (e.g. `/favicon.svg` → `https://<base>/favicon.svg`). Set it on the **main** canister, alongside `__META_BASE_URL`.
+
+The icon and "Open" link are read **only from the main canister** (the one marked `__META_MAIN_CANISTER: "true"`) — `__META_BASE_URL` / `__META_ICON_PATH` on any other canister are ignored.
 
 Set them under each canister's `settings.environment_variables` — this is valid alongside a recipe. With per-canister `canister.yaml` files:
 
@@ -102,6 +106,8 @@ settings:
     __META_PROJECT: "My App"
     __META_NAME: "Frontend"
     __META_MAIN_CANISTER: "true"
+    __META_BASE_URL: "https://<frontend-canister-id>.icp.net"
+    __META_ICON_PATH: "/favicon.svg"
 ```
 
 ```yaml
@@ -129,6 +135,8 @@ canisters:
         __META_PROJECT: "My App"
         __META_NAME: "Frontend"
         __META_MAIN_CANISTER: "true"
+        __META_BASE_URL: "https://<frontend-canister-id>.icp.net"
+        __META_ICON_PATH: "/favicon.svg"
   - name: backend
     recipe: # … as in the canister.yaml example above
     settings:
@@ -141,6 +149,12 @@ Notes:
 - icp-cli **merges** these with the `PUBLIC_CANISTER_ID:<name>` variables it injects automatically at deploy time — the asset canister keeps serving and the app keeps working. (Verified against icp-cli 0.3.0.)
 - All values are strings; `__META_MAIN_CANISTER` must be the exact string `"true"`.
 - They are applied during `icp deploy` (the "Setting environment variables" step). After deploy, confirm with `icp canister settings show <name> -e ic`.
+
+Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_PATH`):
+- **Both** must be present and **on the main canister** for an icon to appear — there is no fallback. `__META_ICON_PATH` alone does nothing.
+- `__META_BASE_URL` must parse as an absolute **`https://`** URL. A bare host, an `http://` URL, or a `data:` / `javascript:` value is rejected: the icon then does not render, and the "Open" button falls back to the main canister's gateway URL (it does not disappear). (The console validates the scheme before using it.)
+- `__META_ICON_PATH` is a **path to an asset your frontend actually serves** (e.g. `/favicon.svg`), not an inline image. The resolved URL is rendered as an `<img>` `src`, so it must return an image. Do **not** put a `data:` URI here: engine env values are length-capped (≤128 chars observed), so it would not fit, and the field is a path by design.
+- The frontend canister's id is only known **after** the first deploy. The usual flow is: deploy once, read the frontend canister id from the output, set `__META_BASE_URL` to `https://<that-id>.icp.net` (and `__META_ICON_PATH`), then re-deploy to apply. If you control a custom domain for the app, you can set it up front instead.
 
 ## Step 3 — Deploy to the engine's subnet
 
@@ -159,7 +173,7 @@ icp deploy -e ic --subnet <subnet-id>
 
 - The `icp deploy` output reports the deployed canister ids.
 - The canisters appear on the engine's **Applications** page in the console; each canister's detail view offers an "Open in browser" link.
-- If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows.
+- If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows. With `__META_BASE_URL` + `__META_ICON_PATH` set, the app also shows its icon (allow for a short console cache delay).
 - A frontend (asset) canister is served at `https://<frontend-canister-id>.icp.net`.
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
@@ -173,6 +187,8 @@ Report the deployed canister ids (and the frontend URL, if any) back to the user
 5. **Using `dfx`.** This ecosystem uses `icp`, never `dfx`. The correct sequence is `icp identity link web <name> --auth <console-origin>` (Step 1), then `icp deploy -e ic --subnet <subnet-id>` (Step 3). See the `icp-cli` skill.
 6. **Skipping the app metadata.** Without `__META_PROJECT` (Step 2), the canisters still deploy and work but render as bare, unnamed principal rows in the console. Setting `__META_*` is what produces a named app with labelled canisters and an "Open" button.
 7. **Wrong `__META_MAIN_CANISTER` value.** It is matched as the exact string `"true"`. A boolean, `"True"`, or marking more than one canister means no (or the wrong) "Open" button. Mark exactly one entry-point canister.
+8. **Inventing an icon variable.** The icon variable is `__META_ICON_PATH` (a path resolved against `__META_BASE_URL`). Do not guess `__META_ICON`, `__META_LOGO`, or `__META_ICON_LINK` — they are ignored, so the icon silently never appears.
+9. **Icon set on the wrong canister, or without a base URL.** The icon is read only from the **main** canister and needs **both** `__META_BASE_URL` (a valid absolute `https://` URL) and `__META_ICON_PATH`. Setting the icon path on a side canister, omitting the base URL, or giving a non-https / `data:` base means no icon renders. (The "Open" button still works — it falls back to the main canister's gateway URL — so a bad base URL costs the icon and the custom Open URL, not the button.)
 
 ## Related Skills
 
