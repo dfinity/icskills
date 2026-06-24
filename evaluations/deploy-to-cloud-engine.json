@@ -1,6 +1,6 @@
 {
   "skill": "deploy-to-cloud-engine",
-  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters, and avoid the documented pitfalls.",
+  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters and an app icon (`__META_BASE_URL` + `__META_ICON_PATH` on the main canister), and avoid the documented pitfalls.",
 
   "output_evals": [
     {
@@ -105,6 +105,27 @@
         "Tells the user to set it and re-deploy by explicitly naming the `icp deploy` command (not just saying 'redeploy')",
         "Does NOT attribute the missing button to the subnet, the identity, or the --auth origin"
       ]
+    },
+    {
+      "name": "Give the app an icon in the console",
+      "prompt": "My app is already deployed to my cloud engine and shows up named in the console. How do I give it an icon? My frontend already serves favicon.svg.",
+      "expected_behaviors": [
+        "Uses `__META_ICON_PATH` for the icon path (e.g. `/favicon.svg`), resolved against `__META_BASE_URL`",
+        "Sets `__META_BASE_URL` to an absolute https URL (the frontend canister URL like https://<id>.icp.net or a custom domain)",
+        "Sets both on the main canister (the one marked `__META_MAIN_CANISTER: \"true\"`)",
+        "Re-runs `icp deploy` to apply the settings",
+        "Does NOT invent `__META_ICON`, `__META_LOGO`, or `__META_ICON_LINK`, and does NOT put an inline data: URI in the icon variable"
+      ]
+    },
+    {
+      "name": "Adversarial: icon not showing (data URI / wrong canister)",
+      "prompt": "I set `__META_ICON_PATH` to a base64 data: URI of my logo on my backend canister and redeployed, but the console still shows no icon. Why?",
+      "expected_behaviors": [
+        "Identifies that the icon must be set on the MAIN canister (marked `__META_MAIN_CANISTER: \"true\"`), not the backend",
+        "Identifies that `__META_ICON_PATH` is a path resolved against `__META_BASE_URL`, not an inline image — a data: URI does not belong there (and would exceed the engine env value length cap)",
+        "Tells the user to set `__META_BASE_URL` to an absolute https URL and `__META_ICON_PATH` to a served path (e.g. /favicon.svg), both on the main canister, then re-deploy",
+        "Does NOT attribute the missing icon to the subnet, the identity, or the --auth origin"
+      ]
     }
   ],
 
@@ -119,7 +140,8 @@
       "Ship this project to my cloud engine",
       "My agent should deploy straight to my engine",
       "Make my deployed app show up with a name in the cloud engine console",
-      "Label my backend and frontend canisters in the engine console instead of bare principal ids"
+      "Label my backend and frontend canisters in the engine console instead of bare principal ids",
+      "Give my deployed app an icon in the OpenCloud engine console"
     ],
     "should_not_trigger": [
       "Package my app as a .icp archive so others can install it on their engines from the marketplace",
