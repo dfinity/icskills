@@ -11,7 +11,7 @@
   <g fill="#f0ebe0" font-family="Newsreader, Charter, Georgia, serif">
     <text x="80" y="300" font-size="96" font-weight="400" letter-spacing="-1.5">ICP Skills</text>
     <text x="80" y="378" font-size="34" font-style="italic">
-      <tspan fill="#f0ebe0">A library for </tspan><tspan fill="#c25a37">agents</tspan><tspan fill="#f0ebe0">, and the humans who direct them.</tspan>
+      <tspan fill="#f0ebe0">A library for</tspan><tspan fill="#c25a37" dx="9">agents</tspan><tspan fill="#f0ebe0">, and the humans who direct them.</tspan>
     </text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
