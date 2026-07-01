@@ -105,7 +105,7 @@
     },
     {
       "name": "Regenerating candid interface",
-      "prompt": "I changed the public interface of my `backend` Motoko canister and want to regenerate its `.did` file. What's the mops command? Just the command, no deploy steps.",
+      "prompt": "I changed the public interface of my `backend` Motoko canister and want to regenerate its `.did` file. What's the mops command and what does it do? No deploy steps.",
       "expected_behaviors": [
         "Uses `mops generate candid backend` (or `mops generate candid` for all canisters)",
         "Explains it (re)generates the `.did` from the current Motoko source",
