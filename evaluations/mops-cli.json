@@ -84,6 +84,45 @@
       ]
     },
     {
+      "name": "check-stable baseline bootstrap",
+      "prompt": "I'm starting a brand-new mops project and want to enable `check-stable`. There's no deployed version yet, so what do I use as the `.most` baseline for `[check-stable].path`? Just the setup, no deploy steps.",
+      "expected_behaviors": [
+        "Uses `mops deployed init <canister>` to bootstrap the empty-actor baseline",
+        "Explains `mops deployed init` also sets `[check-stable].path` in mops.toml",
+        "Does NOT tell the user to hand-write a trivial `.most` file (e.g. `// Version: 1.0.0\\nactor { };`)",
+        "May note the default destination is `deployed/<name>.most`"
+      ]
+    },
+    {
+      "name": "Post-deploy .most promotion",
+      "prompt": "After I deploy my `backend` canister, how do I keep the `check-stable` baseline in sync with what's actually deployed? Just the command and where it should run.",
+      "expected_behaviors": [
+        "Uses `mops deployed backend` (or `mops deployed` for all canisters) after a successful deploy",
+        "Explains it promotes the built `.most` (from `[build].outputDir`, default `.mops/.build`) to `deployed/<name>.most`",
+        "Notes it should run in the deploy pipeline immediately after deploy",
+        "Does NOT claim `mops deployed` regenerates or rebuilds the `.most` (it errors if the source is missing)"
+      ]
+    },
+    {
+      "name": "Regenerating candid interface",
+      "prompt": "I changed the public interface of my `backend` Motoko canister and want to regenerate its `.did` file. What's the mops command and what does it do? No deploy steps.",
+      "expected_behaviors": [
+        "Uses `mops generate candid backend` (or `mops generate candid` for all canisters)",
+        "Explains it (re)generates the `.did` from the current Motoko source",
+        "May note the result is committed alongside `mops.toml`",
+        "Does NOT suggest hand-editing the `.did` file or using `dfx generate`"
+      ]
+    },
+    {
+      "name": "Autofix trimmed migrations with --no-check-limit",
+      "prompt": "My canister has `check-limit` set on its migration chain, but I need to run `mops check --fix` across the older, normally-trimmed migrations too. How?",
+      "expected_behaviors": [
+        "Adds `--no-check-limit` to the command (e.g. `mops check --fix --no-check-limit`)",
+        "Explains `--no-check-limit` overrides `check-limit` for a single run",
+        "Does NOT suggest permanently removing or raising `check-limit` in mops.toml as the only option"
+      ]
+    },
+    {
       "name": "Adversarial: file path to mops check",
       "prompt": "I want to type-check my canister. My main file is at src/backend/main.mo. I'll run: mops check src/backend/main.mo. Is that right?",
       "expected_behaviors": [
@@ -117,7 +156,9 @@
       "Configure moc flags for my Motoko canister",
       "My mops.lock file is stale, what do I do?",
       "How do I add a dev dependency with mops?",
-      "How do I configure the moc toolchain version in mops?"
+      "How do I configure the moc toolchain version in mops?",
+      "How do I regenerate the candid .did file for my Motoko canister with mops?",
+      "How do I keep my check-stable .most baseline in sync after deploying?"
     ],
     "should_not_trigger": [
       "Write a Motoko persistent actor with a counter",
