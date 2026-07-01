@@ -98,18 +98,19 @@ ls evaluations/<skill-name>.json 2>/dev/null || echo "No evals yet — create th
 
 **Keep the suite lean.** Don't add cases for things that are obvious or already well-covered. Each case is a future regression test that costs tokens to run.
 
-## Step 7 — Run existing evals (only when relevant)
+## Step 7 — Run evals
 
-Running the existing suite is a regression check — it answers "did I break something that was already tested?" It is separate from adding new cases (Step 6). You can add a new eval case for a new pitfall without running the existing suite at all.
+Two separate things happen here — don't conflate them:
 
-**Run evals when you modified existing tested content:**
-- You changed or removed content that an eval explicitly tests (canister ID, command name, error message)
-- You rewrote a section that several evals cover
+**A. Always run every case you added or changed (with baseline).** A new or edited eval case is code you just wrote. Running it confirms it actually passes with the skill and shows a real with-skill vs baseline delta. An unrun case can be mis-scoped — e.g. a prompt that says "just the command" paired with an expected behavior that requires an explanation will fail the with-skill run — and you'd be committing a silently broken regression test. Include these results in the PR. This is not optional, even when the change is "purely additive": additive means new cases, and new cases must be run.
+
+**B. Re-run untouched existing cases only when relevant.** Re-running the rest of the existing suite is a regression check — "did I break something that was already tested?" Do this when:
+- You changed or removed content that an existing eval explicitly tests (canister ID, command name, error message)
+- You rewrote a section that several existing evals cover
 - The description changed significantly — run trigger evals only
 - You're unsure whether a change is safe
 
-**Skip running evals when your changes were purely additive:**
-- New pitfall, new section, new example — nothing you touched is already tested
+Skip re-running an existing case only when nothing you touched is content that case covers.
 
 Check what evals exist before deciding:
 
@@ -126,7 +127,10 @@ node scripts/evaluate-skills.js <skill-name> --eval <N>
 # Trigger evals only — for description changes
 node scripts/evaluate-skills.js <skill-name> --triggers-only
 
-# Skip baseline to halve token cost when correctness is what matters, not the delta
+# Run a case you added/changed WITH baseline (default) — this is what goes in the PR
+node scripts/evaluate-skills.js <skill-name> --eval <N>
+
+# Skip baseline (--no-baseline) only for a quick correctness spot-check, not for PR results
 node scripts/evaluate-skills.js <skill-name> --eval <N> --no-baseline
 
 # Full suite — only when you made broad changes across the whole skill
