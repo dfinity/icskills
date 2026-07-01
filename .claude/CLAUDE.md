@@ -80,7 +80,7 @@ New pitfalls and non-obvious behaviors are strong candidates for new eval cases 
 
 **PR eval requirements:**
 - **New skill:** run the full suite (`node scripts/evaluate-skills.js <skill-name>`) and include both output eval and trigger eval results in the PR description. PRs without eval results are not accepted.
-- **Skill improvement:** running and including eval results is recommended but not required. If included, provide only the cases you changed or added.
+- **Skill improvement:** always (re)run every eval case you added or changed — with baseline — and include those results in the PR. A new eval case is code you just wrote; running it confirms it actually passes with the skill and shows a real with-skill vs baseline delta (an unrun case can be mis-scoped and silently broken). Include only the cases you added or changed. Re-running the rest of the existing suite is a separate regression check — do that only when you modified content an untouched case covers.
 - Always wrap eval output in a collapsed `<details>` block in the PR description.
 
 ## LLM Quality Scoring
@@ -175,7 +175,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 - [ ] **Icskills-only content audited** — Any content we have that is absent from the upstream diff must be either listed as owned in `.claude/upstream.md` or removed. Content not tracked there is a gap — file an upstream issue or add it to the owned list.
 - [ ] **Cross-references use icskills skill names** — "Load `motoko`" not upstream's skill name; "Load `migrating-motoko-enhanced`" not upstream's name
 - [ ] **Experimental/removed features excluded** — If upstream removed a command or feature (e.g., `mops migrate new/freeze`), remove it from the skill
-- [ ] **Evals reviewed** — Open `evaluations/<skill-name>.json` and apply the same logic as any improvement: (1) add new eval cases for new pitfalls, new commands, changed defaults, or renamed APIs in the diff — these are exactly where agents will hallucinate without updated guidance; (2) run existing evals with `node scripts/evaluate-skills.js <skill-name> --eval <N>` only if the diff modified content an existing eval covers; (3) skip running evals if the changes were purely additive. Running and including eval results is recommended but not required — if included, collapse in a `<details>` block.
+- [ ] **Evals reviewed** — Open `evaluations/<skill-name>.json` and apply the same logic as any improvement: (1) add new eval cases for new pitfalls, new commands, changed defaults, or renamed APIs in the diff — these are exactly where agents will hallucinate without updated guidance; (2) always run every case you added or changed with baseline (`node scripts/evaluate-skills.js <skill-name> --eval <N>`) and include those results in the PR — this verifies each new case passes with the skill and shows a real delta; (3) re-run untouched existing cases only if the diff modified content they cover. Collapse eval output in a `<details>` block.
 
 ### What icskills changes vs upstream
 
