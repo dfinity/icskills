@@ -44,6 +44,8 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 6. **Using ExperimentalCycles in mo:core** -- In mo:core 2.0, the module is renamed to `Cycles`. `import ExperimentalCycles "mo:base/ExperimentalCycles"` will fail. Use `import Cycles "mo:core/Cycles"`.
 
+7. **Using `icp cycles transfer` to fund a canister** -- `icp cycles transfer <amount> <principal>` moves cycles between cycles-ledger balances, the same as a token transfer between accounts. Passing a canister's principal as the recipient credits that principal's cycles-ledger balance, not the canister's actual execution/compute cycle balance -- `icp canister status` will not show the cycles as received, and the canister keeps burning down its real balance toward freezing with no indication anything went wrong. Use `icp canister top-up <canister> --amount <N> -e ic` instead, which deposits cycles directly onto the canister via the management canister. See "Top Up a Canister" below for both commands side by side.
+
 ## Implementation
 
 ### Motoko
@@ -262,6 +264,16 @@ icp canister top-up backend --amount 1000000000000 -e ic
 icp cycles mint --icp 1.0 -e ic
 icp canister top-up backend --amount 1000000000000 -e ic
 ```
+
+```bash
+# CORRECT -- funds the canister's execution balance:
+icp canister top-up backend --amount 600b -e ic
+
+# WRONG -- sends to the recipient's cycles-ledger balance, canister cannot use it:
+icp cycles transfer 600000000000 <canister-principal> -n ic
+```
+
+`--amount` on `icp canister top-up` accepts `k`/`m`/`b`/`t` suffixes (thousand/million/billion/trillion).
 
 ### Create a Canister via icp
 
