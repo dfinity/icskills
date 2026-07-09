@@ -1,5 +1,7 @@
 // Serves /.well-known/skills/<name>/SKILL.zip at build time
-// Only generated for multi-file skills (SKILL.md + references)
+// Generated for every skill so the download link always resolves. Single-file
+// skills produce a zip containing just SKILL.md; multi-file skills bundle
+// SKILL.md plus their references/ tree.
 import type { APIRoute } from 'astro';
 import archiver from 'archiver';
 import { readdirSync, readFileSync, statSync } from 'fs';
@@ -58,7 +60,7 @@ async function buildZip(skillDir: string): Promise<Buffer> {
 
 let _cache: SkillZipData[] | null = null;
 
-async function loadMultiFileSkillZips(): Promise<SkillZipData[]> {
+async function loadSkillZips(): Promise<SkillZipData[]> {
   if (_cache) return _cache;
 
   const dirs = readdirSync(SKILLS_DIR)
@@ -76,9 +78,6 @@ async function loadMultiFileSkillZips(): Promise<SkillZipData[]> {
 
   for (const dir of dirs) {
     const skillDir = join(SKILLS_DIR, dir);
-    const files = collectFilePaths(skillDir, skillDir);
-    if (files.length <= 1) continue; // skip single-file skills
-
     const content = readFileSync(join(skillDir, 'SKILL.md'), 'utf-8');
     const name = parseName(content);
     if (!name) continue;
@@ -92,7 +91,7 @@ async function loadMultiFileSkillZips(): Promise<SkillZipData[]> {
 }
 
 export async function getStaticPaths() {
-  const skills = await loadMultiFileSkillZips();
+  const skills = await loadSkillZips();
   return skills.map((s) => ({
     params: { name: s.name },
     props: { zipBuffer: s.zipBuffer },
