@@ -1,11 +1,11 @@
 // Raw markdown endpoint: /skills/{slug}/SKILL.md returns the unmodified SKILL.md
-// bytes (frontmatter + body). Served with text/markdown so LLM crawlers can
-// parse it natively. An attribution header line is prepended as a markdown
-// comment so the origin stays visible even if the file is copy-pasted.
+// bytes (frontmatter + body), byte-identical to the repo file. Served with
+// text/markdown so LLM crawlers can parse it natively. Provenance is carried in
+// the X-Content-Source and X-License response headers, not in the body.
 
 import type { APIRoute } from 'astro';
 import { getAllSkills, getSkillGitInfo, getSkillRawMarkdown, githubCommitUrl } from '../../../lib/skills';
-import { SITE, absUrl } from '../../../lib/site';
+import { SITE } from '../../../lib/site';
 
 export async function getStaticPaths() {
   const skills = await getAllSkills();
@@ -19,13 +19,10 @@ export const GET: APIRoute = async ({ props }) => {
   if (!skill) return new Response('Not found', { status: 404 });
 
   const body = await getSkillRawMarkdown(skill);
-  const { sha, updatedAt } = await getSkillGitInfo(skill);
+  const { sha } = await getSkillGitInfo(skill);
   const sourceUrl = githubCommitUrl(slug, sha);
-  const attribution =
-    `<!-- source: ${absUrl(`/skills/${slug}/`)} | origin: ${sourceUrl} | ` +
-    `publisher: ${SITE.author.name} | license: ${SITE.license.spdx} | updated: ${updatedAt} -->\n`;
 
-  return new Response(attribution + body, {
+  return new Response(body, {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'X-Content-Source': sourceUrl,
