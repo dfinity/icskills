@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine, administered from a web console). Covers verifying the icp CLI, linking the user's console identity to the CLI with `icp identity link web`, defaulting the console origin to https://opencloud.org (overridable when the user signs in to a different console), obtaining the engine's subnet id (asking the user when it is unknown), running `icp deploy` against that subnet, tagging the canisters with `__META_*` environment variables so the engine console shows a named app with labelled backend/frontend canisters and an app icon, and (for engine apps that must make cross-subnet cycle-bearing calls such as the exchange-rate canister, threshold ECDSA/Schnorr, or vetKD) deploying a funded proxy canister from the console and calling targets through it. Use when a developer wants to ship an app to their cloud engine, mentions a cloud engine, OpenCloud, an engine subnet id, linking the icp CLI to an engine console, giving a deployed app a name or icon in the console, or needs an engine canister to reach the exchange-rate canister / threshold ECDSA/Schnorr / vetKD or make another cross-subnet cycle-bearing call (proxy canister). Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing general canister application logic."
+description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine): verify the icp CLI, link the console identity with `icp identity link web` (console origin defaults to https://opencloud.org), obtain the engine's subnet id, run `icp deploy` against that subnet, and tag canisters with `__META_*` environment variables for a named app with labelled canisters and an icon. Also covers deploying and calling a funded proxy canister when an engine app must make cross-subnet cycle-bearing calls (the exchange-rate canister, threshold ECDSA/Schnorr, vetKD). Use when shipping an app to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when naming or adding an icon to a console app; or when an engine canister needs a cross-subnet cycle-bearing call (proxy canister). Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing general canister logic."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
@@ -187,12 +187,12 @@ A cloud engine runs on a **`CloudEngine` subnet**, which the IC protocol restric
 - **vetKD** (`vetkd_derive_key`, `vetkd_public_key`),
 - any other canister you must call **with cycles** across a subnet boundary.
 
-The workaround is a **proxy canister**: a small canister deployed on a normal Application subnet and funded with cycles. Your engine canister makes a cheap, cycle-less, bounded-wait call to the proxy; the proxy re-issues the call locally **with the cycles attached** and relays the raw reply back. Same-subnet calls and ordinary cycle-less calls do **not** need it — reach for the proxy only for the cross-subnet, cycle-bearing case above.
+The workaround is a **proxy canister**: deployed on a normal Application subnet and funded with cycles. Your engine canister makes a cheap, cycle-less, bounded-wait call to the proxy, which re-issues it locally **with the cycles attached** and relays the raw reply back. Same-subnet or cycle-less calls do **not** need it.
 
 ### Deploy and fund the proxy (from the console, not the CLI)
 
 1. Open the engine console → **Applications** (App Center) → **Proxy canisters**.
-2. **Deploy a proxy**, choose an initial balance (minimum $5), and optionally enable **automatic top-up** so it recharges from the saved card when the balance runs low. You can change the top-up setting, top up manually, or delete the proxy later from the same table.
+2. **Deploy a proxy**, choose an initial balance (minimum $5), and optionally enable **automatic top-up** to recharge from the saved card when it runs low. You can top up manually or delete the proxy later from the same table.
 3. Copy the **proxy canister id** shown in the table — the app calls this id.
 
 The proxy authorizes callers whose principal falls in **the engine's canister-id range**, so every canister deployed to the engine may use it with no extra configuration.
@@ -223,17 +223,7 @@ service : {
 Motoko sketch (Rust is analogous with `candid::encode_one` / `decode_one`):
 
 ```motoko
-let proxy = actor ("<proxy-canister-id>") : actor {
-  proxy : ({ canister_id : Principal; method : Text; args : Blob; cycles : Nat }) -> async {
-    #Ok : { result : Blob };
-    #Err : {
-      #InsufficientCycles : { available : Nat; required : Nat };
-      #CallFailed : { reason : Text };
-      #UnauthorizedUser;
-    };
-  };
-};
-
+// `proxy` is an actor typed to the candid interface above.
 let arg = to_candid (request);                    // encode the TARGET method's argument
 let res = await proxy.proxy({
   canister_id = xrcPrincipal;
@@ -242,7 +232,7 @@ let res = await proxy.proxy({
   cycles = 1_000_000_000;                         // the XRC fee the proxy forwards
 });
 switch (res) {
-  case (#Ok { result }) { let ?reply = from_candid (result) else { /* decode error */ }; /* … */ };
+  case (#Ok { result }) { let ?reply = from_candid (result) else return; /* … */ };
   case (#Err e) { /* InsufficientCycles | CallFailed | UnauthorizedUser */ };
 };
 ```
