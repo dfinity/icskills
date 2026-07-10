@@ -2,7 +2,7 @@
 name: mops-cli
 description: "Manage Motoko projects with the mops CLI — toolchain pinning, dependency management, type-checking, building, and linting. Use when working with mops.toml, mops.lock, running mops commands, adding/removing packages, pinning moc or lintoko versions, checking or building canisters, configuring moc flags, or setting up a new Motoko project."
 license: Apache-2.0
-compatibility: "mops >= 2.15.2"
+compatibility: "mops >= 2.16.1"
 metadata:
   title: Mops CLI
   category: Infrastructure
@@ -158,6 +158,8 @@ mops toolchain bin moc               # print path to binary
 When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.
 
 Create migration files directly in the `chain` directory.
+
+After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
