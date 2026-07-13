@@ -59,10 +59,10 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
    # Correct — pinned version
    recipe:
-     type: "@dfinity/rust@v3.2.0"
+     type: "@dfinity/rust@v3.3.0"
    ```
 
-4. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use `recipe: { type: "@dfinity/rust@v3.2.0", configuration: { package: backend } }` instead of writing shell commands in `build.steps`.
+4. **Writing manual build steps when a recipe exists.** Official recipes handle Rust, Motoko, and asset canister builds. Use `recipe: { type: "@dfinity/rust@v3.3.0" }` instead of writing shell commands in `build.steps` — the Rust recipe defaults the Cargo `package` to the canister name, so no configuration is needed when they match (see Pitfall 21).
 
 5. **Not committing `.icp/data/` to version control.** Mainnet canister IDs are stored in `.icp/data/mappings/<environment>.ids.json`. Losing this file means losing the mapping between canister names and on-chain IDs. Always commit `.icp/data/` — never delete it. Add `.icp/cache/` to `.gitignore` (it is ephemeral and rebuilt automatically). If you have environments using a connected network that gets reset frequently you can add those specific environment mapping files to .gitignore. **Never** add the entire `.icp` or `.icp/data` directory to gitignore.
 
@@ -123,17 +123,14 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
       - name: backend
         candid: backend/backend.did
         recipe:
-          type: "@dfinity/rust@v3.2.0"
-          configuration:
-            package: backend
+          type: "@dfinity/rust@v3.3.0"
 
     # Correct — candid goes inside recipe.configuration
     canisters:
       - name: backend
         recipe:
-          type: "@dfinity/rust@v3.2.0"
+          type: "@dfinity/rust@v3.3.0"
           configuration:
-            package: backend
             candid: backend/backend.did
     ```
 
@@ -159,12 +156,11 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     **Motoko (v5 recipe)** — `mops build` auto-generates the `.did` to `.mops/.build/<name>.did`.
 
     - **No binding generation needed** — nothing to do. The generated `.did` in `.mops/.build/` is sufficient; do not commit it.
-    - **Binding generation needed** — commit a `.did` at a stable path and keep it in sync:
+    - **Binding generation needed** — generate a curated `.did` at a stable path with `mops generate candid`:
       ```bash
-      mops build backend
-      cp .mops/.build/backend.did backend/backend.did
+      mops generate candid backend
       ```
-      Point the binding tool's config (e.g. `@icp-sdk/bindgen`'s `didFile`) at `backend/backend.did`. **After any interface change, re-run both commands** — `mops build` always writes to `.mops/.build/` and does not update the committed file automatically.
+      This extracts the Candid interface directly from Motoko source **without compiling WASM**. With `[canisters.backend].candid` set in `mops.toml`, it overwrites that file; otherwise it writes `<name>.did` next to `main` (e.g. `main = "src/backend/main.mo"` → `src/backend/backend.did`) and records the path in `mops.toml`. Point the binding tool's config (e.g. `@icp-sdk/bindgen`'s `didFile`) at that `.did`. **Re-run after any interface change**, and commit the `.did` and `mops.toml` together. Load `mops-cli` for details. (The older `mops build backend` + `cp .mops/.build/backend.did …` two-step still works but builds the full WASM just to extract the interface.)
 
 17. **Missing or mismatched `[canisters]` key in `mops.toml`.** The `@dfinity/motoko@v5+` recipe calls `mops build <canister-name>`, where the name comes from the `name` field in `icp.yaml`. `mops build` requires a matching `[canisters.<name>]` entry in `mops.toml`. If the entry is absent or the key does not exactly match (including casing), the build fails with:
     ```
@@ -215,6 +211,24 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     icp cycles balance -n ic   # check cycles balance on mainnet
     icp identity account-id    # get account ID to fund if needed
     ```
+
+21. **Over-specifying (or wrongly omitting) `package` in the Rust recipe.** As of `@dfinity/rust@v3.3.0` the `package` config is **optional** and defaults to the canister `name` in `icp.yaml`. By convention, keep the canister `name` equal to the `[package] name` in `Cargo.toml` and omit `package` entirely:
+    ```yaml
+    # Preferred — name matches the Cargo package, so no package config
+    canisters:
+      - name: backend        # matches [package] name = "backend" in Cargo.toml
+        recipe:
+          type: "@dfinity/rust@v3.3.0"
+
+    # Required only when the names differ (e.g. a workspace crate)
+    canisters:
+      - name: backend
+        recipe:
+          type: "@dfinity/rust@v3.3.0"
+          configuration:
+            package: my-project-backend   # actual [package] name in Cargo.toml
+    ```
+    Omitting `package` when the names **differ** causes `cargo build` to fail with a package-not-found error — set it to the exact `[package] name`. On recipe versions before `v3.3.0`, `package` was required in all cases.
 
 ## How It Works
 
@@ -348,11 +362,13 @@ Bundling fails when:
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/rust@v3.2.0"
+      type: "@dfinity/rust@v3.3.0"
       configuration:
-        package: backend
         candid: backend.did  # optional — if specified, file must exist (auto-generated when omitted)
+        # package: my-crate  # optional — only when the Cargo [package] name differs from the canister name
 ```
+
+By convention the canister `name` must match the `[package] name` in `Cargo.toml`. When they match, `package` is optional (recipe >= v3.3.0 defaults it to the canister name). Set `package` explicitly only when the Cargo package name differs — e.g. a workspace with a differently named crate (see Pitfall 21).
 
 ### Motoko canister
 
@@ -417,7 +433,7 @@ canisters:
 
 | Recipe | Type string | Required config | Optional config |
 |--------|------------|-----------------|-----------------|
-| Rust | `@dfinity/rust@v3.2.0` | `package` | `candid`, `locked`, `shrink`, `compress` |
+| Rust | `@dfinity/rust@v3.3.0` | — | `package` (defaults to canister name), `candid`, `locked`, `shrink`, `compress`, `metadata` |
 | Motoko | `@dfinity/motoko@v5.0.0` | — | `shrink`, `compress`, `metadata` |
 | Asset | `@dfinity/asset-canister@v2.2.1` | `dir` | `build`, `version` |
 | Prebuilt | `@dfinity/prebuilt@v1.0.0` | `wasm` | `sha256`, `candid`, `shrink`, `compress` |
