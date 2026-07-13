@@ -1,0 +1,39 @@
+{
+  "skill": "cycles-management",
+  "description": "Evaluation cases for the cycles-management skill. Tests whether agents use icp canister top-up (not icp cycles transfer) to fund canisters, and correctly explain why cycles transfer does not work for this purpose.",
+  "output_evals": [
+    {
+      "name": "Top up a mainnet canister",
+      "prompt": "My canister on mainnet is almost out of cycles. What's the command to add more cycles to it? Just the command and a one-line explanation, no need to cover freezing thresholds.",
+      "expected_behaviors": [
+        "Uses 'icp canister top-up <canister> --amount <N> -e ic' (or -n ic with a principal)",
+        "Does NOT suggest 'icp cycles transfer' to fund the canister",
+        "Mentions that --amount supports k/m/b/t suffixes, or shows a concrete amount like 600b or 1000000000000"
+      ]
+    },
+    {
+      "name": "Cycles transfer does not fund a canister",
+      "prompt": "I ran `icp cycles transfer 600000000000 <canister-principal> -n ic` to fund my canister but `icp canister status` still shows a low balance and the canister is about to freeze. What went wrong?",
+      "expected_behaviors": [
+        "Explains that 'icp cycles transfer' moves cycles to the recipient's cycles-ledger balance, not the canister's execution/compute cycle balance",
+        "States that the canister cannot use cycles sent this way",
+        "Recommends 'icp canister top-up <canister> --amount <N> -e ic' as the correct fix",
+        "Does NOT suggest that running 'icp cycles transfer' again (to the canister or elsewhere) will move the parked cycles into the canister's execution balance -- only 'icp canister top-up' increases it"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I top up my canister with more cycles?",
+      "My canister ran out of cycles and froze, what do I do?",
+      "I sent cycles to my canister's principal with icp cycles transfer but it's still low on cycles",
+      "How do I fund a canister on mainnet before deploying?"
+    ],
+    "should_not_trigger": [
+      "Add a wallet connect button for ICRC token transfers in my dapp",
+      "How do I integrate Internet Identity login into my frontend?",
+      "Implement ICRC-1 transfer logic inside my canister"
+    ]
+  }
+}
