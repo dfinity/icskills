@@ -55,6 +55,28 @@
       ]
     },
     {
+      "name": "Adversarial: CLI in a remote sandbox, browser on another machine",
+      "prompt": "My coding agent runs in a cloud sandbox. It ran `icp identity link web admin --auth https://opencloud.org` there and gave me a sign-in URL containing `callback=http://127.0.0.1:39281/`. I completed the Internet Identity sign-in in the browser on my laptop, but the CLI in the sandbox never finishes linking. What is wrong and how do I get the sandbox CLI authorized for my engine? Just the fix, no deploy steps.",
+      "expected_behaviors": [
+        "Identifies that the callback targets the sandbox's loopback, which the laptop browser cannot reach — the browser resolves 127.0.0.1 to the laptop itself, so the delegation never reaches the CLI",
+        "Does NOT suggest re-running `icp identity link web` in the sandbox or opening the 127.0.0.1 URL again — that can never complete",
+        "Recommends the delegation handoff: `icp identity delegation request <name>` in the sandbox (prints a session public key PEM), `icp identity delegation sign --key-pem <file> --duration <d>` on the laptop with a locally web-linked identity, then `icp identity delegation use <name> --from-json <file>` back in the sandbox (or running the whole flow on the laptop instead)",
+        "Does NOT invent a headless/no-browser flag on `icp identity link web`",
+        "Treats the signed delegation as a time-limited credential (bounded --duration)"
+      ]
+    },
+    {
+      "name": "Adversarial: bridge shell on the user's machine has no network",
+      "prompt": "My coding agent has shell access on my Mac through a sandboxed device bridge: DNS is blocked (curl returns status 000) and it can only write to /tmp. It already built my ICP project. It proposed doing an identity delegation handoff and then running the deploy to my cloud engine itself from that shell. Is that going to work, and if not, what should it do instead? I know my subnet id. Just the approach and commands.",
+      "expected_behaviors": [
+        "Identifies that the delegation handoff cannot help here: it moves signing authority, not network access — `icp deploy` (and the link) still need network from the shell that runs them, so nothing network-bound can run in the bridge shell",
+        "Recommends preparing a single script the user runs in their real Terminal, doing the normal flow there: `icp identity link web <name> --auth <console-origin>` (terminal and browser share a loopback, so no handoff is needed), `icp identity default <name>`, `icp deploy -e ic --subnet <subnet-id>`",
+        "Asks the user to paste the script output back for verification",
+        "Does NOT suggest tunneling, proxying, or retrying the commands inside the sandboxed shell",
+        "Does NOT use dfx"
+      ]
+    },
+    {
       "name": "Agent pitfall: link command stalls non-interactively",
       "prompt": "I ran `icp identity link web admin --auth https://opencloud.org` as a background process and it has been hanging for minutes — no browser tab ever opened. What is wrong?",
       "expected_behaviors": [
@@ -139,6 +161,7 @@
       "How do I authorize the icp CLI for my cloud engine?",
       "Ship this project to my cloud engine",
       "My agent should deploy straight to my engine",
+      "My agent runs in a cloud sandbox and icp identity link web never completes — the sign-in redirects to 127.0.0.1",
       "Make my deployed app show up with a name in the cloud engine console",
       "Label my backend and frontend canisters in the engine console instead of bare principal ids",
       "Give my deployed app an icon in the OpenCloud engine console"
