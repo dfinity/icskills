@@ -1,8 +1,8 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine): verify the icp CLI, link the console identity with `icp identity link web` (console origin defaults to https://opencloud.org), obtain the engine's subnet id, run `icp deploy` against that subnet, and tag canisters with `__META_*` environment variables for a named app with labelled canisters and an icon. Also covers deploying and calling a funded proxy canister when an engine app must make cross-subnet cycle-bearing calls (the exchange-rate canister, threshold ECDSA/Schnorr, vetKD). Use when shipping an app to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when naming or adding an icon to a console app; or when an engine canister needs a cross-subnet cycle-bearing call (proxy canister). Do NOT use for a general mainnet deploy with no specific engine or subnet (use the icp-cli skill) or for writing general canister logic."
+description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine): verify the icp CLI, link the console identity with `icp identity link web` (origin defaults to https://opencloud.org; a delegation handoff covers CLIs in remote sandboxes where the user's browser cannot reach the CLI's 127.0.0.1 callback), obtain the engine's subnet id, run `icp deploy` against that subnet, and tag canisters with `__META_*` env vars for a named app with labelled canisters and an icon. Also covers a funded proxy canister for cross-subnet cycle-bearing calls (exchange-rate canister, threshold ECDSA/Schnorr, vetKD). Use when shipping an app to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when the console sign-in never completes from a cloud or sandboxed agent; when naming or adding an icon to a console app. Do NOT use for a general mainnet deploy with no engine or subnet (use icp-cli) or for writing canister logic."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0), a cloud engine console account, a browser for the Internet Identity sign-in"
+compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0 and 1.0.2; the delegation handoff needs `icp identity delegation`, present in 1.0.x), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
   title: Deploy to Cloud Engine
   category: Infrastructure
@@ -32,12 +32,76 @@ Record both so you do not re-ask within the session.
 
 ## Prerequisites
 
-- `icp` on `$PATH` — see the **`icp-cli`** skill to install. Verify with `icp --version` (this skill's commands are verified against 0.3.0).
+- `icp` on `$PATH` — see the **`icp-cli`** skill to install. Verify with `icp --version` (this skill's commands are verified against 0.3.0 and 1.0.2). If the installed version differs, confirm the flag set with `icp <cmd> --help` before running — flags have changed across major versions.
 - A project that already builds. If it does not build or package yet, set that up first (see the `icp-cli` skill), then return here.
+- macOS: `icp` stores its data under `~/Library/Application Support/org.dfinity.icp-cli/`. If the shell cannot write there (`Operation not permitted` from macOS TCC, e.g. when commands run through a bridge), redirect the data to an unprotected path for the session — `HOME=/tmp/icp-home icp …` — and keep that same `HOME` on **every** subsequent `icp` command, or the later commands will not see the linked identity.
 
 ## Step 1 — Link the CLI to your engine identity (once per machine)
 
 The CLI must sign as the **same identity that administers the engine** — that is the principal you log in to the console with.
+
+### Step 1.0 — First determine WHERE the CLI runs relative to the browser
+
+`icp identity link web` completes the sign-in via a redirect to `http://127.0.0.1:<port>` **on the machine where the CLI runs**. The browser in which the user completes the Internet Identity sign-in must be able to reach that loopback address. Determine the environment before linking:
+
+- **CLI and browser on the same machine, with network** (local development, or a terminal-integrated agent on the user's own machine) → use the normal link flow below.
+- **CLI in a remote or isolated sandbox, with network** (the agent runs in the cloud; the user's browser is on a different machine) → the normal flow **cannot** work: the sign-in URL carries a `callback=http://127.0.0.1:<port>` bound to the sandbox, the user's browser resolves `127.0.0.1` to its *own* machine, and the delegation never reaches the CLI. Later commands then fail with authorization errors. Use the **delegation handoff** below instead.
+- **CLI shell with no network at all** (e.g. a sandboxed device bridge on the user's own machine: DNS blocked, HTTPS requests fail, writes limited to `/tmp`) → **no** `icp` network command can run there — not the link, and not `icp deploy` either. The delegation handoff does not help: it only moves signing authority, not network access. Do not retry, tunnel, or proxy. Prepare the project and hand the user **one script** to run in their real terminal — see "No-network CLI host" below.
+
+When in doubt, probe before linking: `curl -sI https://<console-origin>` failing (or DNS not resolving) from the CLI shell means the no-network case.
+
+**Never** present a sandbox `127.0.0.1` URL to the user as something to open in their browser — it is unreachable from their machine. And do not invent a headless flag on `icp identity link web`: as of icp-cli 1.0.2 it has none (confirm with `icp identity link web --help`).
+
+### Delegation handoff (CLI host and browser on different machines)
+
+`icp identity delegation` transfers signing authority from an identity linked on the **user's** machine to a session key on the **CLI host**, without the browser ever reaching the CLI host. It requires `icp` installed on the user's machine too, and exists in icp-cli 1.0.x — verify with `icp identity delegation --help` on both machines. If the user's machine has `icp` and you can run commands there, the simplest path is to run this whole skill there instead; otherwise:
+
+1. **On the CLI host (sandbox)** — create a pending identity with a fresh session key:
+
+   ```bash
+   icp identity delegation request <your-identity-name>
+   ```
+
+   It prints the session **public** key as a PEM to stdout. Give that PEM block to the user. (If the default `--storage keyring` fails in a headless sandbox, retry with `--storage plaintext`.)
+
+2. **On the user's machine** — the user links there if not already linked (`icp identity link web <local-name> --auth <console-origin>` — the normal flow works locally), saves the PEM to a file, and signs a delegation to it:
+
+   ```bash
+   icp identity delegation sign --identity <local-name> --key-pem session-key.pem --duration 8h > delegation.json
+   ```
+
+   `--duration` takes e.g. `30m`, `8h`, `1d`; optionally `--canisters <ids>` restricts the delegation. The user sends `delegation.json` back. If `sign` fails with `delegation for identity <name> has expired or will expire within 5 minutes`, the local web session has lapsed — run `icp identity reauth <local-name>` (the normal browser flow, which works locally) and retry.
+
+3. **On the CLI host** — complete the pending identity and activate it:
+
+   ```bash
+   icp identity delegation use <your-identity-name> --from-json delegation.json
+   icp identity default <your-identity-name>
+   icp identity principal   # must print the user's console principal
+   ```
+
+Treat `delegation.json` as a **time-limited credential**: whoever holds the sandbox's session key can sign as the user's console principal until it expires. Keep the duration short and re-run the handoff when it lapses.
+
+### No-network CLI host — hand the user one script
+
+If the CLI shell cannot reach the network, the user's real terminal is the deploy machine — and because their terminal and browser share a loopback there, the **normal** link flow works; no delegation handoff is needed. Your job shifts to preparation:
+
+1. Get the built project into a directory the user's terminal can reach.
+2. Write one script at the project root that does the whole network-bound sequence — adapt this template (fill in the real identity name, console origin, and subnet id; do not leave placeholders):
+
+   ```bash
+   #!/usr/bin/env bash
+   set -euo pipefail
+   icp --version
+   icp identity list | grep -E '^\*? *<your-identity-name> ' >/dev/null || icp identity link web <your-identity-name> --auth <console-origin>
+   icp identity default <your-identity-name>
+   icp deploy -e ic --subnet <subnet-id>
+   ```
+
+3. Ask the user to run it in their terminal, complete the Internet Identity sign-in when the browser opens, and paste the output back.
+4. Verify from the pasted output (canister ids, frontend URL) and continue — a re-deploy for the Step 2 `__META_*` variables goes through the same script.
+
+### Normal link flow (CLI and browser share a loopback)
 
 First check what already exists:
 
@@ -246,7 +310,7 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 
 ## Common Pitfalls
 
-1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt — relaunch with a piped newline, `printf '\n' | icp identity link web …`, never `< /dev/null` (see Step 1).
+1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt — relaunch with a piped newline, `printf '\n' | icp identity link web …`, never `< /dev/null` (see Step 1). If the CLI runs in a remote sandbox, re-running can never complete — see Pitfall 14 and the delegation handoff in Step 1.0.
 2. **Wrong `--auth` origin.** Using any URL other than the console origin the user signs in with derives a different principal, and the engine rejects the deploy as not authorized. Relink with the exact console URL. If the deploy is rejected as unauthorized after linking against the default `https://opencloud.org`, ask the user for the exact URL they sign in with and relink.
 3. **Guessing the subnet id.** Never invent it — the deploy fails or targets the wrong subnet. It is on the engine's App Center / Applications page; ask the user.
 4. **Deploying with the anonymous identity.** The default local identity is anonymous and is not the engine admin. You must link and `icp identity default <your-identity-name>` first.
@@ -259,8 +323,12 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 11. **Attaching cycles to the outer `proxy` call.** The engine subnet forbids cycle-bearing cross-subnet messages — that is the whole reason for the proxy. Put the cycles inside `ProxyArgs.cycles` (the proxy attaches them locally); never `with_cycles` on the call to `proxy` itself.
 12. **Proxy out of cycles, or funded from the CLI.** A `ProxyError::InsufficientCycles` means the proxy's balance is spent — top it up (or enable auto top-up) on the console's Proxy canisters page. Deploying and funding the proxy is a console action, not an `icp` command.
 13. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
+14. **Assuming the browser and CLI share localhost.** `icp identity link web` returns the delegation to `127.0.0.1:<port>` on the CLI host. If the CLI runs in a remote sandbox while the user's browser is on a different machine, the sign-in never completes and later commands fail with authorization errors — no amount of re-running the link fixes it. See Step 1.0: use the delegation handoff (`icp identity delegation request` / `sign` / `use`), or run the link and deploy where the browser and CLI share a loopback.
+15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
 
 ## Related Skills
 
-- **icp-cli** — general icp CLI usage (`icp.yaml`, recipes, environments, bindings, identities). Load it for anything beyond this cloud-engine deploy flow.
+If a referenced skill is not already available, install it the same way this one was installed — `npx skills add dfinity/icskills --skill <name>` — or read it at `https://skills.internetcomputer.org/skills/<name>/`.
+
+- **icp-cli** — general icp CLI usage (`icp.yaml`, recipes, environments, bindings, identities). Load it for anything beyond this cloud-engine deploy flow — in particular when the project does not build or package yet.
 - **internet-identity** — details of the Internet Identity sign-in that Step 1 triggers in the browser.
