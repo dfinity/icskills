@@ -154,17 +154,14 @@
       ]
     },
     {
-      "name": "Full-stack Motoko hello-world with React frontend",
-      "prompt": "Build me a hello-world ICP dapp with a Motoko backend and a React frontend. The frontend should call a greet function on the backend. Show me the full project setup including icp.yaml, TypeScript bindings, and dev server config.",
+      "name": "Full-stack Motoko config artifacts (icp.yaml, mops.toml, bindings)",
+      "prompt": "For a hello-world ICP dapp with a Motoko backend (canister 'backend') and a React frontend that calls it via @icp-sdk/bindgen, show ONLY these artifacts, each in one fenced block with at most a one-line note — no React component code, no prose walkthrough, no deploy steps: (1) icp.yaml with both the Motoko backend and the frontend asset canister, (2) mops.toml, (3) the single command that produces the committed .did file, (4) the @icp-sdk/bindgen Vite plugin config block.",
       "expected_behaviors": [
-        "icp.yaml has Motoko backend with @dfinity/motoko@v5.0.0 (no recipe.configuration block) and asset canister for frontend (version-pinned)",
-        "Shows mops.toml with [toolchain] section (concrete moc version) and [canisters.backend] section with main field",
-        "Shows how to generate the .did file using 'mops build backend && cp .mops/.build/backend.did <path>' and explains that after interface changes the copy must be re-run manually",
-        "Uses @icp-sdk/bindgen (>= 0.3.0) Vite plugin with correct didFile path pointing to the committed .did file",
-        "Uses @icp-sdk/core (>= 5.0.0) — does NOT use a 0.x or 1.x version",
-        "Uses ./src/bindings as outDir (not per-canister subdirectories) so imports are clean (e.g., ./bindings/backend)",
-        "Dev server config only runs getDevServerConfig() during vite dev (command === 'serve'), not during vite build",
-        "Mentions starting the local network and deploying backend before running vite dev",
+        "icp.yaml has Motoko backend with @dfinity/motoko@v5.0.0 (no recipe.configuration block) and a version-pinned asset canister for the frontend",
+        "mops.toml has a [toolchain] section (concrete moc version) and a [canisters.backend] section with a main field",
+        "Uses 'mops generate candid backend' (or 'mops generate candid') as the command that produces the committed .did file — NOT the older 'mops build' + 'cp .mops/.build/backend.did' two-step",
+        "Uses @icp-sdk/bindgen (>= 0.3.0) Vite plugin with a didFile path pointing to the committed .did file",
+        "Uses @icp-sdk/core (>= 5.0.0) if a version is referenced — does NOT use a 0.x or 1.x version",
         "Does NOT use dfx commands, dfx.json, .env files, or process.env for canister IDs"
       ]
     },
@@ -249,6 +246,28 @@
         "Recommends checking mainnet balance before deploying using icp commands: icp token balance -n ic or icp cycles balance -n ic (NOT dfx ledger balance)",
         "Mentions that a new identity will need to be funded with ICP or cycles before it can deploy",
         "Presents identity switch and balance check as required prerequisites before running icp deploy -e ic, not optional suggestions"
+      ]
+    },
+    {
+      "name": "Candid generation for Motoko binding (mops generate candid)",
+      "prompt": "I have a Motoko backend canister named 'backend' built with the @dfinity/motoko@v5.0.0 recipe. My React frontend needs TypeScript bindings via @icp-sdk/bindgen, which needs a .did file committed at a stable path. What's the simplest way to produce and keep that .did file up to date? Just the command and workflow, no deploy steps.",
+      "expected_behaviors": [
+        "Recommends 'mops generate candid backend' (or 'mops generate candid') to produce the .did file",
+        "Notes it extracts the Candid interface from Motoko source WITHOUT compiling WASM",
+        "Explains it overwrites the [canisters.backend].candid path if set, otherwise writes <name>.did next to main and records the path in mops.toml",
+        "States it must be re-run after each interface change and the .did and mops.toml committed together",
+        "Does NOT present the older 'mops build backend' + 'cp .mops/.build/backend.did' two-step as the primary approach",
+        "Does NOT suggest dfx generate"
+      ]
+    },
+    {
+      "name": "Adversarial: Rust recipe package parameter (minimal vs workspace)",
+      "prompt": "Using the @dfinity/rust@v3.3.0 recipe, show me two icp.yaml snippets, no prose: (1) the MINIMAL config for one Rust canister named 'backend' whose Cargo.toml [package] name is also 'backend'; (2) the same canister named 'backend' but where the Cargo.toml [package] name is instead 'my_app_backend'.",
+      "expected_behaviors": [
+        "The first (matching-name) snippet OMITS the package parameter entirely — it does not include a redundant 'package: backend'",
+        "The second (differing-name) snippet sets 'package: my_app_backend' inside recipe.configuration",
+        "Conveys that package defaults to the canister name (so it is optional when they match) and is only needed when the Cargo package name differs",
+        "Does NOT claim the package parameter is required in the matching-name case"
       ]
     },
     {
