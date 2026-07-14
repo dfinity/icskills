@@ -233,7 +233,7 @@ recipe:
         value: $(git rev-parse HEAD)$(git diff --quiet HEAD 2>/dev/null || echo +dirty)
       - name: service:git:origin
         value: $(git remote get-url origin)
-      - name: service:git:last_updated
+      - name: service:git:updated_at
         value: $(git log -1 --format=%cI)
       - name: service:version
         value: $(node -p "require('./package.json').version" 2>/dev/null || echo 1.0.0)
@@ -249,7 +249,7 @@ metadata:
 
 Notes:
 
-- Use these exact names (`service:git:sha`, `service:git:origin`, `service:git:last_updated`, `service:version`) — they are the agreed convention the console will read; differently named entries will not be picked up.
+- Use these exact names (`service:git:sha`, `service:git:origin`, `service:git:updated_at`, `service:version`) — they are the agreed convention the console will read; differently named entries will not be picked up.
 - Prefer command results over literals where possible: `+dirty` on the sha flags uncommitted changes, so a deploy is traceable to its exact source state.
 - Values must be **deterministic** for a given source tree: sha, origin, the last commit's date, a version string. Never embed a build time (`$(date)`) or other build-time-varying values. The commit date (`%cI`) is allowed because it is a property of the commit, not of the build — but note it means "code last changed", not "last deployed": deploying an old commit shows the old date. The deploy time itself comes from the canister history the network records automatically.
 - If the project has no `package.json` (or no version field), the fallback `1.0.0` applies; replace it with the project's real versioning scheme when one exists.
@@ -360,7 +360,7 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 13. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
 14. **Assuming the browser and CLI share localhost.** `icp identity link web` returns the delegation to `127.0.0.1:<port>` on the CLI host. If the CLI runs in a remote sandbox while the user's browser is on a different machine, the sign-in never completes and later commands fail with authorization errors — no amount of re-running the link fixes it. See Step 1.0: use the delegation handoff (`icp identity delegation request` / `sign` / `use`), or run the link and deploy where the browser and CLI share a loopback.
 15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
-16. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:last_updated` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
+16. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
 17. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
 
 ## Related Skills
