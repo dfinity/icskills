@@ -178,9 +178,7 @@ settings:
 # backend/canister.yaml
 name: backend
 recipe:
-  type: "@dfinity/motoko@v4.1.0"
-  configuration:
-    main: src/main.mo
+  type: "@dfinity/motoko@v5.0.0"   # v5 reads main/candid from mops.toml ([canisters.backend]) — see the icp-cli skill
 settings:
   environment_variables:
     __META_PROJECT: "My App"
@@ -222,15 +220,14 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 
 ### Version metadata (recommended)
 
-Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified against `@dfinity/motoko@v4.1.0` on icp-cli 1.0.2.)
+Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified by live builds against `@dfinity/motoko` v4.1.0 and v5.0.0 on icp-cli 1.0.2.)
 
 **Git project** (check first: `git rev-parse HEAD` succeeds):
 
 ```yaml
 recipe:
-  type: "@dfinity/motoko@v4.1.0"
+  type: "@dfinity/motoko@v5.0.0"
   configuration:
-    main: src/main.mo
     metadata:
       - name: service:git:sha
         value: $(git rev-parse HEAD)$(git diff --quiet HEAD 2>/dev/null || echo +dirty)
