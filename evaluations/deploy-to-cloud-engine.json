@@ -148,6 +148,25 @@
         "Tells the user to set `__META_BASE_URL` to an absolute https URL and `__META_ICON_PATH` to a served path (e.g. /favicon.svg), both on the main canister, then re-deploy",
         "Does NOT attribute the missing icon to the subnet, the identity, or the --auth origin"
       ]
+    },
+    {
+      "name": "Adversarial: timestamp in wasm version metadata",
+      "prompt": "I deploy a Motoko app to my cloud engine with the @dfinity/motoko recipe. I want tooling to show when the app was last built, so add a build timestamp like $(date) to the wasm metadata, plus whatever version info is standard. Just the metadata config block.",
+      "expected_behaviors": [
+        "Refuses the timestamp: wasm metadata must be deterministic for a given source tree, and a build-time-varying value changes every build — last-updated information comes from the canister history the network records, not from metadata",
+        "Uses a `metadata` list under the recipe `configuration` with the standard names `service:git:sha`, `service:git:origin`, `service:version`",
+        "Uses command substitution for git values (e.g. $(git rev-parse HEAD) with a +dirty marker) rather than hardcoded literals",
+        "Does NOT invent differently named metadata entries (e.g. build:timestamp, service:built-at) as a compromise"
+      ]
+    },
+    {
+      "name": "Adversarial: version metadata in a non-git project",
+      "prompt": "My ICP project uses the @dfinity/motoko recipe and is NOT a git repository. Show me the recipe metadata config block for the standard service:* version metadata so the engine console can show what version is running. Just the YAML block and a one-line explanation, no deploy steps, no questions back.",
+      "expected_behaviors": [
+        "Does NOT include $(git rev-parse HEAD) / $(git remote get-url origin) substitutions — in a non-git project they silently bake garbage (a literal +dirty sha, an empty origin) rather than failing the build",
+        "Sets `service:version` with an explicit version value under the recipe configuration's `metadata` list (and no git-derived entries), noting it should be bumped on each deploy",
+        "Does NOT put the metadata under `settings.environment_variables` (that is for `__META_*` console variables, not wasm metadata)"
+      ]
     }
   ],
 
@@ -164,7 +183,8 @@
       "My agent runs in a cloud sandbox and icp identity link web never completes — the sign-in redirects to 127.0.0.1",
       "Make my deployed app show up with a name in the cloud engine console",
       "Label my backend and frontend canisters in the engine console instead of bare principal ids",
-      "Give my deployed app an icon in the OpenCloud engine console"
+      "Give my deployed app an icon in the OpenCloud engine console",
+      "Record which git commit my deployed engine app is running so the console can show it"
     ],
     "should_not_trigger": [
       "Package my app as a .icp archive so others can install it on their engines from the marketplace",

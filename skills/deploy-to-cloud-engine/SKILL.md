@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys an already-built Internet Computer project to a user's own cloud engine (an OpenCloud / control-panel engine): verify the icp CLI, link the console identity with `icp identity link web` (origin defaults to https://opencloud.org; a delegation handoff covers CLIs in remote sandboxes where the user's browser cannot reach the CLI's 127.0.0.1 callback), obtain the engine's subnet id, run `icp deploy` against that subnet, and tag canisters with `__META_*` env vars for a named app with labelled canisters and an icon. Also covers a funded proxy canister for cross-subnet cycle-bearing calls (exchange-rate canister, threshold ECDSA/Schnorr, vetKD). Use when shipping an app to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when the console sign-in never completes from a cloud or sandboxed agent; when naming or adding an icon to a console app. Do NOT use for a general mainnet deploy with no engine or subnet (use icp-cli) or for writing canister logic."
+description: "Deploys a built Internet Computer project to a user's cloud engine (an OpenCloud engine): verify the icp CLI, link the console identity with `icp identity link web` (origin defaults to https://opencloud.org; a delegation handoff covers sandboxes whose 127.0.0.1 callback the browser cannot reach), run `icp deploy` against the engine's subnet, tag canisters with `__META_*` env vars for a named console app with labelled canisters and icon, and bake version metadata (service:git:sha, service:version) into the wasm. Also covers a funded proxy canister for cross-subnet cycle-bearing calls (exchange-rate, threshold ECDSA/Schnorr, vetKD). Use when shipping to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when sign-in never completes from a sandboxed agent; when naming, adding an icon, or recording the deployed version/git commit of a console app. Do NOT use for a general mainnet deploy with no engine or subnet (use icp-cli) or for writing canister logic."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0 and 1.0.2; the delegation handoff needs `icp identity delegation`, present in 1.0.x), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
@@ -178,9 +178,7 @@ settings:
 # backend/canister.yaml
 name: backend
 recipe:
-  type: "@dfinity/motoko@v4.1.0"
-  configuration:
-    main: src/main.mo
+  type: "@dfinity/motoko@v5.0.0"   # v5 reads main/candid from mops.toml ([canisters.backend]) — see the icp-cli skill
 settings:
   environment_variables:
     __META_PROJECT: "My App"
@@ -219,6 +217,41 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 - `__META_BASE_URL` must parse as an absolute **`https://`** URL. A bare host, an `http://` URL, or a `data:` / `javascript:` value is rejected: the icon then does not render, and the "Open" button falls back to the main canister's gateway URL (it does not disappear). (The console validates the scheme before using it.)
 - `__META_ICON_PATH` is a **path to an asset your frontend actually serves** (e.g. `/favicon.svg`), not an inline image. The resolved URL is rendered as an `<img>` `src`, so it must return an image. Do **not** put a `data:` URI here: engine env values are length-capped (≤128 chars observed), so it would not fit, and the field is a path by design.
 - The frontend canister's id is only known **after** the first deploy. The usual flow is: deploy once, read the frontend canister id from the output, set `__META_BASE_URL` to `https://<that-id>.icp.net` (and `__META_ICON_PATH`), then re-deploy to apply. If you control a custom domain for the app, you can set it up front instead.
+
+### Version metadata (recommended)
+
+Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified by live builds against `@dfinity/motoko` v4.1.0 and v5.0.0 on icp-cli 1.0.2.)
+
+**Git project** (check first: `git rev-parse HEAD` succeeds):
+
+```yaml
+recipe:
+  type: "@dfinity/motoko@v5.0.0"
+  configuration:
+    metadata:
+      - name: service:git:sha
+        value: $(git rev-parse HEAD)$(git diff --quiet HEAD 2>/dev/null || echo +dirty)
+      - name: service:git:origin
+        value: $(git remote get-url origin)
+      - name: service:version
+        value: $(node -p "require('./package.json').version" 2>/dev/null || echo 1.0.0)
+```
+
+**Non-git project** — the git substitutions above do **not** fail the build; they silently bake garbage (`service:git:sha` becomes the literal `+dirty`, `service:git:origin` comes out empty). Use only an explicit version, and bump it on each subsequent deploy:
+
+```yaml
+metadata:
+  - name: service:version
+    value: "1.0.0"
+```
+
+Notes:
+
+- Use these exact names (`service:git:sha`, `service:git:origin`, `service:version`) — they are the agreed convention the console will read; differently named entries will not be picked up.
+- Prefer command results over literals where possible: `+dirty` on the sha flags uncommitted changes, so a deploy is traceable to its exact source state.
+- Values must be **deterministic** for a given source tree: sha, origin, a version string. Never embed timestamps or other build-time-varying values — "last updated" comes from the canister history the network records automatically, not from metadata.
+- If the project has no `package.json` (or no version field), the fallback `1.0.0` applies; replace it with the project's real versioning scheme when one exists.
+- The sections are injected as `icp:private`, readable by the canister's controllers (you, and the console acting as you) via read_state — no canister call needed. Verify after deploy, with the linked identity active: `icp canister metadata <canister-name> service:git:sha -e ic`.
 
 ## Step 3 — Deploy to the engine's subnet
 
@@ -325,6 +358,8 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 13. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
 14. **Assuming the browser and CLI share localhost.** `icp identity link web` returns the delegation to `127.0.0.1:<port>` on the CLI host. If the CLI runs in a remote sandbox while the user's browser is on a different machine, the sign-in never completes and later commands fail with authorization errors — no amount of re-running the link fixes it. See Step 1.0: use the delegation handoff (`icp identity delegation request` / `sign` / `use`), or run the link and deploy where the browser and CLI share a loopback.
 15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
+16. **Timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a timestamp changes every build and breaks reproducibility. Last-updated information comes from the canister history recorded by the network, never from metadata.
+17. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
 
 ## Related Skills
 
