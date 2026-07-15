@@ -153,8 +153,8 @@
       "name": "Adversarial: timestamp in wasm version metadata",
       "prompt": "I deploy a Motoko app to my cloud engine with the @dfinity/motoko recipe. I want tooling to show when the app was last built, so add a build timestamp like $(date) to the wasm metadata, plus whatever version info is standard. Just the metadata config block.",
       "expected_behaviors": [
-        "Refuses the timestamp: wasm metadata must be deterministic for a given source tree, and a build-time-varying value changes every build — last-updated information comes from the canister history the network records, not from metadata",
-        "Uses a `metadata` list under the recipe `configuration` with the standard names `service:git:sha`, `service:git:origin`, `service:version`",
+        "Refuses the build timestamp ($(date)-style): wasm metadata must be deterministic for a given source tree — and instead offers `service:git:updated_at` with $(git log -1 --format=%cI) (the last commit's date, fixed per commit) and/or notes that deploy time comes from the canister history the network records",
+        "Uses a `metadata` list under the recipe `configuration` with the standard names `service:git:sha`, `service:git:origin`, `service:git:updated_at`, `service:version`",
         "Uses command substitution for git values (e.g. $(git rev-parse HEAD) with a +dirty marker) rather than hardcoded literals",
         "Does NOT invent differently named metadata entries (e.g. build:timestamp, service:built-at) as a compromise"
       ]
