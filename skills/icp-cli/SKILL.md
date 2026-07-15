@@ -110,7 +110,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
               - npm run build
     ```
 
-11. **Expecting `output_env_file` or `.env` with canister IDs.** dfx writes canister IDs to a `.env` file (`CANISTER_ID_BACKEND=...`) via `output_env_file`. icp-cli does not generate `.env` files. Instead, it injects canister IDs as environment variables (`PUBLIC_CANISTER_ID:<name>`) directly into canisters during `icp deploy`. Frontends read these from the `ic_env` cookie set by the asset canister. Remove `output_env_file` from your config and any code that reads `CANISTER_ID_*` from `.env` — use the `ic_env` cookie instead (see Canister Environment Variables below).
+11. **Expecting `output_env_file` or `.env` with canister IDs.** dfx writes canister IDs to a `.env` file (`CANISTER_ID_BACKEND=...`) via `output_env_file`. icp-cli does not generate `.env` files. Instead, it injects canister IDs as environment variables (`PUBLIC_CANISTER_ID:<name>`) directly into canisters during `icp deploy`. Frontends read these from the `ic_env` cookie set by the asset canister. Remove `output_env_file` from your config and any code that reads `CANISTER_ID_*` from `.env` — frontends use the `ic_env` cookie, and canister code reads the same variables at runtime (see Canister Environment Variables below and Pitfall 22).
 
 12. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (>= 0.3.0) with `@icp-sdk/core` (>= 5.0.0 — there is no 0.x or 1.x release) to generate TypeScript bindings from `.did` files at build time. Use `outDir: "./src/bindings"` so imports are clean (e.g., `./bindings/backend`). The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for the full Vite plugin setup.
 
@@ -229,6 +229,8 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
             package: my-project-backend   # actual [package] name in Cargo.toml
     ```
     Omitting `package` when the names **differ** causes `cargo build` to fail with a package-not-found error — set it to the exact `[package] name`. On recipe versions before `v3.3.0`, `package` was required in all cases.
+
+22. **Hand-wiring canister IDs with setter methods or deploy scripts.** Controller-only setters (`setBridge(principal)`) called by a post-deploy script — or sibling IDs hardcoded in `settings.environment_variables` or init args — are unnecessary: `icp deploy` injects every canister's ID into every canister's settings as `PUBLIC_CANISTER_ID:<canister-name>`, readable by canister code at runtime with the correct per-environment value (see Canister Environment Variables). Setter wiring is also more fragile: a `--mode reinstall` silently wipes the stored pointer, while the automatic variables are re-stamped on every deploy.
 
 ## How It Works
 
@@ -442,26 +444,24 @@ Verify latest recipe versions at [dfinity/icp-cli-recipes releases](https://gith
 
 ### Canister Environment Variables
 
-icp-cli automatically injects all canister IDs as environment variables during `icp deploy`. Variables are formatted as `PUBLIC_CANISTER_ID:<canister-name>` and injected into every canister in the environment.
+During `icp deploy`, icp-cli injects the ID of **every canister in the environment** into **every canister's settings** as `PUBLIC_CANISTER_ID:<canister-name>` (the principal in text form). These are canister *settings* env vars, readable **at runtime by canister code**, with per-environment values refreshed on every deploy — the same code is correct on local, staging, and mainnet with zero configuration.
 
-**Frontend → Backend** (reading canister IDs in JavaScript):
+**Use these for inter-canister wiring** instead of setter methods, init args, or post-deploy scripts (Pitfall 22). Read them lazily at call time — Motoko: `Runtime.envVar<system>(...)` (motoko-core v2.1.0+), Rust: `ic_cdk::api::env_var_value(...)` — see `references/canister-env-vars.md` for code and the first-install/reinstall behavior.
 
-Asset canisters expose injected variables through a cookie named `ic_env`, set on all HTML responses. Use `@icp-sdk/core` to read it:
+**Frontend** (JavaScript): asset canisters expose the variables through the `ic_env` cookie, set on all HTML responses. Read it with `@icp-sdk/core`:
 ```js
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 
-const canisterEnv = safeGetCanisterEnv();
-const backendId = canisterEnv?.["PUBLIC_CANISTER_ID:backend"];
+const backendId = safeGetCanisterEnv()?.["PUBLIC_CANISTER_ID:backend"];
 ```
 
-**Backend → Backend** (reading canister IDs in canister code):
-- Rust: `ic_cdk::api::env_var_value("PUBLIC_CANISTER_ID:other_canister")`
-- Motoko (motoko-core v2.1.0+):
-  ```motoko
-  import Runtime "mo:core/Runtime";
-  let otherId = Runtime.envVar("PUBLIC_CANISTER_ID:other_canister");
-  ```
-Note: variables are only updated for canisters at deploy time. When adding a new canister, run `icp deploy` (without specifying a canister name) to update all canisters with the complete ID set.
+**Caveats:**
+
+- Variables are only updated at deploy time. After adding a canister, run `icp deploy` (without a canister name) so every canister gets the complete ID set.
+- User-defined variables (`settings.environment_variables` in `icp.yaml`) are static YAML strings shared across environments: a create-class install (first install or `--mode reinstall`) re-applies them, overwriting anything set with `icp canister settings update --add-environment-variable`. Re-assert environment-specific values (e.g. production origins) after such a deploy.
+- The replica caps an environment-variable *value* at 128 characters.
+
+Full reference: [icp-cli environment variables](https://cli.internetcomputer.org/1.0/reference/environment-variables/).
 
 ### Web identity flows
 
@@ -477,5 +477,6 @@ For the complete CLI and configuration schema, consult the [icp-cli documentatio
 For detailed guides on specific topics, consult these reference files when needed:
 
 - **`references/binding-generation.md`** — TypeScript binding generation with `@icp-sdk/bindgen` (Vite plugin, CLI, actor setup)
+- **`references/canister-env-vars.md`** — reading `PUBLIC_CANISTER_ID:<name>` from canister code at runtime (Motoko/Rust examples, lazy-read pattern)
 - **`references/dev-server.md`** — Vite dev server configuration to simulate the `ic_env` cookie locally. Important: wrap `getDevServerConfig()` in a `command === "serve"` guard so it only runs during `vite dev`, not `vite build`.
 - **`references/dfx-migration.md`** — Complete dfx → icp migration guide (command mapping, config mapping, identity/canister ID migration, frontend package migration, post-migration verification checklist)
