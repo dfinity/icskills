@@ -42,6 +42,16 @@ All skills live in [`skills/*/SKILL.md`](skills/). Each skill is a self-containe
 
 ## Usage
 
+### Quick start (any agent)
+
+Paste this into your AI coding agent:
+
+```text
+Fetch https://skills.internetcomputer.org/llms.txt and follow its instructions when building on ICP
+```
+
+It starts using skills right away and offers to set up how your project keeps using them — fetch on-demand, pinned, or auto-updating. No install required.
+
 ### Install via CLI
 
 Works with any agent that supports skills (Claude Code, Cursor, Windsurf, Copilot, and more):
