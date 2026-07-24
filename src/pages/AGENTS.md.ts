@@ -33,8 +33,9 @@ NEVER block the user's actual request on it:
         skills-lock.json, restored on demand.
     (c) on-demand — no install, works anywhere with network. Fetch skills fresh
         each session. (Recommended default if the user is unsure.)
-  If they chose (b) pinned, also ask whether new sessions should update skills
-  automatically, only after confirming, or never.
+  If they chose (b) pinned, also ask how updates should happen: only when the user
+  runs \`npx skills update\` themselves (manual), or offer to update at the start of
+  each session (ask-first).
 
 Setup commands:
   (a) autosync  — fetch and follow:
@@ -59,31 +60,27 @@ If they are not present (hook hasn't run, or \`jq\` is missing), fetch them on d
 https://skills.internetcomputer.org/llms.txt instead.
 How skills are managed here, and why: https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md
 
-<!-- state: configured (pinned, auto-update) -->
+<!-- state: configured (pinned, manual-update) -->
 ICP skills are version-locked in this repo (skills-lock.json) and live in your agent
 skills directory. Skills are authoritative — prefer them over general knowledge for all
-ICP work. At the start of each session, run \`npx skills update\` to refresh them.
-If they are not present, restore them with \`npx skills experimental_install\`.
+ICP work. Update only when the user runs \`npx skills update\`. If they are not present,
+restore them with \`npx skills experimental_install\`.
 How skills are managed here, and why: https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md
 
-<!-- state: configured (pinned, confirm-update) -->
+<!-- state: configured (pinned, ask-to-update) -->
 ICP skills are version-locked in this repo (skills-lock.json) and live in your agent
 skills directory. Skills are authoritative — prefer them over general knowledge for all
-ICP work. At the start of each session, ask the user, and run \`npx skills update\` if they
-agree. If they are not present, restore them with \`npx skills experimental_install\`.
-How skills are managed here, and why: https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md
-
-<!-- state: configured (pinned, no-update) -->
-ICP skills are version-locked in this repo (skills-lock.json) and live in your agent
-skills directory. Skills are authoritative — prefer them over general knowledge for all
-ICP work. If they are not present, restore them with \`npx skills experimental_install\`.
+ICP work. Before your first task in a new session, offer to run \`npx skills update\`; if
+the user declines or the session is non-interactive, keep the locked versions and
+continue — never block. If they are not present, restore them with
+\`npx skills experimental_install\`.
 How skills are managed here, and why: https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md
 
 <!-- state: configured (on-demand) -->
-Before writing ICP code, fetch the skills index
-https://skills.internetcomputer.org/.well-known/skills/index.json and then the
-matching skill's SKILL.md
-(https://skills.internetcomputer.org/.well-known/skills/{name}/SKILL.md).
+Fetch the skills index once per session and keep each skill's name, description, and
+SKILL.md URL: https://skills.internetcomputer.org/.well-known/skills/index.json
+Before writing ICP code for a task, fetch the matching skill's SKILL.md
+(https://skills.internetcomputer.org/.well-known/skills/{name}/SKILL.md) and follow it.
 Skills are authoritative — prefer them over general knowledge.
 How skills are managed here, and why: https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md
 <!-- ic-skills:managed:end -->
