@@ -13,49 +13,37 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
 >
   <h1>Get started</h1>
 
-  <h2>For agents</h2>
-  <p>The discovery protocol is a single fetch:</p>
-  <pre><code>GET {absUrl('/llms.txt')}</code></pre>
+  <h2>Use skills with your coding agent</h2>
+  <p>Give your agent one instruction:</p>
+  <pre><code>Fetch {absUrl('/llms.txt')} and follow its instructions when building on ICP</code></pre>
   <p>
-    That file contains agent instructions: it tells your agent to fetch the skills index and to pull matching skills on demand
-    when a task fits a skill's description. Paste the URL and your agent handles the rest.
+    It fetches the skills index and pulls the matching skill on demand — no install, no terminal — then
+    offers to set up how the project keeps using skills (auto-update, pin, or fetch on-demand). It works in
+    any project, including one that already has an <code>AGENTS.md</code>: it appends its own section and
+    never edits yours.
   </p>
+  <p>Building tooling instead? Parse the catalogue programmatically:</p>
   <pre><code>GET {absUrl('/api/skills.json')}</code></pre>
+
+  <h2>Start a new project with icp-cli</h2>
   <p>
-    A structured JSON index of all skills with titles, descriptions, categories, and direct URLs
-    to each format (HTML, Markdown, JSON). Use this when you need to parse the catalogue programmatically.
+    Projects scaffolded with
+    <a href="https://cli.internetcomputer.org/1.2/tutorial/#create-a-project" rel="noopener external">icp-cli</a>
+    ship an <code>AGENTS.md</code> (and <code>CLAUDE.md</code>) that configures itself on first use: your
+    agent asks how you want to use ICP skills — auto-update every session, pin version-locked, or fetch
+    on-demand — and records the choice so every later session just follows it.
+  </p>
+  <p>
+    See <a href="https://github.com/dfinity/icp-cli-templates/blob/main/AGENT_SKILLS.md" rel="noopener external">how the modes work and why</a>.
   </p>
 
-  <h2>Use the CLI</h2>
-  <p>Install all skills at once. Auto-detects your agents (Claude Code, Cursor, Copilot, and more) and writes the skills into their rules files:</p>
+  <h2>Pin skills into an existing project</h2>
+  <p>Version-lock skills into a repo you already have. Auto-detects your agent (Claude Code, Cursor, Copilot, and more) and writes the skills into its rules files:</p>
   <pre><code>npx skills add dfinity/icskills</code></pre>
   <p>Or install a single skill by name:</p>
   <pre><code>npx skills add dfinity/icskills --skill ckbtc</code></pre>
 
-  <h2>Add AGENTS.md to your repo</h2>
-  <p>
-    Commit once, and every agent session auto-discovers ICP skills. Create an <code>AGENTS.md</code> in your project root:
-  </p>
-  <pre><code>{`# AI Agent Instructions
-
-Tested implementation patterns for ICP development are available as agent skills.
-Before writing any ICP code, fetch the skills index and remember each skill's name and description:
-${absUrl('/.well-known/skills/index.json')}
-
-When a task matches a skill's description, fetch its content on-demand from:
-${absUrl('/.well-known/skills/')}{skill-name}/SKILL.md
-
-Skills contain correct dependency versions, configuration formats, and common pitfalls
-that prevent build failures. Always prefer skill guidance over general documentation
-when both cover the same topic.
-
-Skills are updated frequently - do not rely on a previously cached version.`}</code></pre>
-  <p>
-    For Claude Code, also add a <code>CLAUDE.md</code> that reads:
-    <code>Read and follow the instructions in AGENTS.md.</code>
-  </p>
-
-  <h2>For humans</h2>
+  <h2>Browse and read skills yourself</h2>
   <ol>
     <li>Browse the <a href="/">skills index</a> and find something that matches your task.</li>
     <li>Open the skill page (for example, <a href={skillUrl(sample.id)}>{sample.data.metadata.title}</a>).</li>
