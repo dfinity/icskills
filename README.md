@@ -50,7 +50,7 @@ Paste this into your AI coding agent:
 Fetch https://skills.internetcomputer.org/llms.txt and follow its instructions when building on ICP
 ```
 
-It starts using skills right away and offers to set up how your project keeps using them — fetch on-demand, pinned, or auto-updating. No install required.
+It starts using skills right away by fetching them on demand (nothing to install), and can set up how your project keeps using them going forward. If you choose to pin skills or enable auto-updates, the agent runs that setup for you.
 
 ### Install via CLI
 
