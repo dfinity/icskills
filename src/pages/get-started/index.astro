@@ -17,10 +17,11 @@ const sample = all.find((s) => s.id === 'icp-cli') ?? all[0];
   <p>Give your agent one instruction:</p>
   <pre><code>Fetch {absUrl('/llms.txt')} and follow its instructions when building on ICP</code></pre>
   <p>
-    It fetches the skills index and pulls the matching skill on demand — no install, no terminal — then
-    offers to set up how the project keeps using skills (auto-update, pin, or fetch on-demand). It works in
-    any project, including one that already has an <code>AGENTS.md</code>: it appends its own section and
-    never edits yours.
+    The agent starts using skills right away by fetching them on demand — nothing for you to install. It
+    then offers to set up how the project keeps using them going forward — auto-update, pin, or keep
+    fetching on-demand — and runs whatever the chosen option needs itself (for example
+    <code>npx skills add</code> when you pin). It works in any project, including one that already has an
+    <code>AGENTS.md</code>: it appends its own section and never edits yours.
   </p>
   <p>Building tooling instead? Parse the catalogue programmatically:</p>
   <pre><code>GET {absUrl('/api/skills.json')}</code></pre>
