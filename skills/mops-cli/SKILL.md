@@ -2,7 +2,7 @@
 name: mops-cli
 description: "Manage Motoko projects with the mops CLI — toolchain pinning, dependency management, type-checking, building, and linting. Use when working with mops.toml, mops.lock, running mops commands, adding/removing packages, pinning moc or lintoko versions, checking or building canisters, configuring moc flags, or setting up a new Motoko project."
 license: Apache-2.0
-compatibility: "mops >= 2.16.1"
+compatibility: "mops >= 2.19.0"
 metadata:
   title: Mops CLI
   category: Infrastructure
@@ -48,6 +48,12 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
+
+# Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
+[optimize]
+# level = "O3"       # default
+# keep-names = true  # default
+# wasm-opt pin: [toolchain] wasm-opt = "131" (auto-pinned to latest if missing)
 ```
 
 `check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
@@ -64,11 +70,11 @@ Optional canister fields: `candid` (path to .did for compatibility checking), `i
 
 Flags are applied in this order (later overrides earlier):
 
-1. `[moc].args` — global, all commands (check, build, test, etc.)
+1. `[moc].args` — global, all commands (check, build, test, bench, etc.)
 2. `[build].args` — build only (e.g. `--release`)
 3. `[canisters.<name>.migrations]` — auto-injected `--enhanced-migration` (managed by mops)
 4. `[canisters.<name>].args` — per-canister
-5. CLI `-- <flags>` — one-off overrides
+5. CLI `-- <flags>` — one-off overrides; supported by `mops check`, `mops build`, `mops check-stable`, `mops generate`, `mops migrate`, `mops test`, and `mops bench`
 
 ## Core Commands
 
@@ -76,9 +82,13 @@ Flags are applied in this order (later overrides earlier):
 
 ```bash
 mops install
+mops install --lock update   # regenerate a stale/corrupt mops.lock
+mops install --lock check    # fail if lockfile is missing or stale (CI)
 ```
 
-Run after cloning or after manual `mops.toml` edits. Updates `mops.lock`. In CI, uses `--lock check` by default (fails if lockfile is stale).
+Run after cloning or after manual `mops.toml` edits. Updates `mops.lock` by default.
+
+When the `CI` env var is set and `--lock` is omitted, defaults to `--lock check` (deprecated — pass `--lock check` explicitly; auto-detection will be removed in v3). A stale lock fails with a hint to run `mops install --lock update`.
 
 ### `mops add <package>`
 
@@ -88,7 +98,7 @@ mops add core@2.5.0       # specific version
 mops add --dev test       # dev dependency
 ```
 
-Updates `mops.toml` and `mops.lock`.
+Updates `mops.toml` and `mops.lock` (even when `CI` is set).
 
 ### `mops check`
 
@@ -116,6 +126,8 @@ mops build -- --ai-errors # pass extra moc flags
 ```
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
+
+With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
 
 ### `mops deployed`
 
@@ -146,12 +158,16 @@ mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
 mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
+mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
+mops toolchain info <tool>           # show release info (latest, pinned, history)
+mops toolchain info <tool> --versions # list recent stable releases, newest first
+mops toolchain info <tool> --versions --all # full stable history (cache warming)
 mops toolchain bin moc               # print path to binary
 ```
 
-**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry.
+**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
 ### Enhanced migrations
 
@@ -196,9 +212,23 @@ mops test my-test                 # filter by name
 mops test --mode wasi             # use wasmtime (for to_candid/from_candid)
 mops test --reporter verbose      # show Debug.print output
 mops test --watch                 # re-run on file changes
+mops test -- -Werror              # pass extra moc flags
 ```
 
 Replica tests (actor files or `// @testmode replica`) use `pocket-ic` from `[toolchain]`. With no pin they fall back to the deprecated `dfx` replica (warning printed) — pin `pocket-ic` in `[toolchain]` to silence it. Same applies to `mops bench` and `mops watch`.
+
+### `mops bench`
+
+Benchmarks live in `bench/*.bench.mo`:
+
+```bash
+mops bench                        # run all benchmarks
+mops bench my-bench               # filter by name
+mops bench --gc incremental       # select GC
+mops bench --save                 # save results to .bench/<name>.json
+mops bench --compare              # compare with saved results
+mops bench -- -Werror             # pass extra moc flags
+```
 
 ### `mops lint`
 
@@ -243,5 +273,3 @@ mops add core
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.
 
 To update tools later: `mops toolchain update moc` or `mops toolchain update` (all tools).
-</content>
-</invoke>

@@ -140,6 +140,26 @@
         "Redirects to mo:core as the replacement",
         "Does NOT confirm that mo:base/HashMap is a valid choice"
       ]
+    },
+    {
+      "name": "Enabling Wasm optimization",
+      "prompt": "How do I turn on wasm-opt optimization for my mops build? Just the mops.toml config and any toolchain command, no deploy steps.",
+      "expected_behaviors": [
+        "Adds an `[optimize]` section to mops.toml (default level `O3`)",
+        "Pins Binaryen via `mops toolchain use wasm-opt 131` (or `latest`), or notes mops auto-pins latest on first build",
+        "Explains the optimization pass runs during `mops build`, and that `--no-optimize` skips it for a single run",
+        "Does NOT tell the user to invoke the `wasm-opt` binary manually or configure optimization through dfx"
+      ]
+    },
+    {
+      "name": "Running benchmarks",
+      "prompt": "I have benchmark files under bench/ in my mops project. How do I run them, save a baseline, and compare a later run against it? Just the commands.",
+      "expected_behaviors": [
+        "Uses `mops bench` to run benchmarks in `bench/*.bench.mo`",
+        "Uses `mops bench --save` to save results as a baseline",
+        "Uses `mops bench --compare` to compare against saved results",
+        "Does NOT invent a non-existent command or suggest a manual benchmarking harness"
+      ]
     }
   ],
   "trigger_evals": {
@@ -158,7 +178,9 @@
       "How do I add a dev dependency with mops?",
       "How do I configure the moc toolchain version in mops?",
       "How do I regenerate the candid .did file for my Motoko canister with mops?",
-      "How do I keep my check-stable .most baseline in sync after deploying?"
+      "How do I keep my check-stable .most baseline in sync after deploying?",
+      "How do I enable wasm-opt optimization for my mops build?",
+      "How do I run benchmarks with mops?"
     ],
     "should_not_trigger": [
       "Write a Motoko persistent actor with a counter",
