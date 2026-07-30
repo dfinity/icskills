@@ -110,6 +110,7 @@ async function manageAssets() {
   });
 
   // Upload a single file. Files >1.9MB are automatically chunked.
+  const fileBuffer = readFileSync("./photo.jpg");
   const key = await assetManager.store(fileBuffer, {
     fileName: "photo.jpg",
     contentType: "image/jpeg",

@@ -9,7 +9,7 @@
 
 # Skill files — domain experts
 /skills/icp-cli/                 @dfinity/sdk
-/skills/asset-canister/          @dfinity/sdk
+/skills/static-site/             @dfinity/sdk
 /skills/certified-variables/     @dfinity/sdk
 /skills/ckbtc/                   @gregorydemay
 /skills/evm-rpc/                 @gregorydemay
