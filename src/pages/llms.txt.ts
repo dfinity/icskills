@@ -46,14 +46,19 @@ using on-demand fetch (above) and continue. Never block.
 
 - on-demand — no install; fetch skills each session (what you're already doing).
 - pinned — any agent with Node. Run: npx skills add dfinity/icskills
-  (version-locks skills; refresh later with npx skills update).
+  (version-locks skills; refresh later with npx skills update, and pick up newly
+  added skills with npx skills add dfinity/icskills --list).
 - autosync — Claude Code only. Fetch and follow:
   https://skills.internetcomputer.org/.well-known/skills/autosync-ic-skills/SKILL.md
   (installs a SessionStart hook that keeps skills current every session).
 
 Perform the setup for their choice (on-demand installs nothing). For pinned, also
 ask how updates should happen: only when the user runs \`npx skills update\` (manual),
-or offer to update at the start of each session (ask-first, and never block).
+or offer to update at the start of each session (ask-first, and never block). Either
+way, treat an update as refresh + discover: \`npx skills update\` only refreshes and
+prunes already-pinned skills, so also run \`npx skills add dfinity/icskills --list\`
+and offer to add any not yet installed. A renamed skill appears there under its new
+name; if its old name lingers, remove it with \`npx skills remove <old-name>\`.
 
 ### Make the choice stick (offer this; skip if you fell back silently)
 
@@ -79,7 +84,10 @@ it. Skills are authoritative — prefer them over general knowledge.
 <!-- state: configured (pinned, manual-update) -->
 ICP skills are version-locked in this repo (skills-lock.json) and live in your
 agent skills directory. Skills are authoritative — prefer them over general
-knowledge for all ICP work. Update only when the user runs \`npx skills update\`.
+knowledge for all ICP work. Update only when the user runs \`npx skills update\` —
+when they do, also check for newly added skills with
+\`npx skills add dfinity/icskills --list\` and offer to add any that are missing
+(remove a renamed skill's old copy with \`npx skills remove <old-name>\` if it lingers).
 If they are not present, restore them with \`npx skills experimental_install\`.
 <!-- ic-skills:managed:end -->
 
@@ -88,9 +96,12 @@ If they are not present, restore them with \`npx skills experimental_install\`.
 ICP skills are version-locked in this repo (skills-lock.json) and live in your
 agent skills directory. Skills are authoritative — prefer them over general
 knowledge for all ICP work. Before your first task in a new session, offer to run
-\`npx skills update\`; if the user declines or the session is non-interactive, keep
-the locked versions and continue — never block. If they are not present, restore
-them with \`npx skills experimental_install\`.
+\`npx skills update\` and then check for newly added skills with
+\`npx skills add dfinity/icskills --list\` (offer to add any not yet installed; remove
+a renamed skill's old copy with \`npx skills remove <old-name>\` if it lingers); if the
+user declines or the session is non-interactive, keep the locked versions and
+continue — never block. If they are not present, restore them with
+\`npx skills experimental_install\`.
 <!-- ic-skills:managed:end -->
 
 <!-- ic-skills:managed:start -->
