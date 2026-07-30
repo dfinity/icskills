@@ -37,6 +37,14 @@
   Access-Control-Allow-Methods: GET
   Access-Control-Allow-Headers: Content-Type
 
+# SKILL.zip bundles under .well-known/ — same discovery treatment as .json/.md
+/.well-known/*.zip
+  Content-Type: application/zip
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
 # User-facing SKILL.md and reference .md files under skills/
 /skills/*.md
   Content-Type: text/markdown; charset=utf-8
@@ -71,9 +79,6 @@
   Cache-Control: public, max-age=0, must-revalidate
 
 /*.xml
-  Cache-Control: public, max-age=0, must-revalidate
-
-/*.zip
   Cache-Control: public, max-age=0, must-revalidate
 
 /robots.txt

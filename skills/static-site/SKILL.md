@@ -82,7 +82,7 @@ The recipe takes four configuration fields:
 
 11. **`.well-known/` is uploaded automatically — no config needed.** The plugin skips dotfiles and dot-directories *except* `.well-known/`, which it traverses normally. So `dir/.well-known/ic-domains` is served at `/.well-known/ic-domains` with no extra setting. (This is the opposite of the legacy canister, which needed an explicit `.ic-assets.json5` un-ignore rule.)
 
-12. **Access protection ordering.** For a brand-new *private* app, `enable_protection` on the empty canister **before** the first sync, so there is never a window where assets are world-readable. The login page must be **fully self-contained** (inline CSS/JS, `data:` URIs) — it is the only gate-exempt path, and any external subresource it references would itself be gated. See [Access protection](#access-protection-private-apps).
+12. **Access protection ordering.** The recipe's `icp deploy` installs the canister **and** syncs assets together, so a plain deploy-then-`enable_protection` briefly serves your content publicly. For a brand-new *private* app, enable protection **before your real assets are synced** — deploy a `dir` containing only `login.html`, `enable_protection`, then deploy the full site — so assets are never world-readable. The login page must be **fully self-contained** (inline CSS/JS, `data:` URIs) — it is the only gate-exempt path, and any external subresource it references would itself be gated. See [Access protection](#access-protection-private-apps).
 
 ## SPA Routing and Redirects: `_redirects`
 
@@ -182,17 +182,20 @@ icp deploy
 # 2. Turn the gate on, naming your login page.
 icp canister call frontend enable_protection '("/login.html")'
 
-# 3. Mint a credential (here: a chosen passphrase valid ~1 year). Omit the opt value for a random token.
-icp canister call frontend issue_token '("owner", 31536000 : nat32, opt "my-passphrase")'
+# 3. Mint a credential (here: a chosen passphrase valid ~1 year). Pass value = null for a random token.
+#    issue_token takes a record (IssueTokenArgs), not positional args.
+icp canister call frontend issue_token '(record { label = "owner"; ttl_secs = 31536000 : nat32; value = opt "my-passphrase" })'
 ```
+
+> **Ordering & the public window.** The `static-site` recipe's `icp deploy` **installs the canister and syncs your assets in one step**, so the sequence above serves your content publicly for the brief window between that first deploy and `enable_protection` — fine when gating an existing or preview app. To avoid *any* public exposure for a **brand-new private app**, enable protection **before your real assets are synced**: run the first `icp deploy` with a `dir` containing only `login.html`, then `enable_protection '("/login.html")'`, then `icp deploy` again with the full site. The login page is gate-exempt, so nothing private is ever served unauthenticated (Pitfall 12). (Enabling on a truly empty canister also works — the canister reports `EnabledLoginPageMissing` and self-heals to `Enabled` once `login.html` is synced.)
 
 | Method | Effect |
 |--------|--------|
-| `issue_token '("<label>", <ttl_secs> : nat32, opt "<value>")'` | Mints a token, returns its value. `null` value → high-entropy random token. |
+| `issue_token '(record { label = "<label>"; ttl_secs = <secs> : nat32; value = opt "<value>" })'` | Mints a token, returns its value. `value = null` → high-entropy random token. |
 | `revoke_token '("<label>")'` | Removes every token with that label, live. |
 | `list_tokens` | Live tokens `{ label; expires_at }` (controller-only). |
 | `check_protection_status` | `Disabled`, `Enabled`, or `EnabledLoginPageMissing`. |
-| `disable_protection` | Gate off, drops all tokens. |
+| `disable_protection '()'` | Gate off, drops all tokens. |
 
 This is **access gating, not confidentiality**: node operators can read asset bytes and the token store, there is no rate-limiting, and it relies on the honest-replica/honest-gateway assumption. Use high-entropy random tokens for share links; enable *before* the first sync for a new private app (Pitfall 12). Full details in the [certified-assets access-protection docs](https://github.com/dfinity/certified-assets/blob/v0.3.1/docs/access-protection.md).
 
