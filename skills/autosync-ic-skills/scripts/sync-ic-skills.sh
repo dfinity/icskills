@@ -30,6 +30,37 @@ trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"; [ -n "$STAGING" ] && rm -rf "$STAGING"
 # step below, which never deletes one that is still the only copy of a skill.)
 rm -rf "${DEST:?}"/.staging-* 2>/dev/null || true
 
+# --- Path-safety guards. `name` and `f` come from the remote index and flow into
+#     rm -rf / mv / file writes, so reject anything that could escape $DEST. ---
+is_safe_name() {   # a flat skill slug: non-empty, no slash, no ".."
+  case "$1" in
+    ""|.|..|*/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+is_safe_relpath() {  # a file path within a skill: subdirs ok, but not absolute or ".."
+  case "$1" in
+    ""|/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# --- Recover from a run interrupted mid-swap. A `.old-<name>.<pid>` dir is the
+#     previous good copy of <name>, moved aside just before its swap. If that swap
+#     never finished (the skill dir is now missing), restore it; otherwise it is
+#     stale and safe to drop. This runs BEFORE the index fetch, so an interrupted
+#     skill is restored even on an offline run — keeping the cached copy available. ---
+for backup in "$DEST"/.old-*; do
+  [ -e "$backup" ] || continue                 # unmatched glob stays literal — skip
+  bname="$(basename "$backup")"; bname="${bname#.old-}"; bname="${bname%.*}"
+  if is_safe_name "$bname" && [ ! -e "$DEST/$bname" ]; then
+    mv "$backup" "$DEST/$bname"
+    echo "[autosync-ic-skills] recovered '$bname' from an interrupted sync" >&2
+  else
+    rm -rf "$backup"
+  fi
+done
+
 # --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
 if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
   echo "[autosync-ic-skills] could not reach $INDEX_URL — keeping cached skills" >&2
@@ -62,37 +93,6 @@ record() {
   local tmp; tmp="$(mktemp)"
   jq --arg n "$1" --arg h "$2" '.[$n] = $h' "$NEW_MANIFEST" > "$tmp" && mv "$tmp" "$NEW_MANIFEST"
 }
-
-# --- Path-safety guards. `name` and `f` come from the remote index and flow into
-#     rm -rf / mv / file writes, so reject anything that could escape $DEST. ---
-is_safe_name() {   # a flat skill slug: non-empty, no slash, no ".."
-  case "$1" in
-    ""|.|..|*/*|*..*) return 1 ;;
-    *) return 0 ;;
-  esac
-}
-is_safe_relpath() {  # a file path within a skill: subdirs ok, but not absolute or ".."
-  case "$1" in
-    ""|/*|*..*) return 1 ;;
-    *) return 0 ;;
-  esac
-}
-
-# --- Recover from a run interrupted mid-swap. A `.old-<name>.<pid>` dir is the
-#     previous good copy of <name>, moved aside just before its swap. If that swap
-#     never finished (the skill dir is now missing), restore it; otherwise it is
-#     stale and safe to drop. Runs after the index fetch, so an offline run exits
-#     earlier and leaves `.old-*` untouched rather than risking the only copy. ---
-for backup in "$DEST"/.old-*; do
-  [ -e "$backup" ] || continue                 # unmatched glob stays literal — skip
-  bname="$(basename "$backup")"; bname="${bname#.old-}"; bname="${bname%.*}"
-  if is_safe_name "$bname" && [ ! -e "$DEST/$bname" ]; then
-    mv "$backup" "$DEST/$bname"
-    echo "[autosync-ic-skills] recovered '$bname' from an interrupted sync" >&2
-  else
-    rm -rf "$backup"
-  fi
-done
 
 NEW_NAMES="$(jq -r '.skills[].name' "$TMP_INDEX")"
 MANAGED="$(managed_names)"
@@ -169,8 +169,8 @@ while IFS= read -r entry; do
         added=$((added + 1))
       fi
     else
-      # Swap failed: restore the existing copy and retry on the next run.
-      echo "[autosync-ic-skills] warning: failed to install $name — kept the existing copy" >&2
+      # Swap failed: restore any existing copy and retry on the next run.
+      echo "[autosync-ic-skills] warning: failed to install $name — kept any existing copy; will retry next run" >&2
       [ -n "$backup" ] && mv "$backup" "$DEST/$name"
       rm -rf "$STAGING"
       STAGING=""
