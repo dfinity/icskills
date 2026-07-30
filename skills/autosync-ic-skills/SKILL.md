@@ -85,7 +85,10 @@ sync logic stays correct as it is updated upstream.
 - For each skill, compares the published `hash` against `.claude/skills/.ic-managed.json`
   (a `{ "<skill>": "<hash>" }` manifest of skills it manages) and re-downloads only the
   skills whose hash changed or are new.
-- Prunes skills it previously installed that are no longer in the index.
+- Prunes skills it previously installed that are no longer in the index, and
+  replaces a changed skill's whole directory via an atomic staging swap — so files
+  renamed or removed upstream don't linger inside a skill, and an interrupted
+  download leaves the existing copy intact.
 - Prints a one-line `added / updated / removed` summary only when something changed;
   otherwise it is silent.
 - Degrades gracefully: exits cleanly (keeping cached skills) if the network is down or

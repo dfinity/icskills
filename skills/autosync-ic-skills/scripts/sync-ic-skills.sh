@@ -17,10 +17,16 @@ MANIFEST="$DEST/.ic-managed.json"   # { "<skill>": "<hash>" } of skills this scr
 
 mkdir -p "$DEST"
 
-# --- Temp files. NEW_MANIFEST is built up as we go, then swapped in atomically. ---
+# --- Temp files. NEW_MANIFEST is built up as we go, then swapped in atomically.
+#     STAGING holds the skill dir currently being downloaded, so the trap can
+#     remove a half-written skill if the run is interrupted. ---
 TMP_INDEX="$(mktemp)"
 NEW_MANIFEST="$(mktemp)"
-trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"' EXIT
+STAGING=""
+trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"; [ -n "$STAGING" ] && rm -rf "$STAGING"' EXIT
+
+# Remove any staging dirs left behind by a previously interrupted run.
+rm -rf "${DEST:?}"/.staging-* 2>/dev/null || true
 
 # --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
 if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
@@ -85,19 +91,28 @@ while IFS= read -r entry; do
     continue
   fi
 
-  # Otherwise (re)download every file for this skill.
+  # Otherwise download this skill into a fresh staging dir, then swap it in
+  # atomically. A clean staging dir means an intra-skill file rename or removal
+  # leaves no orphaned files behind, and a mid-download failure keeps the existing
+  # copy intact — the swap happens only after every file downloaded successfully.
   ok=1
-  mkdir -p "$DEST/$name"
+  STAGING="$(mktemp -d "${DEST}/.staging-${name}.XXXXXX")"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    mkdir -p "$(dirname "$DEST/$name/$f")"   # files may live in subdirs (e.g. scripts/)
-    if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$DEST/$name/$f"; then
+    mkdir -p "$(dirname "$STAGING/$f")"   # files may live in subdirs (e.g. scripts/)
+    if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$STAGING/$f"; then
       echo "[autosync-ic-skills] warning: failed to fetch $name/$f" >&2
       ok=0
+      break
     fi
   done < <(jq -r '.files[]?' <<<"$entry")
 
   if [ "$ok" -eq 1 ]; then
+    # Atomic swap on the same filesystem: replace the old skill dir wholesale, so
+    # files removed or renamed upstream do not survive locally.
+    rm -rf "${DEST:?}/$name"
+    mv "$STAGING" "$DEST/$name"
+    STAGING=""
     # Record the new hash so the next run can skip this skill. A hashless server
     # records an empty hash, which never equals new_hash -> always re-downloads.
     record "$name" "$new_hash"
@@ -107,7 +122,10 @@ while IFS= read -r entry; do
       added=$((added + 1))
     fi
   else
-    # Download incomplete: keep the old hash so the next run retries this skill.
+    # Download incomplete: discard the staging dir, keep the existing skill dir
+    # untouched, and keep the old hash so the next run retries this skill.
+    rm -rf "$STAGING"
+    STAGING=""
     record "$name" "$old_hash"
   fi
 done < <(jq -c '.skills[]' "$TMP_INDEX")
