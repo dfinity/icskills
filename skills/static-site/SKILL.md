@@ -20,7 +20,7 @@ The **`@dfinity/static-site` recipe** deploys a static site — a built frontend
 
 ## Prerequisites
 
-- `icp-cli` (the recipe pins the canister + sync-plugin pair; `ic-wasm`, needed only for the `metadata` field, ships with `icp-cli`).
+- `icp-cli` (the recipe pins the canister + sync-plugin pair). The optional `metadata` field additionally needs `ic-wasm`, installed alongside the CLI (`npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm`) — see the `icp-cli` skill.
 - Your frontend's build toolchain (e.g. Node.js >= 22 for a Vite/React app).
 
 ## Canister IDs and URLs

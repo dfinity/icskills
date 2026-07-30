@@ -210,7 +210,11 @@ jobs:
         id: latest
         run: |
           # Only semver v* releases are the static-site recipe; ignore migration-*/snapshot-* tags.
-          TAG=$(gh release list --repo dfinity/certified-assets --limit 100 --json tagName --jq '[.[] | select(.tagName | test("^v[0-9]"))] | first | .tagName')
+          TAG=$(gh release list --repo dfinity/certified-assets --limit 100 --json tagName --jq '[.[] | select(.tagName | test("^v[0-9]"))] | first | .tagName // empty')
+          if [ -z "$TAG" ]; then
+            echo "No semver v* release found for dfinity/certified-assets — nothing to check." >&2
+            exit 1
+          fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
