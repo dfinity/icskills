@@ -17,10 +17,49 @@ MANIFEST="$DEST/.ic-managed.json"   # { "<skill>": "<hash>" } of skills this scr
 
 mkdir -p "$DEST"
 
-# --- Temp files. NEW_MANIFEST is built up as we go, then swapped in atomically. ---
+# --- Temp files. NEW_MANIFEST is built up as we go, then swapped in atomically.
+#     STAGING holds the skill dir currently being downloaded, so the trap can
+#     remove a half-written skill if the run is interrupted. ---
 TMP_INDEX="$(mktemp)"
 NEW_MANIFEST="$(mktemp)"
-trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"' EXIT
+STAGING=""
+trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"; [ -n "$STAGING" ] && rm -rf "$STAGING"' EXIT
+
+# Remove any staging dirs left by a previously interrupted run — an in-progress
+# download is always safe to discard. (.old-* backups are handled by the recovery
+# step below, which never deletes one that is still the only copy of a skill.)
+rm -rf "${DEST:?}"/.staging-* 2>/dev/null || true
+
+# --- Path-safety guards. `name` and `f` come from the remote index and flow into
+#     rm -rf / mv / file writes, so reject anything that could escape $DEST. ---
+is_safe_name() {   # a flat skill slug: non-empty, no slash, no ".."
+  case "$1" in
+    ""|.|..|*/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+is_safe_relpath() {  # a file path within a skill: subdirs ok, but not absolute or ".."
+  case "$1" in
+    ""|/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# --- Recover from a run interrupted mid-swap. A `.old-<name>.<pid>` dir is the
+#     previous good copy of <name>, moved aside just before its swap. If that swap
+#     never finished (the skill dir is now missing), restore it; otherwise it is
+#     stale and safe to drop. This runs BEFORE the index fetch, so an interrupted
+#     skill is restored even on an offline run — keeping the cached copy available. ---
+for backup in "$DEST"/.old-*; do
+  [ -e "$backup" ] || continue                 # unmatched glob stays literal — skip
+  bname="$(basename "$backup")"; bname="${bname#.old-}"; bname="${bname%.*}"
+  if is_safe_name "$bname" && [ ! -e "$DEST/$bname" ]; then
+    mv "$backup" "$DEST/$bname"
+    echo "[autosync-ic-skills] recovered '$bname' from an interrupted sync" >&2
+  else
+    rm -rf "$backup"
+  fi
+done
 
 # --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
 if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
@@ -63,6 +102,7 @@ echo '{}' > "$NEW_MANIFEST"
 removed=0
 while IFS= read -r old; do
   [ -n "$old" ] || continue
+  is_safe_name "$old" || { echo "[autosync-ic-skills] skipping unsafe managed name: $old" >&2; continue; }
   if ! grep -qxF "$old" <<<"$NEW_NAMES"; then
     rm -rf "${DEST:?}/$old"
     removed=$((removed + 1))
@@ -75,6 +115,7 @@ added=0; updated=0; unchanged=0
 while IFS= read -r entry; do
   name="$(jq -r '.name' <<<"$entry")"
   [ -n "$name" ] && [ "$name" != "null" ] || continue
+  is_safe_name "$name" || { echo "[autosync-ic-skills] skipping skill with unsafe name: $name" >&2; continue; }
   new_hash="$(jq -r '.hash // ""' <<<"$entry")"
   old_hash="$(stored_hash "$name")"
 
@@ -85,29 +126,61 @@ while IFS= read -r entry; do
     continue
   fi
 
-  # Otherwise (re)download every file for this skill.
+  # Otherwise download this skill into a fresh staging dir, then swap it in
+  # atomically. A clean staging dir means an intra-skill file rename or removal
+  # leaves no orphaned files behind, and a mid-download failure keeps the existing
+  # copy intact — the swap happens only after every file downloaded successfully.
   ok=1
-  mkdir -p "$DEST/$name"
+  STAGING="$(mktemp -d "${DEST}/.staging-${name}.XXXXXX")"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    mkdir -p "$(dirname "$DEST/$name/$f")"   # files may live in subdirs (e.g. scripts/)
-    if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$DEST/$name/$f"; then
+    if ! is_safe_relpath "$f"; then
+      echo "[autosync-ic-skills] warning: unsafe file path in $name: $f — skipping skill" >&2
+      ok=0
+      break
+    fi
+    mkdir -p "$(dirname "$STAGING/$f")"   # files may live in subdirs (e.g. scripts/)
+    if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$STAGING/$f"; then
       echo "[autosync-ic-skills] warning: failed to fetch $name/$f" >&2
       ok=0
+      break
     fi
   done < <(jq -r '.files[]?' <<<"$entry")
 
   if [ "$ok" -eq 1 ]; then
-    # Record the new hash so the next run can skip this skill. A hashless server
-    # records an empty hash, which never equals new_hash -> always re-downloads.
-    record "$name" "$new_hash"
-    if grep -qxF "$name" <<<"$MANAGED"; then
-      updated=$((updated + 1))
+    # Swap in the fresh copy. Move any existing dir aside first, move the new one
+    # into place, and only then drop the old copy — so a failed swap restores the
+    # existing copy intact, while files removed or renamed upstream don't survive.
+    backup=""
+    if [ -e "$DEST/$name" ]; then
+      backup="${DEST}/.old-${name}.$$"
+      rm -rf "$backup"
+      mv "$DEST/$name" "$backup"
+    fi
+    if mv "$STAGING" "$DEST/$name"; then
+      STAGING=""
+      [ -n "$backup" ] && rm -rf "$backup"
+      # Record the new hash so the next run can skip this skill. A hashless server
+      # records an empty hash, which never equals new_hash -> always re-downloads.
+      record "$name" "$new_hash"
+      if grep -qxF "$name" <<<"$MANAGED"; then
+        updated=$((updated + 1))
+      else
+        added=$((added + 1))
+      fi
     else
-      added=$((added + 1))
+      # Swap failed: restore any existing copy and retry on the next run.
+      echo "[autosync-ic-skills] warning: failed to install $name — kept any existing copy; will retry next run" >&2
+      [ -n "$backup" ] && mv "$backup" "$DEST/$name"
+      rm -rf "$STAGING"
+      STAGING=""
+      record "$name" "$old_hash"
     fi
   else
-    # Download incomplete: keep the old hash so the next run retries this skill.
+    # Download incomplete: discard the staging dir, keep the existing skill dir
+    # untouched, and keep the old hash so the next run retries this skill.
+    rm -rf "$STAGING"
+    STAGING=""
     record "$name" "$old_hash"
   fi
 done < <(jq -c '.skills[]' "$TMP_INDEX")
