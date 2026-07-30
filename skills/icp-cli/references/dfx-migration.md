@@ -93,7 +93,7 @@ Steps:
 |----------|----------|
 | `"type": "rust"` | `recipe.type: "@dfinity/rust@v3.2.0"` |
 | `"type": "motoko"` | `recipe.type: "@dfinity/motoko@v4.1.0"` |
-| `"type": "assets"` | `recipe.type: "@dfinity/static-site@v0.3.1"` (recommended; legacy: `@dfinity/asset-canister@v2.2.1`) |
+| `"type": "assets"` | `recipe.type: "@dfinity/static-site@v0.3.1"` (recommended) or `@dfinity/asset-canister@v2.2.1` (legacy). Not a drop-in: static-site is a different canister using `_headers`/`_redirects` (not `.ic-assets.json5`), and switching a deployed canister needs a reinstall — see the `static-site` skill's migration guide. |
 | `"package": "X"` | `recipe.configuration.package: X` |
 | `"candid": "X"` | `recipe.configuration.candid: X` |
 | `"main": "X"` | `recipe.configuration.main: X` |

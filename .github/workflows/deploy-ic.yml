@@ -59,7 +59,7 @@ jobs:
 
       - name: Deploy to IC mainnet
         run: |
-          MODE="${{ inputs.mode }}"
+          MODE="${{ github.event.inputs.mode }}"
           if [ -n "$MODE" ]; then
             echo "Deploying with --mode $MODE"
             icp deploy -e ic --mode "$MODE" frontend
