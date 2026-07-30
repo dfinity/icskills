@@ -25,8 +25,8 @@ NEW_MANIFEST="$(mktemp)"
 STAGING=""
 trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"; [ -n "$STAGING" ] && rm -rf "$STAGING"' EXIT
 
-# Remove any staging dirs left behind by a previously interrupted run.
-rm -rf "${DEST:?}"/.staging-* 2>/dev/null || true
+# Remove any staging/backup dirs left behind by a previously interrupted run.
+rm -rf "${DEST:?}"/.staging-* "${DEST:?}"/.old-* 2>/dev/null || true
 
 # --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
 if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
@@ -61,6 +61,21 @@ record() {
   jq --arg n "$1" --arg h "$2" '.[$n] = $h' "$NEW_MANIFEST" > "$tmp" && mv "$tmp" "$NEW_MANIFEST"
 }
 
+# --- Path-safety guards. `name` and `f` come from the remote index and flow into
+#     rm -rf / mv / file writes, so reject anything that could escape $DEST. ---
+is_safe_name() {   # a flat skill slug: non-empty, no slash, no ".."
+  case "$1" in
+    ""|.|..|*/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+is_safe_relpath() {  # a file path within a skill: subdirs ok, but not absolute or ".."
+  case "$1" in
+    ""|/*|*..*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 NEW_NAMES="$(jq -r '.skills[].name' "$TMP_INDEX")"
 MANAGED="$(managed_names)"
 echo '{}' > "$NEW_MANIFEST"
@@ -69,6 +84,7 @@ echo '{}' > "$NEW_MANIFEST"
 removed=0
 while IFS= read -r old; do
   [ -n "$old" ] || continue
+  is_safe_name "$old" || { echo "[autosync-ic-skills] skipping unsafe managed name: $old" >&2; continue; }
   if ! grep -qxF "$old" <<<"$NEW_NAMES"; then
     rm -rf "${DEST:?}/$old"
     removed=$((removed + 1))
@@ -81,6 +97,7 @@ added=0; updated=0; unchanged=0
 while IFS= read -r entry; do
   name="$(jq -r '.name' <<<"$entry")"
   [ -n "$name" ] && [ "$name" != "null" ] || continue
+  is_safe_name "$name" || { echo "[autosync-ic-skills] skipping skill with unsafe name: $name" >&2; continue; }
   new_hash="$(jq -r '.hash // ""' <<<"$entry")"
   old_hash="$(stored_hash "$name")"
 
@@ -99,6 +116,11 @@ while IFS= read -r entry; do
   STAGING="$(mktemp -d "${DEST}/.staging-${name}.XXXXXX")"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
+    if ! is_safe_relpath "$f"; then
+      echo "[autosync-ic-skills] warning: unsafe file path in $name: $f — skipping skill" >&2
+      ok=0
+      break
+    fi
     mkdir -p "$(dirname "$STAGING/$f")"   # files may live in subdirs (e.g. scripts/)
     if ! curl -fsSL --max-time 20 "$BASE/$name/$f" -o "$STAGING/$f"; then
       echo "[autosync-ic-skills] warning: failed to fetch $name/$f" >&2
@@ -108,18 +130,33 @@ while IFS= read -r entry; do
   done < <(jq -r '.files[]?' <<<"$entry")
 
   if [ "$ok" -eq 1 ]; then
-    # Atomic swap on the same filesystem: replace the old skill dir wholesale, so
-    # files removed or renamed upstream do not survive locally.
-    rm -rf "${DEST:?}/$name"
-    mv "$STAGING" "$DEST/$name"
-    STAGING=""
-    # Record the new hash so the next run can skip this skill. A hashless server
-    # records an empty hash, which never equals new_hash -> always re-downloads.
-    record "$name" "$new_hash"
-    if grep -qxF "$name" <<<"$MANAGED"; then
-      updated=$((updated + 1))
+    # Swap in the fresh copy. Move any existing dir aside first, move the new one
+    # into place, and only then drop the old copy — so a failed swap restores the
+    # existing copy intact, while files removed or renamed upstream don't survive.
+    backup=""
+    if [ -e "$DEST/$name" ]; then
+      backup="${DEST}/.old-${name}.$$"
+      rm -rf "$backup"
+      mv "$DEST/$name" "$backup"
+    fi
+    if mv "$STAGING" "$DEST/$name"; then
+      STAGING=""
+      [ -n "$backup" ] && rm -rf "$backup"
+      # Record the new hash so the next run can skip this skill. A hashless server
+      # records an empty hash, which never equals new_hash -> always re-downloads.
+      record "$name" "$new_hash"
+      if grep -qxF "$name" <<<"$MANAGED"; then
+        updated=$((updated + 1))
+      else
+        added=$((added + 1))
+      fi
     else
-      added=$((added + 1))
+      # Swap failed: restore the existing copy and retry on the next run.
+      echo "[autosync-ic-skills] warning: failed to install $name — kept the existing copy" >&2
+      [ -n "$backup" ] && mv "$backup" "$DEST/$name"
+      rm -rf "$STAGING"
+      STAGING=""
+      record "$name" "$old_hash"
     fi
   else
     # Download incomplete: discard the staging dir, keep the existing skill dir
