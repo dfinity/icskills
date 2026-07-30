@@ -1,6 +1,6 @@
 # Dev Server Configuration (Vite)
 
-In development, the Vite dev server must simulate the `ic_env` cookie that the asset canister provides in production.
+In development, the Vite dev server must simulate the `ic_env` cookie that the frontend canister (static-site or asset canister) provides in production.
 
 ## Prerequisites
 
