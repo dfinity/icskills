@@ -25,8 +25,10 @@ NEW_MANIFEST="$(mktemp)"
 STAGING=""
 trap 'rm -f "$TMP_INDEX" "$NEW_MANIFEST"; [ -n "$STAGING" ] && rm -rf "$STAGING"' EXIT
 
-# Remove any staging/backup dirs left behind by a previously interrupted run.
-rm -rf "${DEST:?}"/.staging-* "${DEST:?}"/.old-* 2>/dev/null || true
+# Remove any staging dirs left by a previously interrupted run — an in-progress
+# download is always safe to discard. (.old-* backups are handled by the recovery
+# step below, which never deletes one that is still the only copy of a skill.)
+rm -rf "${DEST:?}"/.staging-* 2>/dev/null || true
 
 # --- Fetch the index. On any network failure, keep cached skills and exit cleanly. ---
 if ! curl -fsSL --max-time 20 "$INDEX_URL" -o "$TMP_INDEX"; then
@@ -75,6 +77,22 @@ is_safe_relpath() {  # a file path within a skill: subdirs ok, but not absolute 
     *) return 0 ;;
   esac
 }
+
+# --- Recover from a run interrupted mid-swap. A `.old-<name>.<pid>` dir is the
+#     previous good copy of <name>, moved aside just before its swap. If that swap
+#     never finished (the skill dir is now missing), restore it; otherwise it is
+#     stale and safe to drop. Runs after the index fetch, so an offline run exits
+#     earlier and leaves `.old-*` untouched rather than risking the only copy. ---
+for backup in "$DEST"/.old-*; do
+  [ -e "$backup" ] || continue                 # unmatched glob stays literal — skip
+  bname="$(basename "$backup")"; bname="${bname#.old-}"; bname="${bname%.*}"
+  if is_safe_name "$bname" && [ ! -e "$DEST/$bname" ]; then
+    mv "$backup" "$DEST/$bname"
+    echo "[autosync-ic-skills] recovered '$bname' from an interrupted sync" >&2
+  else
+    rm -rf "$backup"
+  fi
+done
 
 NEW_NAMES="$(jq -r '.skills[].name' "$TMP_INDEX")"
 MANAGED="$(managed_names)"
