@@ -21,7 +21,7 @@ Before generating any `icp` command not explicitly documented here, run `icp --h
 npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 ```
 
-`ic-wasm` is required when using official recipes (`@dfinity/rust`, `@dfinity/motoko`, `@dfinity/asset-canister`) — they depend on it for optimization and metadata embedding. Requires [Node.js](https://nodejs.org/) >= 22. Also available via Homebrew and shell script installer — see the [icp-cli releases](https://github.com/dfinity/icp-cli/releases).
+`ic-wasm` is required when using official recipes (`@dfinity/rust`, `@dfinity/motoko`, `@dfinity/static-site`, `@dfinity/asset-canister`) — they depend on it for optimization and metadata embedding. Requires [Node.js](https://nodejs.org/) >= 22. Also available via Homebrew and shell script installer — see the [icp-cli releases](https://github.com/dfinity/icp-cli/releases).
 
 **Linux note:** On minimal installs, you may need system libraries: `sudo apt-get install -y libdbus-1-3 libssl3 ca-certificates` (Ubuntu/Debian) or `sudo dnf install -y dbus-libs openssl ca-certificates` (Fedora/RHEL).
 
@@ -97,12 +97,12 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
    icp network stop      # stop when done
    ```
 
-10. **Not specifying build commands for asset canisters.** dfx automatically runs `npm run build` for asset canisters. icp-cli requires explicit build commands in the recipe configuration:
+10. **Not specifying build commands for a frontend canister.** dfx automatically runs `npm run build` for asset canisters. icp-cli requires explicit build commands in the recipe configuration:
     ```yaml
     canisters:
       - name: frontend
         recipe:
-          type: "@dfinity/asset-canister@v2.2.1"
+          type: "@dfinity/static-site@v0.3.1"   # recommended frontend recipe (certified-assets)
           configuration:
             dir: dist
             build:
@@ -251,7 +251,7 @@ Source Code → [Build] → WASM → [Deploy] → Running Canister → [Sync] �
 `icp deploy` runs all three phases in sequence:
 1. **Build** — Compile canisters to WASM (via recipes or explicit build steps)
 2. **Deploy** — Create canisters (if new), apply settings, install WASM
-3. **Sync** — Post-deployment operations via `script` or `plugin` steps (e.g., uploading assets). Asset uploading is not built into the CLI: the `@dfinity/asset-canister@v2.2.1` recipe supplies a `plugin` sync step that uploads the `dir` contents. The legacy built-in `type: assets` step is removed in icp-cli 0.3.0 — see the `asset-canister` skill.
+3. **Sync** — Post-deployment operations via `script` or `plugin` steps (e.g., uploading assets). Asset uploading is not built into the CLI: a frontend recipe supplies a `plugin` sync step that uploads the `dir` contents — the recommended `@dfinity/static-site@v0.3.1` (certified-assets) or the legacy `@dfinity/asset-canister@v2.2.1`. The legacy built-in `type: assets` step is removed in icp-cli 0.3.0 — see the `static-site` skill.
 
 Run phases separately for more control:
 ```bash
@@ -395,19 +395,21 @@ candid = "backend.did"  # optional — auto-generated to .mops/.build/ when omit
 
 The canister name (`backend`) must exactly match between `icp.yaml` and `mops.toml`. No `recipe.configuration` block is needed in `icp.yaml`.
 
-### Asset canister (frontend)
+### Static site (frontend)
 
 ```yaml
 canisters:
   - name: frontend
     recipe:
-      type: "@dfinity/asset-canister@v2.2.1"
+      type: "@dfinity/static-site@v0.3.1"
       configuration:
         dir: dist
         build:
           - npm install
           - npm run build
 ```
+
+`@dfinity/static-site` (the certified-assets canister) is the recommended frontend recipe. The legacy `@dfinity/asset-canister@v2.2.1` recipe is still supported for existing projects — see the `static-site` skill for both and for migration.
 
 For multi-canister projects, list all canisters in the same `canisters` array. icp-cli builds them in parallel. There is no `dependencies` field — use Canister Environment Variables for inter-canister communication.
 
@@ -437,8 +439,11 @@ canisters:
 |--------|------------|-----------------|-----------------|
 | Rust | `@dfinity/rust@v3.3.0` | — | `package` (defaults to canister name), `candid`, `locked`, `shrink`, `compress`, `metadata` |
 | Motoko | `@dfinity/motoko@v5.0.0` | — | `shrink`, `compress`, `metadata` |
-| Asset | `@dfinity/asset-canister@v2.2.1` | `dir` | `build`, `version` |
+| Static site (frontend) | `@dfinity/static-site@v0.3.1` | `dir` | `build`, `presync`, `metadata` |
+| Asset (legacy frontend) | `@dfinity/asset-canister@v2.2.1` | `dir` | `build`, `version` |
 | Prebuilt | `@dfinity/prebuilt@v1.0.0` | `wasm` | `sha256`, `candid`, `shrink`, `compress` |
+
+`@dfinity/static-site` is the recommended way to host a frontend; `@dfinity/asset-canister` is the legacy asset canister (see the `static-site` skill).
 
 Verify latest recipe versions at [dfinity/icp-cli-recipes releases](https://github.com/dfinity/icp-cli-recipes/releases). Use `icp project show` to see the effective configuration after recipe expansion.
 
@@ -448,7 +453,7 @@ During `icp deploy`, icp-cli injects the ID of **every canister in the environme
 
 **Use these for inter-canister wiring** instead of setter methods, init args, or post-deploy scripts (Pitfall 22). Read them lazily at call time — Motoko: `Runtime.envVar<system>(...)` (motoko-core v2.1.0+), Rust: `ic_cdk::api::env_var_value(...)` — see `references/canister-env-vars.md` for code and the first-install/reinstall behavior.
 
-**Frontend** (JavaScript): asset canisters expose the variables through the `ic_env` cookie, set on all HTML responses. Read it with `@icp-sdk/core`:
+**Frontend** (JavaScript): the frontend canister (static-site or the legacy asset canister) exposes the variables through the `ic_env` cookie, set on all HTML responses. Read it with `@icp-sdk/core`:
 ```js
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 

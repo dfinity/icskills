@@ -1,0 +1,55 @@
+# Response headers for the certified-assets (static-site) canister.
+# Ported from the former .ic-assets.json5. Unlike the legacy asset canister,
+# certified-assets adds NO default headers — everything here is explicit.
+# Patterns match the file's asset key; a single `*` matches any run of chars
+# (including `/`). All matching blocks contribute; same-name values combine.
+
+# Global: no MIME sniffing. (No Cache-Control here — it would combine with the
+# per-type Cache-Control blocks below into a contradictory header.)
+/*
+  X-Content-Type-Options: nosniff
+
+# Astro hashed static assets — content-addressed, safe to cache forever.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML — always revalidate so deploys are picked up.
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Non-hashed root assets that can change between deploys.
+/styles.css
+  Cache-Control: public, max-age=0, must-revalidate
+
+/matomo.js
+  Cache-Control: public, max-age=300
+
+# Agent discovery — JSON indices (.well-known/skills/index.json, etc.)
+/.well-known/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# Agent discovery — SKILL.md and reference .md files under .well-known/
+/.well-known/*.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# User-facing SKILL.md and reference .md files under skills/
+/skills/*.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# Agent-readable skill indices (llms.txt, llms-full.txt)
+/llms*.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *

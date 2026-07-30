@@ -74,7 +74,7 @@ networks:
     ii: true
 ```
 
-This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, and the `identityProvider` URL becomes `http://id.ai.localhost:8000/authorize`. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **asset-canister** skills.
+This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, and the `identityProvider` URL becomes `http://id.ai.localhost:8000/authorize`. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **static-site** skills.
 
 ### Frontend: Vanilla JavaScript/TypeScript Sign-In Flow
 

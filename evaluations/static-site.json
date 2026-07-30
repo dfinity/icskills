@@ -1,0 +1,99 @@
+{
+  "skill": "static-site",
+  "description": "Evaluation cases for the static-site skill. Tests whether agents produce correct @dfinity/static-site (certified-assets) configuration — _redirects SPA rules, _headers, recipe setup — avoid legacy .ic-assets.json5 / AssetManager on the new canister, and handle migration from the legacy asset canister.",
+
+  "output_evals": [
+    {
+      "name": "Static-site recipe setup",
+      "prompt": "Show me the icp.yaml configuration to deploy my Vite frontend on the IC with the recommended certified-assets recipe, including the build step. Just the YAML and the deploy command — no _headers, no _redirects, no programmatic upload code.",
+      "expected_behaviors": [
+        "Uses the @dfinity/static-site recipe (certified-assets), not @dfinity/asset-canister",
+        "Sets dir: dist (Vite output)",
+        "Includes build commands (e.g. npm ci / npm install, npm run build)",
+        "Uses icp deploy, NOT dfx deploy"
+      ]
+    },
+    {
+      "name": "SPA routing on static-site uses _redirects, not .ic-assets.json5",
+      "prompt": "I'm hosting my React SPA on the IC with the @dfinity/static-site recipe. Refreshing a deep route like /dashboard/settings returns 404. How do I fix it? Just the config file and where it goes.",
+      "expected_behaviors": [
+        "Adds a _redirects file at the root of the build/dir directory",
+        "Uses the rule /*  /index.html  200 (a rewrite, status 200)",
+        "Does NOT use .ic-assets.json5 or enable_aliasing (those are the legacy asset canister)",
+        "Does NOT use a 301/302 redirect for the SPA fallback"
+      ]
+    },
+    {
+      "name": "Adversarial: AssetManager does not work on certified-assets",
+      "prompt": "I deployed my frontend with the @dfinity/static-site recipe. Write me a Node.js script that uses AssetManager from @icp-sdk/canisters to upload an extra file to it.",
+      "expected_behaviors": [
+        "Explains that AssetManager targets the legacy SDK asset canister and does NOT work against the certified-assets (static-site) canister",
+        "States that static-site uploads happen through the recipe's sync plugin on icp deploy (different upload API: upload_chunks/execute_operations)",
+        "Does NOT present AssetManager.store() as a working way to upload to a static-site canister",
+        "Points the user to the legacy @dfinity/asset-canister recipe if they genuinely need programmatic AssetManager uploads"
+      ]
+    },
+    {
+      "name": "Custom headers / CSP via _headers (no defaults)",
+      "prompt": "How do I set a Content-Security-Policy and cache headers on my @dfinity/static-site frontend on the IC? Just the config file and the key rules.",
+      "expected_behaviors": [
+        "Uses a _headers file at the root of the dir (Netlify-style syntax)",
+        "Notes the certified-assets canister adds NO default headers, so you must declare them",
+        "Explains patterns match the file/asset key (e.g. /index.html, /*.html), not the visitor URL",
+        "Does NOT use .ic-assets.json5 or a security_policy field"
+      ]
+    },
+    {
+      "name": "Adversarial: migrating asset-canister to static-site requires reinstall",
+      "prompt": "I'm migrating my existing @dfinity/asset-canister frontend to the @dfinity/static-site recipe. I just changed the recipe type and ran icp deploy but it failed. What's the gotcha? Just the key points.",
+      "expected_behaviors": [
+        "Explains the two canisters have incompatible stable-memory layouts, so an in-place upgrade fails/panics",
+        "Recommends icp deploy --mode reinstall (which wipes state and re-syncs) or deploying a fresh canister",
+        "Mentions converting .ic-assets.json5 to _headers/_redirects as part of the migration",
+        "Does NOT claim a plain icp deploy upgrade works across the two recipes"
+      ]
+    },
+    {
+      "name": "Legacy asset canister SPA still supported",
+      "prompt": "My existing project uses the @dfinity/asset-canister recipe with a .ic-assets.json5 file. How do I make SPA deep-link refreshes work? Just the config.",
+      "expected_behaviors": [
+        "Uses .ic-assets.json5 with enable_aliasing: true for the SPA fallback",
+        "Keeps the @dfinity/asset-canister (legacy) recipe rather than forcing a rewrite to static-site",
+        "Does NOT tell the user _redirects works on the legacy asset canister"
+      ]
+    },
+    {
+      "name": "Mainnet browser-access domain is icp.net",
+      "prompt": "I deployed my static-site frontend canister to mainnet. What URL do I open in the browser to view it? Just the URL pattern.",
+      "expected_behaviors": [
+        "Gives the URL as https://<canister-id>.icp.net",
+        "Does NOT use the legacy ic0.app or icp0.io gateway domains",
+        "Does NOT use icp-api.io (that is the API endpoint, not the browser gateway)"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I deploy a frontend on the IC?",
+      "Deploy my site with the static-site recipe",
+      "How do I use certified assets on the IC?",
+      "Set up an asset canister for my React app",
+      "My SPA routing doesn't work on the IC",
+      "How do I set up _redirects for my IC frontend?",
+      "Configure .ic-assets.json5 for my project",
+      "How do I migrate from the asset canister to certified-assets?"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login",
+      "How do I make inter-canister calls?",
+      "Set up stable memory in Motoko",
+      "Connect a wallet to my dapp",
+      "How do I create an ICRC-1 token?",
+      "Deploy a Rust backend canister",
+      "How do I set up a custom domain on the IC?",
+      "Configure DNS for my IC canister"
+    ]
+  }
+}
