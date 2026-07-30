@@ -62,7 +62,7 @@ jobs:
           MODE="${{ inputs.mode }}"
           if [ -n "$MODE" ]; then
             echo "Deploying with --mode $MODE"
-            icp deploy -e ic frontend --mode "$MODE"
+            icp deploy -e ic --mode "$MODE" frontend
           else
             icp deploy -e ic frontend
           fi
