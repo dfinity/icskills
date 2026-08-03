@@ -159,7 +159,7 @@ Set them under each canister's `settings.environment_variables` — this is vali
 # frontend/canister.yaml
 name: frontend
 recipe:
-  type: "@dfinity/static-site@v0.3.1"
+  type: "@dfinity/static-site@v0.3.3"
   configuration:
     build:
       - npm install

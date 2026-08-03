@@ -28,7 +28,7 @@ The two canisters have **incompatible stable-memory layouts**. Attempting to upg
    - name: frontend
      recipe:
 -      type: "@dfinity/asset-canister@v2.2.1"
-+      type: "@dfinity/static-site@v0.3.1"
++      type: "@dfinity/static-site@v0.3.3"
        configuration:
          dir: dist
          build:

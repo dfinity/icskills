@@ -39,7 +39,7 @@ Static-site canisters are created per-project — there is no global canister ID
 canisters:
   - name: frontend
     recipe:
-      type: "@dfinity/static-site@v0.3.1"
+      type: "@dfinity/static-site@v0.3.3"
       configuration:
         build:
           - npm ci
@@ -193,11 +193,13 @@ icp canister call frontend issue_token '(record { label = "owner"; ttl_secs = 31
 |--------|--------|
 | `issue_token '(record { label = "<label>"; ttl_secs = <secs> : nat32; value = opt "<value>" })'` | Mints a token, returns its value. `value = null` → high-entropy random token. |
 | `revoke_token '("<label>")'` | Removes every token with that label, live. |
-| `list_tokens` | Live tokens `{ label; expires_at }` (controller-only). |
-| `check_protection_status` | `Disabled`, `Enabled`, or `EnabledLoginPageMissing`. |
+| `list_tokens '()'` | Live tokens `{ label; expires_at }` (controller-only). |
+| `check_protection_status '()'` | `Disabled`, `Enabled`, or `EnabledLoginPageMissing`. |
 | `disable_protection '()'` | Gate off, drops all tokens. |
 
-This is **access gating, not confidentiality**: node operators can read asset bytes and the token store, there is no rate-limiting, and it relies on the honest-replica/honest-gateway assumption. Use high-entropy random tokens for share links; enable *before* the first sync for a new private app (Pitfall 12). Full details in the [certified-assets access-protection docs](https://github.com/dfinity/certified-assets/blob/v0.3.1/docs/access-protection.md).
+Always pass the argument explicitly — `'()'` for the methods that take none. Called with no argument, `icp canister call` opens an interactive prompt instead of sending an empty one.
+
+This is **access gating, not confidentiality**: node operators can read asset bytes and the token store, there is no rate-limiting, and it relies on the honest-replica/honest-gateway assumption. Use high-entropy random tokens for share links; enable *before* the first sync for a new private app (Pitfall 12). Full details in the [certified-assets access-protection docs](https://github.com/dfinity/certified-assets/blob/v0.3.3/docs/access-protection.md).
 
 ## Authorizing Uploaders
 
@@ -224,7 +226,7 @@ icp canister call frontend deauthorize '(principal "<principal-id>")'
 canisters:
   - name: frontend
     recipe:
-      type: "@dfinity/static-site@v0.3.1"
+      type: "@dfinity/static-site@v0.3.3"
       configuration:
         dir: dist
         presync:
@@ -298,4 +300,4 @@ icp canister call frontend http_request '(record {
 - Load `icp-cli` for the recipe system, `icp.yaml` structure, canister-ID injection, and the `ic_env` cookie / `safeGetCanisterEnv()` pattern.
 - Load `custom-domains` for DNS records, ACME challenge, and TLS provisioning of a custom domain.
 - Load `internet-identity` for reading the root key and canister IDs from `ic_env` in a frontend.
-- Full upstream user docs: [certified-assets docs](https://github.com/dfinity/certified-assets/blob/v0.3.1/docs/overview.md).
+- Full upstream user docs: [certified-assets docs](https://github.com/dfinity/certified-assets/blob/v0.3.3/docs/overview.md).
