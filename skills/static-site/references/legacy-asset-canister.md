@@ -155,7 +155,7 @@ icp canister call frontend revoke_permission '(record { of_principal = principal
 
 (In certified-assets this collapses to a single `authorize(principal)` set plus controllers — see the main SKILL.md.)
 
-> **Security Warning:** `icp canister update-settings frontend --add-controller <principal-id>` grants full canister control — not just upload permission. Only add controllers when you genuinely need full administrative access.
+> **Security Warning:** `icp canister settings update frontend --add-controller <principal-id>` grants full canister control — not just upload permission. Only add controllers when you genuinely need full administrative access.
 
 ## Content Encoding & Verify (legacy)
 

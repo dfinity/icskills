@@ -29,7 +29,7 @@ Static-site canisters are created per-project — there is no global canister ID
 
 | Environment | Browser URL |
 |-------------|-------------|
-| Local | `http://<canister-id>.localhost:8000` |
+| Local | `http://<canister-name>.local.localhost:8000` (this is the URL `icp deploy` prints; `http://<canister-id>.localhost:8000` also works — `<canister-name>.localhost` without `.local` does not) |
 | Mainnet | `https://<canister-id>.icp.net` |
 | Custom domain | `https://yourdomain.com` (with DNS configuration) |
 
@@ -214,7 +214,7 @@ icp canister call frontend list_authorized '()'
 icp canister call frontend deauthorize '(principal "<principal-id>")'
 ```
 
-> **Security Warning:** `icp canister update-settings frontend --add-controller <principal-id>` grants full canister control (upgrade wasm, change settings, delete, drain cycles) — not just upload access. Prefer `authorize` for deploy pipelines.
+> **Security Warning:** `icp canister settings update frontend --add-controller <principal-id>` grants full canister control (upgrade wasm, change settings, delete, drain cycles) — not just upload access. Prefer `authorize` for deploy pipelines.
 
 ## Building Against Canister IDs (`presync` vs `build`)
 
@@ -268,8 +268,8 @@ Re-running `icp deploy` re-syncs: the plugin diffs your directory against the ca
 # Canister is running
 icp canister status frontend            # Status: Running, non-zero memory
 
-# Get the canister ID
-icp canister id frontend
+# Get the canister ID (there is no `icp canister id`; use status --id-only)
+icp canister status frontend --id-only
 
 # Fetch the index page (certified)
 icp canister call frontend http_request '(record {
@@ -283,8 +283,8 @@ icp canister call frontend http_request '(record {
   certificate_version = opt 2;
 })'                                       # → 200 (index.html), NOT 404
 
-# Open in a browser
-# Local:   http://<frontend-canister-id>.localhost:8000
+# Open in a browser (this is the URL `icp deploy` prints)
+# Local:   http://frontend.local.localhost:8000
 # Mainnet: https://<frontend-canister-id>.icp.net
 ```
 
