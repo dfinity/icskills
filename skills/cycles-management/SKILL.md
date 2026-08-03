@@ -40,7 +40,7 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 4. **Sending cycles to the wrong canister** -- Cycles sent to a canister cannot be retrieved. There is no refund mechanism for cycles transferred to the wrong principal. Double-check the canister ID before topping up.
 
-5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `icp canister update-settings --add-controller PRINCIPAL` to add one.
+5. **Forgetting to set the canister controller** -- If you lose the controller identity, you permanently lose the ability to upgrade, top up, or manage the canister. Always add a backup controller. Use `icp canister settings update --add-controller PRINCIPAL` to add one.
 
 6. **Using ExperimentalCycles in mo:core** -- In mo:core 2.0, the module is renamed to `Cycles`. `import ExperimentalCycles "mo:base/ExperimentalCycles"` will fail. Use `import Cycles "mo:core/Cycles"`.
 
@@ -285,17 +285,17 @@ icp canister create my_canister
 icp canister create my_canister -e ic --cycles 2000000000000
 
 # Add a backup controller
-icp canister update-settings my_canister --add-controller BACKUP_PRINCIPAL_HERE
+icp canister settings update my_canister --add-controller BACKUP_PRINCIPAL_HERE
 ```
 
 ### Set Freezing Threshold
 
 ```bash
 # Set freezing threshold to 90 days (in seconds: 90 * 24 * 60 * 60 = 7776000)
-icp canister update-settings backend --freezing-threshold 7776000
+icp canister settings update backend --freezing-threshold 7776000
 
 # Mainnet
-icp canister update-settings backend --freezing-threshold 7776000 -e ic
+icp canister settings update backend --freezing-threshold 7776000 -e ic
 ```
 
 ## Verify It Works

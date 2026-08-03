@@ -874,7 +874,7 @@ The factory examples above are intentionally kept simple to demonstrate the cani
 icp deploy user_service
 
 # Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(icp canister id user_service)
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 npm run build
@@ -893,7 +893,7 @@ icp network start -d
 icp deploy user_service
 
 # content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(icp canister id user_service)
+USER_SERVICE_ID=$(icp canister status user_service --id-only)
 icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
 
 # Build and deploy frontend
@@ -959,12 +959,12 @@ icp canister call content_service createPost '("Test Title", "Test Body")'
 
 # Create a new identity that is NOT registered
 icp identity new unregistered --storage plaintext
-icp identity use unregistered
+icp identity default unregistered
 icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-icp identity use default
+icp identity default default
 ```
 
 ### Verify Cross-Canister Query
