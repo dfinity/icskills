@@ -51,6 +51,13 @@ jobs:
 
       - run: npm ci
 
+      # Build gate: runs on every PR (including dependency bumps that touch no
+      # skills) so a broken Astro build can never pass CI. skill-validator only
+      # runs when skills change, so without this a dep upgrade could go green
+      # here yet fail the real build in deploy-ic.yml after merge.
+      - name: Build site
+        run: npm run build
+
       - name: Run skill-validator checks
         id: skill-validator
         if: steps.changed.outputs.found == 'true'
