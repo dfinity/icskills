@@ -37,8 +37,15 @@ import { createActor } from "./bindings/backend";
 // For additional canisters: import { createActor as createOther } from "./bindings/other";
 
 const canisterEnv = safeGetCanisterEnv();
+// Do NOT set host. The agent's default host resolution already picks the right
+// API endpoint everywhere: on known gateway origins (ic0.app, icp0.io,
+// localhost, 127.0.0.1) it uses the page origin — so the local gateway and the
+// Vite dev-server /api proxy keep working — and anywhere else, including custom
+// domains and icp.net, it falls back to https://icp-api.io. Hardcoding
+// host: window.location.origin breaks frontends served from a custom domain:
+// the custom domain is only the HTTP gateway and does not serve /api/v2 (see
+// the custom-domains skill).
 const agentOptions = {
-  host: window.location.origin,
   rootKey: canisterEnv?.IC_ROOT_KEY,
 };
 
