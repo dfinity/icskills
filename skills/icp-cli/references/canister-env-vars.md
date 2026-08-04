@@ -4,19 +4,25 @@
 
 ## Motoko
 
-Requires motoko-core v2.1.0+. `Runtime.envVar` needs the `<system>` capability and returns `?Text`:
+Requires motoko-core v2.1.0+. `Runtime.envVar` needs the `<system>` capability and returns `?Text`. The capability does not cross an ordinary `func` boundary, so a helper that calls it must itself be declared `<system>` and be called with `<system>` from a context that holds the capability (actor init or an update method body):
 
 ```motoko
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
 
-func bridgePrincipal() : ?Principal {
+// note the `<system>` on the function — a plain `func` cannot call Runtime.envVar
+func bridgePrincipal<system>() : ?Principal {
   switch (Runtime.envVar<system>("PUBLIC_CANISTER_ID:bridge")) {
     case (?id) { ?Principal.fromText(id) };
     case null { null };
   };
 };
+
+// call site inside an update method, propagating the capability:
+// let bridge = bridgePrincipal<system>();
 ```
+
+A `query` cannot obtain the `<system>` capability, so it cannot read the variable directly. To expose a resolved ID through a query method, mirror it into a `transient var` during a call that can read it (actor init or an update method) and have the query return the cached value.
 
 ## Rust
 

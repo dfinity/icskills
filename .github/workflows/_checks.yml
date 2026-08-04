@@ -16,8 +16,15 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
+
+      # Use the exact npm pinned in package.json's packageManager field, so the
+      # lockfile CI validates with `npm ci` is byte-identical to what
+      # contributors produce locally. Without this, CI uses Node's bundled npm,
+      # whose version drifts per Node patch and can disagree with local npm on
+      # optional-peer pruning — breaking `npm ci`.
+      - run: corepack enable
 
       - name: Install skill-validator
         env:
