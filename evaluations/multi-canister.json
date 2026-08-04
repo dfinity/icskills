@@ -7,7 +7,7 @@
       "name": "Adversarial: dependencies field for deploy ordering",
       "prompt": "My icp-cli project has two canisters in icp.yaml: user_service and content_service. content_service needs user_service's canister ID at runtime. How do I make sure they deploy in the right order and content_service gets the ID? Just the icp.yaml/config approach and the one-line Motoko read, no full code.",
       "expected_behaviors": [
-        "States that icp.yaml has no dependencies field and deploy ordering is not needed for ID discovery",
+        "States that icp.yaml deploys canisters in parallel and deploy ordering is not needed for ID discovery",
         "Says icp deploy injects every canister's ID as a PUBLIC_CANISTER_ID:<canister-name> environment variable into every canister",
         "Shows reading the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:user_service\") in Motoko",
         "Does NOT invent a dependencies field or other deploy-ordering configuration in icp.yaml"
