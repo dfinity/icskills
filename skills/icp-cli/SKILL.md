@@ -441,7 +441,7 @@ canisters:
 | Motoko | `@dfinity/motoko@v5.0.0` | — | `shrink`, `compress`, `metadata` |
 | Static site (frontend) | `@dfinity/static-site@v0.3.3` | `dir` | `build`, `presync`, `metadata` |
 | Asset (legacy frontend) | `@dfinity/asset-canister@v2.2.1` | `dir` | `build`, `version` |
-| Prebuilt | `@dfinity/prebuilt@v1.0.0` | `wasm` | `sha256`, `candid`, `shrink`, `compress` |
+| Prebuilt | `@dfinity/prebuilt@v2.1.0` | `path` | `sha256`, `shrink`, `compress`, `metadata` |
 
 `@dfinity/static-site` is the recommended way to host a frontend; `@dfinity/asset-canister` is the legacy asset canister (see the `static-site` skill).
 

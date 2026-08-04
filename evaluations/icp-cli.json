@@ -279,6 +279,15 @@
         "Deploys by extracting the archive (tar -xzf) and running `icp deploy` from the extracted directory",
         "Does NOT invent commands like `icp bundle`, `icp package`, or `dfx` equivalents"
       ]
+    },
+    {
+      "name": "Adversarial: prebuilt recipe config key",
+      "prompt": "I have a pre-compiled canister.wasm.gz and want to deploy it with icp-cli using the prebuilt recipe. Show me just the icp.yaml canister entry, no deploy steps.",
+      "expected_behaviors": [
+        "Points the pre-built WASM at the `path` configuration key (e.g. path: canister.wasm.gz)",
+        "Does NOT use a `wasm` key inside recipe.configuration — that key does not exist and fails with a cryptic strict-mode template error naming `path`",
+        "Uses a version-pinned `@dfinity/prebuilt` recipe type string (e.g. @dfinity/prebuilt@v2.1.0), not the non-functional v1.0.0"
+      ]
     }
   ],
   "trigger_evals": {
