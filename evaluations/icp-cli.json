@@ -293,10 +293,10 @@
       "name": "Adversarial: agentOptions host on a custom domain",
       "prompt": "My icp-cli frontend uses @icp-sdk/bindgen bindings and safeGetCanisterEnv(). Show the agentOptions object I should pass to createActor so the same build works on the local network AND in production, including when the site is served from a custom domain. Just the agentOptions object plus a one-sentence explanation.",
       "expected_behaviors": [
+        "Omits host from agentOptions (or explicitly says to leave it unset), relying on the agent's default host resolution",
         "Sets rootKey from the ic_env cookie (canisterEnv?.IC_ROOT_KEY via safeGetCanisterEnv)",
-        "Makes host conditional: window.location.origin only when the ic_env cookie provides a root key (local network); undefined/omitted otherwise",
-        "Explains that an omitted host defaults to https://icp-api.io on mainnet, which works on custom domains where the gateway does not serve /api/v2",
-        "Does NOT set host unconditionally to window.location.origin"
+        "Explains that the default host resolution uses the page origin on known gateway hosts (ic0.app/icp0.io/localhost) and falls back to https://icp-api.io elsewhere, so custom domains work even though they do not serve /api/v2",
+        "Does NOT set host to window.location.origin (conditionally or unconditionally)"
       ]
     }
   ],
