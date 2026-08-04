@@ -83,7 +83,7 @@ Take the perspective of an experienced senior security engineer and carefully re
 
 ## Mistakes That Break Your Build
 
-1. **Deploying canisters in the wrong order.** Canisters with dependencies must be deployed according to their dependencies. Declare `dependencies` in icp.yaml so `icp deploy` orders them correctly.
+1. **Trying to order deployment with a `dependencies` field.** icp.yaml has a `dependencies` field but it is not used to order the deployment — icp-cli builds canisters in parallel, and `icp deploy` injects every canister's ID into every canister as a `PUBLIC_CANISTER_ID:<canister-name>` environment variable, so a canister can discover a sibling's ID at runtime regardless of deploy order. Read it with `Runtime.envVar<system>("PUBLIC_CANISTER_ID:user_service")` in Motoko (motoko-core >= 2.1.0) or `ic_cdk::api::env_var_value("PUBLIC_CANISTER_ID:user_service")` in Rust. See the `icp-cli` skill's Canister Environment Variables section.
 
 2. **Forgetting to generate type declarations for each backend canister.** Use language-specific tooling (e.g., `didc` for Candid bindings) to generate declarations for each backend canister individually.
 
