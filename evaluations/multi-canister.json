@@ -1,0 +1,29 @@
+{
+  "skill": "multi-canister",
+  "description": "Evaluation cases for the multi-canister skill. Tests whether agents avoid documented pitfalls: inventing a dependencies field in icp.yaml instead of using the injected PUBLIC_CANISTER_ID environment variables for inter-canister wiring.",
+
+  "output_evals": [
+    {
+      "name": "Adversarial: dependencies field for deploy ordering",
+      "prompt": "My icp-cli project has two canisters in icp.yaml: user_service and content_service. content_service needs user_service's canister ID at runtime. How do I make sure they deploy in the right order and content_service gets the ID? Just the icp.yaml/config approach and the one-line Motoko read, no full code.",
+      "expected_behaviors": [
+        "States that icp.yaml has no dependencies field and deploy ordering is not needed for ID discovery",
+        "Says icp deploy injects every canister's ID as a PUBLIC_CANISTER_ID:<canister-name> environment variable into every canister",
+        "Shows reading the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:user_service\") in Motoko",
+        "Does NOT invent a dependencies field or other deploy-ordering configuration in icp.yaml"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I split my IC app across multiple canisters that call each other?",
+      "My canister's inter-canister call sometimes returns SYS_UNKNOWN — what does that mean?",
+      "Design a canister factory that spins up a new canister per user"
+    ],
+    "should_not_trigger": [
+      "How do I deploy a single Motoko canister to mainnet with icp-cli?"
+    ]
+  }
+}
