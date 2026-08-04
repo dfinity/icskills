@@ -33,8 +33,11 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
+
+      # Use the npm version pinned in package.json's packageManager field.
+      - run: corepack enable
 
       - run: npm ci
       - run: npm run build
