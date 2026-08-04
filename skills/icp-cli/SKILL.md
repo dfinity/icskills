@@ -68,14 +68,6 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
 6. **Using `icp identity use` instead of `icp identity default`.** The dfx command `dfx identity use <name>` became `icp identity default <name>` (setter). `icp identity default` with no argument is the getter — it prints the current default identity, equivalent to `dfx identity whoami`. The command `icp identity use` does not exist. Similarly, `dfx identity get-principal` became `icp identity principal`, and `dfx identity remove` became `icp identity delete`.
 
-    The subcommand group is **singular** — `icp identity`, never `icp identities`. The plural fails outright:
-    ```
-    $ icp identities list
-    error: unrecognized subcommand 'identities'
-      tip: a similar subcommand exists: 'identity'
-    ```
-    Verified subcommands: `account-id`, `default`, `delegation`, `delete`, `export`, `import`, `link`, `list`, `new`, `principal`, `reauth`, `rename`.
-
 7. **Confusing networks and environments.** A network is a connection endpoint (URL). An environment combines a network + canisters + settings. You deploy to environments (`-e`), not networks. Multiple environments can target the same network with different settings (e.g., staging and production both on `ic`).
 
 8. **Writing `networks` or `environments` as a YAML map instead of an array.** Both `networks` and `environments` are arrays of objects in `icp.yaml`, not maps:
