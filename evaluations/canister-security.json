@@ -61,9 +61,9 @@
       "prompt": "I'm building an IC frontend. Is this agent setup safe for production?\n\n```typescript\nconst agent = new HttpAgent({ host: 'https://ic0.app' });\nawait agent.fetchRootKey();\n```\n\nJust answer yes or no and explain why.",
       "expected_behaviors": [
         "Answers NO — this is not safe for production",
-        "Explains that on mainnet the root key is hardcoded in the agent",
-        "Explains that calling fetchRootKey() on mainnet trusts whatever the replica returns, enabling a man-in-the-middle attack",
-        "States fetchRootKey() should only be called in local development",
+        "Explains that calling fetchRootKey() trusts whatever the replica returns, enabling a man-in-the-middle attack on mainnet",
+        "Recommends removing the fetchRootKey() call entirely rather than wrapping it in an environment check",
+        "Mentions passing the root key via the rootKey option to HttpAgent (from the ic_env cookie / safeGetCanisterEnv) as the correct way to support local development",
         "Does NOT suggest the code is acceptable as-is"
       ]
     },
