@@ -242,6 +242,7 @@
       "prompt": "My project works great locally. Can I just run 'icp deploy -e ic' to deploy to mainnet?",
       "expected_behaviors": [
         "Warns that the anonymous identity (default locally) should not be used on mainnet — it is shared and uncontrolled",
+        "Uses `icp identity list` (singular) to list identities — NOT `icp identities list`, which is not a valid subcommand",
         "Recommends checking and switching to a named identity using icp commands (e.g. icp identity default, icp identity new, icp identity default <name>) — NOT dfx identity use",
         "Recommends checking mainnet balance before deploying using icp commands: icp token balance -n ic or icp cycles balance -n ic (NOT dfx ledger balance)",
         "Mentions that a new identity will need to be funded with ICP or cycles before it can deploy",
