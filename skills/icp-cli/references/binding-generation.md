@@ -37,8 +37,14 @@ import { createActor } from "./bindings/backend";
 // For additional canisters: import { createActor as createOther } from "./bindings/other";
 
 const canisterEnv = safeGetCanisterEnv();
+// Local networks set the ic_env cookie with a root key, and the same origin
+// serves /api (local gateway or Vite dev-server proxy) — use window.location.origin.
+// On mainnet the cookie carries no root key: leave host undefined so the agent
+// defaults to https://icp-api.io. Never hardcode window.location.origin for
+// mainnet — a custom domain serves only the HTTP gateway, not /api/v2, so calls
+// from it would fail (see the custom-domains skill).
 const agentOptions = {
-  host: window.location.origin,
+  host: canisterEnv?.IC_ROOT_KEY ? window.location.origin : undefined,
   rootKey: canisterEnv?.IC_ROOT_KEY,
 };
 

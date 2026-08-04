@@ -50,7 +50,13 @@ createActor(canisterId, { agent });
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 const canisterEnv = safeGetCanisterEnv();
 createActor(canisterEnv?.["PUBLIC_CANISTER_ID:backend"], {
-  agentOptions: { host: window.location.origin, rootKey: canisterEnv?.IC_ROOT_KEY }
+  // window.location.origin only on local networks (root key present in the
+  // ic_env cookie); undefined on mainnet → defaults to https://icp-api.io,
+  // which also works when the site is served from a custom domain.
+  agentOptions: {
+    host: canisterEnv?.IC_ROOT_KEY ? window.location.origin : undefined,
+    rootKey: canisterEnv?.IC_ROOT_KEY,
+  }
 });
 ```
 
