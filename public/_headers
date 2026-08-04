@@ -1,0 +1,96 @@
+# Response headers for the certified-assets (static-site) canister.
+# Ported from the former .ic-assets.json5. Unlike the legacy asset canister,
+# certified-assets adds NO default headers — everything here is explicit.
+# Patterns match the file's asset key; a single `*` matches any run of chars
+# (including `/`). All matching blocks contribute, and same-name values are
+# COMBINED (comma-separated) — so Cache-Control patterns must not overlap.
+# dist/_astro holds only hashed .js, so the extension rules below never touch it.
+
+# Global: no MIME sniffing. (No Cache-Control here — it would combine with the
+# per-type Cache-Control blocks into a contradictory header.)
+/*
+  X-Content-Type-Options: nosniff
+
+# Astro hashed JS bundles — content-addressed, safe to cache forever.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Analytics script — short cache.
+/matomo.js
+  Cache-Control: public, max-age=300
+
+# --- Agent discovery endpoints: short cache + CORS + explicit content type ---
+
+# JSON indices (.well-known/skills/index.json, etc.)
+/.well-known/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# SKILL.md and reference .md files under .well-known/
+/.well-known/*.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# SKILL.zip bundles under .well-known/ — same discovery treatment as .json/.md
+/.well-known/*.zip
+  Content-Type: application/zip
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# User-facing SKILL.md and reference .md files under skills/
+/skills/*.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: Content-Type
+
+# Agent-readable skill indices (llms.txt, llms-full.txt)
+/llms*.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+  Access-Control-Allow-Origin: *
+
+# --- Everything else that can change between deploys: always revalidate ---
+# (Non-hashed assets. Kept as narrow, non-overlapping patterns so no file
+# matches two Cache-Control blocks.)
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.css
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.svg
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.ico
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.xml
+  Cache-Control: public, max-age=0, must-revalidate
+
+/robots.txt
+  Cache-Control: public, max-age=0, must-revalidate
+
+/AGENTS.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Per-skill JSON API — regenerated every deploy, so revalidate.
+# (No CORS here, matching the original .ic-assets.json5, which scoped CORS to
+# the .well-known discovery endpoints and llms*.txt only.)
+/api/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate

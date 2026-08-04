@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Deploy mode — leave empty for a normal upgrade. Use 'reinstall' ONCE for the asset-canister → static-site cutover (wipes canister state; the static site is re-synced from the build)."
+        required: false
+        default: ""
 
 concurrency:
   group: ic-deploy
@@ -53,4 +58,11 @@ jobs:
           ICP_IDENTITY: ${{ secrets.DFX_IDENTITY_DESIGN_TEAM }}
 
       - name: Deploy to IC mainnet
-        run: icp deploy -e ic frontend
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -n "$MODE" ]; then
+            echo "Deploying with --mode $MODE"
+            icp deploy -e ic --mode "$MODE" frontend
+          else
+            icp deploy -e ic frontend
+          fi

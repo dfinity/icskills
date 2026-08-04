@@ -159,7 +159,7 @@ Set them under each canister's `settings.environment_variables` — this is vali
 # frontend/canister.yaml
 name: frontend
 recipe:
-  type: "@dfinity/asset-canister@v2.2.1"
+  type: "@dfinity/static-site@v0.3.3"
   configuration:
     build:
       - npm install
@@ -220,7 +220,7 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 
 ### Version metadata (recommended)
 
-Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified by live builds against `@dfinity/motoko` v4.1.0 and v5.0.0 on icp-cli 1.0.2.)
+Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, static-site, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified by live builds against `@dfinity/motoko` v4.1.0 and v5.0.0 on icp-cli 1.0.2.)
 
 **Git project** (check first: `git rev-parse HEAD` succeeds):
 

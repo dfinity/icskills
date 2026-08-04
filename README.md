@@ -89,8 +89,8 @@ Each skill entry in [`index.json`](https://skills.internetcomputer.org/.well-kno
 
 ```jsonc
 {
-  "name": "asset-canister",
-  "url": "https://.../asset-canister/SKILL.md",
+  "name": "static-site",
+  "url": "https://.../static-site/SKILL.md",
   "files": ["SKILL.md"],
   "hash": "sha256:f3ee5a3e…"   // per-skill aggregate content hash
 }

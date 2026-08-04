@@ -27,16 +27,24 @@ if [ "$OLD_SHA" = "$NEW_SHA" ]; then
 fi
 
 # Skill mappings: "upstream-name:local-name" entries, one per line.
-# Upstream files live at .agents/skills/<upstream-name>/ in the upstream repo.
+# Upstream files live at <SKILLS_BASE_PATH>/<upstream-name>/ in the upstream repo
+# (SKILLS_BASE_PATH may be empty, in which case files live at <upstream-name>/).
 # Local files live at skills/<local-name>/ in this repo.
 case "$REPO" in
   caffeinelabs/motoko)
+    SKILLS_BASE_PATH=".agents/skills"
     SKILLS="writing-motoko:motoko
 migrating-motoko:migrating-motoko
 migrating-motoko-enhanced:migrating-motoko-enhanced"
     ;;
   caffeinelabs/mops)
+    SKILLS_BASE_PATH=".agents/skills"
     SKILLS="mops-cli:mops-cli"
+    ;;
+  dfinity/certified-assets)
+    # certified-assets keeps its user docs at docs/ in the repo root.
+    SKILLS_BASE_PATH=""
+    SKILLS="docs:static-site"
     ;;
   *)
     echo "Unknown repo: $REPO" >&2
@@ -44,7 +52,6 @@ migrating-motoko-enhanced:migrating-motoko-enhanced"
     ;;
 esac
 
-SKILLS_BASE_PATH=".agents/skills"
 REPO_SHORT="${REPO##*/}"
 
 {
@@ -69,7 +76,11 @@ while IFS= read -r skill_pair; do
   [ -z "$skill_pair" ] && continue
   upstream_name="${skill_pair%%:*}"
   local_name="${skill_pair##*:}"
-  skill_path="${SKILLS_BASE_PATH}/${upstream_name}"
+  if [ -n "$SKILLS_BASE_PATH" ]; then
+    skill_path="${SKILLS_BASE_PATH}/${upstream_name}"
+  else
+    skill_path="${upstream_name}"
+  fi
 
   OLD_FILES=$(curl -sf \
     "https://api.github.com/repos/${REPO}/contents/${skill_path}?ref=${OLD_SHA}" \

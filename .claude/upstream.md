@@ -49,6 +49,23 @@ Upstream file paths are relative to `.agents/skills/<upstream-skill-name>/` in t
 
 ---
 
+## static-site
+
+- **Upstream:** https://github.com/dfinity/certified-assets
+- **Tag:** v0.3.3
+- **Commit:** ac2a8e71802b40abb56078ca759b4c0f94f5fe35
+- **Last synced:** 2026-08-03
+- **Upstream files:** `docs/` — the certified-assets user documentation is the source of truth for the static-site recipe. The sync check diffs the **top-level files** in `docs/` only (`scripts/sync-upstream-check.sh` uses the GitHub Contents API, which is non-recursive), so a future nested `docs/<subdir>/` would not be auto-covered — add it to the check if one appears. Files today (all top-level): `overview.md`, `routing.md`, `redirects.md`, `headers.md`, `site-files.md`, `access-protection.md`, `how-it-works.md`, `verifying-contents.md`.
+- **Relationship:** the icskills `static-site` SKILL.md is **derived, not 1:1** — it is an agent-focused condensation of the upstream docs plus icskills-only material (legacy asset-canister reference, migration guide, cross-skill links). Treat the upstream diff as an **advisory review trigger**: when `docs/` changes, review whether the SKILL.md or its references need updating; do not mechanically overwrite.
+- **icskills-owned sections (entirely icskills-authored, never overwrite from upstream):**
+  - The whole `SKILL.md` body (derived/condensed; agent pitfalls, icp.yaml framing, verify commands)
+  - `references/legacy-asset-canister.md` — legacy SDK asset canister (`@dfinity/asset-canister`); has no upstream equivalent in certified-assets docs
+  - `references/migrating-from-asset-canister.md` — migration guide; icskills-only
+  - `## Additional References` — cross-links use icskills skill names
+- **Recipe version note:** the recipe is `@dfinity/static-site@<v>` from [dfinity/icp-cli-recipes](https://github.com/dfinity/icp-cli-recipes/releases?q=static-site); its version tracks the certified-assets release. Update pinned versions in code examples when bumping the tag.
+
+---
+
 ## mops-cli
 
 - **Upstream:** https://github.com/caffeinelabs/mops

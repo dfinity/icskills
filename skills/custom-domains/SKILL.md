@@ -1,6 +1,6 @@
 ---
 name: custom-domains
-description: "Register and manage custom domains for IC canisters via the HTTP gateway custom domain service. Covers DNS record configuration (CNAME, TXT, ACME challenge), the .well-known/ic-domains file, domain registration/validation/update/deletion via the REST API, TLS certificate provisioning, and HttpAgent host configuration. Use when the user wants to serve a canister under a custom domain, configure DNS for IC, register a domain with boundary nodes, troubleshoot custom domain issues, or update/remove a custom domain. Do NOT use for general frontend hosting or asset canister configuration without custom domains — use asset-canister instead."
+description: "Register and manage custom domains for IC canisters via the HTTP gateway custom domain service. Covers DNS record configuration (CNAME, TXT, ACME challenge), the .well-known/ic-domains file, domain registration/validation/update/deletion via the REST API, TLS certificate provisioning, and HttpAgent host configuration. Use when the user wants to serve a canister under a custom domain, configure DNS for IC, register a domain with boundary nodes, troubleshoot custom domain issues, or update/remove a custom domain. Do NOT use for general frontend hosting or asset/static-site canister configuration without custom domains — use static-site instead."
 license: Apache-2.0
 compatibility: "curl, DNS registrar access, deployed canister"
 metadata:
@@ -72,7 +72,7 @@ app.example.com
 www.example.com
 ```
 
-**Asset canister users:** place `.well-known/` inside your `public/` directory (Vite projects) or alongside your source files, and ensure `.ic-assets.json5` includes `{ "match": ".well-known", "ignore": false }` so the hidden directory gets deployed. See the `asset-canister` skill for details on file placement.
+**Frontend canister users:** place `.well-known/` inside your `public/` directory (Vite projects) or alongside your source files so it ends up in your `dir`. With the recommended `@dfinity/static-site` recipe, `.well-known/` is uploaded automatically (no config needed). With the legacy `@dfinity/asset-canister` recipe, ensure `.ic-assets.json5` includes `{ "match": ".well-known", "ignore": false }` so the hidden directory gets deployed. See the `static-site` skill for details on file placement.
 
 **Custom `http_request` canisters:** serve the file contents at `/.well-known/ic-domains` directly from your HTTP request handler.
 

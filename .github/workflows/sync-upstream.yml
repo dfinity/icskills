@@ -191,3 +191,101 @@ jobs:
             /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  check-certified-assets:
+    name: Check dfinity/certified-assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        id: app-token
+        with:
+          client-id: ${{ vars.PR_AUTOMATION_BOT_PUBLIC_CLIENT_ID }}
+          private-key: ${{ secrets.PR_AUTOMATION_BOT_PUBLIC_PRIVATE_KEY }}
+
+      - name: Get latest certified-assets release tag
+        id: latest
+        run: |
+          # Only semver v* releases are the static-site recipe; ignore migration-*/snapshot-* tags.
+          TAG=$(gh release list --repo dfinity/certified-assets --limit 100 --json tagName --jq '[.[] | select(.tagName | test("^v[0-9]"))] | first | .tagName // empty')
+          if [ -z "$TAG" ]; then
+            echo "No semver v* release found for dfinity/certified-assets — nothing to check." >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Get current pinned tag and commit SHA
+        id: current
+        run: |
+          TAG=$(awk '/^## static-site$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
+          SHA=$(awk '/^## static-site$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+      - name: Skip if already at latest
+        id: skip
+        run: |
+          if [ "${{ steps.latest.outputs.tag }}" = "${{ steps.current.outputs.tag }}" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already at latest: ${{ steps.current.outputs.tag }}"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Resolve commit SHA for new release
+        if: steps.skip.outputs.needed == 'true'
+        id: sha
+        run: |
+          TAG="${{ steps.latest.outputs.tag }}"
+          RESULT=$(curl -sf "https://api.github.com/repos/dfinity/certified-assets/git/ref/tags/${TAG}" \
+            -H "Authorization: Bearer $GH_TOKEN" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
+          OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
+          OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
+          if [ "$OBJ_TYPE" = "tag" ]; then
+            COMMIT=$(curl -sf "https://api.github.com/repos/dfinity/certified-assets/git/tags/${OBJ_SHA}" \
+              -H "Authorization: Bearer $GH_TOKEN" | \
+              python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
+          else
+            COMMIT="$OBJ_SHA"
+          fi
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Compute upstream diff and build issue body
+        if: steps.skip.outputs.needed == 'true'
+        id: diff
+        run: |
+          set +e
+          bash scripts/sync-upstream-check.sh \
+            "dfinity/certified-assets" \
+            "${{ steps.current.outputs.sha }}" \
+            "${{ steps.sha.outputs.commit }}" \
+            "${{ steps.current.outputs.tag }}" \
+            "${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "has_changes=false" >> $GITHUB_OUTPUT ;;
+            1) echo "has_changes=true" >> $GITHUB_OUTPUT ;;
+            *) exit $rc ;;
+          esac
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Manage and open sync issue
+        if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
+        run: |
+          bash scripts/sync-upstream-open-issue.sh \
+            "upstream-certified-assets" \
+            "upstream sync available — dfinity/certified-assets ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            /tmp/issue-body.md
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}

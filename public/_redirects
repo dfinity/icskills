@@ -1,0 +1,15 @@
+# Permanent redirects for the asset-canister → static-site skill rename.
+# Served as certified 301s by the certified-assets canister.
+# from                                          to                                          status
+
+# Human-facing skill page
+/skills/asset-canister                          /skills/static-site/                        301
+/skills/asset-canister/                         /skills/static-site/                        301
+/skills/asset-canister/SKILL.md                 /skills/static-site/SKILL.md                301
+
+# Agent discovery endpoints (Skills Discovery RFC)
+/.well-known/skills/asset-canister/SKILL.md     /.well-known/skills/static-site/SKILL.md    301
+/.well-known/skills/asset-canister/SKILL.zip    /.well-known/skills/static-site/SKILL.zip   301
+
+# JSON API (per-skill)
+/api/skills/asset-canister.json                 /api/skills/static-site.json                301
