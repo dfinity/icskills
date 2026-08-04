@@ -5,6 +5,11 @@
   "description": "Agent-readable skill files for the Internet Computer",
   "license": "Apache-2.0",
   "type": "module",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=11.16.0"
+  },
   "scripts": {
     "validate": "skill-validator check skills/ --skip links && node scripts/check-project.js",
     "dev": "astro dev",
