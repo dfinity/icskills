@@ -201,7 +201,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
     Before deploying to mainnet, switch to a named identity:
     ```bash
-    icp identities list                                        # check available identities
+    icp identity list                                          # check available identities (`identity`, never `identities`)
     icp identity default my-identity                           # switch to an existing one
     # or: icp identity new my-identity && icp identity default my-identity
     ```
