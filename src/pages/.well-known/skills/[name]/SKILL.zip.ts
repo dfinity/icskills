@@ -3,7 +3,7 @@
 // skills produce a zip containing just SKILL.md; multi-file skills bundle
 // SKILL.md plus their references/ tree.
 import type { APIRoute } from 'astro';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
@@ -42,7 +42,7 @@ interface SkillZipData {
 
 async function buildZip(skillDir: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
     const chunks: Buffer[] = [];
 
     archive.on('data', (chunk: Buffer) => chunks.push(chunk));
