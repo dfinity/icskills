@@ -362,16 +362,18 @@ icp deploy -e ic backend
 
 ```bash
 # 1. Test the GET outcall (fetch price)
-icp canister call backend fetchPrice
+icp canister call backend getIcpPriceUsd '()'   # Motoko example above
+icp canister call backend fetch_price '()'      # Rust example above
 # Expected: Something like '("{\"internet-computer\":{\"usd\":12.34}}")'
 # (actual price will vary)
 
 # 2. Test the POST outcall
-icp canister call backend postData '("{\"test\": \"hello\"}")'
+icp canister call backend postData '("{\"test\": \"hello\"}")'    # Motoko
+icp canister call backend post_data '("{\"test\": \"hello\"}")'   # Rust
 # Expected: JSON response from httpbin.org echoing back your data
 
 # 3. If using Rust with the typed parser:
-icp canister call backend get_icp_price_usd
+icp canister call backend get_icp_price_usd '()'
 # Expected: '("ICP price: $12.34")'
 
 # 4. Check canister cycle balance (outcalls consume cycles)
