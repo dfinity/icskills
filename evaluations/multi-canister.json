@@ -12,6 +12,16 @@
         "Shows reading the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:user_service\") in Motoko",
         "Does NOT invent a dependencies field or other deploy-ordering configuration in icp.yaml"
       ]
+    },
+    {
+      "name": "Adversarial: reading the factory's own cycle balance",
+      "prompt": "In my canister factory, how do I check the factory's own cycle balance before creating a child canister? Give just the Motoko call and the Rust call, no surrounding function.",
+      "expected_behaviors": [
+        "Motoko call is Cycles.balance() from mo:core/Cycles",
+        "Rust call is ic_cdk::api::canister_cycle_balance()",
+        "Does NOT use ExperimentalCycles (mo:base/ExperimentalCycles is unavailable in a mo:core project)",
+        "Does NOT use ic_cdk::api::canister_balance128 or canister_balance, removed in ic-cdk 0.20"
+      ]
     }
   ],
 
