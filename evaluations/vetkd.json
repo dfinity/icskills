@@ -1,0 +1,28 @@
+{
+  "skill": "vetkd",
+  "description": "Evaluation cases for the vetkd skill. Tests whether agents use the current ic-cdk call API for management-canister vetKD calls rather than the ic_cdk::api::call::* / ic_cdk::caller() functions, which are deprecated in ic-cdk 0.19 and removed in 0.20.",
+
+  "output_evals": [
+    {
+      "name": "Adversarial: management canister vetkd_derive_key call with cycles",
+      "prompt": "Write the Rust update function that calls the management canister's vetkd_derive_key for the calling principal, attaching the cycles key_1 needs. Just the function body and the imports it needs, no struct definitions and no Cargo.toml.",
+      "expected_behaviors": [
+        "Builds the call with Call::unbounded_wait(Principal::management_canister(), \"vetkd_derive_key\")",
+        "Attaches cycles with .with_cycles(...) using ~26 billion for key_1",
+        "Gets the caller with ic_cdk::api::msg_caller() and captures it before the await",
+        "Does NOT use ic_cdk::api::call::call, call_with_payment128, or ic_cdk::caller() — all removed in ic-cdk 0.20"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I derive a per-user encryption key inside my canister with vetKeys?",
+      "How many cycles does a vetkd_derive_key call cost?"
+    ],
+    "should_not_trigger": [
+      "How do I let users sign in to my dapp with Internet Identity?"
+    ]
+  }
+}

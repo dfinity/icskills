@@ -177,7 +177,7 @@ fn init() {
 
 #[update]
 async fn get_encrypted_vetkey(subkey_id: Vec<u8>, transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller(); // Capture BEFORE await
+    let caller = ic_cdk::api::msg_caller(); // Capture BEFORE await
     let future = KEY_MANAGER.with(|km| {
         let km = km.borrow();
         let km = km.as_ref().expect("not initialized");
@@ -202,6 +202,7 @@ async fn get_vetkey_verification_key() -> Vec<u8> {
 
 ```rust
 use candid::{CandidType, Deserialize, Principal};
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 #[derive(CandidType, Deserialize)]
@@ -260,20 +261,22 @@ async fn vetkd_public_key() -> Vec<u8> {
     };
 
     // vetkd_public_key does not require cycles (unlike vetkd_derive_key).
-    let (response,): (VetKdPublicKeyResponse,) = ic_cdk::api::call::call(
+    let response: VetKdPublicKeyResponse = Call::unbounded_wait(
         Principal::management_canister(), // aaaaa-aa
         "vetkd_public_key",
-        (request,),
     )
+    .with_arg(request)
     .await
-    .expect("vetkd_public_key call failed");
+    .expect("vetkd_public_key call failed")
+    .candid()
+    .expect("failed to decode vetkd_public_key response");
 
     response.public_key
 }
 
 #[update]
 async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
-    let caller = ic_cdk::caller(); // MUST capture before await
+    let caller = ic_cdk::api::msg_caller(); // MUST capture before await
 
     let request = VetKdDeriveKeyRequest {
         input: caller.as_slice().to_vec(), // derive key specific to this caller
@@ -283,14 +286,16 @@ async fn vetkd_derive_key(transport_public_key: Vec<u8>) -> Vec<u8> {
     };
 
     // key_1 costs ~26B cycles, test_key_1 costs ~10B cycles.
-    let (response,): (VetKdDeriveKeyResponse,) = ic_cdk::api::call::call_with_payment128(
+    let response: VetKdDeriveKeyResponse = Call::unbounded_wait(
         Principal::management_canister(),
         "vetkd_derive_key",
-        (request,),
-        26_000_000_000, // cycles for key_1 (use 10_000_000_000 for test_key_1)
     )
+    .with_arg(request)
+    .with_cycles(26_000_000_000) // cycles for key_1 (use 10_000_000_000 for test_key_1)
     .await
-    .expect("vetkd_derive_key call failed");
+    .expect("vetkd_derive_key call failed")
+    .candid()
+    .expect("failed to decode vetkd_derive_key response");
 
     response.encrypted_key
 }
