@@ -12,6 +12,16 @@
         "Shows reading the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:user_service\") in Motoko",
         "Does NOT invent a dependencies field or other deploy-ordering configuration in icp.yaml"
       ]
+    },
+    {
+      "name": "Adversarial: passing a sibling canister ID to a Rust canister at deploy time",
+      "prompt": "My icp-cli project has a Rust content_service canister that needs the user_service canister's principal. Show the deploy command and the Rust accessor that reads the ID. Just those two, no icp.yaml and no full canister code.",
+      "expected_behaviors": [
+        "Deploy command is a plain `icp deploy content_service` with no init-argument flag",
+        "Does NOT use `--argument` or `--argument-file`, which are not icp deploy flags (the real flags are `--args` / `--args-file`)",
+        "Rust accessor reads ic_cdk::api::env_var_value(\"PUBLIC_CANISTER_ID:user_service\") and parses it with Principal::from_text",
+        "Does NOT take the sibling ID as an #[init] or #[post_upgrade] parameter"
+      ]
     }
   ],
 

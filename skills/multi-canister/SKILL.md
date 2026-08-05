@@ -531,9 +531,6 @@ thread_local! {
             0u64,
         )
     );
-
-    // Store the user_service canister ID (set during init, re-set on upgrade)
-    static USER_SERVICE_ID: RefCell<Option<Principal>> = RefCell::new(None);
 }
 
 fn post_id_to_key(id: u64) -> Vec<u8> {
@@ -549,21 +546,15 @@ fn deserialize_post(bytes: &[u8]) -> Post {
 }
 
 #[init]
-fn init(user_service_id: Principal) {
-    USER_SERVICE_ID.with(|id| *id.borrow_mut() = Some(user_service_id));
-}
+fn init() {}
 
 #[post_upgrade]
-fn post_upgrade(user_service_id: Principal) {
-    // Re-set the user_service ID (not stored in stable memory for simplicity,
-    // since it is always passed as an init/upgrade argument)
-    init(user_service_id);
-}
+fn post_upgrade() {}
 
+// icp deploy injects the sibling's ID on every deploy -- no init argument needed
 fn get_user_service_id() -> Principal {
-    USER_SERVICE_ID.with(|id| {
-        id.borrow().expect("user_service canister ID not set")
-    })
+    let id = ic_cdk::api::env_var_value("PUBLIC_CANISTER_ID:user_service");
+    Principal::from_text(id).expect("invalid PUBLIC_CANISTER_ID:user_service")
 }
 
 // Defensive: capture caller before any await
@@ -870,12 +861,8 @@ The factory examples above are intentionally kept simple to demonstrate the cani
 ### Upgrade Commands
 
 ```bash
-# Upgrade canisters in dependency order
 icp deploy user_service
-
-# Rust content_service requires the user_service principal on every upgrade (post_upgrade arg)
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
-icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+icp deploy content_service
 
 npm run build
 icp deploy frontend
@@ -889,12 +876,9 @@ icp deploy frontend
 # Start the local replica
 icp network start -d
 
-# Deploy in dependency order
+# Deploy order does not matter -- each canister discovers its siblings at runtime
 icp deploy user_service
-
-# content_service (Rust) requires the user_service canister ID as an init argument
-USER_SERVICE_ID=$(icp canister status user_service --id-only)
-icp deploy content_service --argument "(principal \"$USER_SERVICE_ID\")"
+icp deploy content_service
 
 # Build and deploy frontend
 npm run build
@@ -932,7 +916,6 @@ icp canister call user_service register "(\"alice\")"
 icp canister call user_service is_valid_user "(principal \"$PRINCIPAL\")"
 # Expected: (true)
 
-# content_service must have been deployed with --argument "(principal \"<user_service_id>\")"
 icp canister call content_service create_post "(\"Hello World\", \"My first post\")"
 # Expected: (variant { ok = record { id = 0 : nat64; author = principal "..."; ... } })
 
