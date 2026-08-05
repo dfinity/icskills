@@ -80,6 +80,8 @@ Each user gets a unique deposit address derived from their principal + an option
 
 8. **Forgetting `owner` in `get_btc_address` args.** If you omit `owner`, Candid sub-typing assigns null, and the minter returns the deposit address of the caller (the canister) instead of the user.
 
+9. **Leaving `created_at_time` null on `icrc1_transfer` / `icrc2_approve`.** The ICRC-1 spec says a ledger SHOULD NOT deduplicate a transaction whose `created_at_time` is unset, so a retried transfer executes a second time and moves real BTC-backed value twice. Set it, and retry with the **same** timestamp — the ledger only matches duplicates when every argument is identical, so a fresh `Time.now()` on retry defeats dedup. A retry that was already applied returns `#Err(#Duplicate { duplicate_of })`, which is a success, not a failure.
+
 ## Implementation
 
 ### Motoko
@@ -117,6 +119,8 @@ import Blob "mo:core/Blob";
 import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
+import Int "mo:core/Int";
+import Time "mo:core/Time";
 import Array "mo:core/Array";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
@@ -309,13 +313,14 @@ persistent actor Self {
   public shared ({ caller }) func transfer(to : Principal, amount : Nat) : async TransferResult {
     if (Principal.isAnonymous(caller)) { Runtime.trap("Authentication required") };
     let fromSubaccount = principalToSubaccount(caller);
+    let now = Nat64.fromNat(Int.abs(Time.now()));
     await ckbtcLedger.icrc1_transfer({
       from_subaccount = ?fromSubaccount;
       to = { owner = to; subaccount = null };
       amount = amount;
       fee = ?10; // 10 satoshis
       memo = null;
-      created_at_time = null;
+      created_at_time = ?now; // required for dedup — see Pitfall 9
     })
   };
 
@@ -326,6 +331,7 @@ persistent actor Self {
 
     // Step 1: Approve the minter to spend ckBTC from the user's subaccount
     let fromSubaccount = principalToSubaccount(caller);
+    let now = Nat64.fromNat(Int.abs(Time.now()));
     let approveResult = await ckbtcLedger.icrc2_approve({
       from_subaccount = ?fromSubaccount;
       spender = {
@@ -337,7 +343,7 @@ persistent actor Self {
       expires_at = null;
       fee = ?10;
       memo = null;
-      created_at_time = null;
+      created_at_time = ?now; // required for dedup — see Pitfall 9
     });
 
     switch (approveResult) {
@@ -580,7 +586,7 @@ async fn transfer(to: Principal, amount: Nat) -> Result<Nat, TransferError> {
         amount,
         fee: Some(Nat::from(10u64)), // 10 satoshis
         memo: None,
-        created_at_time: None,
+        created_at_time: Some(ic_cdk::api::time()), // required for dedup — see Pitfall 9
     };
 
     let (result,): (Result<Nat, TransferError>,) = Call::unbounded_wait(ledger_id(), "icrc1_transfer")
@@ -613,7 +619,7 @@ async fn withdraw(btc_address: String, amount: u64) -> RetrieveBtcResult {
         expires_at: None,
         fee: Some(Nat::from(10u64)),
         memo: None,
-        created_at_time: None,
+        created_at_time: Some(ic_cdk::api::time()), // required for dedup — see Pitfall 9
     };
 
     let (approve_result,): (Result<Nat, ApproveError>,) = Call::unbounded_wait(ledger_id(), "icrc2_approve")
@@ -685,6 +691,8 @@ icp canister call mqygn-kiaaa-aaaar-qaadq-cai update_balance \
   -e ic
 
 # Transfer ckBTC (amount in e8s — 1 ckBTC = 100_000_000)
+# created_at_time is null here: no dedup, which is fine for a one-off manual
+# call but not for canister code — see Pitfall 9.
 icp canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_transfer \
   '(record {
     to = record { owner = principal "RECIPIENT-PRINCIPAL"; subaccount = null };
