@@ -29,6 +29,15 @@
         "States that the canister ID, controllers, and settings are retained",
         "Does NOT claim the canister itself is permanently deleted or that the canister ID is lost"
       ]
+    },
+    {
+      "name": "-n vs -e: canister names need an environment",
+      "prompt": "Using icp-cli, give me the two mainnet commands to (a) check the cycle balance of my canister named `backend`, and (b) check my own cycles-ledger balance. Just the two commands, no explanation.",
+      "expected_behaviors": [
+        "The command targeting the canister named `backend` uses -e ic (or --environment ic), NOT -n ic",
+        "Does NOT pass both -n and -e on the same command",
+        "Uses `icp canister status backend -e ic` for the canister and `icp cycles balance` for the personal cycles-ledger balance"
+      ]
     }
   ],
   "trigger_evals": {

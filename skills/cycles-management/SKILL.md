@@ -46,6 +46,16 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 7. **Using `icp cycles transfer` to fund a canister** -- `icp cycles transfer <amount> <principal>` moves cycles between cycles-ledger balances, the same as a token transfer between accounts. Passing a canister's principal as the recipient credits that principal's cycles-ledger balance, not the canister's actual execution/compute cycle balance -- `icp canister status` will not show the cycles as received, and the canister keeps burning down its real balance toward freezing with no indication anything went wrong. Use `icp canister top-up <canister> --amount <N> -e ic` instead, which deposits cycles directly onto the canister via the management canister. See "Top Up a Canister" below for both commands side by side.
 
+8. **Using `-n ic` on a command that names a canister** -- `-n`/`--network` and `-e`/`--environment` are different selectors and conflict with each other; passing both is an error. A canister **name** can only be resolved through an environment, so `-n` fails on it:
+
+   ```bash
+   icp canister status backend -n ic
+   # Error: Specifying a network is not supported if you are targeting a canister
+   # by name, specify an environment instead
+   ```
+
+   So `-e ic` for anything naming a canister (`top-up`, `status`, `settings update`, `create`), and `-n ic` for commands that take a principal or no canister at all (`cycles mint`, `cycles balance`, `cycles transfer`). This is why the mainnet examples below mix the two flags. Load `icp-cli` for the full flag rules.
+
 ## Implementation
 
 ### Motoko
@@ -261,7 +271,7 @@ icp canister top-up backend --amount 1000000000000
 icp canister top-up backend --amount 1000000000000 -e ic
 
 # Convert ICP to cycles and top up in one step (mainnet)
-icp cycles mint --icp 1.0 -e ic
+icp cycles mint --icp 1.0 -n ic   # no canister argument, so -n is fine (see Pitfall 8)
 icp canister top-up backend --amount 1000000000000 -e ic
 ```
 
