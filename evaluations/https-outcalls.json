@@ -1,0 +1,26 @@
+{
+  "skill": "https-outcalls",
+  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21) and the correct cycle cost for omitting max_response_bytes on a 13-node subnet.",
+  "output_evals": [
+    {
+      "name": "2MB limit is 2,000,000 bytes and the default-size cost",
+      "prompt": "For an IC HTTPS outcall: what is the exact maximum value in bytes I can pass for max_response_bytes, and roughly how many cycles does a 13-node subnet charge if I leave max_response_bytes unset? Just the two numbers with a one-line justification each.",
+      "expected_behaviors": [
+        "States the maximum as 2,000,000 bytes (decimal), NOT 2_097_152 / 2^21 / 2 MiB",
+        "Gives the omitted-max_response_bytes cost as roughly 20.8-20.9 billion cycles",
+        "Does NOT state the cost as ~21.5 billion or ~21.86 billion cycles"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "My canister needs to fetch a price from a REST API",
+      "Why does my canister's outcall fail consensus with different responses per replica?",
+      "How much does it cost in cycles to call an external HTTPS endpoint from a canister?"
+    ],
+    "should_not_trigger": [
+      "How do I read an Ethereum contract's state from my canister?"
+    ]
+  }
+}

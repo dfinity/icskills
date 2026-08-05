@@ -37,9 +37,9 @@ You do not deploy anything extra. The management canister is built into every su
 
 3. **Using HTTP instead of HTTPS.** The IC only supports HTTPS outcalls. Plain HTTP URLs are rejected. The target server must have a valid TLS certificate.
 
-4. **Exceeding the 2MB response limit.** The maximum response body is 2MB (2_097_152 bytes). If the external API returns more, the call fails. Use the `max_response_bytes` field to set a limit and design your queries to return small responses.
+4. **Exceeding the 2MB response limit.** The maximum response body is 2MB, which the spec defines as 2_000_000 bytes (decimal, not 2^21). If the external API returns more, the call fails. Use the `max_response_bytes` field to set a limit and design your queries to return small responses.
 
-5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 21.5 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
+5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 20.85 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
 
 6. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
 
@@ -329,7 +329,9 @@ Base cost:                      49_140_000 cycles  (= (3_000_000 + 60_000*13) * 
 + per max_response_bytes byte:  10_400 cycles      (= 800 * 13)
 
 IMPORTANT: The charge is against max_response_bytes, NOT actual response size.
-If you omit max_response_bytes, the system assumes 2MB and charges ~21.5B cycles.
+Omitting max_response_bytes assumes the 2MB maximum (2_000_000 bytes) and costs
+49_140_000 + 10_400 * 2_000_000 = 20_849_140_000 cycles (~20.85B), plus the
+per-request-byte term.
 ```
 
 Unused cycles are refunded to the canister, so it is safe to over-budget.
