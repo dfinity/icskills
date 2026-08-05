@@ -146,6 +146,11 @@ version = "0.1.0"
 
 [dependencies]
 core = "2.0.0"
+
+# Required. Without a [toolchain] moc pin, mops falls back to the dfx cache and
+# the build dies with `dfx: not found` (see `mops-cli`).
+[toolchain]
+moc = "1.9.0"
 ```
 
 ### Rust
