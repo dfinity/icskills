@@ -1,0 +1,28 @@
+{
+  "skill": "stable-memory",
+  "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly.",
+
+  "output_evals": [
+    {
+      "name": "Adversarial: mo:core Map call style in a persistent actor",
+      "prompt": "Write a Motoko persistent actor that keeps users in a Map keyed by Nat, with an addUser and a getUser method, using mo:core. Just the actor and its imports, no mops.toml and no explanation.",
+      "expected_behaviors": [
+        "Calls Map operations in dot notation on the map value, e.g. users.add(id, user) and users.get(id)",
+        "Does NOT pass Nat.compare (or any compare function) explicitly as an argument",
+        "Imports mo:core/Nat, which is what lets the compiler derive Map's implicit compare argument",
+        "Declares the map with Map.empty<Nat, User>() and no `stable` keyword"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "My canister loses all its data every time I upgrade it",
+      "How do I keep a Map across canister upgrades in Motoko?"
+    ],
+    "should_not_trigger": [
+      "How do I call another canister and handle a rejected call?"
+    ]
+  }
+}
