@@ -23,6 +23,15 @@
       ]
     },
     {
+      "name": "Adversarial: core pin must allow Runtime.envVar",
+      "prompt": "I have an icp-cli multi-canister project. My Motoko backend needs to read a sibling canister's ID at runtime. Give me the mops.toml [dependencies] section plus the single line that reads the ID. No explanation.",
+      "expected_behaviors": [
+        "Pins core to 2.1.0 or higher in [dependencies]",
+        "Does NOT pin core = \"2.0.0\" -- in core 2.0.0 the Runtime module has only trap and unreachable, so Runtime.envVar fails to compile with M0072",
+        "Reads the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:<canister-name>\")"
+      ]
+     },
+     {
       "name": "Adversarial: there is no identity named `default`",
       "prompt": "Using icp-cli, give me the bash to verify my canister rejects unregistered callers: make a throwaway identity, call the canister as it to see the rejection, then get back to the identity I normally use. Just the commands, no explanation.",
       "expected_behaviors": [
