@@ -11,7 +11,10 @@ metadata:
 # Stable Memory & Canister Upgrades
 
 ## What This Is
-Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
+Stable memory is persistent storage on Internet Computer that survives canister upgrades. Whether ordinary variables survive depends on the language:
+
+- **Rust** -- heap data (`thread_local! { RefCell<T> }`, plain `static`s) is wiped on every upgrade. Any data you care about must live in stable memory, either through `ic-stable-structures` or by serializing it yourself in `pre_upgrade`/`post_upgrade`.
+- **Motoko** -- enhanced orthogonal persistence is on by default, so `let` and `var` in a `persistent actor` already survive upgrades with no `stable` keyword and no upgrade hooks. Only `transient` declarations are wiped.
 
 ## Prerequisites
 
@@ -35,7 +38,30 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
-7. **Using `actor { }` instead of `persistent actor { }` (Motoko)** -- Plain `actor` in mo:core requires explicit `stable` annotations and pre/post_upgrade hooks. `persistent actor` makes everything stable by default. Always use `persistent actor`.
+7. **Mismatching the actor form and the `--default-persistent-actors` flag (Motoko)** -- Both plain `actor` and `persistent actor` are correct; which one compiles depends on that compiler flag. Enabling it is the recommended setup, because it keeps the code less verbose:
+
+   ```toml
+   # mops.toml — recommended; see `mops-cli`
+   [moc]
+   args = ["--default-persistent-actors"]
+   ```
+
+   With the flag, every actor is persistent, so write plain `actor { }`; the `persistent` keyword still compiles but is redundant (warning M0217). Without the flag, `persistent actor { }` is required, and plain `actor` fails with `[M0220] this actor or actor class should be declared persistent`. No annotation rescues it — `stable`, `transient`, and `pre_upgrade`/`post_upgrade` hooks all still fail, because the error is on the actor itself:
+
+   ```motoko
+   // without --default-persistent-actors
+   actor {
+     stable var users = Map.empty<Nat, Text>();   // M0220 — `stable` does not help
+   };
+
+   persistent actor {
+     let users = Map.empty<Nat, Text>();          // compiles; persisted automatically
+   };
+   ```
+
+   The examples below use `persistent actor`, which compiles either way.
+
+   One trap when the flag is off: if the actor body has un-annotated `let`/`var`, moc reports `[M0219] this declaration is currently implicitly transient, please declare it explicitly transient` on those lines and M0220 never appears. Do not follow that suggestion — `transient` discards the data on upgrade, and the actor still fails M0220. The fix is `persistent` on the actor, or the flag.
 
 ## Implementation
 

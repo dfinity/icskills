@@ -12,6 +12,15 @@
         "Imports mo:core/Nat, which is what lets the compiler derive Map's implicit compare argument",
         "Declares the map with Map.empty<Nat, User>() and no `stable` keyword"
       ]
+    },
+    {
+      "name": "Adversarial: M0219 on a plain actor — the compiler's own suggestion is the wrong fix",
+      "prompt": "My Motoko canister won't compile. Inside `actor { ... }` I have `var users = Map.empty<Nat, User>()` and moc reports: type error [M0219], this declaration is currently implicitly transient, please declare it explicitly `transient`. I need users to survive canister upgrades. What is the fix? Just the fix, no full rewrite.",
+      "expected_behaviors": [
+        "Says to declare the actor as `persistent actor` (or equivalently to enable the --default-persistent-actors compiler flag)",
+        "Does NOT tell the user to add `transient` to the declaration, even though the error message suggests it -- that would discard users on upgrade",
+        "Does NOT claim plain `actor` can be made to persist by adding `stable`, `pre_upgrade`, or `post_upgrade`"
+      ]
     }
   ],
 
