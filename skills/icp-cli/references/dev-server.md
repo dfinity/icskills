@@ -22,8 +22,8 @@ const environment = process.env.ICP_ENVIRONMENT || "local";
 const CANISTER_NAMES = ["backend", "other"];
 
 function getCanisterId(name) {
-  // `-i` makes the command return only the identity of the canister
-  return execSync(`icp canister status ${name} -e ${environment} -i`, {
+  // `--id-only` makes the command print just the canister ID
+  return execSync(`icp canister status ${name} -e ${environment} --id-only`, {
     encoding: "utf-8", stdio: "pipe",
   }).trim();
 }
@@ -72,6 +72,6 @@ Without this guard, `vite build` will execute `icp network status` and `icp cani
 ## Key differences from dfx
 
 - The proxy target and root key come from `icp network status --json` (no hardcoded ports)
-- Canister IDs come from `icp canister status <name> -e <env> -i` (no `.env` file)
+- Canister IDs come from `icp canister status <name> -e <env> --id-only` (no `.env` file)
 - The `ic_env` cookie replaces dfx's `CANISTER_ID_*` environment variables
 - `ICP_ENVIRONMENT` lets the dev server target any environment (local, staging, ic)
