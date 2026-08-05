@@ -202,6 +202,7 @@
         "States prerequisites: local network must be running (icp network start -d) and backend must be deployed (icp deploy backend) before vite dev works",
         "Wraps getDevServerConfig() in a mode guard so it only runs during vite dev (command === 'serve'), not during vite build",
         "Uses icp network status and icp canister status commands (not dfx or hardcoded ports)",
+        "Reads canister IDs with `icp canister status <name> --id-only` (or its short form `-i`), not by parsing full status output",
         "Mentions the ic_env cookie for passing canister IDs and root key to the frontend",
         "Does NOT suggest using .env files or process.env for canister IDs"
       ]
