@@ -1,0 +1,27 @@
+{
+  "skill": "ckbtc",
+  "description": "Evaluation cases for the ckbtc skill. Tests whether agents generate ckBTC transfers that set created_at_time for ICRC-1 deduplication rather than leaving it null.",
+  "output_evals": [
+    {
+      "name": "ckBTC transfer sets created_at_time for dedup",
+      "prompt": "Write the Motoko function for my canister that transfers ckBTC from the caller's subaccount to another principal on mainnet. Just the function, no imports, no type definitions, no deploy steps.",
+      "expected_behaviors": [
+        "Sets created_at_time to a real timestamp derived from Time.now(), NOT to null",
+        "Uses fee = ?10 (10 satoshis) rather than null or a different fee",
+        "Passes an ICRC-1 Account record { owner; subaccount } as 'to', not a raw Principal or an AccountIdentifier hex string"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I give each user their own BTC deposit address in my canister?",
+      "My users need to withdraw ckBTC back to a real Bitcoin address",
+      "Why does update_balance return NoNewUtxos after I sent BTC?"
+    ],
+    "should_not_trigger": [
+      "How do I transfer ICP from my canister to a user?",
+      "Set up an ICRC-1 ledger for my own token locally"
+    ]
+  }
+}
