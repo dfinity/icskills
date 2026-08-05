@@ -34,7 +34,16 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB for wasm32 and 6GB for wasm64. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the heap memory size AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
 
-5. **Changing record field types between upgrades (Motoko)** -- Altering the type of a persistent field (e.g., `Nat` to `Int`, or renaming a record field) will trap on upgrade and data is unrecoverable. Only ADD new optional fields. Never remove or rename existing ones.
+5. **Treating a rejected upgrade as data loss (Motoko)** -- Enhanced orthogonal persistence checks the new program against the existing state and either accepts the upgrade or rejects it *before* it takes effect. A rejected upgrade is not data loss: the canister keeps running the previous version with its state intact, so you fix the code and redeploy. What actually differs is which changes need a migration:
+
+   | Change to a persistent field | Needs a migration? |
+   |---|---|
+   | Adding a field | No |
+   | Widening a `var` field, e.g. `Nat` → `Int` | No — the value is preserved |
+   | Removing a field | **Yes** |
+   | Renaming a field, or a non-widening type change | **Yes** |
+
+   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko` for the migration-expression syntax.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 

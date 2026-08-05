@@ -21,6 +21,16 @@
         "Does NOT tell the user to add `transient` to the declaration, even though the error message suggests it -- that would discard users on upgrade",
         "Does NOT claim plain `actor` can be made to persist by adding `stable`, `pre_upgrade`, or `post_upgrade`"
       ]
+    },
+    {
+      "name": "Adversarial: widening is safe and a rejected upgrade is not data loss",
+      "prompt": "My deployed Motoko persistent actor has `var balance : Nat` and an obsolete `var legacyFlag : Bool`. I want to change balance to `var balance : Int` and delete legacyFlag. Users' balances must not be lost. Which of these two changes needs migration code, and what happens to the data if the upgrade gets rejected? Short answer, no full actor rewrite.",
+      "expected_behaviors": [
+        "States that widening balance from Nat to Int needs no migration and preserves the existing value",
+        "States that deleting legacyFlag DOES require an explicit migration expression",
+        "States that a rejected upgrade aborts and leaves the canister running the previous version with its data intact",
+        "Does NOT claim the data is unrecoverable, lost, or that the canister is bricked if the upgrade is rejected"
+      ]
     }
   ],
 
