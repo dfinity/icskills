@@ -26,8 +26,8 @@ needs this link again — the installed `SessionStart` hook does the work from t
 The script is a **differential mirror**. It fetches the discovery index once and
 compares each skill's published `hash` against a stored manifest, re-downloading only
 the skills that actually changed (and pruning ones removed upstream). Unchanged skills
-are skipped with no per-file downloads, and the script stays silent unless something
-changed. If the server does not publish a `hash` for a skill, the script falls back to
+are skipped with no per-file downloads, and the script writes nothing to stdout unless
+something changed. If the server does not publish a `hash` for a skill, the script falls back to
 re-downloading it every run, so it remains correct either way.
 
 ## Important: tell the user what to expect
@@ -89,8 +89,11 @@ sync logic stays correct as it is updated upstream.
   replaces a changed skill's whole directory via an atomic staging swap — so files
   renamed or removed upstream don't linger inside a skill, and an interrupted
   download leaves the existing copy intact.
-- Prints a one-line `added / updated / removed` summary only when something changed;
-  otherwise it is silent.
+- Writes nothing to stdout on a no-op sync. When something changed it prints one JSON
+  object whose `systemMessage` carries the `added / updated / removed` summary — that
+  string is what the user sees, because SessionStart hooks surface JSON fields rather
+  than raw output. Its diagnostics (interrupted-sync recovery, unsafe skill names) go to
+  stderr and so are not displayed.
 - Degrades gracefully: exits cleanly (keeping cached skills) if the network is down or
   `jq` is missing, and falls back to re-downloading skills the server publishes no
   `hash` for.
