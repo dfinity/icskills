@@ -35,7 +35,21 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
-7. **Using `actor { }` instead of `persistent actor { }` (Motoko)** -- Plain `actor` in mo:core requires explicit `stable` annotations and pre/post_upgrade hooks. `persistent actor` makes everything stable by default. Always use `persistent actor`.
+7. **Using `actor { }` instead of `persistent actor { }` (Motoko)** -- Plain `actor` does not compile under enhanced orthogonal persistence. There is no annotation that rescues it: the error is on the actor itself, so `stable`, `transient`, and `pre_upgrade`/`post_upgrade` hooks all still fail.
+
+   ```motoko
+   actor {
+     stable var users = Map.empty<Nat, Text>();   // M0220: this actor or actor class
+   };                                             // should be declared `persistent`
+
+   persistent actor {
+     let users = Map.empty<Nat, Text>();          // compiles; persisted automatically
+   };
+   ```
+
+   If the actor body has un-annotated `let`/`var`, moc reports `[M0219] this declaration is currently implicitly transient, please declare it explicitly transient` on those lines and M0220 never appears. Do not follow that suggestion — `transient` discards the data on upgrade, and the actor still fails with M0220. The fix is always `persistent` on the actor.
+
+   `persistent actor` compiles whether or not the `--default-persistent-actors` compiler flag is set (with the flag the keyword is merely redundant, warning M0217), whereas plain `actor` compiles **only** with that flag — which is why the `motoko` skill writes plain `actor`.
 
 ## Implementation
 
