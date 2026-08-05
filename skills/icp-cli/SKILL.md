@@ -116,7 +116,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
 13. **Passing `{ agent }` to `createActor` from `@icp-sdk/bindgen`.** The old `@dfinity/agent` pattern was `createActor(canisterId, { agent })`. The `@icp-sdk/bindgen` pattern is `createActor(canisterId, { agentOptions: { host, rootKey } })` — the binding creates the agent internally. Passing `{ agent }` to the new API **silently creates an anonymous identity** — no error is thrown, but calls return empty data or access denied. See `references/binding-generation.md` for the correct pattern.
 
-14. **Mixing canister-level fields across config styles.** When using a recipe, the only valid canister-level fields are `name`, `recipe`, `sync`, `settings`, and `init_args`. Fields like `candid`, `build`, or `wasm` are **not** valid at canister level alongside a recipe — recipe-specific options go inside `recipe.configuration`. When using bare `build` (no recipe), valid canister-level fields are `name`, `build`, `sync`, `settings`, and `init_args`. The field `init_arg_file` does not exist — use `init_args.path` instead (e.g., `init_args: { path: ./args.bin, format: bin }`). For the authoritative field reference, consult the [icp-cli configuration reference](https://cli.internetcomputer.org/0.2/reference/configuration.md).
+14. **Mixing canister-level fields across config styles.** When using a recipe, the only valid canister-level fields are `name`, `recipe`, `sync`, `settings`, and `init_args`. Fields like `candid`, `build`, or `wasm` are **not** valid at canister level alongside a recipe — recipe-specific options go inside `recipe.configuration`. When using bare `build` (no recipe), valid canister-level fields are `name`, `build`, `sync`, `settings`, and `init_args`. The field `init_arg_file` does not exist — use `init_args.path` instead (e.g., `init_args: { path: ./args.bin, format: bin }`). For the authoritative field reference, consult the [icp-cli configuration reference](https://cli.internetcomputer.org/1.2/reference/configuration.md).
     ```yaml
     # Wrong — candid is not a canister-level field when using a recipe
     canisters:
@@ -466,7 +466,7 @@ const backendId = safeGetCanisterEnv()?.["PUBLIC_CANISTER_ID:backend"];
 - User-defined variables (`settings.environment_variables` in `icp.yaml`) are static YAML strings shared across environments: a create-class install (first install or `--mode reinstall`) re-applies them, overwriting anything set with `icp canister settings update --add-environment-variable`. Re-assert environment-specific values (e.g. production origins) after such a deploy.
 - The replica caps an environment-variable *value* at 128 characters.
 
-Full reference: [icp-cli environment variables](https://cli.internetcomputer.org/1.0/reference/environment-variables/).
+Full reference: [icp-cli environment variables](https://cli.internetcomputer.org/1.2/reference/environment-variables/).
 
 ### Web identity flows
 
