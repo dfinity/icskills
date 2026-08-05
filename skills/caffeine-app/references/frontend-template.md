@@ -413,7 +413,7 @@ export default {
 ## `src/frontend/env.json`
 
 Placeholders only — Caffeine injects real values when it serves the app. The `build`
-script copies this file into `dist/` (the `copy:env` step). Keep all four keys.
+script copies this file into `dist/` (the `copy:env` step). Keep all five keys.
 
 ```json
 {
