@@ -1,0 +1,24 @@
+{
+  "skill": "ic-dashboard",
+  "description": "Evaluation cases for the ic-dashboard skill. Tests whether agents use each API's actual pagination field names — notably that Ledger API v2 returns rows under `accounts` with a `prev_cursor`, unlike the `data` / `previous_cursor` shape of the IC, ICRC and SNS APIs.",
+  "output_evals": [
+    {
+      "name": "Ledger API v2 pagination field names differ from the other APIs",
+      "prompt": "I'm paging through the IC Ledger API endpoint https://ledger-api.internetcomputer.org/v2/accounts . Name the JSON response field that holds the row array, and the field that holds the previous-page cursor. Just the two field names.",
+      "expected_behaviors": [
+        "Names the row array field as `accounts`, NOT `data`",
+        "Names the previous-page cursor as `prev_cursor`, NOT `previous_cursor`"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I page through canister data from the IC dashboard API?",
+      "Which internetcomputer.org API gives me mainnet ICP account transactions?"
+    ],
+    "should_not_trigger": [
+      "How do I call an ICRC-1 ledger canister from my own canister?"
+    ]
+  }
+}

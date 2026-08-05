@@ -42,7 +42,7 @@ Full URLs for specs and UI:
 1. **Prefer v2+ APIs with cursor pagination.** IC API v4 (`/api/v4/canisters`, `/api/v4/subnets`), ICRC API v2 (`/api/v2/ledgers`, `/api/v2/ledgers/{id}/transactions`, etc.), and SNS API v2 (`/api/v2/snses`, `/api/v2/snses/{id}/proposals`, `/api/v2/snses/{id}/neurons`) use `after`, `before`, and `limit` for stable, efficient paging. Avoid v1/offset-based endpoints when a v2+ alternative exists.
 2. **Choose the right API** for the data you need: IC API (canisters, subnets, NNS neurons/proposals), **Ledger API for mainnet ICP** (accounts, transactions, supply), ICRC API for **other** ICRC ledgers only (ckBTC, SNS tokens, testicp — ICRC API does not expose mainnet ICP), SNS API (SNS list, neurons, proposals), Metrics API (governance, cycles, Bitcoin, etc.).
 3. **Use the OpenAPI spec** to get exact path, query, and body schemas and response shapes; prefer the spec over hand-written docs to avoid drift.
-4. **Call over HTTPS** with `GET` (or documented method). Use the `next_cursor` / `previous_cursor` from v2+ responses to request the next or previous page.
+4. **Call over HTTPS** with `GET` (or documented method). Use the cursor fields from v2+ responses to request the next or previous page. The names are not uniform: IC, ICRC and SNS APIs return `next_cursor` / `previous_cursor`, but **Ledger API returns `next_cursor` / `prev_cursor`** and puts the rows under `accounts` rather than `data`. Read the field names from the response (or the OpenAPI spec) rather than assuming.
 
 ## Mistakes That Break Your Build
 
@@ -54,7 +54,7 @@ Full URLs for specs and UI:
 
 4. **ICRC API: ledger_canister_id in path.** ICRC endpoints require `ledger_canister_id` in the path (e.g. `/api/v2/ledgers/{ledger_canister_id}/transactions`). Use the canister ID of the ledger you want (e.g. ckBTC `mxzaz-hqaaa-aaaar-qaada-cai`). Do not use ICRC API for mainnet ICP — use Ledger API instead.
 
-5. **Using v1 or offset-based pagination when v2+ exists.** Always prefer v2 or higher endpoints that support cursor pagination (`after`, `before`, `limit`). IC API v4 (canisters, subnets), ICRC API v2 (ledgers, accounts, transactions), and SNS API v2 (snses, proposals, neurons) return `next_cursor`/`previous_cursor` and accept cursor query params. Older v1/offset/`max_*_index` endpoints are legacy; using the wrong pagination model returns empty or incorrect pages.
+5. **Using v1 or offset-based pagination when v2+ exists.** Always prefer v2 or higher endpoints that support cursor pagination (`after`, `before`, `limit`). IC API v4 (canisters, subnets), ICRC API v2 (ledgers, accounts, transactions), and SNS API v2 (snses, proposals, neurons) return `next_cursor`/`previous_cursor` and accept cursor query params — Ledger API v2 also paginates by cursor but names the field `prev_cursor`. Older v1/offset/`max_*_index` endpoints are legacy; using the wrong pagination model returns empty or incorrect pages.
 
 6. **Timestamps.** Most time-range query params (`start`, `end`) expect Unix seconds (integer). Sending milliseconds or ISO strings causes validation errors (422).
 
@@ -118,7 +118,9 @@ curl -s "https://sns-api.internetcomputer.org/api/v2/snses/ROOT_CANISTER_ID/neur
 ### Ledger API — Mainnet ICP token (prefer v2 for cursor pagination)
 
 ```bash
-# List accounts (v2: after/before/limit, next_cursor/prev_cursor)
+# List accounts (v2: after/before/limit). Note this API's own naming:
+# rows come back under `accounts` (not `data`), and the back-cursor is
+# `prev_cursor` (not `previous_cursor` as on the IC/ICRC/SNS APIs).
 curl -s "https://ledger-api.internetcomputer.org/v2/accounts?limit=10"
 
 # Get account by account_identifier (64-char hex)
@@ -180,9 +182,9 @@ curl -s -o /dev/null -w "%{http_code}" "https://icrc-api.internetcomputer.org/ap
 ## Verify It Works
 
 ```bash
-# 1. IC API returns canister list with data array
-curl -s "https://ic-api.internetcomputer.org/api/v3/canisters?limit=1" | head -c 200
-# Expected: JSON with "data" or similar key and at least one canister
+# 1. IC API returns canister list with data array (v4 — the preferred list endpoint)
+curl -s "https://ic-api.internetcomputer.org/api/v4/canisters?limit=1" | head -c 200
+# Expected: JSON with "data", "next_cursor" and "previous_cursor" keys, and one canister
 
 # 2. ICRC API returns ledger list
 curl -s "https://icrc-api.internetcomputer.org/api/v2/ledgers?limit=1" | head -c 200
