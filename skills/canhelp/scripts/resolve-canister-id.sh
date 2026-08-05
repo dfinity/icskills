@@ -4,7 +4,8 @@ set -euo pipefail
 INPUT="${1:?Usage: resolve-canister-id.sh <canister-id-or-name>}"
 
 # Principal: Base32(CRC32 · blob) grouped into 5-char chunks separated by dashes.
-# Each group is exactly 5 lowercase alphanumeric chars, except the last which is 1-5.
+# Each group is exactly 5 base32 chars -- a-z and 2-7 per RFC 4648, so 0, 1, 8 and 9
+# never occur -- except the last group, which is 1-5 chars.
 # Max 63 chars (29-byte blob → 53 base32 chars + 10 dashes). Must have at least 2 groups.
 if [[ "$INPUT" =~ ^[a-z2-7]{5}(-[a-z2-7]{5})*(-[a-z2-7]{1,5})$ ]]; then
     echo "$INPUT"

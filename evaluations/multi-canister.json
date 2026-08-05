@@ -30,6 +30,15 @@
         "Does NOT pin core = \"2.0.0\" -- in core 2.0.0 the Runtime module has only trap and unreachable, so Runtime.envVar fails to compile with M0072",
         "Reads the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:<canister-name>\")"
       ]
+     },
+     {
+      "name": "Adversarial: there is no identity named `default`",
+      "prompt": "Using icp-cli, give me the bash to verify my canister rejects unregistered callers: make a throwaway identity, call the canister as it to see the rejection, then get back to the identity I normally use. Just the commands, no explanation.",
+      "expected_behaviors": [
+        "Saves the current identity into a variable, e.g. ORIGINAL=$(icp identity default), rather than assuming a fixed identity name",
+        "Restores using that saved variable, e.g. icp identity default \"$ORIGINAL\"",
+        "Does NOT switch back with `icp identity default default` -- no identity named `default` exists in icp-cli"
+      ]
     }
   ],
   "trigger_evals": {

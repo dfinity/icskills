@@ -48,7 +48,7 @@ Full URLs for specs and UI:
 
 1. **Wrong base URL or API version.** IC API uses `/api/v3/` (and v4 for canisters/subnets); ICRC has `/api/v1/` and `/api/v2/` (ICRC API does not serve mainnet ICP — use Ledger API). Ledger API uses unversioned paths for some endpoints (e.g. `/accounts`, `/supply/total/latest`) and `/v2/` for cursor-paginated lists. Metrics API uses `/api/v1/`. Using the wrong prefix returns 404 or wrong schema.
 
-2. **Canister ID format.** Canister IDs in paths and queries must match the principal-like pattern: 27 characters, five groups of five plus a final three (e.g. `ryjl3-tyaaa-aaaaa-aaaba-cai`). Subnet IDs use the longer pattern (e.g. 63 chars). Sending a raw principal string in the wrong encoding or length causes 422 or 400.
+2. **Canister ID format.** Canister IDs in paths and queries are principal text: lowercase Base32 of `CRC32(blob) · blob`, split into 5-character groups where only the last group may be shorter (1–5 characters). A mainnet canister ID is 27 characters — **four** groups of five plus a final three, e.g. `ryjl3-tyaaa-aaaaa-aaaba-cai`. Principals are not fixed-length: subnet IDs reach the 63-character maximum (ten groups of five plus a final three), and short ones such as the management canister `aaaaa-aa` are also valid principals. Sending a raw principal string in the wrong encoding or length causes 422 or 400.
 
 3. **Using ICRC API for mainnet ICP.** ICRC API exposes **test ICP (TestICP) only**, not mainnet ICP. For mainnet ICP token data (accounts, transactions, supply) use **Ledger API** (`ledger-api.internetcomputer.org`). Use ICRC API for other ICRC ledgers (e.g. ckBTC, SNS tokens) and for TestICP.
 

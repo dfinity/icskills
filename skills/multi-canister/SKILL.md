@@ -957,6 +957,11 @@ icp canister call user_service register '("testuser")'
 icp canister call content_service createPost '("Test Title", "Test Body")'
 # Expected: (variant { ok = record { ... } })
 
+# Remember the identity you registered with. There is no identity named
+# `default` -- `icp identity default` names the *role*, and a fresh icp-cli
+# install has only `anonymous`. (Notices go to stderr, so this captures cleanly.)
+ORIGINAL_IDENTITY=$(icp identity default)
+
 # Create a new identity that is NOT registered
 icp identity new unregistered --storage plaintext
 icp identity default unregistered
@@ -964,7 +969,7 @@ icp canister call content_service createPost '("Should Fail", "No user")'
 # Expected: (variant { err = "User not registered" })
 
 # Switch back
-icp identity default default
+icp identity default "$ORIGINAL_IDENTITY"
 ```
 
 ### Verify Cross-Canister Query
