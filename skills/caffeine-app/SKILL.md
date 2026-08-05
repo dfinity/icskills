@@ -2,7 +2,7 @@
 name: caffeine-app
 description: "Scaffold and build a complete Caffeine app (caffeine.ai) from scratch — the project layout, the caffeine.toml workspace + canister manifests, the mops.toml for the single Motoko `backend` canister, the React/Vite frontend, and the caffeine CLI build loop (auth login, doctor, install, check --fix, preview --build). Use whenever the user wants to create, scaffold, set up, or build a Caffeine app or a caffeine.ai project, asks about caffeine.toml or mops.toml structure, or needs the caffeine CLI workflow — even if they do not say the words 'from scratch'. Always pair it with the `motoko` skill for the backend code. Do NOT use it for Motoko language syntax or compiler errors (use the `motoko` skill), and do NOT use it for generic Internet Computer / dfx / icp deployment (use the `icp-cli` skill)."
 license: Apache-2.0
-compatibility: "@caffeineai/cli (the `caffeine` command), Node.js >= 18, pnpm, network access + a caffeine.ai account"
+compatibility: "@caffeineai/cli (the `caffeine` command), Node.js >= 18.17, pnpm, network access + a caffeine.ai account"
 metadata:
   title: "Caffeine App (build from scratch)"
   category: Integration
@@ -270,7 +270,7 @@ invoked by the backend canister's `[build]` step (`pnpm bindgen`).
   "name": "@caffeine/template-app",
   "type": "module",
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=18.17.0",
     "pnpm": ">=7.0.0",
     "npm": "please use pnpm"
   },
@@ -401,8 +401,9 @@ returns its URL. Promote a draft to a live URL in the caffeine.ai web app (open 
 
 If you cannot run the CLI locally (no shell, no toolchain), drive Caffeine's hosted AI
 instead: describe the app in natural language with `caffeine chat send "<prompt>"` (or
-the caffeine.ai web chat) and it scaffolds, builds, and deploys for you. This skill is
-for the **local, hand-authored** path.
+the caffeine.ai web chat). Caffeine's hosted AI then scaffolds, builds, and deploys it
+server-side — `chat send` only submits the prompt, so this does not contradict the CLI
+having no deploy command. This skill is for the **local, hand-authored** path.
 
 ## Common Pitfalls
 
