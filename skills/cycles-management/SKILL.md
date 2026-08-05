@@ -11,7 +11,7 @@ metadata:
 # Cycles & Canister Management
 
 ## What This Is
-Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and eventually gets deleted. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
+Cycles are the computation fuel for canisters on Internet Computer. Every canister operation (execution, storage, messaging) burns cycles. When a canister runs out of cycles, it freezes and is eventually uninstalled -- its code and data are deleted, but its metadata (canister ID, controllers, settings) survives. 1 trillion cycles (1T) costs approximately 1 USD equivalent in ICP (the exact rate is set by the NNS and fluctuates with ICP price via the CMC).
 
 **Note:** icp-cli uses the **cycles ledger** (`um5iw-rqaaa-aaaaq-qaaba-cai`) by default. The cycles ledger is a single canister that tracks cycle balances for all principals, similar to a token ledger. Commands like `icp cycles balance`, `icp cycles mint`, and `icp canister top-up` go through the cycles ledger. There is no legacy wallet concept in icp-cli. The programmatic patterns below (accepting cycles, creating canisters via management canister) remain the same regardless of which funding mechanism is used.
 
@@ -32,7 +32,7 @@ The Management Canister (`aaaaa-aa`) is a virtual canister -- it does not exist 
 
 ## Mistakes That Break Your Build
 
-1. **Running out of cycles silently freezes the canister** -- There is no warning. The canister stops responding to all calls. If cycles are not topped up before the freezing threshold, the canister and all its data will be permanently deleted. Set a freezing threshold and monitor balances.
+1. **Running out of cycles silently freezes the canister** -- There is no warning. A frozen canister stops executing messages but keeps paying rent for its memory and allocations, so the balance continues to drain. When it reaches zero the canister is uninstalled: code and data are gone permanently, and only the metadata (canister ID, controllers, settings) remains. Set a freezing threshold and monitor balances.
 
 2. **Not setting freezing_threshold** -- Default is 30 days. If your canister burns cycles fast (high traffic, large stable memory), 30 days may not be enough warning. Set it higher for production canisters. The freezing threshold defines how many seconds worth of idle cycles the canister must retain before it freezes.
 
