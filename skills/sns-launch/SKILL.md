@@ -67,7 +67,13 @@ When an SNS launch succeeds, SNS-W deploys these canisters on an SNS subnet:
 This is the single source of truth for all launch parameters. Copy the template from the `dfinity/sns-testing` repo and customize:
 
 ```yaml
-# Note: numeric values are in e8s (1 token = 100_000_000 e8s). Time values are in seconds.
+# Units: token-valued fields (transaction_fee, rejection_fee, stake, treasury, the swap
+# *_icp limits) carry an explicit suffix -- "tokens", "token", or "e8s"
+# (1 token = 100_000_000 e8s). Duration fields (initial_voting_period, dissolve_delay,
+# vesting_period, ...) carry a time suffix and may be concatenated: seconds, minutes,
+# hours, days, weeks, months (30.44 days), years (365.25 days) -- e.g. "4 days", "1w 2d 3h".
+# Plain counts such as minimum_participants take no suffix.
+# An e8s-only, seconds-only config is the older format; do not mix the two conventions.
 
 # === PROJECT METADATA ===
 name: MyProject
