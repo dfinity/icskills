@@ -11,7 +11,10 @@ metadata:
 # Stable Memory & Canister Upgrades
 
 ## What This Is
-Stable memory is persistent storage on Internet Computer that survives canister upgrades. Heap memory (regular variables) is wiped on every upgrade. Any data you care about MUST be in stable memory, or it will be lost the next time the canister is deployed.
+Stable memory is persistent storage on Internet Computer that survives canister upgrades. Whether ordinary variables survive depends on the language:
+
+- **Rust** -- heap data (`thread_local! { RefCell<T> }`, plain `static`s) is wiped on every upgrade. Any data you care about must live in stable memory, either through `ic-stable-structures` or by serializing it yourself in `pre_upgrade`/`post_upgrade`.
+- **Motoko** -- enhanced orthogonal persistence is on by default, so `let` and `var` in a `persistent actor` already survive upgrades with no `stable` keyword and no upgrade hooks. Only `transient` declarations are wiped.
 
 ## Prerequisites
 
