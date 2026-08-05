@@ -2,7 +2,7 @@
 name: stable-memory
 description: "Persist canister state across upgrades. Covers StableBTreeMap and MemoryManager in Rust, persistent actor in Motoko, and upgrade hook patterns. Use when dealing with canister upgrades, data persistence, data lost after upgrade, stable storage, StableBTreeMap, pre_upgrade traps, or heap vs stable memory. Do NOT use for inter-canister calls or access control — use multi-canister or canister-security instead."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.2.2"
+compatibility: "icp-cli >= 0.2.2, moc >= 1.7.0 for the Motoko examples (dot notation)"
 metadata:
   title: "Stable Memory & Upgrades"
   category: Core
@@ -15,7 +15,7 @@ Stable memory is persistent storage on Internet Computer that survives canister 
 
 ## Prerequisites
 
-- For Motoko: mops with `core = "2.0.0"` in mops.toml
+- For Motoko: mops with `core = "2.0.0"` in mops.toml, and `moc >= 1.7.0` (dot notation on `Map`/`List` needs it)
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
 ## Canister IDs
@@ -46,7 +46,7 @@ With mo:core 2.0, `persistent actor` makes stable storage trivial. All `let` and
 ```motoko
 import Map "mo:core/Map";
 import List "mo:core/List";
-import Nat "mo:core/Nat";
+import Nat "mo:core/Nat";  // required: the compiler derives Map's implicit `compare` from this module
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 
@@ -69,7 +69,7 @@ persistent actor {
 
   public func addUser(name : Text) : async Nat {
     let id = userCounter;
-    Map.add(users, Nat.compare, id, {
+    users.add(id, {
       id;
       name;
       created = Time.now();
@@ -80,11 +80,11 @@ persistent actor {
   };
 
   public query func getUser(id : Nat) : async ?User {
-    Map.get(users, Nat.compare, id)
+    users.get(id)
   };
 
   public query func getUserCount() : async Nat {
-    Map.size(users)
+    users.size()
   };
 
   // requestCount resets to 0 after every upgrade
