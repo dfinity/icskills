@@ -87,7 +87,8 @@ import Time "mo:core/Time";
 
 persistent actor {
 
-  // Types -- must be inside actor body
+  // Types: in the actor body (as here) or in an imported module -- but never
+  // between the imports and the actor, which is M0141. See the `motoko` skill.
   type User = {
     id : Nat;
     name : Text;
