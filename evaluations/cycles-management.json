@@ -20,6 +20,15 @@
         "Recommends 'icp canister top-up <canister> --amount <N> -e ic' as the correct fix",
         "Does NOT suggest that running 'icp cycles transfer' again (to the canister or elsewhere) will move the parked cycles into the canister's execution balance -- only 'icp canister top-up' increases it"
       ]
+    },
+    {
+      "name": "Zero cycles uninstalls the canister, it is not deleted",
+      "prompt": "My mainnet canister ran out of cycles months ago and I never topped it up. Its ID is hardcoded in my frontend and in two other canisters. Do I have to create a brand new canister and update every hardcoded ID? Short answer, no top-up commands.",
+      "expected_behaviors": [
+        "States that at zero cycles the canister is uninstalled -- its code and data are deleted",
+        "States that the canister ID, controllers, and settings are retained",
+        "Does NOT claim the canister itself is permanently deleted or that the canister ID is lost"
+      ]
     }
   ],
   "trigger_evals": {
