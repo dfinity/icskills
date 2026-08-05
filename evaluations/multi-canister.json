@@ -1,7 +1,6 @@
 {
   "skill": "multi-canister",
   "description": "Evaluation cases for the multi-canister skill. Tests whether agents avoid documented pitfalls: inventing a dependencies field in icp.yaml instead of using the injected PUBLIC_CANISTER_ID environment variables for inter-canister wiring.",
-
   "output_evals": [
     {
       "name": "Adversarial: dependencies field for deploy ordering",
@@ -22,14 +21,22 @@
         "Does NOT use ExperimentalCycles (mo:base/ExperimentalCycles is unavailable in a mo:core project)",
         "Does NOT use ic_cdk::api::canister_balance128 or canister_balance, removed in ic-cdk 0.20"
       ]
+    },
+    {
+      "name": "Adversarial: core pin must allow Runtime.envVar",
+      "prompt": "I have an icp-cli multi-canister project. My Motoko backend needs to read a sibling canister's ID at runtime. Give me the mops.toml [dependencies] section plus the single line that reads the ID. No explanation.",
+      "expected_behaviors": [
+        "Pins core to 2.1.0 or higher in [dependencies]",
+        "Does NOT pin core = \"2.0.0\" -- in core 2.0.0 the Runtime module has only trap and unreachable, so Runtime.envVar fails to compile with M0072",
+        "Reads the ID with Runtime.envVar<system>(\"PUBLIC_CANISTER_ID:<canister-name>\")"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
     "should_trigger": [
       "How do I split my IC app across multiple canisters that call each other?",
-      "My canister's inter-canister call sometimes returns SYS_UNKNOWN — what does that mean?",
+      "My canister's inter-canister call sometimes returns SYS_UNKNOWN \u2014 what does that mean?",
       "Design a canister factory that spins up a new canister per user"
     ],
     "should_not_trigger": [
