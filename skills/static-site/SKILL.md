@@ -25,7 +25,7 @@ The **`@dfinity/static-site` recipe** deploys a static site — a built frontend
 
 ## Canister IDs and URLs
 
-Static-site canisters are created per-project — there is no global canister ID. After deployment the canister ID is stored in `.icp/data/mappings/` (per environment).
+Static-site canisters are created per-project — there is no global canister ID. After deployment the canister ID is stored in `.icp/<cache|data>/mappings/<environment>.ids.json`. Managed networks (the local replica) are **cache** — `.icp/cache/mappings/local.ids.json`; connected networks (mainnet `ic`) are **data** — `.icp/data/mappings/ic.ids.json`.
 
 | Environment | Browser URL |
 |-------------|-------------|
