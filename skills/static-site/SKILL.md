@@ -57,7 +57,7 @@ The recipe takes four configuration fields:
 | `dir` | **Yes** | The single directory of built files to serve. The canister owns its whole URL space, so this is one directory, not a list. Vite → `dist`, Next.js export → `out`. |
 | `build` | No | Shell commands run *before the canister exists* to produce `dir` (e.g. `npm run build`). No canister IDs are available yet. |
 | `presync` | No | Shell commands run *at sync time, after the canister exists*, with deployed canister IDs exported as env vars. Use this to bake a canister ID into a frontend build (see [below](#building-against-canister-ids-presync-vs-build)). |
-| `metadata` | No | `name`/`value` pairs baked into the canister wasm via `ic-wasm`. Values are interpolated in a shell at build time, so `$(…)` works. |
+| `metadata` | No | `name`/`value`/`visibility` entries baked into the canister wasm via `ic-wasm`. `visibility` is optional, `public` or `private`; omitted means `private` (ic-wasm's default), and only `public` sections are readable by anyone via `icp canister metadata`. Values are interpolated in a shell at build time, so `$(…)` works. |
 
 ## Pitfalls
 
