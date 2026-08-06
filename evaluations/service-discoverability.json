@@ -66,8 +66,7 @@
       "name": "Fetch candid:service by canister ID",
       "prompt": "Given only a canister ID on mainnet, how does an agent fetch that canister's Candid interface so it can encode calls correctly? Just the command.",
       "expected_behaviors": [
-        "Uses `icp canister metadata <canister-id> candid:service --network ic` (a raw canister ID has no project environment)",
-        "Notes candid:service is embedded by default by the @dfinity/motoko and @dfinity/rust recipes and should not be stripped",
+        "Uses `icp canister metadata <canister-id> candid:service --network ic` (a raw canister ID has no project environment, so --network targets mainnet directly rather than -e)",
         "Uses icp-cli, NOT dfx"
       ]
     }
