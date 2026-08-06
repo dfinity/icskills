@@ -60,7 +60,7 @@ The recipe takes four configuration fields:
 
 ## Pitfalls
 
-1. **Using `.ic-assets.json5` with the static-site recipe.** `.ic-assets.json5` is the **legacy asset canister's** config file. The certified-assets canister does not read it — a `.ic-assets.json5` in your `dir` is uploaded as an ordinary served asset and otherwise ignored, so SPA fallback, headers, and security policy silently do nothing. Configure this canister with `_redirects` and `_headers` instead (below).
+1. **Using `.ic-assets.json5` with the static-site recipe.** `.ic-assets.json5` is the **legacy asset canister's** config file. The certified-assets canister does not read it — and because the plugin skips every dotfile and dot-directory (only `.well-known/` is exempt, Pitfall 11), a `.ic-assets.json5` in your `dir` is not even uploaded. It is silently absent, so SPA fallback, headers, and security policy do nothing. Configure this canister with `_redirects` and `_headers` instead (below).
 
 2. **Wrong SPA fallback rule.** For client-side routing, the fallback is a **rewrite** in `_redirects`: `/*  /index.html  200`. The `200` status is what makes it a rewrite (serve the shell's contents at the requested URL, no visible redirect) so deep links work on fresh load and reload. Do **not** use a `301`/`302` redirect, and do **not** reach for `enable_aliasing` — that is a legacy asset-canister setting and has no effect here.
 
