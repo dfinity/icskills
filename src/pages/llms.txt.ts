@@ -27,9 +27,9 @@ an install:
    e.g. curl -sL https://skills.internetcomputer.org/.well-known/skills/index.json
 
 2. Before writing code for a task, fetch the matching skill's SKILL.md and follow
-   it. For example, the "motoko" skill:
-   https://skills.internetcomputer.org/.well-known/skills/motoko/SKILL.md
-   e.g. curl -sL https://skills.internetcomputer.org/.well-known/skills/motoko/SKILL.md
+   it. For example, the "writing-motoko" skill:
+   https://skills.internetcomputer.org/.well-known/skills/writing-motoko/SKILL.md
+   e.g. curl -sL https://skills.internetcomputer.org/.well-known/skills/writing-motoko/SKILL.md
    Fetch any referenced files too. HTML instead of markdown means the URL is wrong.
 
 3. Follow the skill exactly — it has the correct versions, flags, and pitfalls.

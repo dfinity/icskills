@@ -518,7 +518,7 @@ export function createActor(
 ```
 
 **Worked example** (validated end-to-end: a button that calls a backend query and shows
-the result). Backend — write it with the **`motoko` skill**:
+the result). Backend — write it with the **`writing-motoko` skill**:
 
 ```motoko
 import MixinViews "mo:caffeineai-data-viewer/MixinViews";

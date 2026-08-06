@@ -43,7 +43,7 @@ No external canister dependencies. Stable memory is a local canister feature.
    | Removing a field | **Yes** |
    | Renaming a field, or a non-widening type change | **Yes** |
 
-   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko` for the migration-expression syntax.
+   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko-actors` to write the migration.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
@@ -88,7 +88,7 @@ import Time "mo:core/Time";
 persistent actor {
 
   // Types: in the actor body (as here) or in an imported module -- but never
-  // between the imports and the actor, which is M0141. See the `motoko` skill.
+  // between the imports and the actor, which is M0141. See the `writing-motoko` skill.
   type User = {
     id : Nat;
     name : Text;

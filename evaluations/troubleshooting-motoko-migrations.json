@@ -1,0 +1,54 @@
+{
+  "skill": "troubleshooting-motoko-migrations",
+  "description": "Evaluation cases for the troubleshooting-motoko-migrations skill. Tests whether agents correctly handle migration-chain failure modes: enhanced migration is one-way (no revert to inline/legacy), applied/frozen migration files must not be edited or renamed (fix forward), and a non-empty OldActor in a converted project's first migration is correct, not a bug. Trigger evals check it activates only for unexplained migration failures, not routine migration authoring (migrating-motoko-actors) or general Motoko (writing-motoko).",
+  "output_evals": [
+    {
+      "name": "Reject reverting enhanced migration to inline",
+      "prompt": "Our deployed canister uses a migrations/ chain. The team wants to delete the migrations/ directory and go back to inline `(with migration = ...)` migration. Walk me through doing that.",
+      "expected_behaviors": [
+        "States that enhanced migration is one-way — there is no supported path back to legacy/inline persistence",
+        "Warns that removing the chain / migrations config triggers a stable-signature downgrade error (M0255) and that a legacy wasm over an enhanced canister traps at runtime",
+        "Does NOT provide steps to delete the migrations/ directory or restore inline initializers on stable fields",
+        "Offers the forward-only alternative: a new migration that reshapes state toward what the user wants"
+      ]
+    },
+    {
+      "name": "Do not edit or chmod a frozen applied migration",
+      "prompt": "I need to change a field that was introduced in a migration file that is already deployed, but the file is read-only. Can I just chmod it and edit the migration body?",
+      "expected_behaviors": [
+        "Says NOT to chmod, edit, rename, or delete an already-applied/frozen migration file",
+        "Explains applied migrations are tracked by module name, so an edited body never re-runs and a rename is treated as never applied (risking IC0503 / missing migration var at runtime)",
+        "Directs the fix forward: add a NEW timestamped migration that transforms current state into the desired shape"
+      ]
+    },
+    {
+      "name": "Non-empty first OldActor in a converted project is correct",
+      "prompt": "The first file in our migrations/ chain has a non-empty `OldActor` instead of `OldActor = {}`. Should I 'fix' it to start from an empty actor?",
+      "expected_behaviors": [
+        "Explains a non-empty OldActor in the earliest file means the project was converted from legacy persistence, so state predates the chain and the file is correct as written",
+        "Warns that rewriting it to `OldActor = {}` would discard live state / re-seed fields and must not be done",
+        "Does NOT recommend flattening, pruning, or restarting the chain at `{}`"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' are unexplained migration-chain failures; 'should_not_trigger' are routine migration authoring (migrating-motoko-actors) or general Motoko/mops questions.",
+    "should_trigger": [
+      "I'm getting M0255 stable signature downgrade after removing my migrations config",
+      "mops check complains about a field that isn't anywhere in my source anymore",
+      "My canister traps with IC0503 missing migration var after an upgrade",
+      "Can I delete the migrations directory and go back to inline migration?",
+      "The first migration file has a non-empty OldActor — is that a bug?",
+      "IC0505 invalid custom section on install, but mops build and check both pass",
+      "How do I edit a migration file that is frozen / read-only?",
+      "The upgrade compatibility error names a state shape that isn't in main.mo"
+    ],
+    "should_not_trigger": [
+      "How do I add a new stable field with a migration?",
+      "Write a migration to rename an actor field",
+      "How do I use Map in Motoko?",
+      "Set up mops.toml for my canister",
+      "How do I deploy my canister to mainnet?"
+    ]
+  }
+}

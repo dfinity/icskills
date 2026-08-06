@@ -1,7 +1,6 @@
 {
-  "skill": "migrating-motoko-enhanced",
-  "description": "Evaluation cases for the migrating-motoko-enhanced skill. Tests whether agents generate correct migration chain files, configure mops.toml correctly, write actor bodies without initializers, handle field semantics, compose migrations correctly, and avoid common pitfalls.",
-
+  "skill": "migrating-motoko-actors",
+  "description": "Evaluation cases for the migrating-motoko-actors skill. Tests whether agents generate correct migration chain files, configure mops.toml correctly, write actor bodies without initializers, handle field semantics, compose migrations correctly, and avoid common pitfalls.",
   "output_evals": [
     {
       "name": "First migration (Init)",
@@ -17,10 +16,11 @@
       "name": "Add a field",
       "prompt": "Write a migration file that adds an `email : Text` field (default empty string) to a Motoko canister that uses enhanced migration. The canister already has `name : Text` and `count : Nat` from a previous Init migration.",
       "expected_behaviors": [
-        "Creates a new migration file with a timestamp prefix",
-        "Migration function takes empty input `(_ : {})`",
-        "Migration function returns `{ email : Text }` with `{ email = \"\" }`",
-        "Notes that only the NEW field needs to appear in this migration (existing fields carry through)"
+        "Uses a UTC-timestamp filename (e.g. YYYYMMDD_HHMMSS.mo) for the migration file",
+        "Migration is `public func migration(old : OldActor) : NewActor` (not empty input)",
+        "OldActor mirrors the prior deployed stable signature; NewActor lists every stable field (including unchanged ones)",
+        "Produces the new field in the body, e.g. `{ old with email = \"\" }`",
+        "Actor declares the new field with a type only — no inline initializer"
       ]
     },
     {
@@ -47,9 +47,8 @@
       "name": "Migration chain composition",
       "prompt": "Explain how migrations compose in the enhanced migration system. I have Init (adds `name : Text`), then AddEmail (adds `email : Text`), then RenameField (renames `name` to `displayName`). What is the final actor state?",
       "expected_behaviors": [
-        "Explains the carry-through rule: fields not mentioned in a migration pass through unchanged",
+        "Shows or explains that unchanged fields carry through (e.g. via `{ old with ... }` or an explicit statement)",
         "Final state is `{ displayName : Text; email : Text }`",
-        "Explains that compiler verifies each migration's input is compatible with previous output",
         "Notes that `name` is consumed by RenameField and `displayName` is produced"
       ]
     },
@@ -78,30 +77,27 @@
       "name": "Adversarial: mixing inline and enhanced migration",
       "prompt": "Can I use `(with migration = ...)` inline syntax together with `--enhanced-migration` in the same canister?",
       "expected_behaviors": [
-        "Explains these two approaches cannot be combined",
-        "States the restriction clearly: `--enhanced-migration` and inline `(with migration = ...)` are mutually exclusive",
-        "Recommends choosing one: inline for simple one-shot migrations, enhanced for multi-step chains"
+        "Does not mix the two mechanisms — keeps all migrations in the mops-managed `migrations/` chain",
+        "Explains the legacy inline `(with migration = ...)` syntax is not used with the chain",
+        "Routes all migrations, including one-shot changes, through a timestamped file in the chain rather than inline"
       ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
       "How do I set up enhanced migration for my Motoko canister?",
       "Write a migration file for my migrations/ directory",
-      "I'm getting Compatibility error M0170 with --enhanced-migration",
       "How does the migration chain work in Motoko?",
       "How do I set up the migrations/ directory for my Motoko canister?",
       "How do I add a field to my canister using the migrations directory?",
       "How do I add a field to my canister with the enhanced migration workflow?",
-      "My actor has enhanced migration but I need to rename a field"
+      "My actor has enhanced migration but I need to rename a field",
+      "I need a one-shot migration for a single field rename"
     ],
     "should_not_trigger": [
       "Write a Motoko canister with a counter",
       "How do I use Map in Motoko?",
-      "I need a one-shot migration for a single field rename",
-      "How do I write (with migration = ...) for my actor?",
       "Deploy my canister to mainnet",
       "How do I pin the moc version in mops.toml?",
       "Set up Internet Identity in my app"
