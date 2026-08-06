@@ -47,10 +47,20 @@
       "name": "Adversarial: migrating asset-canister to static-site requires reinstall",
       "prompt": "I'm migrating my existing @dfinity/asset-canister frontend to the @dfinity/static-site recipe. I just changed the recipe type and ran icp deploy but it failed. What's the gotcha? Just the key points.",
       "expected_behaviors": [
-        "Explains the two canisters have incompatible stable-memory layouts, so an in-place upgrade fails/panics",
+        "Explains the plain deploy is aborted by icp-cli's pre-install Candid interface compatibility check (a BREAKING change between two unrelated interfaces) — nothing is installed and the running canister is untouched, NOT a stable-memory / 'Cannot parse header' panic",
         "Recommends icp deploy --mode reinstall (which wipes state and re-syncs) or deploying a fresh canister",
         "Mentions converting .ic-assets.json5 to _headers/_redirects as part of the migration",
-        "Does NOT claim a plain icp deploy upgrade works across the two recipes"
+        "Does NOT claim a plain icp deploy upgrade works across the two recipes, and does NOT recommend forcing it through with --yes"
+      ]
+    },
+    {
+      "name": "Adversarial: recipe version bump does not reinstall itself",
+      "prompt": "I bumped my @dfinity/static-site recipe to a newer version and ran icp deploy. The deploy step succeeded but then sync failed with 'assets canister version mismatch: canister is X, this plugin is Y'. What happened and how do I fix it? Just the key points.",
+      "expected_behaviors": [
+        "Explains the canister and sync plugin are version-locked: the deploy upgraded the canister in place, but the plugin refuses to sync against a canister whose version does not match it",
+        "Says the fix is to run the reinstall/upgrade yourself — icp canister install --mode reinstall for a breaking bump (wipes state, next sync re-uploads everything) or --mode upgrade for a patch bump (state preserved)",
+        "Clarifies this is expected behavior after a version bump, not a bug",
+        "Does NOT tell the user the mismatch resolves on its own or that simply re-running icp deploy (with no explicit --mode reinstall/upgrade) will clear it"
       ]
     },
     {
