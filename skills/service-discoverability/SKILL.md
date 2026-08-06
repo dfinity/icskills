@@ -66,7 +66,7 @@ Field rules:
 
 Canister IDs differ per network (local, staging, mainnet), so **never commit hard-coded IDs**. Produce the file in the deploy pipeline, which already knows the IDs. With the `@dfinity/static-site` recipe this is the **`presync`** hook: it runs at sync time, *after* the canisters exist, so their IDs are resolvable.
 
-`frontend/canister.yaml`:
+`frontend/canister.yaml` (the per-canister config referenced from your top-level `icp.yaml`; see the `static-site` skill for the project layout):
 
 ```yaml
 name: frontend
@@ -88,7 +88,7 @@ recipe:
     dir: dist
 ```
 
-- `icp canister status <name> --id-only -e <env>` prints just the canister ID (`--id-only` also has the short form `-i`). There is no `icp canister id` command.
+- `icp canister status <name> --id-only -e <env>` prints just the canister ID. There is no `icp canister id` command.
 - `$ICP_CLI_ENVIRONMENT` is the environment being deployed (e.g. `local`, `ic`), exported into the `presync` shell. It selects the matching template, so the same hook serves every network.
 - **`presync` runs with the canister directory as its working directory.** The relative `ic-architecture/...` path therefore resolves *inside the frontend canister directory* — put the templates at `frontend/ic-architecture/`, alongside `canister.yaml` (as the example project does). A path resolved from the repo root instead would make `envsubst` read nothing and silently write an empty manifest (Pitfall 7).
 - Pin the recipe to the current release (`@dfinity/static-site@v0.3.3` here); check the static-site recipe releases and the `static-site` skill for the latest.
@@ -109,7 +109,7 @@ Keep one template per environment under `frontend/ic-architecture/`, with `envsu
 
 `frontend/ic-architecture/tmpl.ic.json` (mainnet) is the same shape; only fixed fields like a static external dependency would differ.
 
-**Cleaner variant — skip the `icp canister status` calls.** The static-site recipe already exports every project canister's ID into `presync` as `ICP_CLI_CID_<NAME>` (name upper-cased, non-alphanumerics → `_`; e.g. `backend` → `ICP_CLI_CID_BACKEND`). So the hook can be just:
+**Simpler default (recommended) — use the recipe's exported IDs.** The form above mirrors the reference demo's explicit `icp canister status` calls, but the static-site recipe already exports every project canister's ID into `presync` as `ICP_CLI_CID_<NAME>` (name upper-cased, non-alphanumerics → `_`; e.g. `backend` → `ICP_CLI_CID_BACKEND`). Prefer this shorter, less error-prone form, which drops the extra calls entirely:
 
 ```yaml
     presync:
