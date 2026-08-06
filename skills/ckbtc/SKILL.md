@@ -16,7 +16,7 @@ ckBTC is a 1:1 BTC-backed token native to the Internet Computer. No bridges, no 
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
+- For Motoko: `mops` package manager, `core >= 2.0.0` in mops.toml
 - For Rust: `ic-cdk`, `icrc-ledger-types`, `candid`, `serde`
 
 ## Canister IDs

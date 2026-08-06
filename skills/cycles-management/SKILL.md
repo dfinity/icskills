@@ -17,7 +17,7 @@ Cycles are the computation fuel for canisters on Internet Computer. Every canist
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
+- For Motoko: `mops` package manager, `core >= 2.0.0` in mops.toml
 - For Rust: `ic-cdk >= 0.19`
 
 ## Canister IDs
