@@ -9,7 +9,7 @@
         "Uses icp (not dfx) commands throughout",
         "Configuration file is icp.yaml, NOT dfx.json",
         "Canisters are a YAML array of objects (- name: ...), NOT a keyed map",
-        "Rust canister uses a recipe with a version pin (e.g., @dfinity/rust@v3.2.0)",
+        "Rust canister uses a recipe with a version pin (e.g., @dfinity/rust@v3.3.0)",
         "Frontend/asset canister uses a recipe with a version pin",
         "Asset canister recipe includes explicit build commands (e.g., npm install, npm run build)",
         "Shows how to start the local network (icp network start -d)"
@@ -32,7 +32,8 @@
       "expected_behaviors": [
         "Shows icp.yaml with recipe-based canister configuration",
         "Motoko canister uses @dfinity/motoko recipe with a version pin",
-        "Asset canister uses @dfinity/asset-canister recipe with a version pin",
+        "Does NOT map dfx.json's \"main\" to recipe.configuration.main in icp.yaml -- under the @dfinity/motoko@v5+ recipe main belongs in mops.toml as [canisters.<name>].main",
+        "Frontend canister uses a version-pinned recipe -- @dfinity/static-site (recommended) or @dfinity/asset-canister (legacy) is acceptable",
         "Mentions identity migration (export from dfx, import into icp) or references dfx-migration.md",
         "Mentions canister ID migration via .icp/data/mappings/ic.ids.json or references dfx-migration.md",
         "Uses correct icp identity commands ('icp identity default' not 'icp identity use') or references dfx-migration.md for the command mapping"
@@ -43,7 +44,7 @@
       "prompt": "Here's my icp.yaml, does it look right?\n\ncanisters:\n  - name: backend\n    recipe:\n      type: \"@dfinity/rust\"\n      configuration:\n        package: backend",
       "expected_behaviors": [
         "Identifies that the recipe is missing a version pin",
-        "Recommends pinning to a specific version (e.g., @dfinity/rust@v3.2.0)",
+        "Recommends pinning to a specific version (e.g., @dfinity/rust@v3.3.0)",
         "Explains that icp-cli rejects unpinned recipe references"
       ]
     },

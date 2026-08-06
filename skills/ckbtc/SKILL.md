@@ -96,7 +96,12 @@ version = "0.1.0"
 [dependencies]
 core = "2.0.0"
 icrc2-types = "1.1.0"
+
+[canisters.backend]
+main = "src/backend/main.mo"
 ```
+
+The `@dfinity/motoko@v5+` recipe compiles via `mops build <canister-name>`, so `main` lives here â€” not in `recipe.configuration` in `icp.yaml`. The `[canisters.<name>]` key must exactly match the canister `name` in `icp.yaml`.
 
 #### icp.yaml
 
@@ -106,9 +111,7 @@ Your backend canister calls the ckBTC ledger and minter by principal directly â€
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: src/backend/main.mo
+      type: "@dfinity/motoko@v5.0.0"
 ```
 
 #### src/backend/main.mo

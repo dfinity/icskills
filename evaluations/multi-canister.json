@@ -13,6 +13,16 @@
       ]
     },
     {
+      "name": "Adversarial: Motoko v5 recipe puts each canister's main in mops.toml",
+      "prompt": "Set up an icp-cli project with two Motoko canisters, user_service (src/user_service/main.mo) and content_service (src/content_service/main.mo), using the @dfinity/motoko@v5.0.0 recipe. Show ONLY the icp.yaml and the mops.toml, each in one fenced block, no prose and no deploy steps.",
+      "expected_behaviors": [
+        "icp.yaml lists both canisters with recipe type @dfinity/motoko@v5.0.0 and NO recipe.configuration block on either",
+        "Does NOT put main (or candid) under recipe.configuration in icp.yaml -- that is the v4 layout, removed in v5",
+        "mops.toml has a separate [canisters.user_service] and [canisters.content_service] section, each with a main field pointing at that canister's .mo entry point",
+        "The [canisters.<name>] keys exactly match the canister name values in icp.yaml"
+      ]
+    },
+    {
       "name": "Adversarial: reading the factory's own cycle balance",
       "prompt": "In my canister factory, how do I check the factory's own cycle balance before creating a child canister? Give just the Motoko call and the Rust call, no surrounding function.",
       "expected_behaviors": [
