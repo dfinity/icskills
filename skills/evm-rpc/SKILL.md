@@ -89,9 +89,7 @@ The `evm_rpc` canister definition is only needed for local development — the l
 canisters:
   - name: backend
     recipe:
-      type: "@dfinity/rust@v3.2.0"
-      configuration:
-        package: backend
+      type: "@dfinity/rust@v3.3.0"
   - name: evm_rpc
     build:
       steps:

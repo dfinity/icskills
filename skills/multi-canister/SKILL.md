@@ -114,14 +114,28 @@ my-project/
 canisters:
   - name: user_service
     recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: src/user_service/main.mo
+      type: "@dfinity/motoko@v5.0.0"
   - name: content_service
     recipe:
-      type: "@dfinity/motoko@v4.1.0"
-      configuration:
-        main: src/content_service/main.mo
+      type: "@dfinity/motoko@v5.0.0"
+```
+
+### mops.toml
+
+The `@dfinity/motoko@v5+` recipe compiles via `mops build <canister-name>`, so each canister's `main` lives in `mops.toml`, not in `recipe.configuration` in `icp.yaml`. Every canister `name` in `icp.yaml` must have an exactly matching `[canisters.<name>]` key here, or the build fails with `No Motoko canisters found in mops.toml configuration`.
+
+```toml
+[toolchain]
+moc = "1.9.0"
+
+[dependencies]
+core = "2.1.0"
+
+[canisters.user_service]
+main = "src/user_service/main.mo"
+
+[canisters.content_service]
+main = "src/content_service/main.mo"
 ```
 
 ### Motoko
@@ -347,17 +361,17 @@ members = [
 canisters:
   - name: user_service
     recipe:
-      type: "@dfinity/rust@v3.2.0"
+      type: "@dfinity/rust@v3.3.0"
       configuration:
-        package: user_service
         candid: src/user_service/user_service.did
   - name: content_service
     recipe:
-      type: "@dfinity/rust@v3.2.0"
+      type: "@dfinity/rust@v3.3.0"
       configuration:
-        package: content_service
         candid: src/content_service/content_service.did
 ```
+
+`package` is omitted: recipe >= v3.3.0 defaults it to the canister `name`, and each workspace member's `[package] name` already matches. Set `package` explicitly only when a crate name differs from its canister name.
 
 #### src/user_service/Cargo.toml
 
