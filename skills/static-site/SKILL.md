@@ -30,7 +30,7 @@ Static-site canisters are created per-project — there is no global canister ID
 
 | Environment | Browser URL |
 |-------------|-------------|
-| Local | `http://<canister-name>.local.localhost:8000` (this is the URL `icp deploy` prints; `http://<canister-id>.localhost:8000` also works — `<canister-name>.localhost` without `.local` does not) |
+| Local | `http://<canister-name>.<environment>.localhost:8000` — the middle label is the **environment name**, `local` by default, so `http://frontend.local.localhost:8000` (this is the URL `icp deploy` prints; `http://<canister-id>.localhost:8000` also works — `<canister-name>.localhost` with no environment label does not) |
 | Mainnet | `https://<canister-id>.icp.net` |
 | Custom domain | `https://yourdomain.com` (with DNS configuration) |
 
