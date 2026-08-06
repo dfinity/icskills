@@ -2,7 +2,7 @@
 name: static-site
 description: "Deploy a frontend or any static site to the IC with the @dfinity/static-site recipe (the certified-assets canister). Covers icp.yaml recipe config, SPA routing with _redirects, custom headers/CSP with _headers, clean URLs, access protection for private apps, custom domains, and building against canister IDs. This is the recommended way to host frontends and static files on the IC. Also the entry point for the legacy @dfinity/asset-canister recipe and .ic-assets.json5 (see the legacy reference) and for migrating an existing asset canister to certified-assets. Use when hosting a frontend, deploying static files, an asset canister, or setting up SPA routing on the IC. Do NOT use for canister-level HTTP code patterns or custom domain DNS setup — use custom-domains for DNS."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.3.0, Node.js >= 22"
+compatibility: "icp-cli >= 1.0.0, Node.js >= 22"
 metadata:
   title: Static Site (Certified Assets)
   category: Frontend
