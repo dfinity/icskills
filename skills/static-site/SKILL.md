@@ -246,7 +246,7 @@ No configuration needed — on by default:
 
 - **Response certification** — every response is certified and gateway-verified.
 - **Clean URLs** — `307` canonicalization (above).
-- **Compression** — text/JS/JSON/SVG/wasm stored gzip + Brotli, negotiated per request via `Accept-Encoding`.
+- **Compression** — compressible assets are stored gzip + Brotli alongside the original and negotiated per request via `Accept-Encoding`. Compressible means: any `text/*`; any `+json` or `+xml` suffix (so `image/svg+xml`, `application/xhtml+xml`); `application/javascript`, `application/json`, `application/xml`, `application/wasm`; and `font/*` **except** `woff`/`woff2` (already compressed). An encoding is kept only if it actually came out smaller than the original.
 - **ETag / `304 Not Modified`** — content-hash ETag; unchanged files aren't re-downloaded.
 - **A default certified `404`** — replaceable with your own `/404.html`.
 - **The `ic_env` cookie** — on HTML responses, carrying canister IDs and the root key for the frontend.
