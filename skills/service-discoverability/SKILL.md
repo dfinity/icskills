@@ -78,17 +78,13 @@ recipe:
       - npm ci
       - npm run build
     presync:
-      # Runs AFTER canisters exist, with deployed IDs available. Generate the
-      # manifest with the real per-environment IDs into the served directory.
+      # Runs AFTER canisters exist, with each canister's ID exported as ICP_CLI_CID_<NAME>.
       - mkdir -p dist/.well-known
-      - >-
-        FRONTEND_ID=$(icp canister status frontend --id-only -e "$ICP_CLI_ENVIRONMENT")
-        BACKEND_ID=$(icp canister status backend --id-only -e "$ICP_CLI_ENVIRONMENT")
-        envsubst < ic-architecture/tmpl."$ICP_CLI_ENVIRONMENT".json > dist/.well-known/ic-architecture
+      - envsubst < ic-architecture/tmpl."$ICP_CLI_ENVIRONMENT".json > dist/.well-known/ic-architecture
     dir: dist
 ```
 
-- `icp canister status <name> --id-only -e <env>` prints just the canister ID. There is no `icp canister id` command.
+- The static-site recipe exports each project canister's ID into `presync` as `ICP_CLI_CID_<NAME>` (name upper-cased, non-alphanumerics → `_`; e.g. `backend` → `ICP_CLI_CID_BACKEND`). Other vars: `ICP_CLI_CID` (this canister), `ICP_CLI_NETWORK`.
 - `$ICP_CLI_ENVIRONMENT` is the environment being deployed (e.g. `local`, `ic`), exported into the `presync` shell. It selects the matching template, so the same hook serves every network.
 - **`presync` runs with the canister directory as its working directory.** The relative `ic-architecture/...` path therefore resolves *inside the frontend canister directory* — put the templates at `frontend/ic-architecture/`, alongside `canister.yaml` (as the example project does). A path resolved from the repo root instead would make `envsubst` read nothing and silently write an empty manifest (Pitfall 7).
 - Pin the recipe to the current release (`@dfinity/static-site@v0.3.3` here); check the static-site recipe releases and the `static-site` skill for the latest.
@@ -101,23 +97,26 @@ Keep one template per environment under `frontend/ic-architecture/`, with `envsu
 {
   "version": "1.0.0",
   "canisters": [
-    { "id": "${FRONTEND_ID}", "name": "frontend", "role": "the frontend" },
-    { "id": "${BACKEND_ID}", "name": "backend", "role": "the backend", "description": "orders + inventory API; call getApiDoc() first" }
+    { "id": "${ICP_CLI_CID_FRONTEND}", "name": "frontend", "role": "the frontend" },
+    { "id": "${ICP_CLI_CID_BACKEND}", "name": "backend", "role": "the backend", "description": "orders + inventory API; call getApiDoc() first" }
   ]
 }
 ```
 
 `frontend/ic-architecture/tmpl.ic.json` (mainnet) is the same shape; only fixed fields like a static external dependency would differ.
 
-**Simpler default (recommended) — use the recipe's exported IDs.** The form above mirrors the reference demo's explicit `icp canister status` calls, but the static-site recipe already exports every project canister's ID into `presync` as `ICP_CLI_CID_<NAME>` (name upper-cased, non-alphanumerics → `_`; e.g. `backend` → `ICP_CLI_CID_BACKEND`). Prefer this shorter, less error-prone form, which drops the extra calls entirely:
+**Alternative — the reference demo's form.** [`raymondk/demo-ic-architecture`](https://github.com/raymondk/demo-ic-architecture/tree/main/frontend/ic-architecture) resolves the IDs explicitly with `icp canister status` rather than the exported vars — useful if you need an ID the recipe does not export. Its `presync` is:
 
 ```yaml
     presync:
       - mkdir -p dist/.well-known
-      - envsubst < ic-architecture/tmpl."$ICP_CLI_ENVIRONMENT".json > dist/.well-known/ic-architecture
+      - >-
+        FRONTEND_ID=$(icp canister status frontend --id-only -e "$ICP_CLI_ENVIRONMENT")
+        BACKEND_ID=$(icp canister status backend --id-only -e "$ICP_CLI_ENVIRONMENT")
+        envsubst < ic-architecture/tmpl."$ICP_CLI_ENVIRONMENT".json > dist/.well-known/ic-architecture
 ```
 
-with the template referencing `${ICP_CLI_CID_FRONTEND}` / `${ICP_CLI_CID_BACKEND}` instead. Other `presync` variables: `ICP_CLI_CID` (this canister), `ICP_CLI_NETWORK`, `ICP_CLI_ENVIRONMENT`.
+with the template using `${FRONTEND_ID}` / `${BACKEND_ID}` instead. `icp canister status <name> --id-only -e <env>` prints just the canister ID (there is no `icp canister id` command).
 
 ### Serve it correctly
 
@@ -259,7 +258,7 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 5. **Writing the file with a `.json` extension.** The path is exactly `/.well-known/ic-architecture` (and `/.well-known/ii-derivation-origin`) — no extension, matching the IC `.well-known` convention (`ic-domains`, `ii-alternative-origins`).
 
-6. **`envsubst` clobbering unintended `${...}`.** With no arguments `envsubst` substitutes *every* environment variable it finds. If a template contains a `${...}` you do not want replaced, restrict it: `envsubst '$FRONTEND_ID $BACKEND_ID'`.
+6. **`envsubst` clobbering unintended `${...}`.** With no arguments `envsubst` substitutes *every* environment variable it finds. If a template contains a `${...}` you do not want replaced, restrict it: `envsubst '$ICP_CLI_CID_FRONTEND $ICP_CLI_CID_BACKEND'`.
 
 7. **A missing `tmpl.<env>.json`, or templates in the wrong directory.** `$ICP_CLI_ENVIRONMENT` selects the template by name; if the file for the current environment is absent — or lives at the repo root while `presync` runs from the canister directory — `envsubst` reads nothing and writes an empty manifest. Keep one template per environment, under the frontend canister directory.
 
