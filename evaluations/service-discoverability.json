@@ -8,7 +8,7 @@
       "prompt": "I want an AI agent to discover the canisters in my app from its URL. How do I publish the /.well-known/ic-architecture manifest listing my frontend and backend canister IDs, using icp-cli with the @dfinity/static-site recipe? Just the canister.yaml config and the template.",
       "expected_behaviors": [
         "Generates the manifest in the static-site recipe's presync hook (runs after canisters exist), NOT the build step",
-        "Resolves canister IDs at deploy time via `icp canister status <name> -i -e $ICP_CLI_ENVIRONMENT` or the presync ICP_CLI_CID_<NAME> env vars",
+        "Resolves canister IDs at deploy time via `icp canister status <name> --id-only -e $ICP_CLI_ENVIRONMENT` or the presync ICP_CLI_CID_<NAME> env vars",
         "Writes the file to dist/.well-known/ic-architecture at the extensionless path (no .json extension)",
         "Uses a per-environment template selected by $ICP_CLI_ENVIRONMENT so IDs are correct per network",
         "Does NOT commit hard-coded canister IDs, and does NOT use dfx"
@@ -66,7 +66,7 @@
       "name": "Fetch candid:service by canister ID",
       "prompt": "Given only a canister ID on mainnet, how does an agent fetch that canister's Candid interface so it can encode calls correctly? Just the command.",
       "expected_behaviors": [
-        "Uses `icp canister metadata <canister-id> candid:service -e ic`",
+        "Uses `icp canister metadata <canister-id> candid:service --network ic` (a raw canister ID has no project environment)",
         "Notes candid:service is embedded by default by the @dfinity/motoko and @dfinity/rust recipes and should not be stripped",
         "Uses icp-cli, NOT dfx"
       ]

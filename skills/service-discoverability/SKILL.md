@@ -1,6 +1,6 @@
 ---
 name: service-discoverability
-description: "Make a canister app discoverable to an AI agent from just its URL. Covers publishing a /.well-known/ic-architecture manifest of your canisters — generated at deploy time from real canister IDs via the static-site recipe's presync hook and envsubst — plus exposing candid:service (interface), a getApiDoc query method (behavior), an optional OQL schema/execute data surface, and a /.well-known/ii-derivation-origin file (identity). Use when making an app agent-ready, for agent/service discovery, the well-known ic-architecture manifest, or generating that manifest at deploy time. Do NOT use for the agent/CLI sign-in flow that consumes the derivation origin — use agent-web-identity; and for adding Internet Identity sign-in to a frontend — use internet-identity."
+description: "Make a canister app discoverable to an AI agent from just its URL. Covers publishing a /.well-known/ic-architecture manifest of your canisters — generated at deploy time from real canister IDs via the static-site recipe's presync hook and envsubst — plus exposing candid:service (interface), a getApiDoc query method (behavior), an optional OQL schema/execute data surface, and a /.well-known/ii-derivation-origin file (identity). Use when making an app agent-ready, for agent/service discovery, the well-known ic-architecture manifest, or generating that manifest at deploy time. Do NOT use for the sign-in flows that consume the derivation origin: use agent-web-identity for the agent/CLI web-identity link, or internet-identity for adding II login to a frontend."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 with the @dfinity/static-site recipe; envsubst (gettext) for templating"
 metadata:
@@ -82,13 +82,13 @@ recipe:
       # manifest with the real per-environment IDs into the served directory.
       - mkdir -p dist/.well-known
       - >-
-        FRONTEND_ID=$(icp canister status frontend -i -e "$ICP_CLI_ENVIRONMENT")
-        BACKEND_ID=$(icp canister status backend -i -e "$ICP_CLI_ENVIRONMENT")
+        FRONTEND_ID=$(icp canister status frontend --id-only -e "$ICP_CLI_ENVIRONMENT")
+        BACKEND_ID=$(icp canister status backend --id-only -e "$ICP_CLI_ENVIRONMENT")
         envsubst < ic-architecture/tmpl."$ICP_CLI_ENVIRONMENT".json > dist/.well-known/ic-architecture
     dir: dist
 ```
 
-- `icp canister status <name> -i -e <env>` prints just the canister ID (`-i` = `--id-only`). There is no `icp canister id` command.
+- `icp canister status <name> --id-only -e <env>` prints just the canister ID (`--id-only` also has the short form `-i`). There is no `icp canister id` command.
 - `$ICP_CLI_ENVIRONMENT` is the environment being deployed (e.g. `local`, `ic`), exported into the `presync` shell. It selects the matching template, so the same hook serves every network.
 - **`presync` runs with the canister directory as its working directory.** The relative `ic-architecture/...` path therefore resolves *inside the frontend canister directory* — put the templates at `frontend/ic-architecture/`, alongside `canister.yaml` (as the example project does). A path resolved from the repo root instead would make `envsubst` read nothing and silently write an empty manifest (Pitfall 7).
 - Pin the recipe to the current release (`@dfinity/static-site@v0.3.3` here); check the static-site recipe releases and the `static-site` skill for the latest.
@@ -139,8 +139,9 @@ Expose your Candid interface as the canister's public `candid:service` metadata 
 An agent (or you, to verify) fetches it with:
 
 ```bash
-# By canister ID or by name+environment; candid:service is the standard metadata name.
-icp canister metadata <BACKEND_ID> candid:service -e ic
+# By raw canister ID against mainnet (the agent's case: no project context) — target the network.
+icp canister metadata <BACKEND_ID> candid:service --network ic
+# By canister name from inside a project — use the project environment instead.
 icp canister metadata backend candid:service -e ic
 ```
 
@@ -236,7 +237,7 @@ curl -s https://APP/.well-known/ic-architecture | jq '.canisters[].id'
 
 # 2. Backend exposes candid:service; fetch it against a canister ID from step 1
 #    (confirm it declares getApiDoc, plus schema/execute if data-rich).
-icp canister metadata <BACKEND_ID> candid:service -e ic
+icp canister metadata <BACKEND_ID> candid:service --network ic
 
 # 3. If you pin a CUSTOM derivation origin, it is published as the canonical
 #    https://host. Use -f so a 404 is an error and the fallback fires: curl -s
@@ -266,7 +267,7 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 9. **Naming the behavior method undiscoverably.** The name must appear in `candid:service`, so use `getApiDoc` / `get_api_doc`. A method reachable only via an out-of-band hint defeats zero-knowledge discovery.
 
-10. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service`.
+10. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
 
 ## Additional References
 
