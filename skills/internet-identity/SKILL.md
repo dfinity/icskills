@@ -42,7 +42,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 7. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
-8. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain.
+8. **Adding `derivationOrigin` or `ii-alternative-origins` to handle `icp0.io` vs `ic0.app`.** Internet Identity automatically rewrites `icp0.io` to `ic0.app` during delegation, so both domains produce the same principal. Do not add `derivationOrigin` or `ii-alternative-origins` configuration to handle this — it will break authentication. If a user reports getting a different principal, the cause is almost certainly a different passkey or device, not the domain. (A genuine second origin — a custom domain — is a different situation and *does* need this configuration: see "Serving an app at more than one origin".)
 
 9. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from a backend canister call. A frontend-generated nonce defeats replay protection: the canister cannot verify that the bundle's `implicit:nonce` is one it actually issued. Have the backend mint and return the nonce from `_internet_identity_sign_in_start` (the `mo:identity-attributes` mixin provides it in Motoko; you write it in Rust), and check it against the bundle's implicit fields when the user calls `_internet_identity_sign_in_finish`.
 
@@ -147,6 +147,41 @@ async function init() {
 
 init();
 ```
+
+### Serving an app at more than one origin
+
+II derives a principal per **origin**, so `https://<canister-id>.icp.net` and `https://shop.example.com` are two different users to the same person. To keep one account per person, pick **one** origin as the derivation origin and list the others as alternative origins.
+
+Pick the **canister address** as the derivation origin. Custom domains can be changed or dropped; the canister address cannot.
+
+**1. The alternative origin passes `derivationOrigin`.** The primary origin does *not* — it is only set on the other origins.
+
+```js
+const authClient = new AuthClient({
+  identityProvider: "https://id.ai/authorize",
+  derivationOrigin: "https://<canister-id>.icp.net",
+});
+```
+
+**2. The derivation origin's canister serves the list.** Put the file at `dir/.well-known/ii-alternative-origins`:
+
+```json
+{ "alternativeOrigins": ["https://shop.example.com"] }
+```
+
+A maximum of 10 alternative origins can be listed. Entries are origins — no trailing slashes and no paths.
+
+**3. With `@dfinity/static-site`, add a `_headers` block.** `.well-known/` is uploaded automatically, but this file has no extension, so its media type is not `application/json`, and the certified-assets canister sets no CORS header by default. II needs both:
+
+```
+/.well-known/ii-alternative-origins
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+```
+
+Do **not** reach for `.ic-assets.json5` — that is the legacy asset canister's config file, and the static-site recipe does not read or even upload it, so the headers would silently never apply. See the `static-site` skill.
+
+**Order matters.** Pin the derivation origin before an origin has users. Repointing an origin that has already collected sign-ins orphans every account made under it.
 
 ### Frontend: Requesting Identity Attributes
 

@@ -128,6 +128,15 @@
         "Explains the mixin injects _internet_identity_sign_in_start and _internet_identity_sign_in_finish and runs onVerified only on a bundle that passed signer, origin, nonce, and freshness checks",
         "Reads the email from the resolved attrs (sourced from the verified_email key), and requests verified_email on the frontend"
       ]
+    },
+    {
+      "name": "Adversarial: alternative origins on the static-site recipe",
+      "prompt": "IC frontend on the @dfinity/static-site recipe, adding a custom domain, need Internet Identity to keep the same principals across both origins. List ONLY the files I add under my build dir and their exact contents. No DNS, no prose, no explanation.",
+      "expected_behaviors": [
+        "Serves .well-known/ii-alternative-origins containing {\"alternativeOrigins\": [...]}",
+        "Adds a _headers entry setting Content-Type: application/json AND Access-Control-Allow-Origin: * for /.well-known/ii-alternative-origins",
+        "Does NOT create a .ic-assets.json5 file — that is the legacy asset canister config, which the static-site recipe does not read or upload"
+      ]
     }
   ],
   "trigger_evals": {
