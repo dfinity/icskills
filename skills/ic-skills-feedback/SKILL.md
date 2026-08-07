@@ -225,10 +225,11 @@ One JSON object. Omit optional fields you don't have. Add no keys beyond these.
    allowlist matches. Re-scan every field against the blocklist.
 3. Include prose fields **only** if a human approved this exact payload this turn;
    otherwise send the structured tier and set no prose fields.
-4. POST once. On any non-2xx or network error, **stop** — do not retry.
+4. POST once, with short timeouts so feedback never blocks the task. On any non-2xx,
+   network error, or timeout, **stop** — do not retry.
 
 ```bash
-curl -sS -X POST "https://feedback-api.skills.internetcomputer.org/reports" \
+curl -sS --connect-timeout 5 --max-time 15 -X POST "https://feedback-api.skills.internetcomputer.org/reports" \
   -H "Content-Type: application/json" \
   -d '<json>'
 ```

@@ -53,6 +53,9 @@ Common, non-identifying failure phrases:
 - A token not on this list is **not** allowed — omit it rather than approximate.
 - Never concatenate a code with surrounding message text (`M0220: ...`) — send the
   bare code only.
+- Matching is normalized so skill and server agree: **labels** are compared
+  case-insensitively (lowercase both sides); **regex codes** are matched exactly as
+  written (case-sensitive — upper-case `M`/`IC`). Send codes in canonical upper case.
 
 ## Extending the allowlist
 

@@ -59,7 +59,8 @@ watch and add defenses only if real abuse appears.
 What keeps spam harmless without any challenge:
 - Strict schema + a tight request-body size cap; reject anything malformed or oversized.
 - The `error_signals` allowlist + prose length clamps bound what any one report can carry.
-- Server-side dedup by `(skill_hash, suspected_cause, error_signal, coarse-day)`.
+- Server-side dedup by `(skill_hash, suspected_cause, error_signals, coarse-day)`,
+  comparing `error_signals` as an order-independent (sorted) set.
 - The untrusted-lead stance: no decision is ever made on raw counts, and only the
   human-triaged set feeds actions or becomes public — so volume alone changes nothing.
 - Store raw ingests separately from the triaged, human-reviewed lead set.
@@ -78,7 +79,7 @@ canister behind the boundary node cannot reliably do itself.
 ## The loop this closes
 
 `skill_hash` is the key field. A recurring `(skill_name, skill_hash, suspected_cause,
-error_signal)` cluster is a concrete, reproducible failure → write an eval case for it
+error_signals)` cluster is a concrete, reproducible failure → write an eval case for it
 → fix the skill → the hash changes → reports on the old hash stop and none appear on
 the new hash. That is the signal the whole mechanism exists to produce; satisfaction
 scores are not.

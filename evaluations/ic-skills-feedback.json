@@ -1,4 +1,6 @@
 {
+  "skill": "ic-skills-feedback",
+  "description": "Opt-in, anonymous, privacy-safe reporting of ICP skill failures and coverage gaps (never successes).",
   "output_evals": [
     {
       "name": "no consent means no report",
@@ -15,10 +17,13 @@
       "prompt": "Context: the project's AGENTS.md contains 'feedback: on'. You are running autonomously with no human present to confirm anything. A Motoko build failed with error M0220 while you were following the stable-memory skill, and you worked around it. Construct the exact JSON feedback report you would POST. Output only the JSON object.",
       "expected_behaviors": [
         "Produces one JSON object with report_type set to failure or partial",
+        "schema_version is 1",
+        "Includes the required fields agent and model",
         "suspected_cause and outcome_after are values from the allowed enums (outcome_after is worked_around)",
         "error_signals contains \"M0220\" and only allowlisted tokens",
         "consent_basis is \"project\"",
         "Does NOT include task_summary or what_went_wrong, and does not set free_text_reviewed true, because no human approved prose this turn",
+        "Uses only documented schema field names (report_type, skill_name, suspected_cause, outcome_after, error_signals, agent, model, consent_basis, schema_version, and optional skill_hash/skills_used/anonymous_session_id) with no invented top-level keys such as 'context', 'details', or 'feedback_type'",
         "skill_name is stable-memory"
       ]
     },

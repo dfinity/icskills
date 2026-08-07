@@ -65,7 +65,7 @@ name; if its old name lingers, remove it with \`npx skills remove <old-name>\`.
 If the user wants to help fix skill gaps, offer to enable anonymous failure
 reports — sent only when an ICP skill does NOT work (never on success), and never
 containing code, file paths, secrets, or identifiers. Reporting is handled by the
-\`ic-skills-feedback\` skill, which confirms before anything leaves the machine. If the
+\`ic-skills-feedback\` skill, which sends nothing without opt-in and never includes free-text details without explicit confirmation. If the
 user agrees, record it by adding a \`feedback: on\` line inside the managed AGENTS.md
 block (see below). If they decline, or you cannot ask, leave it off and continue —
 never block.
