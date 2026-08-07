@@ -2,7 +2,7 @@
 name: static-site
 description: "Deploy a frontend or any static site to the IC with the @dfinity/static-site recipe (the certified-assets canister). Covers icp.yaml recipe config, SPA routing with _redirects, custom headers/CSP with _headers, clean URLs, access protection for private apps, custom domains, and building against canister IDs. This is the recommended way to host frontends and static files on the IC. Also the entry point for the legacy @dfinity/asset-canister recipe and .ic-assets.json5 (see the legacy reference) and for migrating an existing asset canister to certified-assets. Use when hosting a frontend, deploying static files, an asset canister, or setting up SPA routing on the IC. Do NOT use for canister-level HTTP code patterns or custom domain DNS setup — use custom-domains for DNS."
 license: Apache-2.0
-compatibility: "icp-cli >= 0.3.0, Node.js >= 22"
+compatibility: "icp-cli >= 1.0.0, Node.js >= 22"
 metadata:
   title: Static Site (Certified Assets)
   category: Frontend
@@ -20,16 +20,17 @@ The **`@dfinity/static-site` recipe** deploys a static site — a built frontend
 
 ## Prerequisites
 
-- `icp-cli` **and** `ic-wasm`, installed together: `npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm` (official recipes require `ic-wasm` — see the `icp-cli` skill). The recipe pins the canister + sync-plugin pair; `ic-wasm` is also what bakes the `metadata` field into the wasm.
+- `icp-cli` — `npm install -g @icp-sdk/icp-cli`. The recipe pins the canister + sync-plugin pair, both pre-built, so a plain `dir`/`build`/`presync` deploy needs nothing else.
+- `ic-wasm` — `npm install -g @icp-sdk/ic-wasm`. A **separate** binary, not bundled with `icp-cli`. This recipe shells out to it *only* when you set the `metadata` field (the generated build guards on `command -v ic-wasm` and fails with "ic-wasm not found"); other official recipes need it unconditionally, so installing both up front is the safe default — see the `icp-cli` skill.
 - Your frontend's build toolchain (e.g. Node.js >= 22 for a Vite/React app).
 
 ## Canister IDs and URLs
 
-Static-site canisters are created per-project — there is no global canister ID. After deployment the canister ID is stored in `.icp/data/mappings/` (per environment).
+Static-site canisters are created per-project — there is no global canister ID. After deployment the canister ID is stored in `.icp/<cache|data>/mappings/<environment>.ids.json`. Managed networks (the local replica) are **cache** — `.icp/cache/mappings/local.ids.json`; connected networks (mainnet `ic`) are **data** — `.icp/data/mappings/ic.ids.json`.
 
 | Environment | Browser URL |
 |-------------|-------------|
-| Local | `http://<canister-name>.local.localhost:8000` (this is the URL `icp deploy` prints; `http://<canister-id>.localhost:8000` also works — `<canister-name>.localhost` without `.local` does not) |
+| Local | `http://<canister-name>.<environment>.localhost:8000` — the middle label is the **environment name**, `local` by default, so `http://frontend.local.localhost:8000` (this is the URL `icp deploy` prints; `http://<canister-id>.localhost:8000` also works — `<canister-name>.localhost` with no environment label does not) |
 | Mainnet | `https://<canister-id>.icp.net` |
 | Custom domain | `https://yourdomain.com` (with DNS configuration) |
 
@@ -56,11 +57,11 @@ The recipe takes four configuration fields:
 | `dir` | **Yes** | The single directory of built files to serve. The canister owns its whole URL space, so this is one directory, not a list. Vite → `dist`, Next.js export → `out`. |
 | `build` | No | Shell commands run *before the canister exists* to produce `dir` (e.g. `npm run build`). No canister IDs are available yet. |
 | `presync` | No | Shell commands run *at sync time, after the canister exists*, with deployed canister IDs exported as env vars. Use this to bake a canister ID into a frontend build (see [below](#building-against-canister-ids-presync-vs-build)). |
-| `metadata` | No | `name`/`value` pairs baked into the canister wasm via `ic-wasm`. Values are interpolated in a shell at build time, so `$(…)` works. |
+| `metadata` | No | `name`/`value`/`visibility` entries baked into the canister wasm via `ic-wasm`. `visibility` is optional, `public` or `private`; omitted means `private` (ic-wasm's default), and only `public` sections are readable by anyone via `icp canister metadata`. Values are interpolated in a shell at build time, so `$(…)` works. |
 
 ## Pitfalls
 
-1. **Using `.ic-assets.json5` with the static-site recipe.** `.ic-assets.json5` is the **legacy asset canister's** config file. The certified-assets canister does not read it — a `.ic-assets.json5` in your `dir` is uploaded as an ordinary served asset and otherwise ignored, so SPA fallback, headers, and security policy silently do nothing. Configure this canister with `_redirects` and `_headers` instead (below).
+1. **Using `.ic-assets.json5` with the static-site recipe.** `.ic-assets.json5` is the **legacy asset canister's** config file. The certified-assets canister does not read it — and because the plugin skips every dotfile and dot-directory (only `.well-known/` is exempt, Pitfall 12), a `.ic-assets.json5` in your `dir` is not even uploaded. It is silently absent, so SPA fallback, headers, and security policy do nothing. Configure this canister with `_redirects` and `_headers` instead (below).
 
 2. **Wrong SPA fallback rule.** For client-side routing, the fallback is a **rewrite** in `_redirects`: `/*  /index.html  200`. The `200` status is what makes it a rewrite (serve the shell's contents at the requested URL, no visible redirect) so deep links work on fresh load and reload. Do **not** use a `301`/`302` redirect, and do **not** reach for `enable_aliasing` — that is a legacy asset-canister setting and has no effect here.
 
@@ -78,11 +79,13 @@ The recipe takes four configuration fields:
 
 9. **Expecting dynamic redirect captures.** There is no `:splat` or `:placeholder` — you can't forward a captured segment (`/old/:rest → /new/:rest`). Every certifiable response must be enumerable ahead of time, so `_redirects`/`_headers` support only exact paths, a trailing `/*` subtree wildcard, and fixed destinations.
 
-10. **Upgrading a legacy asset canister into a static-site canister.** The two canisters have **incompatible stable-memory layouts** — an in-place upgrade panics ("Cannot parse header"). Deploy static-site as a **fresh canister**, or reinstall with `icp deploy --mode reinstall` (wipes all state, then re-syncs). This also applies to certified-assets' own releases: a **patch** release upgrades in place, a **breaking** (minor/major) release reinstalls and re-uploads. See the migration reference.
+10. **Switching an existing project from the legacy asset canister to static-site.** Repointing `recipe:` at `@dfinity/static-site` and running a plain `icp deploy` **fails before anything is installed**: these are two unrelated canisters with unrelated Candid interfaces, so icp-cli's pre-install check aborts with `Candid interface compatibility check failed: '<canister>' … You are making a BREAKING change`. Run **`icp deploy --mode reinstall`** instead. That replaces the wasm with the certified-assets canister, **discards the old stable memory** — every legacy asset, permission, and `.ic-assets.json5`-derived setting is gone — and leaves the canister with empty state, after which the sync plugin uploads your whole `dir` from scratch. Deploying static-site as a brand-new canister avoids the question entirely. Do **not** silence the check with `--yes`: that pushes the in-place upgrade through onto stable memory certified-assets cannot read, leaving a live canister that serves nothing. See the migration reference.
 
-11. **`.well-known/` is uploaded automatically — no config needed.** The plugin skips dotfiles and dot-directories *except* `.well-known/`, which it traverses normally. So `dir/.well-known/ic-domains` is served at `/.well-known/ic-domains` with no extra setting. (This is the opposite of the legacy canister, which needed an explicit `.ic-assets.json5` un-ignore rule.)
+11. **Assuming a recipe version bump re-installs itself.** Moving between certified-assets' **own** releases is gentler than the legacy switch above — the Candid interface is stable across a release series, so nothing blocks the deploy — but a breaking bump still needs a reinstall **you run yourself**. The canister and plugin are version-locked, so after bumping the recipe `icp deploy` upgrades in place and the sync plugin then refuses, reporting `assets canister version mismatch: canister is X, this plugin is Y` plus the fix: `icp canister install --mode upgrade` for a **patch** bump (state preserved) or `icp canister install --mode reinstall` for a **breaking** (pre-1.0 minor, post-1.0 major) bump, which wipes state so the next sync re-uploads every asset and redirect rule. A failed sync right after a version bump is this, not a bug.
 
-12. **Access protection ordering.** The recipe's `icp deploy` installs the canister **and** syncs assets together, so a plain deploy-then-`enable_protection` briefly serves your content publicly. For a brand-new *private* app, enable protection **before your real assets are synced** — deploy a `dir` containing only `login.html`, `enable_protection`, then deploy the full site — so assets are never world-readable. The login page must be **fully self-contained** (inline CSS/JS, `data:` URIs) — it is the only gate-exempt path, and any external subresource it references would itself be gated. See [Access protection](#access-protection-private-apps).
+12. **`.well-known/` is uploaded automatically — no config needed.** The plugin skips dotfiles and dot-directories *except* `.well-known/`, which it traverses normally. So `dir/.well-known/ic-domains` is served at `/.well-known/ic-domains` with no extra setting. (This is the opposite of the legacy canister, which needed an explicit `.ic-assets.json5` un-ignore rule.)
+
+13. **Access protection ordering.** The recipe's `icp deploy` installs the canister **and** syncs assets together, so a plain deploy-then-`enable_protection` briefly serves your content publicly. For a brand-new *private* app, enable protection **before your real assets are synced** — deploy a `dir` containing only `login.html`, `enable_protection`, then deploy the full site — so assets are never world-readable. The login page must be **fully self-contained** (inline CSS/JS, `data:` URIs) — it is the only gate-exempt path, and any external subresource it references would itself be gated. See [Access protection](#access-protection-private-apps).
 
 ## SPA Routing and Redirects: `_redirects`
 
@@ -169,7 +172,7 @@ example.com
 www.example.com
 ```
 
-`.well-known/` is uploaded automatically (Pitfall 11), so the file is served where the IC boundary nodes look. Registering the domain itself (DNS records, ACME challenge, TLS provisioning) is a separate IC platform step — see the `custom-domains` skill.
+`.well-known/` is uploaded automatically (Pitfall 12), so the file is served where the IC boundary nodes look. Registering the domain itself (DNS records, ACME challenge, TLS provisioning) is a separate IC platform step — see the `custom-domains` skill.
 
 ## Access Protection (private apps)
 
@@ -187,7 +190,7 @@ icp canister call frontend enable_protection '("/login.html")'
 icp canister call frontend issue_token '(record { label = "owner"; ttl_secs = 31536000 : nat32; value = opt "my-passphrase" })'
 ```
 
-> **Ordering & the public window.** The `static-site` recipe's `icp deploy` **installs the canister and syncs your assets in one step**, so the sequence above serves your content publicly for the brief window between that first deploy and `enable_protection` — fine when gating an existing or preview app. To avoid *any* public exposure for a **brand-new private app**, enable protection **before your real assets are synced**: run the first `icp deploy` with a `dir` containing only `login.html`, then `enable_protection '("/login.html")'`, then `icp deploy` again with the full site. The login page is gate-exempt, so nothing private is ever served unauthenticated (Pitfall 12). (Enabling on a truly empty canister also works — the canister reports `EnabledLoginPageMissing` and self-heals to `Enabled` once `login.html` is synced.)
+> **Ordering & the public window.** The `static-site` recipe's `icp deploy` **installs the canister and syncs your assets in one step**, so the sequence above serves your content publicly for the brief window between that first deploy and `enable_protection` — fine when gating an existing or preview app. To avoid *any* public exposure for a **brand-new private app**, enable protection **before your real assets are synced**: run the first `icp deploy` with a `dir` containing only `login.html`, then `enable_protection '("/login.html")'`, then `icp deploy` again with the full site. The login page is gate-exempt, so nothing private is ever served unauthenticated (Pitfall 13). (Enabling on a truly empty canister also works — the canister reports `EnabledLoginPageMissing` and self-heals to `Enabled` once `login.html` is synced.)
 
 | Method | Effect |
 |--------|--------|
@@ -199,7 +202,7 @@ icp canister call frontend issue_token '(record { label = "owner"; ttl_secs = 31
 
 Always pass the argument explicitly — `'()'` for the methods that take none. Called with no argument, `icp canister call` opens an interactive prompt instead of sending an empty one.
 
-This is **access gating, not confidentiality**: node operators can read asset bytes and the token store, there is no rate-limiting, and it relies on the honest-replica/honest-gateway assumption. Use high-entropy random tokens for share links; enable *before* the first sync for a new private app (Pitfall 12). Full details in the [certified-assets access-protection docs](https://github.com/dfinity/certified-assets/blob/v0.3.3/docs/access-protection.md).
+This is **access gating, not confidentiality**: node operators can read asset bytes and the token store, there is no rate-limiting, and it relies on the honest-replica/honest-gateway assumption. Use high-entropy random tokens for share links; enable *before* the first sync for a new private app (Pitfall 13). Full details in the [certified-assets access-protection docs](https://github.com/dfinity/certified-assets/blob/v0.3.3/docs/access-protection.md).
 
 ## Authorizing Uploaders
 
@@ -245,7 +248,7 @@ No configuration needed — on by default:
 
 - **Response certification** — every response is certified and gateway-verified.
 - **Clean URLs** — `307` canonicalization (above).
-- **Compression** — text/JS/JSON/SVG/wasm stored gzip + Brotli, negotiated per request via `Accept-Encoding`.
+- **Compression** — compressible assets are stored gzip + Brotli alongside the original and negotiated per request via `Accept-Encoding`. Compressible means: any `text/*`; any `+json` or `+xml` suffix (so `image/svg+xml`, `application/xhtml+xml`); `application/javascript`, `application/json`, `application/xml`, `application/wasm`; and `font/*` **except** `woff`/`woff2` (already compressed). An encoding is kept only if it actually came out smaller than the original.
 - **ETag / `304 Not Modified`** — content-hash ETag; unchanged files aren't re-downloaded.
 - **A default certified `404`** — replaceable with your own `/404.html`.
 - **The `ic_env` cookie** — on HTML responses, carrying canister IDs and the root key for the frontend.

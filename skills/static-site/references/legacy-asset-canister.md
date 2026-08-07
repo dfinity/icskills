@@ -77,7 +77,7 @@ If the standard security policy blocks the app, override the default security he
 3. **Missing `build` step.** If `configuration.build` is omitted, run the build manually before deploying or `dir` is stale/empty.
 4. **Pinning Wasm below `0.30.2`.** The `ic_env` cookie (read by `safeGetCanisterEnv()`) is only served by asset-canister Wasm ≥ `0.30.2`. Omit `configuration.version` or pin ≥ `0.30.2`.
 5. **`allow_raw_access` left enabled.** By default assets are also served on the uncertified `raw.icp.net` domain, where content can be tampered with undetected. Set `"allow_raw_access": false` for sensitive assets.
-6. **Downgrading the Wasm version.** Upgrading to an older Wasm can panic ("Cannot parse header") if the stable-memory format changed. Prefer the recipe (loads latest) over `type: pre-built` with a manual Wasm URL. For an intentional downgrade use `icp deploy --mode reinstall` (wipes state).
+6. **Downgrading the Wasm version.** The legacy asset canister serializes its state across upgrades, so upgrading *down* to an older Wasm can trap on boot when the older deserializer cannot read a newer stable-memory format. Prefer the recipe (loads latest) over `type: pre-built` with a manual Wasm URL. For an intentional downgrade use `icp deploy --mode reinstall` (wipes state).
 7. **Removed `type: assets` sync step.** icp-cli 0.3.0 rejects it: *"icp-cli no longer supports the `assets` sync step type."* Use the `@dfinity/asset-canister@v2.2.1` recipe (plugin sync) — see above.
 
 ## Programmatic Uploads with `@icp-sdk/canisters` (legacy only)

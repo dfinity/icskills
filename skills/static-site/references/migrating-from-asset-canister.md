@@ -8,16 +8,16 @@ The certified-assets canister adds **response certification** and **automatic cl
 
 ## The core caveat: you cannot upgrade in place
 
-The two canisters have **incompatible stable-memory layouts**. Attempting to upgrade a running asset canister into a static-site canister panics ("Cannot parse header"). You have two options:
+The two are **unrelated canisters with unrelated Candid interfaces**, so a plain `icp deploy` (which attempts an in-place *upgrade*) **fails before anything is installed**: icp-cli's pre-install compatibility check aborts with `Candid interface compatibility check failed: '<canister>' … You are making a BREAKING change`. Nothing is installed and the running asset canister is untouched — a safe failure, not a corrupted canister. (This is *not* a stable-memory "Cannot parse header" panic; the check stops the deploy before any wasm is installed.) You have two options:
 
 1. **New canister (simplest, changes the canister ID).** Remove the old canister from `icp.yaml`, add a new `frontend` entry with the static-site recipe, and `icp deploy`. You get a fresh canister ID. Update any custom-domain registration and any hardcoded references to the old ID.
 2. **Reinstall in place (keeps the canister ID, wipes state).** Point the existing canister's recipe at static-site and deploy with reinstall mode:
    ```bash
    icp deploy --mode reinstall frontend
    ```
-   Reinstall replaces the wasm and **wipes all canister state**, then the sync plugin re-uploads every file. The canister ID (and thus its URL / custom domain) is preserved. This is what PR #682 used, exposed as a `mode` input on its deploy workflow.
+   Reinstall replaces the wasm and **wipes all canister state**, then the sync plugin re-uploads every file. Because `--mode reinstall` is not an upgrade, it **skips the Candid check entirely**. The canister ID (and thus its URL / custom domain) is preserved. This is what PR #682 used, exposed as a `mode` input on its deploy workflow.
 
-> Always deploy with the intended mode explicitly during migration. A plain `icp deploy` attempts an *upgrade*, which fails across these two canister types.
+> Always deploy with the intended mode explicitly during migration. Do **not** silence the check with `--yes`: that forces the in-place upgrade onto stable memory the certified-assets canister cannot interpret (it keeps its state in `ic-stable-structures` with no deserialize-on-boot step, so it reinitializes to empty rather than rejecting the foreign layout), leaving a live canister that serves nothing. Use `--mode reinstall` or a new canister instead.
 
 ## Config mapping
 
