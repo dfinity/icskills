@@ -1,7 +1,6 @@
 {
   "skill": "deploy-to-cloud-engine",
   "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters and an app icon (`__META_BASE_URL` + `__META_ICON_PATH` on the main canister), and avoid the documented pitfalls.",
-
   "output_evals": [
     {
       "name": "Deploy a built project to a cloud engine",
@@ -167,9 +166,18 @@
         "Sets `service:version` with an explicit version value under the recipe configuration's `metadata` list (and no git-derived entries), noting it should be bumped on each deploy",
         "Does NOT put the metadata under `settings.environment_variables` (that is for `__META_*` console variables, not wasm metadata)"
       ]
+    },
+    {
+      "name": "Adversarial: II app on an engine with a custom domain planned",
+      "prompt": "My multi-canister app is deployed to my OpenCloud cloud engine and uses Internet Identity. We will move it to a custom domain later. Which exact URL should I use as the Internet Identity derivation origin, and when do I set it? Be specific about which canister. No full deploy walkthrough.",
+      "expected_behaviors": [
+        "Names the MAIN canister (the one marked __META_MAIN_CANISTER: \"true\") as the one whose address is the derivation origin — not an arbitrary or backend canister",
+        "Gives the canister address form https://<main-canister-id>.icp.net and notes it is the same URL as __META_BASE_URL",
+        "Says to set it on the first deploy, before the app has users, because it cannot be applied retroactively without orphaning existing accounts",
+        "Does NOT recommend using the future custom domain as the derivation origin"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
     "should_trigger": [

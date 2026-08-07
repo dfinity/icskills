@@ -218,6 +218,22 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 - `__META_ICON_PATH` is a **path to an asset your frontend actually serves** (e.g. `/favicon.svg`), not an inline image. The resolved URL is rendered as an `<img>` `src`, so it must return an image. Do **not** put a `data:` URI here: engine env values are length-capped (≤128 chars observed), so it would not fit, and the field is a path by design.
 - The frontend canister's id is only known **after** the first deploy. The usual flow is: deploy once, read the frontend canister id from the output, set `__META_BASE_URL` to `https://<that-id>.icp.net` (and `__META_ICON_PATH`), then re-deploy to apply. If you control a custom domain for the app, you can set it up front instead.
 
+### Pin the Internet Identity derivation origin (if the app signs users in)
+
+Internet Identity derives a principal **per origin**. An app reached at both its canister address and a custom domain signs the same person in as two different users.
+
+The engine console names the app's **canister address** as the origin to derive from — it cannot be renamed or removed, so it survives adding, changing, or dropping a custom domain. It is the URL of the canister you marked `__META_MAIN_CANISTER: "true"` — the same value you set as `__META_BASE_URL`:
+
+```
+https://<main-canister-id>.icp.net
+```
+
+**Do this before the app has users, not after.** A domain that has already collected sign-ins cannot be repointed at a derivation origin without orphaning every account created under it. If the app might ever get a custom domain, set `derivationOrigin` on the first deploy even while the canister address is the only origin — it costs nothing then and cannot be applied retroactively without losing accounts.
+
+For the mechanics — the `derivationOrigin` option and the `.well-known/ii-alternative-origins` file, including the `_headers` entry the `@dfinity/static-site` recipe needs — load the **`internet-identity`** skill.
+
+Caffeine apps are the exception: Caffeine owns their address, so it is not the app's to derive from. The console withholds the canister-address row for them.
+
 ### Version metadata (recommended)
 
 Embed build provenance into each canister's wasm so tooling and the console can show what version is running (console support is rolling out; the metadata is already readable — see the verify note below). Add this **by default on every deploy** — do not wait for the user to ask. All official recipes (motoko, rust, static-site, asset-canister, prebuilt) accept a `metadata` list under the recipe `configuration`; each entry is baked into the wasm as a custom section. Values are interpolated into a shell command at build time, so `$(…)` command substitution works. (Verified by live builds against `@dfinity/motoko` v4.1.0 and v5.0.0 on icp-cli 1.0.2.)
@@ -362,6 +378,7 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
 16. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
 17. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
+18. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the main canister's address (`https://<main-canister-id>.icp.net` — the same URL as `__META_BASE_URL`), even when that is currently the app's only origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
 
 ## Related Skills
 
