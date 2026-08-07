@@ -1,0 +1,98 @@
+{
+  "skill": "service-discoverability",
+  "description": "Evaluation cases for the service-discoverability skill. Tests whether agents make a canister app discoverable to an AI agent: generate the /.well-known/ic-architecture manifest at deploy time (presync, not hard-coded IDs), serve it correctly as JSON, expose candid:service and a discoverable getApiDoc, understand the OQL data surface, and publish/read ii-derivation-origin without confusing it with ii-alternative-origins.",
+
+  "output_evals": [
+    {
+      "name": "Generate ic-architecture at deploy time (not hard-coded IDs)",
+      "prompt": "I want an AI agent to discover the canisters in my app from its URL. How do I publish the /.well-known/ic-architecture manifest listing my frontend and backend canister IDs, using icp-cli with the @dfinity/static-site recipe? Just the canister.yaml config and the template.",
+      "expected_behaviors": [
+        "Generates the manifest in the static-site recipe's presync hook (runs after canisters exist), NOT the build step",
+        "Resolves canister IDs at deploy time via `icp canister status <name> --id-only -e $ICP_CLI_ENVIRONMENT` or the presync ICP_CLI_CID_<NAME> env vars",
+        "Writes the file to dist/.well-known/ic-architecture at the extensionless path (no .json extension)",
+        "Uses a per-environment template selected by $ICP_CLI_ENVIRONMENT so IDs are correct per network",
+        "Does NOT commit hard-coded canister IDs, and does NOT use dfx"
+      ]
+    },
+    {
+      "name": "Adversarial: build vs presync for canister IDs",
+      "prompt": "In my @dfinity/static-site canister.yaml I put a command in the build step that reads $ICP_CLI_CID_BACKEND to write /.well-known/ic-architecture, but the backend ID comes out empty. Why, and what's the fix? Just the key point.",
+      "expected_behaviors": [
+        "Explains that build runs BEFORE the canisters exist, so no canister IDs are available there (ICP_CLI_CID_* are unset)",
+        "Moves the ID-dependent generation to the presync hook, which runs after canisters exist with IDs exported",
+        "Does NOT recommend hard-coding the canister ID as the fix"
+      ]
+    },
+    {
+      "name": "Serve the extensionless manifest as application/json",
+      "prompt": "My /.well-known/ic-architecture file is served on my @dfinity/static-site IC frontend, but not with Content-Type application/json. How do I fix the content type? Just the config.",
+      "expected_behaviors": [
+        "Adds a _headers file at the root of the served dir with a /.well-known/ic-architecture block setting `Content-Type: application/json`",
+        "Notes that extensionless files are not served as application/json automatically",
+        "Does NOT use .ic-assets.json5 (that is the legacy asset canister)"
+      ]
+    },
+    {
+      "name": "Adversarial: .well-known and the SPA catch-all on static-site",
+      "prompt": "On my @dfinity/static-site IC frontend I have an SPA fallback rewriting /* to index.html. Will that hijack /.well-known/ic-architecture and return the HTML shell? Do I need a special exemption?",
+      "expected_behaviors": [
+        "Explains a real uploaded file beats the /* SPA rewrite on certified-assets, so the manifest is served directly (the rewrite only catches paths with no matching file)",
+        "Notes .well-known/ is uploaded automatically by the static-site recipe, with no .ic-assets.json5 or un-ignore rule needed",
+        "Notes an explicit /.well-known/* SPA exemption is only needed on the legacy @dfinity/asset-canister or a non-IC host",
+        "Does NOT claim you must add .ic-assets.json5 on the static-site canister"
+      ]
+    },
+    {
+      "name": "Discoverable getApiDoc for behavior the types can't express",
+      "prompt": "How should my backend canister tell an AI agent about behavior its Candid types can't express (unit scaling, which calls need auth, polling for async operations)? Just the method.",
+      "expected_behaviors": [
+        "Exposes a query method returning markdown/text, named so it appears in candid:service (getApiDoc or get_api_doc)",
+        "Covers units/encoding, which calls need a signed principal, async/staged operations that must be polled, and what is irreversible",
+        "Provides a copy-paste-correct Candid query method (Motoko or Rust)",
+        "Does NOT rely on an out-of-band hint, meta tag, or side channel for discovery"
+      ]
+    },
+    {
+      "name": "Adversarial: ii-derivation-origin vs ii-alternative-origins",
+      "prompt": "To find which origin an app derives its Internet Identity principals for, can I just fetch the app's /.well-known/ii-alternative-origins and use that? Explain.",
+      "expected_behaviors": [
+        "Explains ii-alternative-origins is the inverse relation (which origins may derive against this origin), not a pointer to the app's derivation origin",
+        "States there is no reverse lookup from an app URL to its derivation origin; the app publishes /.well-known/ii-derivation-origin for the forward fact",
+        "Warns that reading it backwards silently produces the wrong principal",
+        "Does NOT tell the user to infer the derivation origin from ii-alternative-origins"
+      ]
+    },
+    {
+      "name": "Fetch candid:service by canister ID",
+      "prompt": "Given only a canister ID on mainnet, how does an agent fetch that canister's Candid interface so it can encode calls correctly? Just the command.",
+      "expected_behaviors": [
+        "Uses `icp canister metadata <canister-id> candid:service --network ic` (a raw canister ID has no project environment, so --network targets mainnet directly rather than -e)",
+        "Uses icp-cli, NOT dfx"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I make my canister app discoverable to an AI agent from just its URL?",
+      "Publish a /.well-known/ic-architecture manifest of my canisters",
+      "How do I generate the ic-architecture file with my canister IDs at deploy time?",
+      "How do I make my app agent-ready?",
+      "How do agents discover which canisters make up my app?",
+      "Expose a getApiDoc method so agents understand my canister's behavior",
+      "How do I publish my app's ii-derivation-origin so agents use the right principal?",
+      "Serve a service discovery manifest for my IC app"
+    ],
+    "should_not_trigger": [
+      "Sign an AI agent in to oisy.com and act as me",
+      "Add Internet Identity login to my React frontend",
+      "How do I set up a custom domain's DNS for my IC canister?",
+      "How do I make inter-canister calls?",
+      "Connect a wallet to my dapp",
+      "How do I store data across canister upgrades?",
+      "Deploy my Vite frontend to the IC",
+      "Configure _redirects for my SPA on the IC"
+    ]
+  }
+}
