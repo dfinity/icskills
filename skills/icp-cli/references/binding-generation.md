@@ -61,7 +61,7 @@ export const backend = createActor(
 
 Use the `@icp-sdk/bindgen` CLI to generate bindings manually:
 ```bash
-npx @icp-sdk/bindgen --did ../backend/backend.did --out ./src/bindings
+npx @icp-sdk/bindgen --did-file ../backend/backend.did --out-dir ./src/bindings
 ```
 
 ## `opt T` is `T | null` in the wrapper, not `[] | [T]`
