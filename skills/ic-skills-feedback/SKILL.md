@@ -109,6 +109,15 @@ runtime to decide this; the only question is "did a human approve this text just
 Set `free_text_reviewed: true` only when that approval genuinely happened. The server
 discards `task_summary`/`what_went_wrong`/`workaround` unless `free_text_reviewed` is `true`.
 
+**In an interactive session, actively offer the prose — don't default to structured-only
+when a human is present.** On a reportable failure, briefly ask whether to attach a
+one-line `what_went_wrong` and, if you worked around it, a `workaround` (you redact
+identifiers first), then include them with `free_text_reviewed: true` if the user agrees.
+This prose — especially the workaround, which hints at the fix the skill needs — is what
+makes a report triageable; a structured-only report is a weak lead by comparison. If you
+phrase `what_went_wrong` as "the skill said X but Y was needed," that implicitly proposes
+the fix without over-claiming. Autonomous runs (no human to ask) still send structured-only.
+
 ## Privacy — hard blocklist
 
 **Never** put any of these in **any** field, including the prose fields:
