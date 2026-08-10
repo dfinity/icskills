@@ -36,14 +36,25 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 5. **Treating a rejected upgrade as data loss (Motoko)** -- Enhanced orthogonal persistence checks the new program against the existing state and either accepts the upgrade or rejects it *before* it takes effect. A rejected upgrade is not data loss: the canister keeps running the previous version with its state intact, so you fix the code and redeploy. What actually differs is which changes need a migration:
 
-   | Change to a persistent field | Needs a migration? |
+   | Change | Needs a migration? |
    |---|---|
-   | Adding a field | No |
+   | Adding a **new** persistent variable (a new stable actor field) | No |
    | Widening a `var` field, e.g. `Nat` → `Int` | No — the value is preserved |
-   | Removing a field | **Yes** |
-   | Renaming a field, or a non-widening type change | **Yes** |
+   | Adding, removing, or renaming a field of a **record type** a persistent variable uses | **Yes** — even an *optional* added field |
+   | Removing a persistent variable | **Yes** |
+   | A non-widening type change to a persistent variable | **Yes** |
 
-   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko-actors` to write the migration.
+   **Common surprise:** adding a field to a persisted *record type* — a new `?Text` on a
+   record stored in a `Map`, or on any record a persistent variable holds — is **not**
+   migration-free, even when the field is optional. EOP rejects it at runtime with
+   `RTS error: Memory-incompatible program upgrade`. (This holds wherever the record
+   lives: top-level `var`, a `Map` value, etc. — it is the *record-type change* that
+   needs the migration, not the collection.) Only adding a brand-new top-level
+   persistent variable is migration-free. For anything in the "Yes" rows, supply a
+   migration expression — load `migrating-motoko` for the syntax. A field discarded
+   without one also shows compile-time `[M0169] the stable variable <name> of the
+   previous version cannot be implicitly discarded`. A rejected upgrade keeps the old
+   state intact — it is not data loss.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
