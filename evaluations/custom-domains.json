@@ -1,7 +1,6 @@
 {
   "skill": "custom-domains",
   "description": "Evaluation cases for the custom-domains skill. Tests whether agents produce correct DNS records, use the right registration API endpoints, and warn about common pitfalls like provider SSL interference and stale ACME records.",
-
   "output_evals": [
     {
       "name": "DNS record configuration",
@@ -77,9 +76,18 @@
         "Uses DELETE https://icp.net/custom-domains/v1/DOMAIN to notify the service",
         "Does NOT suggest only removing DNS records without calling the API"
       ]
+    },
+    {
+      "name": "Adversarial: custom domain on an app that already has II users",
+      "prompt": "My IC app already has a few hundred users signed in with Internet Identity at its canister URL. I am about to point a custom domain at it. Anything I should watch out for? Short answer.",
+      "expected_behaviors": [
+        "Warns that II principals are per-origin, so existing users would get brand-new accounts at the custom domain",
+        "Says to pin the canister address as the derivation origin and list the custom domain in .well-known/ii-alternative-origins BEFORE the domain goes live",
+        "Notes that a domain which has already collected sign-ins cannot be repointed without orphaning those accounts",
+        "Does NOT present the custom domain switch as principal-neutral or a pure DNS change"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
