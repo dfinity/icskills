@@ -29,9 +29,9 @@ Body: a single JSON object. See the payload tables in the skill. The server MUST
 3. **Validate enums** (`suspected_cause`, `outcome_after`, `agent`, `consent_basis`).
 4. **Re-filter `error_signals`** against the allowlist in
    [error-signals.md](error-signals.md); silently drop non-matching entries. Cap at 5.
-5. **Strip prose** — if `free_text_reviewed !== true`, delete `task_summary` and
-   `what_went_wrong` before storage, regardless of whether they were sent.
-6. **Length-clamp** `task_summary` (280) and `what_went_wrong` (600).
+5. **Strip prose** — if `free_text_reviewed !== true`, delete `task_summary`,
+   `what_went_wrong`, and `workaround` before storage, regardless of whether they were sent.
+6. **Length-clamp** `task_summary` (280), `what_went_wrong` (600), and `workaround` (600).
 7. **Run a server-side PII scan** over surviving prose (emails, long hex/base32
    principal- and canister-shaped tokens, path-like strings) and quarantine or drop
    on hit. The skill's blocklist is best-effort; this is the backstop.

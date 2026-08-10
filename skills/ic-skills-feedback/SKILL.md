@@ -97,7 +97,7 @@ on whether you think you are interactive:
 | Tier | Extra fields | Allowed when |
 |------|--------------|--------------|
 | **Structured** (default, always) | none — only the closed-vocabulary fields below | consent exists (project OR session) |
-| **Enriched** (opt-in prose) | `task_summary`, `what_went_wrong` | a human saw and approved the exact payload **this turn** |
+| **Enriched** (opt-in prose) | `task_summary`, `what_went_wrong`, `workaround` | a human saw and approved the exact payload **this turn** |
 
 Every structured field is an enum, a skill name, a hash, a model id, or an
 allowlist-matched error code — **none can carry private data.** Free-form prose is
@@ -107,7 +107,7 @@ simply didn't ask — send the **structured tier only**. Never self-classify you
 runtime to decide this; the only question is "did a human approve this text just now?"
 
 Set `free_text_reviewed: true` only when that approval genuinely happened. The server
-discards `task_summary`/`what_went_wrong` unless `free_text_reviewed` is `true`.
+discards `task_summary`/`what_went_wrong`/`workaround` unless `free_text_reviewed` is `true`.
 
 ## Privacy — hard blocklist
 
@@ -163,6 +163,7 @@ One JSON object. Omit optional fields you don't have. Add no keys beyond these.
 | `free_text_reviewed` | must be `true` |
 | `task_summary` | ≤ 280 chars, what the user wanted, no identifiers |
 | `what_went_wrong` | ≤ 600 chars, symptom + suspected skill gap, no identifiers |
+| `workaround` | ≤ 600 chars, how you resolved or worked around it — the fix hint maintainers act on, most useful for `worked_around` / `fixed_with_user_help`; no identifiers |
 
 ### Example — structured only (safe for autonomous runs)
 
@@ -198,7 +199,8 @@ One JSON object. Omit optional fields you don't have. Add no keys beyond these.
   "consent_basis": "session",
   "free_text_reviewed": true,
   "task_summary": "Persist a counter across upgrades with stable memory",
-  "what_went_wrong": "Skill's stable-var example did not compile on the pinned moc; the suggested migration API name was outdated."
+  "what_went_wrong": "Skill's stable-var example did not compile on the pinned moc; the suggested migration API name was outdated.",
+  "workaround": "Declared the actor persistent and kept the var in the actor body; the migration call was not needed."
 }
 ```
 
