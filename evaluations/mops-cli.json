@@ -79,8 +79,18 @@
       "expected_behaviors": [
         "Explains the warning is because `pocket-ic` is not pinned in `[toolchain]`, so mops falls back to the deprecated dfx replica",
         "Pins `pocket-ic` in the `[toolchain]` section of mops.toml (e.g. `pocket-ic = \"12.0.0\"`) OR uses `mops toolchain use pocket-ic 12.0.0`",
-        "Pins a specific pocket-ic version rather than `latest` (latest may resolve to a version the bundled pic-js client doesn't support)",
+        "Pins a specific pocket-ic version rather than `latest` (latest may resolve to a version the vendored `@dfinity/pic` client doesn't support)",
         "Notes the same pin also applies to `mops bench` and `mops watch`"
+      ]
+    },
+    {
+      "name": "Adversarial: mops publish --dry-run scope",
+      "prompt": "Before publishing my package to the mops registry, I ran `mops publish --dry-run` and it passed. Does that mean the real `mops publish` is guaranteed to succeed? Just answer the question.",
+      "expected_behaviors": [
+        "Explains that `--dry-run` runs the same local publish pipeline (packaging checks, docs, changelog, tests, benchmarks) but stops before identity/upload (no registry contact)",
+        "Clarifies it does NOT validate canister config (SPDX/semver/name rules)",
+        "Clarifies it does NOT prove registry acceptance (already published, permissions, missing deps)",
+        "Does NOT claim a passing `--dry-run` guarantees the real publish will succeed"
       ]
     },
     {
@@ -180,7 +190,8 @@
       "How do I regenerate the candid .did file for my Motoko canister with mops?",
       "How do I keep my check-stable .most baseline in sync after deploying?",
       "How do I enable wasm-opt optimization for my mops build?",
-      "How do I run benchmarks with mops?"
+      "How do I run benchmarks with mops?",
+      "How do I publish my package to the mops registry?"
     ],
     "should_not_trigger": [
       "Write a Motoko persistent actor with a counter",
