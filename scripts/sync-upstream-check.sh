@@ -65,14 +65,17 @@ REPO_SHORT="${REPO##*/}"
 #   $1 = commit SHA  →  prints the cache file path on stdout
 fetch_tree() {
   local sha="$1"
-  local cache="/tmp/upstream-tree-${sha}.json"
+  # Repo-scoped, SHA-keyed cache under the runner temp dir (falls back to /tmp locally).
+  local cache="${RUNNER_TEMP:-/tmp}/upstream-tree-${REPO//\//-}-${sha}.json"
   if [ ! -s "$cache" ]; then
+    local tmp="${cache}.tmp.$$"
     curl -sf "https://api.github.com/repos/${REPO}/git/trees/${sha}?recursive=1" \
-      -H "Authorization: Bearer $GH_TOKEN" > "$cache" || {
+      -H "Authorization: Bearer $GH_TOKEN" > "$tmp" || {
       echo "ERROR: could not fetch git tree for ${REPO}@${sha}" >&2
-      rm -f "$cache"
+      rm -f "$tmp"
       return 1
     }
+    mv -f "$tmp" "$cache"  # atomic: the cache file is only ever complete or absent
   fi
   printf '%s' "$cache"
 }

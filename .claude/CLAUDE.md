@@ -145,8 +145,10 @@ Get both commit SHAs and the upstream skill folder path from `.claude/upstream.m
 Diff every file in the upstream skill folder. First, list all files at both commits and take the union (to catch additions and removals):
 
 ```bash
-# List all files (recursively) in the upstream skill folder at a given commit.
-# Recursive matters: some skills nest files (e.g. writing-motoko/references/*).
+# List files under the upstream skill folder at a given commit. The Git Trees API
+# (?recursive=1) returns the WHOLE repo tree for that commit; the Python filters it down
+# to <upstream-skill-path>/ locally. Recursive matters: some skills nest files
+# (e.g. writing-motoko/references/*).
 curl -s "https://api.github.com/repos/<org>/<repo>/git/trees/<SHA>?recursive=1" | \
   python3 -c "import sys,json; p='<upstream-skill-path>/'; [print(e['path'][len(p):]) for e in json.load(sys.stdin).get('tree',[]) if e.get('type')=='blob' and e['path'].startswith(p)]"
 ```
