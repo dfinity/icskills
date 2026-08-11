@@ -1,12 +1,12 @@
 {
-  "skill": "motoko",
-  "description": "Evaluation cases for the motoko skill. Tests whether agents generate correct modern Motoko syntax, use mo:core instead of mo:base, avoid non-stable types, use dot notation for collections, handle common language pitfalls, and use the --default-persistent-actors flag.",
+  "skill": "writing-motoko",
+  "description": "Evaluation cases for the writing-motoko skill. Tests whether agents generate correct modern Motoko syntax, use mo:core instead of mo:base, avoid non-stable types in shared APIs, use dot notation for collections, follow enhanced orthogonal persistence (no `stable` keyword), and handle common language pitfalls.",
   "output_evals": [
     {
       "name": "Simple actor with counter",
       "prompt": "Write a Motoko canister with a counter that can be incremented and queried.",
       "expected_behaviors": [
-        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor` (no flag needed for the explicit keyword)",
+        "Uses `actor` (persistent by default under enhanced orthogonal persistence); does NOT declare fields `stable`",
         "Uses `var` for the counter, NOT `stable var`",
         "Increment function is `public func` returning `async`",
         "Query function uses `public query func`",
@@ -17,31 +17,13 @@
       "name": "Actor with Map collection",
       "prompt": "Write a Motoko actor body that stores user profiles (name : Text, email : Text) by Nat ID using mo:core/Map, with add, get, and list operations. Show the actor body and a minimal mops.toml — no deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
+        "Uses `actor` (persistent by default under enhanced orthogonal persistence); does NOT declare fields `stable`",
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
-        "Creates map with Map.empty<K, V>()",
+        "Uses `Map.Map<K, V>` from mo:core as the store (with `Map.empty<K, V>()` where an initializer is shown)",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
         "Does NOT pass explicit compare function — comparator is inferred",
-        "Type definitions are inside the actor body, not before it",
+        "Defines the profile type in the actor body OR an imported `types.mo` module — not between the imports and the actor (M0141)",
         "Does NOT use HashMap, TrieMap, or Buffer"
-      ]
-    },
-    {
-      "name": "Fix M0220 error",
-      "prompt": "I'm getting this Motoko compiler error: `type error [M0220], this actor or actor class should be declared persistent`. Here's my code:\n\nactor {\n  var count : Nat = 0;\n  public func increment() : async Nat {\n    count += 1;\n    count\n  };\n};",
-      "expected_behaviors": [
-        "Explains that M0220 occurs when neither `--default-persistent-actors` flag nor `persistent` keyword is present",
-        "Offers at least one valid fix: add `--default-persistent-actors` to `[moc].args` in mops.toml OR change `actor` to `persistent actor`",
-        "Does NOT suggest adding `stable` keyword to variables"
-      ]
-    },
-    {
-      "name": "Fix M0141 error",
-      "prompt": "My Motoko code won't compile:\n\nimport Nat \"mo:core/Nat\";\n\ntype UserId = Nat;\nlet MAX_USERS = 1000;\n\nactor {\n  var count : Nat = 0;\n};",
-      "expected_behaviors": [
-        "Identifies error M0141: type and let declarations must be inside the actor body",
-        "Shows the fix: move `type UserId` and `let MAX_USERS` inside `actor { }`",
-        "Keeps the import statement before the actor (imports are allowed)"
       ]
     },
     {
@@ -66,7 +48,7 @@
       "name": "Transient vs stable semantics",
       "prompt": "In my Motoko canister, I have a request counter that should reset to zero after every upgrade, and a user database that should persist. How do I set this up?",
       "expected_behaviors": [
-        "Shows mops.toml with `--default-persistent-actors` in moc args, OR uses `persistent actor`",
+        "Uses `actor`/`persistent actor` under enhanced orthogonal persistence; does NOT use the `stable` keyword",
         "Uses plain `var` or `let` for the user database (auto-stable)",
         "Uses `transient var` for the request counter",
         "Does NOT use `stable var` (redundant in persistent actors)",
@@ -86,7 +68,7 @@
       "name": "Adversarial: stable var",
       "prompt": "Write a Motoko actor with `stable var` for user data so it survives upgrades.",
       "expected_behaviors": [
-        "Explains that `stable var` is redundant in persistent actors and produces warning M0218",
+        "Explains that the `stable` keyword is not needed / redundant under enhanced orthogonal persistence",
         "Uses plain `var` instead (auto-stable in persistent actors)",
         "Does NOT include `stable` keyword on any declaration"
       ]
@@ -106,7 +88,7 @@
       "expected_behaviors": [
         "Produces a separate mixin file using `mixin(users : List.List<User>) { ... }` syntax",
         "Update functions in the mixin use `public shared ({ caller }) func`; read-only functions may use `public query func`",
-        "The actor uses plain `actor` with `include AuthMixin(users)` (or `persistent actor` if no flag)",
+        "The actor uses `actor` with `include AuthMixin(users)`",
         "Passes the List to the mixin, NOT a plain `var` primitive",
         "Does NOT put public methods directly in the actor body — they come from the mixin"
       ]
@@ -125,14 +107,14 @@
       "expected_behaviors": [
         "Uses `{ todo with completed = true }` for the updated record",
         "Does NOT copy fields manually: NOT `{ id = todo.id; title = todo.title; completed = true }`",
-        "Uses `mapInPlace` with a conditional to replace the matching record in the list"
+        "Updates the matching record via a documented pattern (`mapInPlace`, `find` + mutate a `var` field, or clear + rebuild) — not a manual field-by-field copy"
       ]
     },
     {
       "name": "Full canister with multiple features",
       "prompt": "Write a Motoko actor body for a todo app: add todo (title), mark complete by ID, list all todos. Show the actor body and a minimal mops.toml — no types.mo, no deploy steps.",
       "expected_behaviors": [
-        "Uses plain `actor` with `--default-persistent-actors` in `[moc].args` in mops.toml, OR uses `persistent actor`",
+        "Uses `actor` (persistent by default under enhanced orthogonal persistence); does NOT declare fields `stable`",
         "Uses List from mo:core for storing todos",
         "Todo type definition is inside the actor body, not before it",
         "Uses dot notation for all collection operations",
@@ -155,8 +137,8 @@
       "name": "Module with self pattern",
       "prompt": "Write a Motoko lib/User.mo module for a User type with id (Principal), name (Text), and isActive (Bool). Include new() and a deactivate function. Just the module code.",
       "expected_behaviors": [
-        "The deactivate (or ban) function takes `self : User` as its first parameter",
-        "Shows or describes dot-notation call: `user.deactivate()` or `user.ban()`",
+        "Takes the User value as its first parameter (conventionally named `self`)",
+        "Enables contextual dot-notation (`user.deactivate()`) by making User the first parameter of the module function",
         "new() initializes isActive to true",
         "Module is stateless — no state stored directly in the module"
       ]
@@ -178,15 +160,6 @@
         "Does NOT use `type` as a field name — it is a reserved keyword in Motoko",
         "Uses an alternative name such as `typ`, `kind`, `assetType`, or `category` instead",
         "Shows a valid compilable type definition"
-      ]
-    },
-    {
-      "name": "Text.join parameter order",
-      "prompt": "Write a Motoko expression that joins the values of a `List.List<Text>` called `names` with `\", \"` as separator. Just the expression, no full canister.",
-      "expected_behaviors": [
-        "Calls Text.join with the iterator as the first argument and the separator as the second: Text.join(names.values(), sep)",
-        "Does NOT reverse the arguments — separator must NOT come first",
-        "Imports `Text` from `mo:core/Text` if it shows imports"
       ]
     },
     {

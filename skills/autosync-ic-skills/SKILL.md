@@ -136,7 +136,7 @@ bash .claude/sync-ic-skills.sh
 
 ## Step 4 — Verify and report
 
-- Confirm `.claude/skills/` now contains skill directories (e.g. `motoko`,
+- Confirm `.claude/skills/` now contains skill directories (e.g. `writing-motoko`,
   `static-site`, `internet-identity`, …) each with a `SKILL.md`.
 - Confirm `.claude/skills/.ic-managed.json` maps each synced skill name to its hash.
 - Tell the user: how many skills were installed, that the `SessionStart` hook is in

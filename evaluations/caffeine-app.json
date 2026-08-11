@@ -1,6 +1,6 @@
 {
   "skill": "caffeine-app",
-  "description": "Evaluation cases for the caffeine-app skill. Tests that an agent can produce the correct Caffeine project shape (caffeine.toml workspace + canister manifests, mops.toml), the build loop (caffeine auth/doctor/install/check/preview), and that it defers Motoko language details to the motoko skill. Each output eval is scoped to one artifact to stay within the eval timeout. Pitfalls in SKILL.md each have at least one eval.",
+  "description": "Evaluation cases for the caffeine-app skill. Tests that an agent can produce the correct Caffeine project shape (caffeine.toml workspace + canister manifests, mops.toml), the build loop (caffeine auth/doctor/install/check/preview), and that it defers Motoko language details to the writing-motoko skill. Each output eval is scoped to one artifact to stay within the eval timeout. Pitfalls in SKILL.md each have at least one eval.",
   "output_evals": [
     {
       "name": "Root workspace manifest",
@@ -91,7 +91,7 @@
       "prompt": "I'm building a Caffeine app and need to write the backend logic in Motoko. Where does it go and what should I consult? Brief — do not write Motoko code.",
       "expected_behaviors": [
         "Backend code goes in src/backend/main.mo",
-        "Says to follow the motoko skill at https://skills.internetcomputer.org/skills/motoko/SKILL.md for the language"
+        "Says to follow the writing-motoko skill at https://skills.internetcomputer.org/skills/writing-motoko/SKILL.md for the language"
       ]
     },
     {
@@ -179,7 +179,7 @@
     }
   ],
   "trigger_evals": {
-    "description": "Queries to test whether the caffeine-app skill activates correctly. 'should_trigger' queries should load this skill; 'should_not_trigger' queries are about the Motoko language (use the motoko skill) or generic IC/dfx/icp work (use icp-cli or domain skills) and should NOT activate caffeine-app.",
+    "description": "Queries to test whether the caffeine-app skill activates correctly. 'should_trigger' queries should load this skill; 'should_not_trigger' queries are about the Motoko language (use the writing-motoko skill) or generic IC/dfx/icp work (use icp-cli or domain skills) and should NOT activate caffeine-app.",
     "should_trigger": [
       "Create a new Caffeine app from scratch",
       "How do I structure a caffeine.ai project?",

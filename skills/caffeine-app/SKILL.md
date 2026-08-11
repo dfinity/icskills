@@ -1,6 +1,6 @@
 ---
 name: caffeine-app
-description: "Scaffold and build a complete Caffeine app (caffeine.ai) from scratch — the project layout, the caffeine.toml workspace + canister manifests, the mops.toml for the single Motoko `backend` canister, the React/Vite frontend, and the caffeine CLI build loop (auth login, doctor, install, check --fix, preview --build). Use whenever the user wants to create, scaffold, set up, or build a Caffeine app or a caffeine.ai project, asks about caffeine.toml or mops.toml structure, or needs the caffeine CLI workflow — even if they do not say the words 'from scratch'. Always pair it with the `motoko` skill for the backend code. Do NOT use it for Motoko language syntax or compiler errors (use the `motoko` skill), and do NOT use it for generic Internet Computer / dfx / icp deployment (use the `icp-cli` skill)."
+description: "Scaffold and build a complete Caffeine app (caffeine.ai) from scratch — the project layout, the caffeine.toml workspace + canister manifests, the mops.toml for the single Motoko `backend` canister, the React/Vite frontend, and the caffeine CLI build loop (auth login, doctor, install, check --fix, preview --build). Use whenever the user wants to create, scaffold, set up, or build a Caffeine app or a caffeine.ai project, asks about caffeine.toml or mops.toml structure, or needs the caffeine CLI workflow — even if they do not say the words 'from scratch'. Always pair it with the `writing-motoko` skill for the backend code. Do NOT use it for Motoko language syntax or compiler errors (use the `writing-motoko` skill), and do NOT use it for generic Internet Computer / dfx / icp deployment (use the `icp-cli` skill)."
 license: Apache-2.0
 compatibility: "@caffeineai/cli (the `caffeine` command), Node.js >= 18.17, pnpm, network access + a caffeine.ai account"
 metadata:
@@ -16,8 +16,8 @@ canister. This skill teaches the exact **project shape** and the **CLI build loo
 you can produce a buildable Caffeine app from nothing.
 
 **This skill owns the project shape and the build workflow. It does NOT own the Motoko
-language.** Before you write or edit any backend code, fetch and follow the `motoko`
-skill: <https://skills.internetcomputer.org/skills/motoko/SKILL.md>. That skill is
+language.** Before you write or edit any backend code, fetch and follow the `writing-motoko`
+skill: <https://skills.internetcomputer.org/skills/writing-motoko/SKILL.md>. That skill is
 authoritative for actor syntax, stable state, `mo:core`, and compiler errors. This
 skill only shows the minimal empty actor and where it lives.
 
@@ -27,7 +27,7 @@ skill only shows the minimal empty actor and where it lives.
 - Writing or fixing `caffeine.toml` (workspace or canister manifest) or `mops.toml`.
 - Running the caffeine CLI loop: `auth login`, `doctor`, `install`, `check`, `preview`.
 
-Do **not** use it for Motoko language details (use `motoko`) or for raw IC/`dfx`/`icp`
+Do **not** use it for Motoko language details (use `writing-motoko`) or for raw IC/`dfx`/`icp`
 deployment (use `icp-cli`). Caffeine apps are built and deployed through the `caffeine`
 CLI and the caffeine.ai web app, **not** through `dfx`.
 
@@ -84,7 +84,7 @@ my-app/
 └── src/
     ├── backend/                # the single Motoko canister, named "backend"
     │   ├── caffeine.toml        #   canister manifest: type = "motoko"
-    │   ├── main.mo              #   actor entry point (write with the `motoko` skill)
+    │   ├── main.mo              #   actor entry point (write with the `writing-motoko` skill)
     │   └── system-idl/          #   Candid for IC system canisters (see note below)
     │       └── aaaaa-aa.did     #   IC management canister interface
     └── frontend/               # the assets canister (React + Vite)
@@ -248,7 +248,7 @@ Notes:
   ships `aaaaa-aa.did` (the IC management-canister interface). A minimal backend needs only
   the directory.
 - **`core = "2.5.0"`** is the `mo:core` standard library. Use `mo:core`, never the
-  deprecated `mo:base` — see the `motoko` skill. **`caffeineai-data-viewer`** backs the
+  deprecated `mo:base` — see the `writing-motoko` skill. **`caffeineai-data-viewer`** backs the
   built-in data-viewer mixin used by the default `main.mo` (below) and pairs with the
   `--generate-view-queries` flag.
 
@@ -318,7 +318,7 @@ The canonical template's starting `main.mo` includes the built-in **data-viewer 
 (`include MixinViews()`), which pairs with the `caffeineai-data-viewer` dependency and the
 `--generate-view-queries` flag in `mops.toml`. With `--default-persistent-actors` the
 actor is already persistent. Add your own functions inside the actor, following the
-**`motoko` skill**.
+**`writing-motoko` skill**.
 
 ```motoko
 import MixinViews "mo:caffeineai-data-viewer/MixinViews";
@@ -330,7 +330,7 @@ actor {
 
 (A bare `actor {}` also compiles if you drop the `caffeineai-data-viewer` dependency and
 the `--generate-view-queries` flag.) Do not write more Motoko than this without loading
-the `motoko` skill — it covers persistent actors, stable types, `mo:core`, and the
+the `writing-motoko` skill — it covers persistent actors, stable types, `mo:core`, and the
 compiler-error pitfalls that an agent will otherwise hallucinate.
 
 ## The frontend
@@ -367,7 +367,7 @@ Run from the project root. Order matters.
 pnpm install
 caffeine install
 
-# 2. Write your backend in src/backend/main.mo using the `motoko` skill, and your
+# 2. Write your backend in src/backend/main.mo using the `writing-motoko` skill, and your
 #    frontend in src/frontend/src/.
 
 # 3. Build: compiles the backend, then `pnpm bindgen` regenerates the frontend client
@@ -429,9 +429,9 @@ having no deploy command. This skill is for the **local, hand-authored** path.
 7. **Deleting `.old/` or `env.json`, or skipping `copy:env`.** `.old/` holds the
    stable-signature snapshot `check-stable` compares against; `env.json` must be copied
    into `dist/` so the served frontend can read its runtime config.
-8. **Writing Motoko without the `motoko` skill.** Modern Caffeine Motoko uses
+8. **Writing Motoko without the `writing-motoko` skill.** Modern Caffeine Motoko uses
    `mo:core`, persistent actors, and specific patterns. Guessing produces compiler
-   errors. Load <https://skills.internetcomputer.org/skills/motoko/SKILL.md> first.
+   errors. Load <https://skills.internetcomputer.org/skills/writing-motoko/SKILL.md> first.
 9. **Using `npm`/`yarn` instead of `pnpm`.** The workspace is pnpm-based
    (`pnpm-workspace.yaml`, `pnpm -r` scripts). `caffeine install` uses pnpm + mops.
 10. **`caffeine install`/`build` fails with `ERR_PNPM_NO_LOCKFILE` on a fresh project.**
@@ -450,8 +450,8 @@ having no deploy command. This skill is for the **local, hand-authored** path.
 
 ## Related skills
 
-- **`motoko`** — REQUIRED companion. Authoritative for all backend Motoko code:
-  <https://skills.internetcomputer.org/skills/motoko/SKILL.md>. Always load it before
+- **`writing-motoko`** — REQUIRED companion. Authoritative for all backend Motoko code:
+  <https://skills.internetcomputer.org/skills/writing-motoko/SKILL.md>. Always load it before
   editing `src/backend/main.mo`.
 - **`icp-cli`** — for raw Internet Computer / `dfx` / `icp` projects. Not used by
   Caffeine; reach for it only when the user is *not* building a Caffeine app.

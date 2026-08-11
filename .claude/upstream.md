@@ -1,51 +1,59 @@
 # Upstream Skill Tracking
 
-All upstream-tracked skills. Update **Tag**, **Commit**, and **Last synced** when syncing a new release.
+All upstream-tracked skills. Update **Commit** (and **Tag**/**Version** where present) and **Last synced** when syncing.
 
-Upstream file paths are relative to `.agents/skills/<upstream-skill-name>/` in the upstream repo.
+Upstream file paths and the tracking model (release-tag vs commit) are listed per skill — they differ by upstream repo layout.
 
 ---
 
-## motoko
+## writing-motoko
 
-- **Upstream:** https://github.com/caffeinelabs/motoko
-- **Tag:** 1.8.2
-- **Commit:** f45204bc75c8e0ed5198fd2fe7265679af71814a
-- **Last synced:** 2026-05-28
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (this repo has no releases/tags). Watch for changes to the skill folder between the pinned commit and `main`; the per-skill `version:` frontmatter field is a secondary signal.
+- **Commit:** 02e531673bad43eaff75f4222bee56bf85e381db
+- **Upstream version:** 0.1.3 (skill frontmatter `version:`)
+- **Last synced:** 2026-08-06
 - **Upstream files:**
-  - `.agents/skills/writing-motoko/SKILL.md`
-  - `.agents/skills/writing-motoko/examples.md → references/examples.md`
+  - `skills/writing-motoko/SKILL.md`
+  - `skills/writing-motoko/api-reference.md → references/api-reference.md`
+  - `skills/writing-motoko/examples.md → references/examples.md`
+  - `skills/writing-motoko/references/control-flow.md → references/control-flow.md`
+  - `skills/writing-motoko/references/type-conversions.md → references/type-conversions.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - Pitfall 3: `Text.join` parameter order (iterator first, separator second)
-  - Pitfall 4: `List.get` vs `List.at` (safe `?T` vs trapping `T`)
-  - Common Compile Error Patterns: M0145 row; M0170 row links to both migrating-motoko skills; M0064 row (`misplaced '!'`)
-  - `## Additional References` — links use icskills skill names, not upstream names
-- **Pending upstream** ([caffeinelabs/motoko#6156](https://github.com/caffeinelabs/motoko/issues/6156)): pitfalls 3–4 and mops.one/core/docs link. When that issue merges and we sync, drop pitfalls 3–4 and the M0145 error row from icskills-owned (they will come through upstream). The `## Additional References` section stays icskills-owned.
-- **Pending upstream** ([caffeinelabs/motoko#6157](https://github.com/caffeinelabs/motoko/issues/6157)): M0064 error table row. When that issue merges and we sync, drop the M0064 row from icskills-owned (it will come through upstream).
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.5.0`), and `metadata.title`/`category`.
+  - **mops docs link → `mops-cli` skill:** the body's `https://docs.mops.one/` reference is rewritten to "Load the `mops-cli` skill …". Do not restore the external link on sync.
+  - **`## Additional Resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
+  - **Reference-file paths:** upstream keeps `api-reference.md`/`examples.md` at the skill root; icskills places all non-SKILL files under `references/`, so intra-skill links are rewritten to `references/…`.
 
 ---
 
-## migrating-motoko
+## migrating-motoko-actors
 
-- **Upstream:** https://github.com/caffeinelabs/motoko
-- **Tag:** 1.8.2
-- **Commit:** f45204bc75c8e0ed5198fd2fe7265679af71814a
-- **Last synced:** 2026-05-28
-- **Upstream file:** `.agents/skills/migrating-motoko/SKILL.md`
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
+- **Commit:** 02e531673bad43eaff75f4222bee56bf85e381db
+- **Upstream version:** 0.2.2 (skill frontmatter `version:`)
+- **Last synced:** 2026-08-06
+- **Upstream files:**
+  - `skills/migrating-motoko-actors/SKILL.md`
+  - `skills/migrating-motoko-actors/examples.md → references/examples.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - `## Additional References` — section renamed from upstream's "Additional Resources"; links use icskills skill names (e.g., `motoko` not `writing-motoko`); extra link added: `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup`
+  - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description`, `license`, string `compatibility`, `metadata`). The description drops the reference to the retired inline skill and points failures at `troubleshooting-motoko-migrations`.
+  - **`## Additional Resources` → `## Additional References`** rename, plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
+  - **Reference-file path:** `examples.md → references/examples.md`; intra-skill link rewritten.
 
 ---
 
-## migrating-motoko-enhanced
+## troubleshooting-motoko-migrations
 
-- **Upstream:** https://github.com/caffeinelabs/motoko
-- **Tag:** 1.8.2
-- **Commit:** f45204bc75c8e0ed5198fd2fe7265679af71814a
-- **Last synced:** 2026-05-28
-- **Upstream file:** `.agents/skills/migrating-motoko-enhanced/SKILL.md`
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
+- **Commit:** 02e531673bad43eaff75f4222bee56bf85e381db
+- **Upstream version:** 0.1.3 (skill frontmatter `version:`)
+- **Last synced:** 2026-08-06
+- **Upstream file:** `skills/troubleshooting-motoko-migrations/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - `## Additional References` — section renamed from upstream's "Additional Resources"; links use icskills skill names (e.g., `motoko` not `writing-motoko`); extra link added: `Load \`mops-cli\` for \`mops check\`, \`mops build\`, and toolchain setup`
+  - **Frontmatter (entire block):** same transform as the other two. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
 
 ---
 
