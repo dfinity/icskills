@@ -64,21 +64,29 @@ REPO_SHORT="${REPO##*/}"
 # nested files such as writing-motoko/references/*.
 #   $1 = commit SHA, $2 = skill path
 list_skill_files() {
-  curl -sf "https://api.github.com/repos/${REPO}/git/trees/$1?recursive=1" \
-    -H "Authorization: Bearer $GH_TOKEN" | \
-  python3 -c "
+  local tree
+  # Fail (non-zero) on a fetch error, unparseable response, or a truncated tree — the caller
+  # aborts rather than treating an incomplete/untrusted listing as "no changes" (a silent miss).
+  tree=$(curl -sf "https://api.github.com/repos/${REPO}/git/trees/$1?recursive=1" \
+    -H "Authorization: Bearer $GH_TOKEN") || {
+    echo "ERROR: could not fetch git tree for ${REPO}@$1" >&2
+    return 1
+  }
+  printf '%s' "$tree" | python3 -c "
 import sys, json
 prefix = sys.argv[1].rstrip('/') + '/'
 try:
     d = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
+except Exception as err:
+    sys.stderr.write('ERROR: could not parse git tree JSON: %s\n' % err)
+    sys.exit(1)
 if d.get('truncated'):
-    sys.stderr.write('WARNING: git tree truncated; files under %s may be missed\n' % sys.argv[1])
+    sys.stderr.write('ERROR: git tree truncated; cannot reliably enumerate %s\n' % sys.argv[1])
+    sys.exit(1)
 for e in d.get('tree', []):
     if e.get('type') == 'blob' and e['path'].startswith(prefix):
         print(e['path'][len(prefix):])
-" "$2" || true
+" "$2"
 }
 
 {
@@ -109,8 +117,11 @@ while IFS= read -r skill_pair; do
     skill_path="${upstream_name}"
   fi
 
-  OLD_FILES=$(list_skill_files "$OLD_SHA" "$skill_path")
-  NEW_FILES=$(list_skill_files "$NEW_SHA" "$skill_path")
+  # Abort the whole run (exit 3) if either listing can't be trusted — the workflow's
+  # diff step re-raises any non-0/1 code, so the job fails loudly instead of opening
+  # (or skipping) an issue based on incomplete data.
+  OLD_FILES=$(list_skill_files "$OLD_SHA" "$skill_path") || exit 3
+  NEW_FILES=$(list_skill_files "$NEW_SHA" "$skill_path") || exit 3
 
   ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$' || true)
 
