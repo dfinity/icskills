@@ -43,7 +43,7 @@ No external canister dependencies. Stable memory is a local canister feature.
    | Removing a field | **Yes** |
    | Renaming a field, or a non-widening type change | **Yes** |
 
-   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko-actors` to write the migration — note it uses the mops-managed migration chain (`migrations/` directory, stable fields declared type-only), so adapt the inline-initializer examples in this skill accordingly.
+   Removing a field without one is rejected at compile time with `[M0169] the stable variable <name> of the previous version cannot be implicitly discarded`, and at runtime with `RTS error: Memory-incompatible program upgrade`. Both abort the upgrade; neither loses data. Load `migrating-motoko-actors` to write the migration.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
