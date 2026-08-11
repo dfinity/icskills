@@ -1,6 +1,6 @@
 {
   "skill": "stable-memory",
-  "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly.",
+  "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly, and whether they correctly warn that changing a record type an existing persistent variable holds needs a migration (rejected at runtime as incompatible; catch it pre-deploy with mops check-stable).",
   "output_evals": [
     {
       "name": "Adversarial: adding a field to a persisted record needs a migration, and mops check catches it",
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "name": "Adversarial: M0219 on a plain actor \u2014 the compiler's own suggestion is the wrong fix",
+      "name": "Adversarial: M0219 on a plain actor — the compiler's own suggestion is the wrong fix",
       "prompt": "My Motoko canister won't compile. Inside `actor { ... }` I have `var users = Map.empty<Nat, User>()` and moc reports: type error [M0219], this declaration is currently implicitly transient, please declare it explicitly `transient`. I need users to survive canister upgrades. What is the fix? Just the fix, no full rewrite.",
       "expected_behaviors": [
         "Says to declare the actor as `persistent actor` (or equivalently to enable the --default-persistent-actors compiler flag)",
