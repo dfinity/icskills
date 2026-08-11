@@ -3,11 +3,12 @@
   "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly.",
   "output_evals": [
     {
-      "name": "Adversarial: adding a field to a persisted record needs a migration",
+      "name": "Adversarial: adding a field to a persisted record needs a migration, and mops check catches it",
       "prompt": "In a Motoko `persistent actor` I have `let reports = Map.empty<Nat, Report>()`, and I want to add an optional field `note : ?Text` to the `Report` record type. Will a plain `icp deploy --mode upgrade` succeed, or is something else required? Be concise.",
       "expected_behaviors": [
         "States a plain upgrade will be REJECTED / trap (RTS error: Memory-incompatible program upgrade)",
-        "Says an explicit migration expression is required (e.g. `(with migration = ...)`), even though the added field is optional",
+        "Says a migration is required because changing a record type an existing persistent variable holds is incompatible, even though the added field is optional",
+        "Recommends catching this before deploy with mops check stable-compatibility checking, rather than only discovering the runtime error on upgrade",
         "Does NOT claim that adding the field is automatically migration-free"
       ]
     },

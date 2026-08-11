@@ -34,27 +34,11 @@ No external canister dependencies. Stable memory is a local canister feature.
 
 4. **Confusing heap memory limits with stable memory limits (Rust)** -- Heap (Wasm linear) memory is limited to 4GB for wasm32 and 6GB for wasm64. Stable memory can grow up to hundreds of GB (the subnet storage limit). The real danger: if you use `pre_upgrade`/`post_upgrade` hooks to serialize heap data to stable memory and deserialize it back, you are limited by the heap memory size AND by the instruction limit for upgrade hooks. Large datasets will trap during upgrade, bricking the canister. The solution is to use stable structures (`StableBTreeMap`, `StableCell`, etc.) that read/write directly to stable memory, bypassing the heap entirely. Use `MemoryManager` to partition stable memory into virtual memories so multiple structures can coexist without overwriting each other.
 
-5. **Treating a rejected upgrade as data loss (Motoko)** -- Enhanced orthogonal persistence checks the new program against the existing state and either accepts the upgrade or rejects it *before* it takes effect. A rejected upgrade is not data loss: the canister keeps running the previous version with its state intact, so you fix the code and redeploy. What actually differs is which changes need a migration:
+5. **Treating a rejected upgrade as data loss (Motoko)** -- Enhanced orthogonal persistence checks the new program against the existing state and either accepts the upgrade or rejects it *before* it takes effect. A rejected upgrade is **not** data loss: the canister keeps running the previous version with its state intact, so you fix the code and redeploy.
 
-   | Change | Needs a migration? |
-   |---|---|
-   | Adding a **new** persistent variable (a new stable actor field) | No |
-   | Widening a `var` field, e.g. `Nat` → `Int` | No — the value is preserved |
-   | Adding, removing, or renaming a field of a **record type** a persistent variable uses | **Yes** — even an *optional* added field |
-   | Removing a persistent variable | **Yes** |
-   | A non-widening type change to a persistent variable | **Yes** |
+   Which schema changes need a migration — and the two migration styles (enhanced migration vs. the legacy `(with migration = ...)` expression) — are owned by `migrating-motoko-actors`; load it for the rules and syntax. The one thing to know here is the common surprise: **changing a record type that an existing persistent variable holds is an incompatible change and needs a migration**, even for an *optional* added field, and regardless of where the record lives (a top-level `var`, a `Map` value, etc.). Whether adding a *new* stable field itself needs a migration depends on the migration style, which is exactly why the rules live in that skill rather than as a table here. An incompatible upgrade is rejected at runtime with `RTS error: Memory-incompatible program upgrade` (the old state stays intact — it is not data loss).
 
-   **Common surprise:** adding a field to a persisted *record type* — a new `?Text` on a
-   record stored in a `Map`, or on any record a persistent variable holds — is **not**
-   migration-free, even when the field is optional. EOP rejects it at runtime with
-   `RTS error: Memory-incompatible program upgrade`. (This holds wherever the record
-   lives: top-level `var`, a `Map` value, etc. — it is the *record-type change* that
-   needs the migration, not the collection.) Only adding a brand-new top-level
-   persistent variable is migration-free. For anything in the "Yes" rows, supply a
-   migration expression — load `migrating-motoko` for the syntax. A field discarded
-   without one also shows compile-time `[M0169] the stable variable <name> of the
-   previous version cannot be implicitly discarded`. A rejected upgrade keeps the old
-   state intact — it is not data loss.
+   Don't discover this at deploy time. Enable stable-compatibility checking in `mops check` (load `mops-cli`): given the previous version's `.most` interface, the compiler tells you at check time whether a change is compatible or needs a migration, instead of surfacing the `RTS error` on the upgrade call.
 
 6. **Serializing large data in pre_upgrade (Rust)** -- `pre_upgrade` has a fixed instruction limit. If you serialize a large HashMap to stable memory in pre_upgrade, it will hit the limit and trap, bricking the canister. Use `StableBTreeMap` which writes directly to stable memory and needs no serialization step.
 
