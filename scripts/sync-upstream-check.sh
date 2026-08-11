@@ -59,6 +59,28 @@ esac
 
 REPO_SHORT="${REPO##*/}"
 
+# List files under a skill path at a commit, RECURSIVELY (paths relative to the skill path).
+# Uses the Git Trees API (?recursive=1); the Contents API is non-recursive and would miss
+# nested files such as writing-motoko/references/*.
+#   $1 = commit SHA, $2 = skill path
+list_skill_files() {
+  curl -sf "https://api.github.com/repos/${REPO}/git/trees/$1?recursive=1" \
+    -H "Authorization: Bearer $GH_TOKEN" | \
+  python3 -c "
+import sys, json
+prefix = sys.argv[1].rstrip('/') + '/'
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+if d.get('truncated'):
+    sys.stderr.write('WARNING: git tree truncated; files under %s may be missed\n' % sys.argv[1])
+for e in d.get('tree', []):
+    if e.get('type') == 'blob' and e['path'].startswith(prefix):
+        print(e['path'][len(prefix):])
+" "$2" || true
+}
+
 {
   echo "## Upstream diff: \`${REPO}\` \`${CURRENT_TAG}\` → \`${LATEST_TAG}\`"
   echo ""
@@ -87,17 +109,8 @@ while IFS= read -r skill_pair; do
     skill_path="${upstream_name}"
   fi
 
-  OLD_FILES=$(curl -sf \
-    "https://api.github.com/repos/${REPO}/contents/${skill_path}?ref=${OLD_SHA}" \
-    -H "Authorization: Bearer $GH_TOKEN" | \
-    python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-    2>/dev/null || echo "")
-
-  NEW_FILES=$(curl -sf \
-    "https://api.github.com/repos/${REPO}/contents/${skill_path}?ref=${NEW_SHA}" \
-    -H "Authorization: Bearer $GH_TOKEN" | \
-    python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-    2>/dev/null || echo "")
+  OLD_FILES=$(list_skill_files "$OLD_SHA" "$skill_path")
+  NEW_FILES=$(list_skill_files "$NEW_SHA" "$skill_path")
 
   ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$' || true)
 
