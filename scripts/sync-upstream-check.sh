@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Compute the upstream skill diff between two releases and write an issue body.
+# Compute the upstream skill diff between two commits and write an issue body.
 #
 # Usage:
-#   scripts/sync-upstream-check.sh <org/repo> <old-sha> <new-sha> <current-tag> <latest-tag> <output-file>
+#   scripts/sync-upstream-check.sh <org/repo> <old-sha> <new-sha> <current-label> <latest-label> <output-file>
+#
+# <current-label>/<latest-label> are display strings only (a release tag for
+# release-tracked repos, or a short commit SHA for commit-tracked repos like
+# caffeinelabs/skills). The actual diff is always between <old-sha> and <new-sha>.
 #
 # Exit codes:
 #   0 — no skill content changed (output file not meaningful)
@@ -31,11 +35,12 @@ fi
 # (SKILLS_BASE_PATH may be empty, in which case files live at <upstream-name>/).
 # Local files live at skills/<local-name>/ in this repo.
 case "$REPO" in
-  caffeinelabs/motoko)
-    SKILLS_BASE_PATH=".agents/skills"
-    SKILLS="writing-motoko:motoko
-migrating-motoko:migrating-motoko
-migrating-motoko-enhanced:migrating-motoko-enhanced"
+  caffeinelabs/skills)
+    # No releases/tags; tracked by commit. The three Motoko skills share one pinned commit.
+    SKILLS_BASE_PATH="skills"
+    SKILLS="writing-motoko:writing-motoko
+migrating-motoko-actors:migrating-motoko-actors
+troubleshooting-motoko-migrations:troubleshooting-motoko-migrations"
     ;;
   caffeinelabs/mops)
     SKILLS_BASE_PATH=".agents/skills"
