@@ -49,6 +49,8 @@ You do not deploy anything extra. The management canister is built into every su
 
 9. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
 
+10. **Attaching cycles on a cloud engine.** On a cloud engine (a CloudEngine subnet, e.g. an OpenCloud engine), outcalls are free and the canister holds 0 cycles — pitfall 2 inverts: do NOT attach cycles and do NOT use the cycle-attaching wrappers (`Call.httpRequest`); call `IC.http_request(request)` directly with no cycles, or the call fails (IC0504). Everything else in this skill (transform, `max_response_bytes`, idempotency) applies unchanged. Load the `cloud-engine-canisters` skill for the engine call rules.
+
 ## Implementation
 
 ### Motoko

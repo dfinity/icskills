@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys a built Internet Computer project to a user's cloud engine (an OpenCloud engine): verify the icp CLI, link the console identity with `icp identity link web` (origin defaults to https://opencloud.org; a delegation handoff covers sandboxes whose 127.0.0.1 callback the browser cannot reach), run `icp deploy` against the engine's subnet, tag canisters with `__META_*` env vars for a named console app with labelled canisters and icon, and bake version metadata (service:git:sha, service:version) into the wasm. Also covers a funded proxy canister for cross-subnet cycle-bearing calls (exchange-rate, threshold ECDSA/Schnorr, vetKD). Use when shipping to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when sign-in never completes from a sandboxed agent; when naming, adding an icon, or recording the deployed version/git commit of a console app. Do NOT use for a general mainnet deploy with no engine or subnet (use icp-cli) or for writing canister logic."
+description: "Deploys a built Internet Computer project to a user's cloud engine (an OpenCloud engine): verify the icp CLI, link the console identity with `icp identity link web` (origin defaults to https://opencloud.org; a delegation handoff covers sandboxes whose 127.0.0.1 callback the browser cannot reach), run `icp deploy` against the engine's subnet, tag canisters with `__META_*` env vars for a named console app with labelled canisters and icon, and bake version metadata (service:git:sha, service:version) into the wasm. Use when shipping to a cloud engine; on mention of OpenCloud, an engine subnet id, or linking the icp CLI to an engine console; when sign-in never completes from a sandboxed agent; when naming, adding an icon, or recording the deployed version/git commit of a console app. Do NOT use for a general mainnet deploy with no engine or subnet (use icp-cli) or for writing canister logic — engine call rules (no cycles, bounded-wait, the console proxy) live in cloud-engine-canisters."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0 and 1.0.2; the delegation handoff needs `icp identity delegation`, present in 1.0.x), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
@@ -297,75 +297,13 @@ icp deploy -e ic --subnet <subnet-id>
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
 
-## Cross-subnet calls via a proxy canister (only if the app needs them)
+## Code that runs on the engine
 
-A cloud engine runs on a **`CloudEngine` subnet**, which the IC protocol restricts: a canister on it **cannot** send a cross-subnet (XNet) message that carries **attached cycles** or that is a **guaranteed-response (unbounded-wait)** call. So an engine canister **cannot call these directly**, because they live on other subnets and require cycles:
-
-- the **exchange-rate canister** (XRC),
-- **threshold ECDSA / Schnorr** signing (`sign_with_ecdsa`, `sign_with_schnorr`) and their public-key methods,
-- **vetKD** (`vetkd_derive_key`, `vetkd_public_key`),
-- any other canister you must call **with cycles** across a subnet boundary.
-
-The workaround is a **proxy canister**: deployed on a normal Application subnet and funded with cycles. Your engine canister makes a cheap, cycle-less, bounded-wait call to the proxy, which re-issues it locally **with the cycles attached** and relays the raw reply back. Same-subnet or cycle-less calls do **not** need it.
-
-### Deploy and fund the proxy (from the console, not the CLI)
-
-1. Open the engine console → **Applications** (App Center) → **Proxy canisters**.
-2. **Deploy a proxy**, choose an initial balance (minimum $5), and optionally enable **automatic top-up** to recharge from the saved card when it runs low. You can top up manually or delete the proxy later from the same table.
-3. Copy the **proxy canister id** shown in the table — the app calls this id.
-
-The proxy authorizes callers whose principal falls in **the engine's canister-id range**, so every canister deployed to the engine may use it with no extra configuration.
-
-### Call through the proxy from your canister
-
-Instead of calling the target canister directly, call the proxy's `proxy` method with the target id, method name, candid-encoded argument bytes, and the cycles to attach. Its candid interface:
-
-```candid
-type ProxyArgs = record { canister_id : principal; method : text; args : blob; cycles : nat };
-type ProxySucceed = record { result : blob };
-type ProxyError = variant {
-  InsufficientCycles : record { available : nat; required : nat };
-  CallFailed : record { reason : text };
-  UnauthorizedUser;
-};
-type ProxyResult = variant { Ok : ProxySucceed; Err : ProxyError };
-service : {
-  proxy : (ProxyArgs) -> (ProxyResult);
-  get_allowed_ranges : () -> (vec record { start : principal; end : principal }) query;
-};
-```
-
-- `args` is the **candid-encoded argument of the _target_ method** (you encode it); `result` is the target's **raw reply bytes** (you decode it).
-- `cycles` is what the proxy attaches to the relayed call — size it to what the target charges (e.g. the XRC or signing fee). Do **not** attach cycles to the outer `proxy` call itself; the engine subnet forbids that and it is unnecessary.
-- Handle `ProxyError`: `InsufficientCycles` means the proxy's balance is too low (top it up in the console), `UnauthorizedUser` means the caller is outside the engine's range, `CallFailed` carries the downstream reject reason.
-
-Motoko sketch (Rust is analogous with `candid::encode_one` / `decode_one`):
-
-```motoko
-// `proxy` is an actor typed to the candid interface above.
-let arg = to_candid (request);                    // encode the TARGET method's argument
-let res = await proxy.proxy({
-  canister_id = xrcPrincipal;
-  method = "get_exchange_rate";
-  args = arg;
-  cycles = 1_000_000_000;                         // the XRC fee the proxy forwards
-});
-switch (res) {
-  case (#Ok { result }) { let ?reply = from_candid (result) else return; /* … */ };
-  case (#Err e) { /* InsufficientCycles | CallFailed | UnauthorizedUser */ };
-};
-```
-
-### Threshold keys through the proxy (read this before deriving keys)
-
-For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, `sign_with_schnorr`, `schnorr_public_key`, `vetkd_derive_key`, `vetkd_public_key`), the proxy **isolates the derivation per calling canister**: it prefixes the caller's (unforgeable) principal into the `derivation_path` (ECDSA/Schnorr) or `context` (vetKD), and forces `canister_id = None` on the `*_public_key` calls. Two consequences:
-
-- Each engine canister behind the proxy gets its **own** key namespace — one canister cannot read or sign with another's key.
-- The key/address obtained **through the proxy differs** from what a direct management-canister call would give (the injected prefix changes the derivation). Always fetch the public key and sign **through the same proxy**, consistently, so the address you derive matches the key you can sign for. Do not mix direct and proxied key calls for one identity.
+A cloud engine runs on a **`CloudEngine` subnet** with protocol-level call rules that differ from normal Application subnets: engine canisters hold 0 cycles and must **never attach cycles** to any call, **cross-subnet calls must be bounded-wait**, HTTPS outcalls are made directly and free, and cycle-bearing cross-subnet targets (exchange-rate XRC, threshold ECDSA/Schnorr, vetKD) go through the engine's funded **console proxy canister**. Before writing or debugging any canister code that will run on the engine, load the **`cloud-engine-canisters`** skill — it has the rules, the proxy interface, and the pitfalls.
 
 ## Common Pitfalls
 
-1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt — relaunch with a piped newline, `printf '\n' | icp identity link web …`, never `< /dev/null` (see Step 1). If the CLI runs in a remote sandbox, re-running can never complete — see Pitfall 14 and the delegation handoff in Step 1.0.
+1. **Sign-in not completed.** Running `icp identity link web …` but not finishing the Internet Identity sign-in in the browser leaves the CLI unlinked; later commands fail with authorization errors. Re-run and wait for the user to confirm the browser flow finished. If no browser ever opened, the command is stalled at the "Press Enter to log in" prompt — relaunch with a piped newline, `printf '\n' | icp identity link web …`, never `< /dev/null` (see Step 1). If the CLI runs in a remote sandbox, re-running can never complete — see Pitfall 10 and the delegation handoff in Step 1.0.
 2. **Wrong `--auth` origin.** Using any URL other than the console origin the user signs in with derives a different principal, and the engine rejects the deploy as not authorized. Relink with the exact console URL. If the deploy is rejected as unauthorized after linking against the default `https://opencloud.org`, ask the user for the exact URL they sign in with and relink.
 3. **Guessing the subnet id.** Never invent it — the deploy fails or targets the wrong subnet. It is on the engine's App Center / Applications page; ask the user.
 4. **Deploying with the anonymous identity.** The default local identity is anonymous and is not the engine admin. You must link and `icp identity default <your-identity-name>` first.
@@ -374,19 +312,16 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 7. **Wrong `__META_MAIN_CANISTER` value.** It is matched as the exact string `"true"`. A boolean, `"True"`, or marking more than one canister means no (or the wrong) "Open" button. Mark exactly one entry-point canister.
 8. **Inventing an icon variable.** The icon variable is `__META_ICON_PATH` (a path resolved against `__META_BASE_URL`). Do not guess `__META_ICON`, `__META_LOGO`, or `__META_ICON_LINK` — they are ignored, so the icon silently never appears.
 9. **Icon set on the wrong canister, or without a base URL.** The icon is read only from the **main** canister and needs **both** `__META_BASE_URL` (a valid absolute `https://` URL) and `__META_ICON_PATH`. Setting the icon path on a side canister, omitting the base URL, or giving a non-https / `data:` base means no icon renders. (The "Open" button still works — it falls back to the main canister's gateway URL — so a bad base URL costs the icon and the custom Open URL, not the button.)
-10. **Calling the XRC / threshold signing / vetKD directly from an engine canister.** These are cross-subnet, cycle-bearing calls, which a `CloudEngine`-subnet canister cannot make — the call is rejected. Route them through a funded proxy canister (see "Cross-subnet calls via a proxy canister"). Plain same-subnet or cycle-less calls do not need the proxy.
-11. **Attaching cycles to the outer `proxy` call.** The engine subnet forbids cycle-bearing cross-subnet messages — that is the whole reason for the proxy. Put the cycles inside `ProxyArgs.cycles` (the proxy attaches them locally); never `with_cycles` on the call to `proxy` itself.
-12. **Proxy out of cycles, or funded from the CLI.** A `ProxyError::InsufficientCycles` means the proxy's balance is spent — top it up (or enable auto top-up) on the console's Proxy canisters page. Deploying and funding the proxy is a console action, not an `icp` command.
-13. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
-14. **Assuming the browser and CLI share localhost.** `icp identity link web` returns the delegation to `127.0.0.1:<port>` on the CLI host. If the CLI runs in a remote sandbox while the user's browser is on a different machine, the sign-in never completes and later commands fail with authorization errors — no amount of re-running the link fixes it. See Step 1.0: use the delegation handoff (`icp identity delegation request` / `sign` / `use`), or run the link and deploy where the browser and CLI share a loopback.
-15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
-16. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
-17. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
-18. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
+10. **Assuming the browser and CLI share localhost.** `icp identity link web` returns the delegation to `127.0.0.1:<port>` on the CLI host. If the CLI runs in a remote sandbox while the user's browser is on a different machine, the sign-in never completes and later commands fail with authorization errors — no amount of re-running the link fixes it. See Step 1.0: use the delegation handoff (`icp identity delegation request` / `sign` / `use`), or run the link and deploy where the browser and CLI share a loopback.
+11. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
+12. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
+13. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
+14. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
 
 ## Related Skills
 
 If a referenced skill is not already available, install it the same way this one was installed — `npx skills add dfinity/icskills --skill <name>` — or read it at `https://skills.internetcomputer.org/skills/<name>/`.
 
+- **cloud-engine-canisters** — the call rules for code that runs on the engine: never attach cycles, bounded-wait cross-subnet calls, direct HTTPS outcalls, and the console proxy for cycle-bearing cross-subnet targets (XRC, threshold signing, vetKD). Load it before writing or debugging engine canister code.
 - **icp-cli** — general icp CLI usage (`icp.yaml`, recipes, environments, bindings, identities). Load it for anything beyond this cloud-engine deploy flow — in particular when the project does not build or package yet.
 - **internet-identity** — details of the Internet Identity sign-in that Step 1 triggers in the browser.

@@ -10,6 +10,16 @@
         "Gives the omitted-max_response_bytes cost as roughly 20.8-20.9 billion cycles",
         "Does NOT state the cost as ~21.5 billion or ~21.86 billion cycles"
       ]
+    },
+    {
+      "name": "Adversarial: cycles guidance inverts on a cloud engine",
+      "prompt": "My Motoko canister makes HTTPS outcalls with `Call.httpRequest` from mo:ic. I'm redeploying the same code to a cloud engine (CloudEngine subnet). Does the outcall code need to change, and if so how? Answer in a few sentences, no full code listing.",
+      "expected_behaviors": [
+        "Says yes: on a cloud engine the canister holds 0 cycles and outcalls are free, so cycles must NOT be attached",
+        "Replaces the `Call.httpRequest` wrapper (which attaches computed cycles) with a direct `IC.http_request(request)` call",
+        "Keeps the transform function and max_response_bytes guidance unchanged",
+        "Does NOT suggest topping up the engine canister with cycles"
+      ]
     }
   ],
   "trigger_evals": {
