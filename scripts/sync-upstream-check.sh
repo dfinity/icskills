@@ -59,34 +59,47 @@ esac
 
 REPO_SHORT="${REPO##*/}"
 
-# List files under a skill path at a commit, RECURSIVELY (paths relative to the skill path).
-# Uses the Git Trees API (?recursive=1); the Contents API is non-recursive and would miss
-# nested files such as writing-motoko/references/*.
+# Fetch a repo tree recursively ONCE per commit SHA, cached to a temp file and echoed as its
+# path. Git trees are immutable per SHA, so caching is safe and avoids re-fetching the same
+# (potentially large) tree once per skill. Fails (non-zero) on a fetch error.
+#   $1 = commit SHA  →  prints the cache file path on stdout
+fetch_tree() {
+  local sha="$1"
+  local cache="/tmp/upstream-tree-${sha}.json"
+  if [ ! -s "$cache" ]; then
+    curl -sf "https://api.github.com/repos/${REPO}/git/trees/${sha}?recursive=1" \
+      -H "Authorization: Bearer $GH_TOKEN" > "$cache" || {
+      echo "ERROR: could not fetch git tree for ${REPO}@${sha}" >&2
+      rm -f "$cache"
+      return 1
+    }
+  fi
+  printf '%s' "$cache"
+}
+
+# List files under a skill path at a commit, RECURSIVELY (paths relative to the skill path),
+# from the cached tree. The Contents API is non-recursive and would miss nested files such as
+# writing-motoko/references/*. Fails (non-zero) on a fetch error, unparseable response, or a
+# truncated tree — the caller aborts rather than treating an incomplete listing as "no changes".
 #   $1 = commit SHA, $2 = skill path
 list_skill_files() {
-  local tree
-  # Fail (non-zero) on a fetch error, unparseable response, or a truncated tree — the caller
-  # aborts rather than treating an incomplete/untrusted listing as "no changes" (a silent miss).
-  tree=$(curl -sf "https://api.github.com/repos/${REPO}/git/trees/$1?recursive=1" \
-    -H "Authorization: Bearer $GH_TOKEN") || {
-    echo "ERROR: could not fetch git tree for ${REPO}@$1" >&2
-    return 1
-  }
-  printf '%s' "$tree" | python3 -c "
+  local cache
+  cache=$(fetch_tree "$1") || return 1
+  python3 -c "
 import sys, json
-prefix = sys.argv[1].rstrip('/') + '/'
+prefix = sys.argv[2].rstrip('/') + '/'
 try:
-    d = json.load(sys.stdin)
+    d = json.load(open(sys.argv[1]))
 except Exception as err:
     sys.stderr.write('ERROR: could not parse git tree JSON: %s\n' % err)
     sys.exit(1)
 if d.get('truncated'):
-    sys.stderr.write('ERROR: git tree truncated; cannot reliably enumerate %s\n' % sys.argv[1])
+    sys.stderr.write('ERROR: git tree truncated; cannot reliably enumerate %s\n' % sys.argv[2])
     sys.exit(1)
 for e in d.get('tree', []):
     if e.get('type') == 'blob' and e['path'].startswith(prefix):
         print(e['path'][len(prefix):])
-" "$2"
+" "$cache" "$2"
 }
 
 {
