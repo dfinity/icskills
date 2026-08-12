@@ -1,7 +1,17 @@
 {
   "skill": "stable-memory",
-  "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly.",
+  "description": "Evaluation cases for the stable-memory skill. Tests whether agents write persistent actors in the dot-notation call style mo:core requires (moc >= 1.7.0) instead of passing Map's implicit compare argument explicitly, and whether they correctly warn that changing a record type an existing persistent variable holds needs a migration (rejected at runtime as incompatible; catch it pre-deploy with mops check-stable).",
   "output_evals": [
+    {
+      "name": "Adversarial: adding a field to a persisted record needs a migration, and mops check catches it",
+      "prompt": "In a Motoko `persistent actor` I have `let reports = Map.empty<Nat, Report>()`, and I want to add an optional field `note : ?Text` to the `Report` record type. Will a plain `icp deploy --mode upgrade` succeed, or is something else required? Be concise.",
+      "expected_behaviors": [
+        "States a plain upgrade will be REJECTED / trap (RTS error: Memory-incompatible program upgrade)",
+        "Says a migration is required because changing a record type an existing persistent variable holds is incompatible, even though the added field is optional",
+        "Recommends catching this before deploy with mops check stable-compatibility checking, rather than only discovering the runtime error on upgrade",
+        "Does NOT claim that adding the field is automatically migration-free"
+      ]
+    },
     {
       "name": "Adversarial: mo:core Map call style in a persistent actor",
       "prompt": "Write a Motoko persistent actor that keeps users in a Map keyed by Nat, with an addUser and a getUser method, using mo:core. Just the actor and its imports, no mops.toml and no explanation.",
@@ -13,7 +23,7 @@
       ]
     },
     {
-      "name": "Adversarial: M0219 on a plain actor \u2014 the compiler's own suggestion is the wrong fix",
+      "name": "Adversarial: M0219 on a plain actor — the compiler's own suggestion is the wrong fix",
       "prompt": "My Motoko canister won't compile. Inside `actor { ... }` I have `var users = Map.empty<Nat, User>()` and moc reports: type error [M0219], this declaration is currently implicitly transient, please declare it explicitly `transient`. I need users to survive canister upgrades. What is the fix? Just the fix, no full rewrite.",
       "expected_behaviors": [
         "Says to declare the actor as `persistent actor` (or equivalently to enable the --default-persistent-actors compiler flag)",
