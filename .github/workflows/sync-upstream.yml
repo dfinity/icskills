@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-motoko:
-    name: Check caffeinelabs/motoko
+  check-caffeinelabs-skills:
+    name: Check caffeinelabs/skills
     runs-on: ubuntu-latest
 
     steps:
@@ -20,64 +20,46 @@ jobs:
           client-id: ${{ vars.PR_AUTOMATION_BOT_PUBLIC_CLIENT_ID }}
           private-key: ${{ secrets.PR_AUTOMATION_BOT_PUBLIC_PRIVATE_KEY }}
 
-      - name: Get latest motoko release tag
+      - name: Get latest commit on caffeinelabs/skills default branch
         id: latest
         run: |
-          TAG=$(gh release view --repo caffeinelabs/motoko --json tagName -q .tagName)
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-
-      - name: Get current pinned tag and commit SHA
-        id: current
-        run: |
-          TAG=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Tag:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Tag:\*\* //')
-          SHA=$(awk '/^## motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
-
-      - name: Skip if already at latest
-        id: skip
-        run: |
-          if [ "${{ steps.latest.outputs.tag }}" = "${{ steps.current.outputs.tag }}" ]; then
-            echo "needed=false" >> $GITHUB_OUTPUT
-            echo "Already at latest: ${{ steps.current.outputs.tag }}"
-          else
-            echo "needed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Resolve commit SHA for new release
-        if: steps.skip.outputs.needed == 'true'
-        id: sha
-        run: |
-          TAG="${{ steps.latest.outputs.tag }}"
-          RESULT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/ref/tags/${TAG}" \
-            -H "Authorization: Bearer $GH_TOKEN" | \
-            python3 -c "import sys,json; d=json.load(sys.stdin); print(d['object']['sha'], d['object']['type'])")
-          OBJ_SHA=$(echo "$RESULT" | awk '{print $1}')
-          OBJ_TYPE=$(echo "$RESULT" | awk '{print $2}')
-          if [ "$OBJ_TYPE" = "tag" ]; then
-            COMMIT=$(curl -sf "https://api.github.com/repos/caffeinelabs/motoko/git/tags/${OBJ_SHA}" \
-              -H "Authorization: Bearer $GH_TOKEN" | \
-              python3 -c "import sys,json; print(json.load(sys.stdin)['object']['sha'])")
-          else
-            COMMIT="$OBJ_SHA"
-          fi
+          # caffeinelabs/skills has no releases/tags — track the default branch HEAD.
+          BR=$(gh api repos/caffeinelabs/skills --jq '.default_branch')
+          COMMIT=$(gh api "repos/caffeinelabs/skills/commits/${BR}" --jq '.sha')
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Get current pinned commit SHA
+        id: current
+        run: |
+          # All three Motoko skills tracked from this repo share one pinned commit; read writing-motoko's.
+          SHA=$(awk '/^## writing-motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+      - name: Skip if already at latest commit
+        id: skip
+        run: |
+          if [ "${{ steps.latest.outputs.commit }}" = "${{ steps.current.outputs.sha }}" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already at latest commit: ${{ steps.current.outputs.sha }}"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Compute upstream diff and build issue body
         if: steps.skip.outputs.needed == 'true'
         id: diff
         run: |
+          OLD="${{ steps.current.outputs.sha }}"
+          NEW="${{ steps.latest.outputs.commit }}"
           set +e
           bash scripts/sync-upstream-check.sh \
-            "caffeinelabs/motoko" \
-            "${{ steps.current.outputs.sha }}" \
-            "${{ steps.sha.outputs.commit }}" \
-            "${{ steps.current.outputs.tag }}" \
-            "${{ steps.latest.outputs.tag }}" \
+            "caffeinelabs/skills" \
+            "$OLD" \
+            "$NEW" \
+            "${OLD:0:7}" \
+            "${NEW:0:7}" \
             /tmp/issue-body.md
           rc=$?
           set -e
@@ -92,9 +74,11 @@ jobs:
       - name: Manage and open sync issue
         if: steps.skip.outputs.needed == 'true' && steps.diff.outputs.has_changes == 'true'
         run: |
+          OLD="${{ steps.current.outputs.sha }}"
+          NEW="${{ steps.latest.outputs.commit }}"
           bash scripts/sync-upstream-open-issue.sh \
-            "upstream-motoko" \
-            "upstream sync available — caffeinelabs/motoko ${{ steps.current.outputs.tag }} → ${{ steps.latest.outputs.tag }}" \
+            "upstream-skills" \
+            "upstream sync available — caffeinelabs/skills ${OLD:0:7} → ${NEW:0:7}" \
             /tmp/issue-body.md
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

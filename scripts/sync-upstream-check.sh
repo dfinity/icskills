@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Compute the upstream skill diff between two releases and write an issue body.
+# Compute the upstream skill diff between two commits and write an issue body.
 #
 # Usage:
-#   scripts/sync-upstream-check.sh <org/repo> <old-sha> <new-sha> <current-tag> <latest-tag> <output-file>
+#   scripts/sync-upstream-check.sh <org/repo> <old-sha> <new-sha> <current-label> <latest-label> <output-file>
+#
+# <current-label>/<latest-label> are display strings only (a release tag for
+# release-tracked repos, or a short commit SHA for commit-tracked repos like
+# caffeinelabs/skills). The actual diff is always between <old-sha> and <new-sha>.
 #
 # Exit codes:
 #   0 — no skill content changed (output file not meaningful)
@@ -31,11 +35,12 @@ fi
 # (SKILLS_BASE_PATH may be empty, in which case files live at <upstream-name>/).
 # Local files live at skills/<local-name>/ in this repo.
 case "$REPO" in
-  caffeinelabs/motoko)
-    SKILLS_BASE_PATH=".agents/skills"
-    SKILLS="writing-motoko:motoko
-migrating-motoko:migrating-motoko
-migrating-motoko-enhanced:migrating-motoko-enhanced"
+  caffeinelabs/skills)
+    # No releases/tags; tracked by commit. The three Motoko skills share one pinned commit.
+    SKILLS_BASE_PATH="skills"
+    SKILLS="writing-motoko:writing-motoko
+migrating-motoko-actors:migrating-motoko-actors
+troubleshooting-motoko-migrations:troubleshooting-motoko-migrations"
     ;;
   caffeinelabs/mops)
     SKILLS_BASE_PATH=".agents/skills"
@@ -53,6 +58,52 @@ migrating-motoko-enhanced:migrating-motoko-enhanced"
 esac
 
 REPO_SHORT="${REPO##*/}"
+
+# Fetch a repo tree recursively ONCE per commit SHA, cached to a temp file and echoed as its
+# path. Git trees are immutable per SHA, so caching is safe and avoids re-fetching the same
+# (potentially large) tree once per skill. Fails (non-zero) on a fetch error.
+#   $1 = commit SHA  →  prints the cache file path on stdout
+fetch_tree() {
+  local sha="$1"
+  # Repo-scoped, SHA-keyed cache under the runner temp dir (falls back to /tmp locally).
+  local cache="${RUNNER_TEMP:-/tmp}/upstream-tree-${REPO//\//-}-${sha}.json"
+  if [ ! -s "$cache" ]; then
+    local tmp="${cache}.tmp.$$"
+    curl -sf "https://api.github.com/repos/${REPO}/git/trees/${sha}?recursive=1" \
+      -H "Authorization: Bearer $GH_TOKEN" > "$tmp" || {
+      echo "ERROR: could not fetch git tree for ${REPO}@${sha}" >&2
+      rm -f "$tmp"
+      return 1
+    }
+    mv -f "$tmp" "$cache"  # atomic: the cache file is only ever complete or absent
+  fi
+  printf '%s' "$cache"
+}
+
+# List files under a skill path at a commit, RECURSIVELY (paths relative to the skill path),
+# from the cached tree. The Contents API is non-recursive and would miss nested files such as
+# writing-motoko/references/*. Fails (non-zero) on a fetch error, unparseable response, or a
+# truncated tree — the caller aborts rather than treating an incomplete listing as "no changes".
+#   $1 = commit SHA, $2 = skill path
+list_skill_files() {
+  local cache
+  cache=$(fetch_tree "$1") || return 1
+  python3 -c "
+import sys, json
+prefix = sys.argv[2].rstrip('/') + '/'
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception as err:
+    sys.stderr.write('ERROR: could not parse git tree JSON: %s\n' % err)
+    sys.exit(1)
+if d.get('truncated'):
+    sys.stderr.write('ERROR: git tree truncated; cannot reliably enumerate %s\n' % sys.argv[2])
+    sys.exit(1)
+for e in d.get('tree', []):
+    if e.get('type') == 'blob' and e['path'].startswith(prefix):
+        print(e['path'][len(prefix):])
+" "$cache" "$2"
+}
 
 {
   echo "## Upstream diff: \`${REPO}\` \`${CURRENT_TAG}\` → \`${LATEST_TAG}\`"
@@ -82,17 +133,11 @@ while IFS= read -r skill_pair; do
     skill_path="${upstream_name}"
   fi
 
-  OLD_FILES=$(curl -sf \
-    "https://api.github.com/repos/${REPO}/contents/${skill_path}?ref=${OLD_SHA}" \
-    -H "Authorization: Bearer $GH_TOKEN" | \
-    python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-    2>/dev/null || echo "")
-
-  NEW_FILES=$(curl -sf \
-    "https://api.github.com/repos/${REPO}/contents/${skill_path}?ref=${NEW_SHA}" \
-    -H "Authorization: Bearer $GH_TOKEN" | \
-    python3 -c "import sys,json; [print(f['name']) for f in json.load(sys.stdin) if f['type'] == 'file']" \
-    2>/dev/null || echo "")
+  # Abort the whole run (exit 3) if either listing can't be trusted — the workflow's
+  # diff step re-raises any non-0/1 code, so the job fails loudly instead of opening
+  # (or skipping) an issue based on incomplete data.
+  OLD_FILES=$(list_skill_files "$OLD_SHA" "$skill_path") || exit 3
+  NEW_FILES=$(list_skill_files "$NEW_SHA" "$skill_path") || exit 3
 
   ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$' || true)
 
