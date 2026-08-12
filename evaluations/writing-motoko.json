@@ -179,6 +179,24 @@
         "Does NOT include `.mo` extension: NOT `../types.mo`",
         "Does NOT use the path from main.mo's perspective: NOT `import Types \"types\"`"
       ]
+    },
+    {
+      "name": "Null coalesce for unwrap-or-trap",
+      "prompt": "In Motoko with mo:core, write a single statement binding `let user` by unwrapping `users.find(func(u : User) : Bool { u.id == caller })`, trapping with Runtime.trap(\"User not found\") when the option is null. Just the statement, no surrounding function.",
+      "expected_behaviors": [
+        "Uses the `??` null-coalescing operator (e.g. `... ?? Runtime.trap(\"User not found\")`)",
+        "Does NOT use a two-arm `switch` with `case (?u)` / `case (null)` merely to unwrap the option",
+        "Traps via `Runtime.trap` on the null case"
+      ]
+    },
+    {
+      "name": "break and continue in loops",
+      "prompt": "In Motoko (mo:core, moc 1.11+), write a `for` loop over `items.values()` that skips items whose `item.archived` is true and stops at the first item whose `id` equals `targetId`, setting `result := ?item` before stopping. Just the loop.",
+      "expected_behaviors": [
+        "Uses `continue` to skip archived items",
+        "Uses a plain `break` to exit the loop",
+        "Does NOT claim `break`/`continue` are unsupported, and does NOT require a labeled loop (`label ... break search`) or a helper function with early return"
+      ]
     }
   ],
   "trigger_evals": {
