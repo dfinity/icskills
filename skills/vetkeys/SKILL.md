@@ -10,7 +10,7 @@ metadata:
 
 # vetKeys (Verifiable Encrypted Threshold Keys)
 
-vetKeys bring on-chain privacy to the IC via the **vetKD** protocol: a canister requests a key derived by the subnet's threshold key-derivation infrastructure, receives it **encrypted** under a client-supplied transport key, and only the client decrypts it locally. No node, and no canister, ever sees the raw key. Derivation is **deterministic**: the same `(canister, context, input)` always yields the same key.
+vetKeys bring on-chain privacy to the IC via the **vetKD** protocol: a canister requests a key derived by the subnet's threshold key-derivation infrastructure, receives it **encrypted** under a client-supplied transport key, and only the client decrypts it locally. No subnet node ever sees the raw key, and in this standard client-delivery pattern neither does the canister — it relays the still-encrypted key to the client. (Some flows deliberately have the canister obtain key material itself: threshold BLS signing and in-canister timelock decryption — see those sections.) Derivation is **deterministic**: the same `(canister, context, input)` always yields the same key.
 
 Build on the maintained libraries — do not hand-roll the cryptography or the Candid interface:
 
@@ -39,7 +39,7 @@ Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (an
 
 ## Core concepts
 
-- **context** — a domain-separator blob that namespaces derived keys within a canister (e.g. `"my_app"`, or a per-purpose value like `"symmetric_key"`). It **must be identical** between the public-key call, the derive call, and any client-side verify/decrypt, or the keys will not match and decryption fails silently.
+- **context** — a domain-separator blob that namespaces derived keys within a canister (e.g. `"my_app"`, or a per-purpose value like `"symmetric_key"`). It **must be identical** between the public-key call, the derive call, and any client-side verify/decrypt, or the keys will not match — `decryptAndVerify` then throws (the Rust APIs return an error), so handle that failure rather than assuming success.
 - **input** — application data identifying *which* key to derive (e.g. a caller principal, a document ID). It is sent to the management canister **in plaintext** — use it as an identifier, never for secret data.
 - **transport key** — an ephemeral key pair the client generates per request. The public half is sent so the subnet can encrypt the derived key for delivery; only the holder of the secret half can decrypt. Generate a **fresh** one each request (`TransportSecretKey.random()`).
 - **encrypted vs unencrypted vetKeys** — IBE and symmetric derivation use the **encrypted** delivery flow (transport key → `decryptAndVerify` → `VetKey`). Threshold BLS uses the **unencrypted** vetKey directly; the library's `sign_with_bls` / `signWithBls` handles that — never feed an encrypted vetKey into BLS.
@@ -110,8 +110,9 @@ import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
 
 persistent actor {
-  // `transient` keeps the key name out of stable storage (re-read from the env each start).
-  transient let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
+  // Captured into keyId at first install and fixed for the life of the canister's derived keys;
+  // changing VETKD_KEY_NAME on a later upgrade has no effect (see the key-name warning above).
+  let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
   let keyId : ManagementCanister.VetKdKeyid = { curve = #bls12_381_g2; name = keyName };
 
   public shared func symmetricVerificationKey() : async Blob {
@@ -207,7 +208,7 @@ A vetKey can be turned into **verifiable randomness**: a Rust canister calls `ic
 
 5. **Fund the canister for derivations.** `vetkd_derive_key` costs cycles (`key_1` = 26_153_846_153, `test_key_1` = 10_000_000_000 — the same locally and on mainnet); `vetkd_public_key` is free. Let the helpers attach the amount — the Rust binding computes the exact cost, the Motoko helper attaches 26_153_846_153 and the excess is refunded — and keep the canister topped up.
 
-6. **`context` and `input` must match end to end.** A different `context` (or a different `input`) produces a different key; decryption then fails silently. Keep them byte-identical across public-key, derive, and client verify/decrypt.
+6. **`context` and `input` must match end to end.** A different `context` (or a different `input`) produces a different key; `decryptAndVerify` then throws (the Rust APIs return an error) rather than returning wrong plaintext — handle it, and keep `context`/`input` byte-identical across public-key, derive, and client verify/decrypt.
 
 7. **`input` is plaintext.** It is a key identifier sent to the management canister — use IDs (principal, document ID), never secret data.
 

@@ -93,6 +93,7 @@ In a `persistent actor` the `encryptedMapsState` binding is stable and persists 
 
 ```typescript
 import { HttpAgent, type Identity } from "@icp-sdk/core/agent";
+import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 import {
   DefaultEncryptedMapsClient,
   EncryptedMaps,
@@ -103,7 +104,8 @@ import {
 export async function createEncryptedMaps(
   identity: Identity, canisterId: string, host: string,
 ): Promise<EncryptedMaps> {
-  // rootKey comes from safeGetCanisterEnv() (@icp-sdk/core/agent/canister-env) — never fetchRootKey()
+  // rootKey from the canister env (never fetchRootKey() in shipped code); undefined on mainnet
+  const rootKey = safeGetCanisterEnv()?.IC_ROOT_KEY;
   const agent = await HttpAgent.create({ identity, host, rootKey });
   // Since 0.5.0 derived key material is cached in memory only by default.
   // Opt into cross-reload persistence, namespaced by principal; clearCache() on logout.

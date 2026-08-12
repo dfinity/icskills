@@ -60,7 +60,8 @@ import Nat "mo:core/Nat";
 import Runtime "mo:core/Runtime";
 
 persistent actor {
-  transient let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
+  // Captured at first install and fixed for the canister's derived keys (immutable after install).
+  let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
   let keyId : VetKeys.ManagementCanister.VetKdKeyid = { curve = #bls12_381_g2; name = keyName };
 
   // Length-prefixed domain separator + signer principal. The dot-notation calls
@@ -87,12 +88,13 @@ persistent actor {
 ```typescript
 import { verifyBlsSignature, DerivedPublicKey } from "@icp-sdk/vetkeys";
 
+// Encode once and use the SAME bytes for signing and verifying. The Motoko backend's
+// signMessage(Text) signs Text.encodeUtf8(message), so verify against those bytes.
+const messageBytes = new TextEncoder().encode("hello");
+const signature = new Uint8Array(await backend.signMessage("hello"));
 // First arg is a DerivedPublicKey object, not raw bytes — deserialize first.
-const publicKey = DerivedPublicKey.deserialize(new Uint8Array(await backend.get_my_verification_key()));
-// `message` must be the exact bytes the backend signed (the Motoko backend signs
-// Text.encodeUtf8(message)), so encode the same way: new TextEncoder().encode(message)
-const signature = new Uint8Array(await backend.sign_message(message));
-const ok = verifyBlsSignature(publicKey, message, signature); // true if valid
+const publicKey = DerivedPublicKey.deserialize(new Uint8Array(await backend.getMyVerificationKey()));
+const ok = verifyBlsSignature(publicKey, messageBytes, signature); // true if valid
 ```
 
 ## Pitfalls

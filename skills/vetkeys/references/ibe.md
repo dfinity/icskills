@@ -56,7 +56,8 @@ import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
 
 persistent actor {
-  transient let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
+  // Captured at first install and fixed for the canister's derived keys (immutable after install).
+  let keyName = Runtime.envVar<system>("VETKD_KEY_NAME") ?? "test_key_1";
   let keyId : ManagementCanister.VetKdKeyid = { curve = #bls12_381_g2; name = keyName };
 
   public shared func getIbePublicKey() : async Blob {

@@ -41,3 +41,13 @@
 /.well-known/skills/migrating-motoko-enhanced/SKILL.md    /.well-known/skills/migrating-motoko-actors/SKILL.md        301
 /.well-known/skills/migrating-motoko-enhanced/SKILL.zip   /.well-known/skills/migrating-motoko-actors/SKILL.zip       301
 /api/skills/migrating-motoko-enhanced.json                /api/skills/migrating-motoko-actors.json                    301
+
+# Permanent redirects for the vetkd → vetkeys skill rename.
+# (encrypted-maps is a new sibling skill, not a rename, so it needs no redirect.)
+# from                                          to                                          status
+/skills/vetkd                                   /skills/vetkeys/                            301
+/skills/vetkd/                                  /skills/vetkeys/                            301
+/skills/vetkd/SKILL.md                          /skills/vetkeys/SKILL.md                    301
+/.well-known/skills/vetkd/SKILL.md              /.well-known/skills/vetkeys/SKILL.md        301
+/.well-known/skills/vetkd/SKILL.zip             /.well-known/skills/vetkeys/SKILL.zip       301
+/api/skills/vetkd.json                          /api/skills/vetkeys.json                    301
