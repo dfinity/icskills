@@ -222,11 +222,15 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 
 Internet Identity derives a principal **per origin**. An app reached at both its canister address and a custom domain signs the same person in as two different users.
 
-The engine console names the app's **canister address** as the origin to derive from — it cannot be renamed or removed, so it survives adding, changing, or dropping a custom domain. It is the URL of the canister you marked `__META_MAIN_CANISTER: "true"` — the same value you set as `__META_BASE_URL`:
+The engine console names the app's **canister address** as the origin to derive from. It cannot be renamed or removed, so it survives adding, changing, or dropping a custom domain. It is the address of the canister that **serves your frontend** (the asset/static-site canister the browser loads the app from), built from that canister's id:
 
 ```
-https://<main-canister-id>.icp.net
+https://<frontend-canister-id>.icp.net
 ```
+
+That is usually the canister you marked `__META_MAIN_CANISTER: "true"`, but that flag is a console display setting, not a guarantee. If you marked a backend canister, still derive from the frontend canister. A backend canister cannot be a derivation origin: the browser is never on it, and it cannot serve the `.well-known/ii-alternative-origins` file Internet Identity fetches from that origin to validate the claim.
+
+Build the value from the canister id, **not** from `__META_BASE_URL`. The two match only while `__META_BASE_URL` still points at the canister address. Pointing it at a custom domain is normal and supported (see the icon notes above), and the two then differ. A custom domain is the one value that must never become the derivation origin.
 
 **Do this before the app has users, not after.** A domain that has already collected sign-ins cannot be repointed at a derivation origin without orphaning every account created under it. If the app might ever get a custom domain, set `derivationOrigin` on the first deploy even while the canister address is the only origin — it costs nothing then and cannot be applied retroactively without losing accounts.
 
@@ -378,7 +382,7 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 15. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
 16. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
 17. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
-18. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the main canister's address (`https://<main-canister-id>.icp.net` — the same URL as `__META_BASE_URL`), even when that is currently the app's only origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
+18. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
 
 ## Related Skills
 
