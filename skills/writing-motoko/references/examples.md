@@ -254,19 +254,15 @@ mixin (
 ) {
 
   public shared ({ caller }) func createPost(title : Text) : async Nat {
-    let maybeUser = users.find(func(u) { u.id == caller });
+    let author = users.find(func(u) { u.id == caller })
+      ?? Runtime.trap("User not registered");
 
-    switch (maybeUser) {
-      case (null) { Runtime.trap("User not registered") };
-      case (?author) {
-        let pid = state.nextPostId;
-        state.nextPostId += 1;
+    let pid = state.nextPostId;
+    state.nextPostId += 1;
 
-        let newPost = PostLib.new(pid, author, title);
-        posts.add(newPost);
-        pid;
-      };
-    };
+    let newPost = PostLib.new(pid, author, title);
+    posts.add(newPost);
+    pid;
   };
 
   public shared ({ caller }) func publishPost(postId : Nat) : async Bool {
