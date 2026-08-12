@@ -1,0 +1,54 @@
+{
+  "output_evals": [
+    {
+      "name": "scaffold_backend_with_macro",
+      "prompt": "Scaffold just the Rust `lib.rs` for an encrypted password-manager canister on the IC using the vetKeys EncryptedMaps library. No frontend, no Cargo.toml, no explanation.",
+      "expected_behaviors": [
+        "Uses the `ic_vetkeys::export_encrypted_maps_canister!(...)` macro with a domain-separator string and four `Memory` instances",
+        "Sets up a `MemoryManager` and a `memory(id)` helper",
+        "Calls `ic_cdk::export_candid!();`",
+        "Does NOT hand-write `vetkd_derive_key` calls or the individual EncryptedMaps endpoints"
+      ]
+    },
+    {
+      "name": "share_map_access_rights_variant",
+      "prompt": "Using @icp-sdk/vetkeys in the frontend, give me just the call that shares an encrypted map with another principal at read-write access. No setup, no explanation.",
+      "expected_behaviors": [
+        "Calls `setUserRights(owner, mapName, user, rights)` (map owner, map name, target principal, and rights)",
+        "Passes access rights as a Candid variant `{ ReadWrite: null }` — NOT the string \"ReadWrite\""
+      ]
+    },
+    {
+      "name": "scaffold_motoko_backend_mixin",
+      "prompt": "Scaffold just the Motoko main.mo for an encrypted password-manager backend canister using the vetKeys EncryptedMaps library. No frontend, no explanation.",
+      "expected_behaviors": [
+        "Uses `include EncryptedMapsCanister(encryptedMapsState)` from `mo:ic-vetkeys/encrypted_maps/Canister`",
+        "Builds state with `EncryptedMaps.newEncryptedMapsState<Types.AccessRights>({ curve = #bls12_381_g2; name = keyName }, \"<domain separator>\")`",
+        "Reads the key name from the `VETKD_KEY_NAME` env var via `Runtime.envVar`",
+        "Declares the canister as `persistent actor` (so state persists without relying on a compiler flag)",
+        "Does NOT hand-write the individual EncryptedMaps endpoints (vetKD key, value, or access-control methods)"
+      ]
+    },
+    {
+      "name": "derived_key_material_caching",
+      "prompt": "In my encrypted notes app the users re-derive their vetKey on every page reload. Should I just save the derived key material in localStorage to avoid that? Answer in a short paragraph.",
+      "expected_behaviors": [
+        "Warns against persisting raw key material in localStorage",
+        "Explains that since @icp-sdk/vetkeys 0.5.0 derived key material is cached in memory only by default (no longer persisted automatically)",
+        "Recommends `IndexedDbDerivedKeyMaterialCache` to persist across reloads and calling `clearCache()` on logout / identity change"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries testing whether the encrypted-maps skill activates. should_trigger should load it; should_not_trigger should route elsewhere (bidirectional routing with the sibling skill).",
+    "should_trigger": [
+      "Build a password manager on the IC with encrypted vaults users can share with each other",
+      "Store encrypted key-value data on-chain with per-user read/write access rights",
+      "Encrypt notes client-side and store them in my canister, shareable between users"
+    ],
+    "should_not_trigger": [
+      "I need my canister to produce threshold BLS signatures verifiable by anyone",
+      "Encrypt a message to a specific principal using identity-based encryption"
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "output_evals": [
+    {
+      "name": "ibe_encrypt_to_principal",
+      "prompt": "Using the IC vetKeys frontend library, write just the TypeScript function that encrypts a string message to a recipient's principal with identity-based encryption (IBE). Assume you already have the canister's derived IBE public key bytes. No canister/backend code, no explanation.",
+      "expected_behaviors": [
+        "Imports from `@icp-sdk/vetkeys` (NOT `@dfinity/vetkeys`)",
+        "Uses `IbeCiphertext.encrypt(...)` with `IbeIdentity.fromPrincipal(recipient)` and `IbeSeed.random()`",
+        "Deserializes the public key via `DerivedPublicKey.deserialize(...)` and serializes the ciphertext with `.serialize()`",
+        "Does not invent a static per-user key pair — encrypts to the identity using the derived public key"
+      ]
+    },
+    {
+      "name": "symmetric_key_material_api",
+      "prompt": "In a frontend, I already decrypted and verified a vetKey into a `VetKey` object. Give me just the snippet that derives an AES key from it and encrypts a string. No backend, no explanation.",
+      "expected_behaviors": [
+        "Calls `await vetKey.asDerivedKeyMaterial()` (async) — does NOT call a non-existent `toDerivedKeyMaterial()`",
+        "Encrypts via `await keyMaterial.encryptMessage(message, domainSep, associatedData)` (the correct 3-argument signature)",
+        "Does NOT use the raw decrypted vetKey bytes directly as an AES key"
+      ]
+    },
+    {
+      "name": "motoko_has_no_low_level_primitives",
+      "prompt": "I'm writing a Motoko canister that uses vetKeys for IBE. Show me the Motoko code that generates the transport key pair, calls vetkd_derive_key, and then decrypts the encrypted vetKey with the transport secret key inside the canister. Just the Motoko.",
+      "expected_behaviors": [
+        "States that the Motoko `ic-vetkeys` library has no low-level primitives (no transport keys, no IBE, no vetKey decryption)",
+        "Explains the canister returns the ENCRYPTED vetKey and the frontend (`@icp-sdk/vetkeys`) does transport-key generation, `decryptAndVerify`, and IBE decryption",
+        "Shows the backend deriving via `mo:ic-vetkeys/ManagementCanister` (`vetKdDeriveKey`) rather than hand-rolling `actor \"aaaaa-aa\"`",
+        "Does not fabricate a Motoko `TransportSecretKey` / `decryptAndVerify` API"
+      ]
+    },
+    {
+      "name": "cycle_cost_and_helpers",
+      "prompt": "How many cycles does a vetkd_derive_key call with test_key_1 cost on the local replica versus mainnet, and do I attach them manually? One short paragraph.",
+      "expected_behaviors": [
+        "States test_key_1 and key_1 cost the same locally and on mainnet — does NOT claim the local replica charges a different or higher amount",
+        "Gives the amounts: test_key_1 = 10_000_000_000, key_1 = 26_153_846_153, and notes vetkd_public_key is free",
+        "Notes the library helpers attach the cycles automatically (the Rust `ic-cdk-management-canister` binding or the Motoko `ManagementCanister`), so you just keep the canister funded"
+      ]
+    },
+    {
+      "name": "bls_verify_uses_derived_public_key",
+      "prompt": "Frontend: verify a threshold BLS signature returned by my canister using the vetKeys library. Just the verification snippet, no setup.",
+      "expected_behaviors": [
+        "Calls `verifyBlsSignature(...)` imported from `@icp-sdk/vetkeys`",
+        "Passes a DerivedPublicKey object as the first argument via `DerivedPublicKey.deserialize(publicKeyBytes)` — NOT raw public-key bytes",
+        "Passes the message and signature as the remaining arguments"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries testing whether the vetkeys skill activates. should_trigger should load it; should_not_trigger should route elsewhere (bidirectional routing with the sibling skill).",
+    "should_trigger": [
+      "Implement identity-based encryption on the IC so a user can send an encrypted message to another user's principal",
+      "Add threshold BLS signing to my canister so anyone can verify signatures it produces",
+      "Build a sealed-bid auction where bids stay encrypted until the deadline passes",
+      "Derive a per-user symmetric AES key on my canister so each user can encrypt their own data"
+    ],
+    "should_not_trigger": [
+      "Add an encrypted password manager with shareable vaults to my dapp",
+      "Set up Internet Identity login for my web app"
+    ]
+  }
+}
