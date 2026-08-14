@@ -17,7 +17,7 @@ Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/ski
 `name`, `description`, plus `title`, `category` under `metadata:`
 
 ### Recommended frontmatter fields
-`license`, `compatibility` (environment requirements — tools, system packages, network access; library deps go in `## Prerequisites`) — validator warns if missing but does not block
+`license`, `compatibility` (environment requirements — tools, system packages, network access; document library deps in the body, either as a `## Prerequisites` section or a versions table — whichever reads better for the skill) — validator warns if missing but does not block
 
 ### Body sections
 No rigid structure — organize content to best serve agents.
