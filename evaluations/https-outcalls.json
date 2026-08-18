@@ -12,11 +12,11 @@
       ]
     },
     {
-      "name": "Adversarial: cycles guidance inverts on a cloud engine",
-      "prompt": "My Motoko canister makes HTTPS outcalls with `Call.httpRequest` from mo:ic. I'm redeploying the same code to a cloud engine (CloudEngine subnet). Does the outcall code need to change, and if so how? Answer in a few sentences, no full code listing.",
+      "name": "Adversarial: outcall fee on a cloud engine",
+      "prompt": "My Motoko canister makes HTTPS outcalls with `Call.httpRequest` from mo:ic. I'm redeploying the same code to a cloud engine (CloudEngine subnet), where I read that outcalls are free and the canister holds 0 cycles. Do I need to change the outcall code? Answer in a few sentences, no full code listing.",
       "expected_behaviors": [
-        "Says yes: on a cloud engine the canister holds 0 cycles and outcalls are free, so cycles must NOT be attached",
-        "Replaces the `Call.httpRequest` wrapper (which attaches computed cycles) with a direct `IC.http_request(request)` call",
+        "Says the `Call.httpRequest` code needs no change — the wrapper asks `ic0.cost_http_request`, which is cost-schedule aware and returns 0 on an engine, so no cycles are attached",
+        "Warns against replacing it with a hardcoded fee from this skill's Application-subnet cost figures, which would attach a non-zero amount against a 0 balance",
         "Keeps the transform function and max_response_bytes guidance unchanged",
         "Does NOT suggest topping up the engine canister with cycles"
       ]
