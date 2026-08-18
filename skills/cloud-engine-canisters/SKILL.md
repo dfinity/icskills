@@ -27,7 +27,13 @@ That model comes with protocol-enforced call rules. Code that works on a normal 
 
 Engine canisters hold 0 cycles and there is nothing to pay for: under the engine's free cost schedule every fee an Application-subnet canister would pay (execution, message transmission, HTTPS outcalls, threshold signing, vetKD, storage) is charged as zero.
 
-- **Inter-canister calls you write: no cycles clause at all.** Write `await service.method(args)`, never `await (with cycles = 1_000_000) service.method(args)`. Do not "fix" a failing call by setting `cycles = 0` — drop the clause. (Direct cycle-bearing calls from an engine canister are reported failing with `IC0504`, a contract violation; note the code is *not* the out-of-cycles code, which is `IC0207`.)
+- **Inter-canister calls you write: no cycles clause at all.** Write `await service.method(args)`, never `await (with cycles = 1_000_000) service.method(args)`. Verified on a live engine canister (`Cycles: 0`): **any non-zero amount fails** with
+
+  ```
+  Canister <id> is out of cycles, error code Some("IC0504")
+  ```
+
+  while an explicit `(with cycles = 0)` **is accepted** — locally and cross-subnet alike. So a zero does stop the error, but it is pointless noise that breaks again the moment the amount becomes non-zero (a computed fee, a copied constant). Drop the clause instead of zeroing it. If you see `IC0504` from an engine canister, some call is attaching a non-zero amount.
 - **Rust:** do not call `.with_cycles(…)` on a `Call` builder.
 - **Management-canister calls keep their standard wrapper.** `Call.httpRequest` (Motoko, `mo:ic`) and `ic_cdk::management_canister::http_request` (Rust) ask the `ic0.cost_*` system API for the fee, and that API is cost-schedule aware: on an engine it returns **0**, so the wrapper attaches nothing and the same source stays portable to an Application subnet. What breaks is substituting a hardcoded or hand-computed fee — never take a number from the `https-outcalls` cost tables and attach it on an engine.
 - The one exception: cycles that a **cross-subnet target** charges are placed *inside* `ProxyArgs.cycles` of the console proxy (Rule 4), never attached to a call your canister sends.
@@ -39,6 +45,8 @@ The protocol rejects any cross-subnet (XNet) request **from or to** a CloudEngin
 ```
 Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets
 ```
+
+Verified live from an engine canister: a plain `await` to a canister on another subnet comes back as that exact `#system_fatal` reject, while the same call with `(with timeout = 30)` succeeds — and with `(with cycles = 0; timeout = 30)` it also succeeds, because the boundary check trips on a **non-zero** payment, not on the presence of the clause.
 
 Make every cross-subnet call bounded-wait and cycle-free:
 
@@ -153,7 +161,7 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 
 ## Common Pitfalls
 
-1. **Attaching a cycles amount to a call you write.** A `(with cycles = N)` clause on an inter-canister call from an engine canister is never needed and is reported failing with `IC0504`. Remove the clause entirely; do not keep it with `cycles = 0`. Nothing an engine canister does needs cycles: outcall, signing, and messaging fees are all zero under the engine's free cost schedule.
+1. **Attaching a cycles amount to a call you write.** A `(with cycles = N)` clause on an inter-canister call from an engine canister is never needed, and any non-zero `N` fails with `IC0504` / `is out of cycles` (verified live). Remove the clause entirely rather than setting `cycles = 0`: a zero is accepted, so it hides the mistake instead of fixing the habit. Nothing an engine canister does needs cycles: outcall, signing, and messaging fees are all zero under the engine's free cost schedule.
 2. **Unbounded-wait cross-subnet calls.** A plain `await service.method(args)` to a canister on another subnet is unbounded-wait and is rejected with "Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets". Use `(with timeout = N)` in Motoko or `Call::bounded_wait` in Rust — and handle `SYS_UNKNOWN`. Same-subnet (engine-local) calls are exempt.
 3. **Rewriting outcall code for an engine — or hardcoding its fee.** Outcalls need no engine-specific form: keep `Call.httpRequest` (Motoko) or `ic_cdk::management_canister::http_request` (Rust), because the `ic0.cost_*` API they consult is cost-schedule aware and returns 0 on an engine. The mistake is replacing that call with a hand-computed fee from an Application-subnet cost table, which attaches a non-zero amount against a 0 balance.
 4. **Routing HTTPS outcalls through the console proxy.** Two different failures, one cause. Consensus: `SYS_TRANSIENT: No consensus could be reached. Replicas had different responses`, because the transform must live on the calling canister — behind the proxy that is the proxy itself, and it exposes none. Cost: the proxy is on a normal Application subnet, so it pays the real outcall fee from the balance you funded, and a bulk workload drains it into `ProxyError::InsufficientCycles`. Issue outcalls directly from your canister instead: on an engine they are free and unmetered, so no budget exists to exhaust.
