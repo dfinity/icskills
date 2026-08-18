@@ -27,7 +27,7 @@ That model comes with protocol-enforced call rules. Code that works on a normal 
 
 Engine canisters hold 0 cycles and there is nothing to pay for: under the engine's free cost schedule every fee an Application-subnet canister would pay (execution, message transmission, HTTPS outcalls, threshold signing, vetKD, storage) is charged as zero.
 
-- **Inter-canister calls you write: no cycles clause at all.** Write `await service.method(args)`, never `await (with cycles = 1_000_000) service.method(args)`. Verified on a live engine canister (`Cycles: 0`): **any non-zero amount fails** with
+- **Inter-canister calls you write: no cycles clause at all.** There is nothing to buy — every fee on an engine is charged as zero — so a cycles attachment is never *needed*, independently of whether the protocol tolerates it. Write `await service.method(args)`, never `await (with cycles = 1_000_000) service.method(args)`. Verified on a live engine canister (`Cycles: 0`): **any non-zero amount fails** with
 
   ```
   Canister <id> is out of cycles, error code Some("IC0504")
