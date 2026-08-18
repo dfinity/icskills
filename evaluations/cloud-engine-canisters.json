@@ -8,7 +8,6 @@
       "expected_behaviors": [
         "Identifies that plain awaits are unbounded-wait (guaranteed-response) calls, which the protocol rejects for cross-subnet messages from a CloudEngine subnet",
         "Fixes it with a bounded-wait call using the Motoko parenthetical, e.g. `await (with timeout = N) service.method(args)`",
-        "Mentions the call must also carry no cycles (no `with cycles`)",
         "Does NOT propose routing this cycle-less call through the console proxy canister, and does NOT suggest topping up the canister with cycles"
       ]
     },
