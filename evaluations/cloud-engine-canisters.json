@@ -42,6 +42,16 @@
       ]
     },
     {
+      "name": "Adversarial: proxied outcalls drain the proxy budget",
+      "prompt": "I'm bulk-importing ~4000 records into my cloud engine canister, each needing one HTTPS outcall to a vendor REST API. I route the outcalls through the engine's console proxy canister, and now every call fails with the proxy's InsufficientCycles (required ~72B per call). Should I ask for the proxy's budget to be raised? Answer briefly.",
+      "expected_behaviors": [
+        "Says no — an HTTPS outcall does not belong on the proxy; issue it directly from the engine canister, where outcalls are free, so no budget exists to exhaust",
+        "Explains the proxy sits on a normal Application subnet and pays the real outcall fee from its funded balance, which a bulk workload drains",
+        "Does NOT recommend topping up the proxy or enabling auto top-up as the fix",
+        "Notes the direct outcalls need the transform on the calling canister, and/or `is_replicated = ?false`, to hold up at that volume"
+      ]
+    },
+    {
       "name": "Exchange rate canister through the console proxy",
       "prompt": "My canister on a cloud engine needs an ICP/USD rate from the exchange rate canister (XRC), which lives on another subnet and charges cycles. How do I call it? Outline the mechanism and where the cycles go — no full code listing.",
       "expected_behaviors": [
@@ -61,7 +71,8 @@
       "Can my cloud engine canister call sign_with_ecdsa?",
       "Call the exchange rate canister from my engine canister",
       "My outcall through the console proxy fails with 'No consensus could be reached. Replicas had different responses'",
-      "Writing Motoko code for an app that runs on a cloud engine — anything special about inter-canister calls?"
+      "Writing Motoko code for an app that runs on a cloud engine — anything special about inter-canister calls?",
+      "Every outcall through my engine's proxy canister fails with InsufficientCycles — can we raise the outcall budget?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
