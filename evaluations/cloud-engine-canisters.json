@@ -16,7 +16,7 @@
       "prompt": "My canister on a cloud engine fails with IC0504 on a call written as `await (with cycles = 1_000_000_000) service.method(args)`. I was told engines hold 0 cycles, so I plan to change it to `with cycles = 0`. Is that the right fix? Answer briefly.",
       "expected_behaviors": [
         "Says the fix is to remove the `(with cycles = …)` clause entirely rather than zeroing it — an engine call should not mention cycles at all",
-        "Explains engine canisters hold 0 cycles by design and everything on an engine is free, so no attachment is ever needed (only a non-zero amount fails)",
+        "Explains nothing on an engine needs paying for — every fee is charged as zero under the engine's free cost schedule — so a cycles attachment is never needed",
         "Gives the corrected call as a plain `await service.method(args)` (plus `with timeout` if the target is on another subnet)",
         "Does NOT suggest topping up or funding the engine canister with cycles"
       ]
