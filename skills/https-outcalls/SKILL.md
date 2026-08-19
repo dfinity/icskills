@@ -49,8 +49,6 @@ You do not deploy anything extra. The management canister is built into every su
 
 9. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
 
-10. **Hand-computing the fee on a cloud engine.** On a cloud engine (a CloudEngine subnet, e.g. an OpenCloud engine) outcalls are free and the canister holds 0 cycles, so the cost figures above do not apply there. The wrappers in pitfall 2 stay correct — `Call.httpRequest` and `ic_cdk::management_canister::http_request` consult `ic0.cost_http_request`, which is cost-schedule aware and returns 0 on an engine. What breaks is attaching a hardcoded amount taken from this skill's cost numbers: that is a non-zero attachment against a 0 balance. Everything else here (transform, `max_response_bytes`, idempotency) applies unchanged. Load the `cloud-engine-canisters` skill for the engine call rules.
-
 ## Implementation
 
 ### Motoko
