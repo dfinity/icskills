@@ -16,8 +16,8 @@ export type Skill = CollectionEntry<'skills'>;
 
 /** Preferred category order. Unknown categories sort last, alphabetically. */
 const CATEGORY_ORDER = [
-  'Architecture',
   'Auth',
+  'CloudEngine',
   'Core',
   'DeFi',
   'Frontend',
@@ -26,8 +26,6 @@ const CATEGORY_ORDER = [
   'Integration',
   'Motoko',
   'Security',
-  'Tokens',
-  'Wallet',
 ];
 
 export async function getAllSkills(): Promise<Skill[]> {

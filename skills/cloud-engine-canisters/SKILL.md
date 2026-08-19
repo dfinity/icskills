@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: "A cloud engine (CloudEngine subnet) to run on; Motoko examples need moc >= 0.14.2 (parenthetical `(with cycles = …)` / `(with timeout = …)` call attributes), Rust examples need ic-cdk >= 0.18 (bounded-wait `Call` API)"
 metadata:
   title: Cloud Engine Canisters
-  category: Infrastructure
+  category: CloudEngine
 ---
 
 # Cloud Engine Canisters

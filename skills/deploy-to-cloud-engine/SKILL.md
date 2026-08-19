@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 (commands verified against 0.3.0 and 1.0.2; the delegation handoff needs `icp identity delegation`, present in 1.0.x), a cloud engine console account, a browser for the Internet Identity sign-in"
 metadata:
   title: Deploy to Cloud Engine
-  category: Infrastructure
+  category: CloudEngine
 ---
 
 # Deploy to Cloud Engine

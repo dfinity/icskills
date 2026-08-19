@@ -36,7 +36,7 @@
         "category": {
           "type": "string",
           "minLength": 1,
-          "description": "Skill category for browsing/filtering. Use an existing category when possible: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security."
+          "description": "Skill category for browsing/filtering. Use an existing category when possible: Auth, CloudEngine, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security."
         }
       },
       "additionalProperties": false
