@@ -33,8 +33,8 @@ Engine canisters hold 0 cycles and there is nothing to pay for: under the engine
   Canister <id> is out of cycles, error code Some("IC0504")
   ```
 
-  while an explicit `(with cycles = 0)` **is accepted** — locally and cross-subnet alike. So a zero does stop the error, but it is pointless noise that breaks again the moment the amount becomes non-zero (a computed fee, a copied constant). Drop the clause instead of zeroing it. If you see `IC0504` from an engine canister, some call is attaching a non-zero amount.
-- **Rust:** do not call `.with_cycles(…)` on a `Call` builder.
+  Do not "fix" this by zeroing the amount. The platform team's guidance is simply **not to mention cycles at all** on an engine call, and a `cycles = 0` left in place is noise that breaks again the moment the amount becomes non-zero (a computed fee, a copied constant). If you see `IC0504` from an engine canister, some call is attaching a non-zero amount.
+- **Rust:** the same rule — never call `.with_cycles(…)` on a `Call` builder. (The platform team states the Motoko rule as "just don't mention cycles"; omitting `.with_cycles` is its Rust equivalent.)
 - **Management-canister calls keep their standard wrapper.** `Call.httpRequest` (Motoko, `mo:ic`) and `ic_cdk::management_canister::http_request` (Rust) ask the `ic0.cost_*` system API for the fee, and that API is cost-schedule aware: on an engine it returns **0**, so the wrapper attaches nothing and the same source stays portable to an Application subnet. What breaks is substituting a hardcoded or hand-computed fee — never take a number from the `https-outcalls` cost tables and attach it on an engine.
 - The one exception: cycles that a **cross-subnet target** charges are placed *inside* `ProxyArgs.cycles` of the console proxy (Rule 4), never attached to a call your canister sends.
 
@@ -46,7 +46,7 @@ The protocol rejects any cross-subnet (XNet) request **from or to** a CloudEngin
 Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets
 ```
 
-Verified live from an engine canister: a plain `await` to a canister on another subnet comes back as that exact `#system_fatal` reject, while the same call with `(with timeout = 30)` succeeds — and with `(with cycles = 0; timeout = 30)` it also succeeds, because the boundary check trips on a **non-zero** payment, not on the presence of the clause.
+Verified live from an engine canister: a plain `await` to a canister on another subnet comes back as that exact `#system_fatal` reject, while the same call with `(with timeout = 30)` and no cycles clause succeeds.
 
 Make every cross-subnet call bounded-wait and cycle-free:
 
@@ -82,8 +82,8 @@ let response = await Call.httpRequest(request);
 ```
 
 - **Keep the wrapper; never swap in a hardcoded fee** (Rule 1). `ic_cdk::management_canister::http_request` behaves the same way in Rust. This is how outcalls are written in engine apps running today.
-- Everything else about outcalls is unchanged — transform function on your own canister, `max_response_bytes`, idempotency, `is_replicated = ?false` for non-idempotent or rate-limited APIs. Load the `https-outcalls` skill for those.
-- **Never route HTTPS outcalls through the console proxy canister.** The IC requires the transform function to live on the canister that issues `http_request` — behind the proxy that is the proxy itself, and the proxy exposes no transform method (verified against its live interface). Untransformed responses differ across replicas for most real APIs, and the call fails with:
+- Everything else about outcalls is unchanged — transform function on your own canister, `max_response_bytes`, idempotency. Engines support the **full** outcall feature set per the platform team, replicated or not, so `is_replicated = ?false` is available for non-idempotent or rate-limited APIs — and for bulk workloads, where a replicated call multiplies every request by the replica count. Load the `https-outcalls` skill for those.
+- **Never route HTTPS outcalls through the console proxy canister.** The platform team is explicit: all HTTP outcalls should be direct, and the proxy exists only for mainnet services that require cycles. The IC requires the transform function to live on the canister that issues `http_request` — behind the proxy that is the proxy itself, and the proxy exposes no transform method (verified against its live interface, and the team confirms none is planned). Untransformed responses differ across replicas for most real APIs, and the call fails with:
 
   ```
   SYS_TRANSIENT: No consensus could be reached. Replicas had different responses
@@ -95,12 +95,13 @@ let response = await Call.httpRequest(request);
 
 ## Rule 4 — Cross-subnet cycle-bearing calls via the console proxy
 
-The IC protocol restriction from Rule 2 means an engine canister **cannot** send a cross-subnet message that carries cycles. So it cannot directly call targets that live on other subnets and charge cycles:
+Two separate facts land in the same place. The Rule 2 restriction means an engine canister **cannot** send a cross-subnet message carrying cycles — and, per the platform team, **cloud engines do not provide threshold signing at all**, so those facilities have to be reached on mainnet. Either way the call cannot be made directly:
 
-- the **exchange-rate canister** (XRC),
-- **threshold ECDSA / Schnorr** signing (`sign_with_ecdsa`, `sign_with_schnorr`) and their public-key methods,
-- **vetKD** (`vetkd_derive_key`, `vetkd_public_key`),
+- **threshold ECDSA / Schnorr** signing (`sign_with_ecdsa`, `sign_with_schnorr`) and their public-key methods, and **vetKD** (`vetkd_derive_key`, `vetkd_public_key`) — not available on an engine; use mainnet's via the proxy,
+- the **exchange-rate canister** (XRC) — a mainnet canister that charges cycles,
 - any other canister that must be called **with cycles** across a subnet boundary.
+
+This is the proxy's entire purpose: reaching mainnet services that require cycles. It is **not** for HTTPS outcalls (Rule 3).
 
 The workaround is the **console proxy canister**: deployed on a normal Application subnet and funded with cycles. Your engine canister makes a cheap, cycle-less, bounded-wait call to the proxy, which re-issues it locally **with the cycles attached** and relays the raw reply back. Same-subnet or cycle-less calls do **not** need it — and neither do HTTPS outcalls (Rule 3).
 
@@ -132,7 +133,7 @@ service : {
 ```
 
 - `args` is the **candid-encoded argument of the _target_ method** (you encode it); `result` is the target's **raw reply bytes** (you decode it).
-- `cycles` is what the proxy attaches to the relayed call — size it to what the target charges (e.g. the XRC or signing fee). The proxy receives `args` as an **opaque blob**, so it cannot size the amount for you: a constant you pass is exactly what it will require, and the `required` field of `InsufficientCycles` echoes your own number back rather than reporting a proxy-side reservation. Do **not** attach cycles to the outer `proxy` call itself; the engine subnet forbids that and it is unnecessary.
+- `cycles` is what the proxy attaches to the relayed call — size it to what the target charges (e.g. the XRC or signing fee). The platform team confirms the **caller** chooses how much the proxy attaches, and the proxy receives `args` as an **opaque blob**, so it cannot size the amount for you: a constant you pass is exactly what it will require, and the `required` field of `InsufficientCycles` echoes your own number back rather than reporting a proxy-side reservation. Do **not** attach cycles to the outer `proxy` call itself; the engine subnet forbids that and it is unnecessary.
 - Handle `ProxyError`: `InsufficientCycles` means the proxy's balance is too low (top it up in the console), `UnauthorizedUser` means the caller is outside the engine's range, `CallFailed` carries the downstream reject reason.
 
 Motoko sketch (Rust is analogous with `candid::encode_one` / `decode_one`):
@@ -164,9 +165,9 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 1. **Attaching a cycles amount to a call you write.** A `(with cycles = N)` clause on an inter-canister call from an engine canister is never needed, and any non-zero `N` fails with `IC0504` / `is out of cycles` (verified live). Remove the clause entirely rather than setting `cycles = 0`: a zero is accepted, so it hides the mistake instead of fixing the habit. Nothing an engine canister does needs cycles: outcall, signing, and messaging fees are all zero under the engine's free cost schedule.
 2. **Unbounded-wait cross-subnet calls.** A plain `await service.method(args)` to a canister on another subnet is unbounded-wait and is rejected with "Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets". Use `(with timeout = N)` in Motoko or `Call::bounded_wait` in Rust — and handle `SYS_UNKNOWN`. Same-subnet (engine-local) calls are exempt.
 3. **Rewriting outcall code for an engine — or hardcoding its fee.** Outcalls need no engine-specific form: keep `Call.httpRequest` (Motoko) or `ic_cdk::management_canister::http_request` (Rust), because the `ic0.cost_*` API they consult is cost-schedule aware and returns 0 on an engine. The mistake is replacing that call with a hand-computed fee from an Application-subnet cost table, which attaches a non-zero amount against a 0 balance.
-4. **Routing HTTPS outcalls through the console proxy.** Two different failures, one cause. Consensus: `SYS_TRANSIENT: No consensus could be reached. Replicas had different responses`, because the transform must live on the calling canister — behind the proxy that is the proxy itself, and it exposes none. Cost: the proxy is on a normal Application subnet, so it pays the real outcall fee from the balance you funded, and a bulk workload drains it into `ProxyError::InsufficientCycles`. Issue outcalls directly from your canister instead: on an engine they are free and unmetered, so no budget exists to exhaust.
+4. **Routing HTTPS outcalls through the console proxy.** Two different failures, one cause. Consensus: `SYS_TRANSIENT: No consensus could be reached. Replicas had different responses`, because the transform must live on the calling canister — behind the proxy that is the proxy itself, and it exposes none (nor is one planned). Cost: the proxy is on a normal Application subnet, so it pays the real outcall fee from the balance you funded, and a bulk workload drains it into `ProxyError::InsufficientCycles`. Issue outcalls directly from your canister instead: on an engine they are free and unmetered, so no budget exists to exhaust.
 5. **Topping up an engine canister with cycles.** Engine canisters hold 0 cycles by design; you cannot and need not send cycles to them. A "0 cycles" reading from an engine canister is normal, not an emergency — do not add top-up logic or cycles-balance alarms ported from Application-subnet apps.
-6. **Calling the XRC / threshold signing / vetKD directly from an engine canister.** These are cross-subnet, cycle-bearing calls, which a CloudEngine-subnet canister cannot make — the call is rejected. Route them through the funded console proxy (Rule 4). Plain same-subnet or cycle-less calls do not need the proxy.
+6. **Calling the XRC / threshold signing / vetKD directly from an engine canister.** Cloud engines do not provide threshold signing at all (platform team), so `sign_with_ecdsa` / `sign_with_schnorr` / vetKD must be reached on mainnet — and a cross-subnet, cycle-bearing call is exactly what a CloudEngine-subnet canister cannot send. Route them through the funded console proxy (Rule 4). Plain same-subnet or cycle-less calls do not need the proxy.
 7. **Attaching cycles to the outer `proxy` call.** The engine subnet forbids cycle-bearing cross-subnet messages — that is the whole reason for the proxy. Put the cycles inside `ProxyArgs.cycles` (the proxy attaches them locally); never `with cycles` on the call to `proxy` itself.
 8. **Topping up the proxy without first asking what it was relaying.** On `ProxyError::InsufficientCycles`, check the call type before treating it as a funding problem. **An HTTPS outcall does not belong on the proxy at all** (Rule 3, pitfall 4): move it onto your own canister, where it is free, rather than buying budget for work that should cost nothing — raising the balance only delays the same stall. A drained balance is a genuine funding problem only for the proxy's real jobs (XRC, threshold signing, vetKD): top it up, or enable auto top-up, on the console's Proxy canisters page. Deploying and funding the proxy is a console action, not an `icp` command.
 9. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.

@@ -1,6 +1,6 @@
 {
   "skill": "cloud-engine-canisters",
-  "description": "Evaluation cases for the cloud-engine-canisters skill. Tests whether agents apply the CloudEngine subnet call rules: never attach cycles (remove `(with cycles = …)` clauses and cycle-attaching wrappers), make cross-subnet calls bounded-wait, issue HTTPS outcalls directly and cycle-free instead of through the console proxy, and route cycle-bearing cross-subnet targets (XRC, threshold signing, vetKD) through the funded console proxy with cycles inside ProxyArgs.",
+  "description": "Evaluation cases for the cloud-engine-canisters skill. Tests whether agents apply the CloudEngine subnet call rules: never attach a cycles amount to calls they write (drop the `(with cycles = …)` clause rather than zeroing it) while keeping the schedule-aware management-canister wrappers, make cross-subnet calls bounded-wait, issue HTTPS outcalls directly from the engine canister instead of through the console proxy, and route cycle-requiring mainnet targets (XRC, threshold signing, vetKD) through the funded console proxy with the cycles inside ProxyArgs.",
   "output_evals": [
     {
       "name": "Adversarial: unbounded-wait rejection from an engine subnet",
@@ -15,7 +15,7 @@
       "name": "Adversarial: cycles attached on an engine, user proposes cycles = 0",
       "prompt": "My canister on a cloud engine fails with IC0504 on a call written as `await (with cycles = 1_000_000_000) service.method(args)`. I was told engines hold 0 cycles, so I plan to change it to `with cycles = 0`. Is that the right fix? Answer briefly.",
       "expected_behaviors": [
-        "Says a zero attachment IS accepted so it would stop the IC0504, but is pointless — the `(with cycles = …)` clause should be removed entirely rather than zeroed",
+        "Says the fix is to remove the `(with cycles = …)` clause entirely rather than zeroing it — an engine call should not mention cycles at all",
         "Explains engine canisters hold 0 cycles by design and everything on an engine is free, so no attachment is ever needed (only a non-zero amount fails)",
         "Gives the corrected call as a plain `await service.method(args)` (plus `with timeout` if the target is on another subnet)",
         "Does NOT suggest topping up or funding the engine canister with cycles"
