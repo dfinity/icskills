@@ -1,0 +1,85 @@
+{
+  "skill": "cloud-engine-canisters",
+  "description": "Evaluation cases for the cloud-engine-canisters skill. Tests whether agents apply the CloudEngine subnet call rules: never attach a cycles amount to calls they write (drop the `(with cycles = …)` clause rather than zeroing it) while keeping the schedule-aware management-canister wrappers, make cross-subnet calls bounded-wait, issue HTTPS outcalls directly from the engine canister instead of through the console proxy, and route cycle-requiring mainnet targets (XRC, threshold signing, vetKD) through the funded console proxy with the cycles inside ProxyArgs.",
+  "output_evals": [
+    {
+      "name": "Adversarial: unbounded-wait rejection from an engine subnet",
+      "prompt": "My Motoko canister runs on a cloud engine. Its call to a canister on another subnet is rejected with: \"Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets\". What is wrong and what is the one-line fix to the call expression? No full code listing.",
+      "expected_behaviors": [
+        "Identifies that plain awaits are unbounded-wait (guaranteed-response) calls, which the protocol rejects for cross-subnet messages from a CloudEngine subnet",
+        "Fixes it with a bounded-wait call using the Motoko parenthetical, e.g. `await (with timeout = N) service.method(args)`",
+        "Does NOT propose routing this cycle-less call through the console proxy canister, and does NOT suggest topping up the canister with cycles"
+      ]
+    },
+    {
+      "name": "Adversarial: cycles attached on an engine, user proposes cycles = 0",
+      "prompt": "My canister on a cloud engine fails with IC0504 on a call written as `await (with cycles = 1_000_000_000) service.method(args)`. I was told engines hold 0 cycles, so I plan to change it to `with cycles = 0`. Is that the right fix? Answer briefly.",
+      "expected_behaviors": [
+        "Says the fix is to remove the `(with cycles = …)` clause entirely rather than zeroing it — an engine call should not mention cycles at all",
+        "Explains nothing on an engine needs paying for — every fee is charged as zero under the engine's free cost schedule — so a cycles attachment is never needed",
+        "Gives the corrected call as a plain `await service.method(args)` (plus `with timeout` if the target is on another subnet)",
+        "Does NOT suggest topping up or funding the engine canister with cycles"
+      ]
+    },
+    {
+      "name": "HTTPS outcall from an engine canister",
+      "prompt": "My Motoko canister runs on a cloud engine and needs to call an external REST API over HTTPS. Does the outcall code need anything engine-specific, and what about the cycles? Just the call line and a one-sentence note on cycles.",
+      "expected_behaviors": [
+        "Says no engine-specific outcall form is needed — keeps the standard wrapper `Call.httpRequest(request)` from `mo:ic` (or notes `ic_cdk::management_canister::http_request` for Rust)",
+        "Explains the wrapper consults the cost API (`ic0.cost_http_request`), which is cost-schedule aware and returns 0 on an engine, so nothing is attached",
+        "Does NOT attach a hardcoded or hand-computed cycles amount, and does NOT tell the user to top up the engine canister",
+        "Does NOT route the outcall through the console proxy canister"
+      ]
+    },
+    {
+      "name": "Adversarial: proxied outcall fails consensus",
+      "prompt": "From my cloud-engine canister I route HTTPS outcalls through the console proxy canister, and they fail with `SYS_TRANSIENT: No consensus could be reached. Replicas had different responses`. Why does this happen and what should I do instead? Briefly.",
+      "expected_behaviors": [
+        "Explains the transform function must live on the canister that issues http_request — behind the proxy that is the proxy itself, which exposes no transform, so per-replica response differences are never normalized and consensus fails",
+        "Tells the user to issue the outcall directly from their own canister (free on an engine, no cycles attached), with the transform on that canister",
+        "Does NOT suggest retrying the proxied call or adding cycles"
+      ]
+    },
+    {
+      "name": "Adversarial: proxied outcalls drain the proxy budget",
+      "prompt": "I'm bulk-importing ~4000 records into my cloud engine canister, each needing one HTTPS outcall to a vendor REST API. I route the outcalls through the engine's console proxy canister, and now every call fails with the proxy's InsufficientCycles (required ~72B per call). Should I ask for the proxy's budget to be raised? Answer briefly.",
+      "expected_behaviors": [
+        "Says no — an HTTPS outcall does not belong on the proxy; issue it directly from the engine canister, where outcalls are free, so no budget exists to exhaust",
+        "Explains the proxy sits on a normal Application subnet and pays the real outcall fee from its funded balance, which a bulk workload drains",
+        "Does NOT recommend topping up the proxy or enabling auto top-up as the fix",
+        "Notes the direct outcalls need the transform on the calling canister, and/or `is_replicated = ?false`, to hold up at that volume"
+      ]
+    },
+    {
+      "name": "Exchange rate canister through the console proxy",
+      "prompt": "My canister on a cloud engine needs an ICP/USD rate from the exchange rate canister (XRC), which lives on another subnet and charges cycles. How do I call it? Outline the mechanism and where the cycles go — no full code listing.",
+      "expected_behaviors": [
+        "States the engine canister cannot call the XRC directly: cross-subnet calls from a CloudEngine subnet cannot carry cycles",
+        "Routes the call through the console proxy canister, deployed and funded from the engine console (Applications → Proxy canisters)",
+        "Puts the XRC fee inside `ProxyArgs.cycles` (the proxy attaches them locally), with candid-encoded target args passed as a blob",
+        "Does NOT attach cycles to the outer call to the proxy itself"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "My engine canister's call fails with 'Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets'",
+      "Getting IC0504 when my canister on a cloud engine makes a call with cycles attached",
+      "How do I make an HTTPS outcall from a canister running on my OpenCloud engine?",
+      "Can my cloud engine canister call sign_with_ecdsa?",
+      "Call the exchange rate canister from my engine canister",
+      "My outcall through the console proxy fails with 'No consensus could be reached. Replicas had different responses'",
+      "Writing Motoko code for an app that runs on a cloud engine — anything special about inter-canister calls?",
+      "Every outcall through my engine's proxy canister fails with InsufficientCycles — can we raise the outcall budget?"
+    ],
+    "should_not_trigger": [
+      "Deploy my app to my cloud engine",
+      "Link the icp CLI to my engine console",
+      "Give my deployed app an icon in the OpenCloud engine console",
+      "My canister on mainnet needs to fetch a price from a REST API",
+      "How many cycles does an HTTPS outcall cost on a 13-node subnet?",
+      "How do inter-canister calls work between my two canisters?"
+    ]
+  }
+}

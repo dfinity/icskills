@@ -47,7 +47,7 @@ When asked to improve, fix, update, add pitfalls to, or evaluate an existing ski
 ```yaml
 metadata:
   title: "Display Name"
-  category: CategoryName   # Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security
+  category: CategoryName   # Auth, CloudEngine, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security
 ```
 
 Then run `npm run validate` to catch any remaining schema errors.
@@ -225,7 +225,7 @@ This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com
 
 ## Categories
 
-Known categories: Auth, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security. New categories are allowed — the validator warns but does not block.
+Known categories: Auth, CloudEngine, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security. New categories are allowed — the validator warns but does not block.
 
 To add a new category, update three files: the description string in `skills/skill.schema.json`, the `KNOWN_CATEGORIES` array in `scripts/check-project.js`, and the `CATEGORY_ORDER` array in `src/lib/skills.ts`.
 

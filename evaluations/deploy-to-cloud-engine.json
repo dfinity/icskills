@@ -194,6 +194,8 @@
       "Record which git commit my deployed engine app is running so the console can show it"
     ],
     "should_not_trigger": [
+      "My engine canister's call fails with 'Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets'",
+      "How do I make an HTTPS outcall from a canister running on my cloud engine?",
       "Package my app as a .icp archive so others can install it on their engines from the marketplace",
       "Deploy my canister to mainnet",
       "Set up icp.yaml for my Rust canister",

@@ -10,6 +10,7 @@ import { listSkillDirs, readSkill, SKILLS_DIR } from "./lib/parse-skill.js";
 
 const KNOWN_CATEGORIES = [
   "Auth",
+  "CloudEngine",
   "Core",
   "DeFi",
   "Frontend",
