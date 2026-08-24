@@ -75,12 +75,13 @@
     },
     {
       "name": "Replica tests pocket-ic pin",
-      "prompt": "I'm adding replica-mode tests (actor files / `// @testmode replica`) to my mops project and `mops test --mode replica` prints a warning about the dfx replica. How do I configure mops so it doesn't fall back to the deprecated dfx replica? Just the config change.",
+      "prompt": "I'm adding replica-mode tests (actor files / `// @testmode replica`) to my mops project and `mops test` errors saying pocket-ic isn't pinned. Briefly explain why it errors (not just a warning) and give me the config fix.",
       "expected_behaviors": [
-        "Explains the warning is because `pocket-ic` is not pinned in `[toolchain]`, so mops falls back to the deprecated dfx replica",
-        "Pins `pocket-ic` in the `[toolchain]` section of mops.toml (e.g. `pocket-ic = \"12.0.0\"`) OR uses `mops toolchain use pocket-ic 12.0.0`",
-        "Pins a specific pocket-ic version rather than `latest` (latest may resolve to a version the vendored `@dfinity/pic` client doesn't support)",
-        "Notes the same pin also applies to `mops bench` and `mops watch`"
+        "Explains a cause for the hard error — e.g. that replica-mode tests need a specific pocket-ic version to run against and mops has no default/fallback to pick one",
+        "Pins `pocket-ic` in the `[toolchain]` section of mops.toml, or via `mops toolchain use pocket-ic <version>`, using a version `9.0.0` or higher (e.g. `15.0.0`) — not a version below `9.0.0`",
+        "Does NOT invent a `mops toolchain init` command (no such command exists in mops)",
+        "Does NOT claim this is only a warning that can be ignored",
+        "Does NOT suggest a dfx replica fallback still exists"
       ]
     },
     {
@@ -156,9 +157,40 @@
       "prompt": "How do I turn on wasm-opt optimization for my mops build? Just the mops.toml config and any toolchain command, no deploy steps.",
       "expected_behaviors": [
         "Adds an `[optimize]` section to mops.toml (default level `O3`)",
-        "Pins Binaryen via `mops toolchain use wasm-opt 131` (or `latest`), or notes mops auto-pins latest on first build",
+        "Pins Binaryen via `mops toolchain use wasm-opt 131` (or `latest`) — states this pin is required; mops no longer auto-pins it",
+        "Notes a `wasm-opt` failure now fails the build (no longer soft-fails to an unoptimized Wasm)",
         "Explains the optimization pass runs during `mops build`, and that `--no-optimize` skips it for a single run",
         "Does NOT tell the user to invoke the `wasm-opt` binary manually or configure optimization through dfx"
+      ]
+    },
+    {
+      "name": "mops install --locked (v3 lockfile flag)",
+      "prompt": "My old mops workflow used `mops install --lock check` in CI. What's the mops v3 equivalent, and does the CI env var still matter? Just answer directly.",
+      "expected_behaviors": [
+        "Explains the `--lock` flag was removed in v3, replaced by `--locked`",
+        "Uses `mops install --locked` (fails if the lock is missing or would change; never writes it)",
+        "Explains the `CI` env var no longer affects lockfile behavior in v3 (previously it defaulted to `--lock check`)",
+        "Does NOT suggest `mops install --lock check` or `mops install --lock update` (removed flags)"
+      ]
+    },
+    {
+      "name": "mops verify command",
+      "prompt": "I suspect a file inside `.mops/` was hand-edited after install. How do I check for that with mops? Just the command and what it checks.",
+      "expected_behaviors": [
+        "Uses `mops verify`",
+        "Explains it re-hashes `.mops/` against `mops.lock`, and `mops.lock` against the registry",
+        "Notes it covers GitHub dependencies as well as registry ones",
+        "Does NOT claim `mops install` alone catches this — `mops install` no longer re-hashes `.mops/` on every run in v3"
+      ]
+    },
+    {
+      "name": "mops build --check-deploy",
+      "prompt": "I want to catch canister installation failures (bad init args, module validation) before actually deploying. Is there a mops build flag for that? Just the flag and what it validates.",
+      "expected_behaviors": [
+        "Uses `mops build --check-deploy` (or `[build].check-deploy = true` in mops.toml)",
+        "Explains it installs each built Wasm on a fresh PocketIC canister to catch module validation, initialization, and installation failures",
+        "Notes it requires `[toolchain] pocket-ic` pinned (`9.0.0`+) or `MOPS_POCKET_IC_URL` set to a running server",
+        "Does NOT claim this replaces an actual deploy — it's a pre-deploy validation step"
       ]
     },
     {
