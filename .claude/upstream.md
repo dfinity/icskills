@@ -10,17 +10,20 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (this repo has no releases/tags). Watch for changes to the skill folder between the pinned commit and `main`; the per-skill `version:` frontmatter field is a secondary signal.
-- **Commit:** 6173cbcecefe3d9c6a8a0f657090d93b8483875b
-- **Upstream version:** 0.1.5 (skill frontmatter `version:`)
-- **Last synced:** 2026-08-12
+- **Commit:** 9274f9bb5d34db77c29304ea32ec5ad7bdc3d6fc
+- **Upstream version:** 0.1.8 (skill frontmatter `version:`)
+- **Last synced:** 2026-08-24
 - **Upstream files:**
   - `skills/writing-motoko/SKILL.md`
   - `skills/writing-motoko/api-reference.md → references/api-reference.md`
   - `skills/writing-motoko/examples.md → references/examples.md`
   - `skills/writing-motoko/references/control-flow.md → references/control-flow.md`
+  - `skills/writing-motoko/references/equality.md → references/equality.md`
+  - `skills/writing-motoko/references/project-setup.md → references/project-setup.md`
+  - `skills/writing-motoko/references/reserved-keywords.md → references/reserved-keywords.md`
   - `skills/writing-motoko/references/type-conversions.md → references/type-conversions.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.5.0`), and `metadata.title`/`category`.
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`/`mops` CLI major), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.5.0, mops >= 3.0.0`), and `metadata.title`/`category`.
   - **mops docs link → `mops-cli` skill:** the body's `https://docs.mops.one/` reference is rewritten to "Load the `mops-cli` skill …". Do not restore the external link on sync.
   - **`## Additional Resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
   - **Reference-file paths:** upstream keeps `api-reference.md`/`examples.md` at the skill root; icskills places all non-SKILL files under `references/`, so intra-skill links are rewritten to `references/…`.
@@ -31,9 +34,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 6173cbcecefe3d9c6a8a0f657090d93b8483875b
-- **Upstream version:** 0.2.2 (skill frontmatter `version:`)
-- **Last synced:** 2026-08-12
+- **Commit:** 9274f9bb5d34db77c29304ea32ec5ad7bdc3d6fc
+- **Upstream version:** 0.2.2 (skill frontmatter `version:`, unchanged — no content changes in this sync)
+- **Last synced:** 2026-08-24
 - **Upstream files:**
   - `skills/migrating-motoko-actors/SKILL.md`
   - `skills/migrating-motoko-actors/examples.md → references/examples.md`
@@ -48,9 +51,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 6173cbcecefe3d9c6a8a0f657090d93b8483875b
-- **Upstream version:** 0.1.3 (skill frontmatter `version:`)
-- **Last synced:** 2026-08-12
+- **Commit:** 9274f9bb5d34db77c29304ea32ec5ad7bdc3d6fc
+- **Upstream version:** 0.1.3 (skill frontmatter `version:`, unchanged — no content changes in this sync)
+- **Last synced:** 2026-08-24
 - **Upstream file:** `skills/troubleshooting-motoko-migrations/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
   - **Frontmatter (entire block):** same transform as the other two. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).

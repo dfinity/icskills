@@ -21,8 +21,8 @@
         "Imports Map from mo:core/Map, NOT HashMap from mo:base",
         "Uses `Map.Map<K, V>` from mo:core as the store (with `Map.empty<K, V>()` where an initializer is shown)",
         "Uses dot notation: `profiles.add(id, profile)`, `profiles.get(id)`, NOT `Map.add(profiles, Nat.compare, id, profile)`",
-        "Does NOT pass explicit compare function — comparator is inferred",
-        "Defines the profile type in the actor body OR an imported `types.mo` module — not between the imports and the actor (M0141)",
+        "Does NOT pass explicit compare function — comparator is inferred (requires importing `mo:core/Nat` for the `Nat` key type)",
+        "Defines the profile type in the actor body OR an imported `types.mo` module",
         "Does NOT use HashMap, TrieMap, or Buffer"
       ]
     },
@@ -185,6 +185,7 @@
       "prompt": "In Motoko with mo:core, write a single statement binding `let user` by unwrapping `users.find(func(u : User) : Bool { u.id == caller })`, trapping with Runtime.trap(\"User not found\") when the option is null. Just the statement, no surrounding function.",
       "expected_behaviors": [
         "Uses the `??` null-coalescing operator (e.g. `... ?? Runtime.trap(\"User not found\")`)",
+        "Rewrites the predicate to the unannotated shorthand `func u = u.id == caller` rather than keeping the prompt's annotated `func(u : User) : Bool { ... }` form",
         "Does NOT use a two-arm `switch` with `case (?u)` / `case (null)` merely to unwrap the option",
         "Traps via `Runtime.trap` on the null case"
       ]
@@ -196,6 +197,44 @@
         "Uses `continue` to skip archived items",
         "Uses a plain `break` to exit the loop",
         "Does NOT claim `break`/`continue` are unsupported, and does NOT require a labeled loop (`label ... break search`) or a helper function with early return"
+      ]
+    },
+    {
+      "name": "Inline func arguments: instantiate the call, not the lambda",
+      "prompt": "Write a Motoko expression using mo:core that maps a `[PhotoInternal]` array called `internalPhotos` to `[Photo]` (a different record type) via `.map(...)`, where the compiler reports M0098 (no best choice for type parameter) without help. Just the expression.",
+      "expected_behaviors": [
+        "Adds explicit type parameters on the **call** — `.map<PhotoInternal, Photo>(...)`",
+        "Does NOT annotate the lambda's parameter or return type instead (e.g. does NOT write `func(p : PhotoInternal) : Photo { ... }`)",
+        "Uses the unannotated shorthand lambda form (`func p = { ... }`) alongside the call-level type parameters"
+      ]
+    },
+    {
+      "name": "do ? option chaining for multiple lookups",
+      "prompt": "Write a Motoko function `nameAndCity(id : Text) : ?Text` that looks up a nickname via `nick.get(id) : ?Text` and a city via `cityOf(id) : ?Text` (assume `cityOf` exists), returning `nickname # \" of \" # city` only when BOTH succeed, or null if either is null. Just the function.",
+      "expected_behaviors": [
+        "Uses a `do ? { ... }` block with postfix `!` to unwrap both `nick.get(id)!` and `cityOf(id)!` before concatenating",
+        "Does NOT use nested `switch` statements to combine the two independent option lookups",
+        "Does NOT use `!` outside of a `do ? { ... }` block (that fails with M0064)"
+      ]
+    },
+    {
+      "name": "Prefer equal/compare over == on records with var fields",
+      "prompt": "I have `type Todo = { id : Nat; var completed : Bool }` in Motoko and I wrote `a == b` to compare two `Todo` values, but it fails to compile. Why, and how do I fix it? Just the explanation and fix, no deploy steps.",
+      "expected_behaviors": [
+        "Explains `==` is compiler-generated structural equality that only exists for **shared** types, and a `var` field takes the record out of shared (M0060)",
+        "Recommends writing an explicit `equal` function for the record instead of `==`",
+        "Does NOT suggest making the field immutable just to restore `==` as the fix (that changes the data model instead of addressing the actual ask)",
+        "Does NOT claim `==` should still work once given a type annotation"
+      ]
+    },
+    {
+      "name": "Enabling persistent actors without a managed platform",
+      "prompt": "I'm setting up a brand-new mops project myself (no hosting platform managing mops.toml for me) and my `actor { var count = 0 }` fails to compile with M0220. What moc flag fixes this project-wide, and where does it go? Just the config, no deploy steps.",
+      "expected_behaviors": [
+        "Adds `args = [\"--default-persistent-actors\"]` under `[moc]` in mops.toml",
+        "Explains this makes every actor persistent by default so `stable` is never needed",
+        "Mentions `persistent actor { ... }` as the per-actor alternative if the flag can't be set",
+        "Does NOT suggest adding a `stable` keyword to fix M0220"
       ]
     }
   ],

@@ -1,6 +1,6 @@
 # Control Flow
 
-Reference for Motoko control flow patterns. Load when you need `??`, switch, or loop syntax.
+Reference for Motoko control flow patterns. Load when you need `??`, `do ?`, switch, or loop syntax.
 
 ## Null Coalesce (`??`) — prefer this for `?T`
 
@@ -26,6 +26,30 @@ let rec = opt ?? ({ x = 0 });
 ```
 
 Do **not** use `??` when the `?v` arm transforms the value, runs side effects, or matches variants — keep `switch` for those.
+
+## Option Chaining (`do ? { ... }`)
+
+Inside a `do ? { ... }` block, postfix `!` unwraps an option. If any `!` hits `null`, the **whole block** short-circuits to `null`. Use it when several lookups must all succeed and you want one combined result — `??` only handles a single option at a time.
+
+```motoko
+// Every step must succeed; any null makes cityOf return null
+func cityOf(id : Text) : ?Text {
+  do ? { users.get(id)!.city! }
+};
+
+// `!` composes with ordinary computation inside the block
+func nameAndCity(id : Text) : ?Text {
+  do ? { nick.get(id)! # " of " # cityOf(id)! }
+};
+```
+
+`!` is only legal inside `do ? { ... }`. Using it anywhere else is an error:
+
+```text
+type error [M0064], misplaced '!' (no enclosing 'do ? { ... }' expression)
+```
+
+Reach for `do ?` over nested `switch`es when unwrapping several options; reach for `??` when there is one option and a default.
 
 ## Switch Statements
 

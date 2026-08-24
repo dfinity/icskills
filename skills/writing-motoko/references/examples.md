@@ -387,8 +387,8 @@ module {
 
   public func migration(_ : OldActor) : NewActor {
     {
-      users = List.empty<User>();
-      posts = List.empty<Post>();
+      users = List.empty();
+      posts = List.empty();
       state = { var nextPostId = 0 };
     };
   };
@@ -728,7 +728,7 @@ module {
 
   public func migration(_ : OldActor) : NewActor {
     {
-      todos = List.empty<TodoItem>();
+      todos = List.empty();
       var nextId = 0;
     };
   };
