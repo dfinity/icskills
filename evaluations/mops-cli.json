@@ -77,6 +77,7 @@
       "name": "Replica tests pocket-ic pin",
       "prompt": "I'm adding replica-mode tests (actor files / `// @testmode replica`) to my mops project and `mops test` errors saying pocket-ic isn't pinned. Briefly explain why it errors (not just a warning) and give me the config fix.",
       "expected_behaviors": [
+        "Explains a cause for the hard error — e.g. that replica-mode tests need a specific pocket-ic version to run against and mops has no default/fallback to pick one",
         "Pins `pocket-ic` in the `[toolchain]` section of mops.toml, or via `mops toolchain use pocket-ic <version>`, using a version `9.0.0` or higher (e.g. `15.0.0`) — not a version below `9.0.0`",
         "Does NOT invent a `mops toolchain init` command (no such command exists in mops)",
         "Does NOT claim this is only a warning that can be ignored",
