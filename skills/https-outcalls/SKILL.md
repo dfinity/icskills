@@ -433,8 +433,6 @@ fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
 }
 ```
 
-## Related Skills
+## Additional References
 
-If a referenced skill is not already available, install it the same way this one was installed — `npx skills add dfinity/icskills --skill <name>` — or read it at `https://skills.internetcomputer.org/skills/<name>/`.
-
-- **cloud-engine-canisters** — call rules for canisters running on a cloud engine, including why outcall cost drops to 0 there and why outcalls must never be routed through the engine's console proxy.
+- Load `cloud-engine-canisters` for canisters running on a cloud engine, including why outcall cost drops to 0 there and why outcalls must never be routed through the engine's console proxy.
