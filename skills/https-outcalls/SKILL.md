@@ -33,7 +33,7 @@ You do not deploy anything extra. The management canister is built into every su
 
 1. **Forgetting the transform function.** Without a transform, the raw HTTP response often differs between replicas (different headers, different ordering in JSON fields, timestamps). Consensus fails and the call is rejected. ALWAYS provide a transform function.
 
-2. **Not attaching cycles to the call.** HTTPS outcalls are not free. The calling canister must attach cycles to cover the cost. If you attach zero cycles, the call fails immediately. Both Motoko and Rust have wrappers that compute and attach the required cycles automatically: in Motoko, use `await Call.httpRequest(args)` from the `ic` mops package (`import Call "mo:ic/Call"`); in Rust, use `ic_cdk::management_canister::http_request` (available since ic-cdk 0.18). Under the hood, both use the `ic0.cost_http_request` system API to calculate the exact cost from `request_size` and `max_response_bytes`.
+2. **Not attaching cycles to the call.** On a normal Application subnet, HTTPS outcalls are not free — the calling canister must attach cycles to cover the cost, and attaching zero fails the call. Both Motoko and Rust have wrappers that compute and attach the required cycles automatically: in Motoko, use `await Call.httpRequest(args)` from the `ic` mops package (`import Call "mo:ic/Call"`); in Rust, use `ic_cdk::management_canister::http_request` (available since ic-cdk 0.18). Under the hood, both use the `ic0.cost_http_request` system API to calculate the exact cost from `request_size` and `max_response_bytes` — the API is cost-schedule aware, so the same wrapper attaches the correct amount on any subnet type. On a **cloud engine** (`CloudEngine` subnet), that amount is always 0 by design; do not "fix" a working outcall by attaching a hardcoded non-zero fee there — see the `cloud-engine-canisters` skill.
 
 3. **Using HTTP instead of HTTPS.** The IC only supports HTTPS outcalls. Plain HTTP URLs are rejected. The target server must have a valid TLS certificate.
 
@@ -336,6 +336,8 @@ per-request-byte term.
 
 Unused cycles are refunded to the canister, so it is safe to over-budget.
 
+This formula applies on a normal **Application subnet**. It does not apply on a **cloud engine** (`CloudEngine` subnet): there, `ic0.cost_http_request` returns 0 regardless of `request_size` or `max_response_bytes`, because engines run under a free cost schedule. Load the `cloud-engine-canisters` skill for the engine's call rules before writing or debugging outcall code that will run there.
+
 ## Deploy & Test
 
 ### Local Deployment
@@ -430,3 +432,7 @@ fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
     }
 }
 ```
+
+## Additional References
+
+- Load `cloud-engine-canisters` for canisters running on a cloud engine, including why outcall cost drops to 0 there and why outcalls must never be routed through the engine's console proxy.

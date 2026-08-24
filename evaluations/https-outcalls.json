@@ -1,6 +1,6 @@
 {
   "skill": "https-outcalls",
-  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21) and the correct cycle cost for omitting max_response_bytes on a 13-node subnet.",
+  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21), the correct cycle cost for omitting max_response_bytes on a 13-node subnet, and that the Application-subnet cost formula does not apply on a cloud engine.",
   "output_evals": [
     {
       "name": "2MB limit is 2,000,000 bytes and the default-size cost",
@@ -9,6 +9,15 @@
         "States the maximum as 2,000,000 bytes (decimal), NOT 2_097_152 / 2^21 / 2 MiB",
         "Gives the omitted-max_response_bytes cost as roughly 20.8-20.9 billion cycles",
         "Does NOT state the cost as ~21.5 billion or ~21.86 billion cycles"
+      ]
+    },
+    {
+      "name": "Adversarial: outcall cycle cost on a cloud engine",
+      "prompt": "My canister runs on a cloud engine (a CloudEngine subnet) and makes an HTTPS outcall with the standard Call.httpRequest wrapper. Roughly how many cycles should I budget for this outcall, and do I need to attach any? Answer briefly.",
+      "expected_behaviors": [
+        "States the cost is 0 on a cloud engine, not the ~20.8 billion Application-subnet figure",
+        "Says no cycles need to be attached and the standard wrapper already handles this correctly",
+        "Does NOT instruct topping up the canister with cycles or attaching a hardcoded non-zero fee"
       ]
     }
   ],

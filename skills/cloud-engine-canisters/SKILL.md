@@ -172,10 +172,8 @@ For the management-canister key methods (`sign_with_ecdsa`, `ecdsa_public_key`, 
 8. **Topping up the proxy without first asking what it was relaying.** On `ProxyError::InsufficientCycles`, check the call type before treating it as a funding problem. **An HTTPS outcall does not belong on the proxy at all** (Rule 3, pitfall 4): move it onto your own canister, where it is free, rather than buying budget for work that should cost nothing — raising the balance only delays the same stall. A drained balance is a genuine funding problem only for the proxy's real jobs (XRC, threshold signing, vetKD): top it up, or enable auto top-up, on the console's Proxy canisters page. Deploying and funding the proxy is a console action, not an `icp` command.
 9. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
 
-## Related Skills
+## Additional References
 
-If a referenced skill is not already available, install it the same way this one was installed — `npx skills add dfinity/icskills --skill <name>` — or read it at `https://skills.internetcomputer.org/skills/<name>/`.
-
-- **deploy-to-cloud-engine** — getting the app onto the engine: CLI identity linking, subnet-targeted deploy, console app metadata.
-- **https-outcalls** — everything about outcalls that is not engine-specific: transform functions, `max_response_bytes`, idempotency, debugging consensus failures.
-- **multi-canister** — inter-canister call design, bounded vs unbounded wait semantics, and `SYS_UNKNOWN` handling.
+- Load `deploy-to-cloud-engine` for getting the app onto the engine: CLI identity linking, subnet-targeted deploy, console app metadata.
+- Load `https-outcalls` for everything about outcalls that is not engine-specific: transform functions, `max_response_bytes`, idempotency, debugging consensus failures.
+- Load `multi-canister` for inter-canister call design, bounded vs unbounded wait semantics, and `SYS_UNKNOWN` handling.

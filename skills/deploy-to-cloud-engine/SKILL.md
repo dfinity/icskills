@@ -318,10 +318,8 @@ A cloud engine runs on a **`CloudEngine` subnet** with protocol-level call rules
 13. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
 14. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. See the `internet-identity` skill for the `.well-known/ii-alternative-origins` half.
 
-## Related Skills
+## Additional References
 
-If a referenced skill is not already available, install it the same way this one was installed — `npx skills add dfinity/icskills --skill <name>` — or read it at `https://skills.internetcomputer.org/skills/<name>/`.
-
-- **cloud-engine-canisters** — the call rules for code that runs on the engine: never attach cycles, bounded-wait cross-subnet calls, direct HTTPS outcalls, and the console proxy for cycle-bearing cross-subnet targets (XRC, threshold signing, vetKD). Load it before writing or debugging engine canister code.
-- **icp-cli** — general icp CLI usage (`icp.yaml`, recipes, environments, bindings, identities). Load it for anything beyond this cloud-engine deploy flow — in particular when the project does not build or package yet.
-- **internet-identity** — details of the Internet Identity sign-in that Step 1 triggers in the browser.
+- Load `cloud-engine-canisters` for the call rules for code that runs on the engine: never attach cycles, bounded-wait cross-subnet calls, direct HTTPS outcalls, and the console proxy for cycle-bearing cross-subnet targets (XRC, threshold signing, vetKD). Load it before writing or debugging engine canister code.
+- Load `icp-cli` for general icp CLI usage (`icp.yaml`, recipes, environments, bindings, identities). Load it for anything beyond this cloud-engine deploy flow — in particular when the project does not build or package yet.
+- Load `internet-identity` for details of the Internet Identity sign-in that Step 1 triggers in the browser.
