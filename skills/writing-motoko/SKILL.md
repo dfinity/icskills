@@ -2,7 +2,7 @@
 name: writing-motoko
 description: "Motoko language pitfalls, modern syntax, and architecture patterns for the Internet Computer. Covers persistent actors, stable types, mo:core standard library, dot notation, mixins, and common compilation errors. Use when writing Motoko canister code, fixing Motoko compiler errors, or generating Motoko actors. Do NOT use for deployment, icp.yaml, or CLI commands."
 license: Apache-2.0
-compatibility: "moc >= 1.11.2, core >= 2.5.0"
+compatibility: "moc >= 1.11.2, core >= 2.5.0, mops >= 3.0.0"
 metadata:
   title: Writing Motoko
   category: Motoko
@@ -25,7 +25,8 @@ Motoko is an under-represented language for the Internet Computer Protocol, so y
 - Manual field-by-field record copying for immutable records -- Use record spread (`{ self with ... }`). For records with `var` fields, do not use record spread; mutate the `var` field directly or rebuild the record explicitly.
 - Single-file monolithic actors -- Use the multi-file architecture: types.mo, lib/, mixins/, main.mo
 - Stable state in a `mixin` block -- a bare `let`/`var` is silently stable and traps at runtime (`IC0503`). Pass state in as a parameter and keep constants in a module
-- Any Motoko reserved keyword as a declared identifier -- Before writing, check parameter, variable, function, type, field, and label names against Motoko's reserved words. `query` and `label` are reserved and must never be identifiers. Rename a colliding domain term instead of relying on its position or inferred meaning.
+- Any Motoko reserved keyword as a declared identifier -- Before writing, check parameter, variable, function, type, field, and label names against the full list in [references/reserved-keywords.md](references/reserved-keywords.md). `query` and `label` are reserved and must never be identifiers. Rename a colliding domain term instead of relying on its position or inferred meaning.
+- Type annotations on an inline `func` passed as a **call argument** -- write `xs.filter(func x = x > 1)`, not `xs.filter(func(x : Nat) : Bool { x > 1 })`. The call supplies the types. If a generic cannot be inferred, instantiate the call (`map<In, Out>`), never the lambda. This applies only in argument position — named declarations still carry full signatures. **One exception:** keep `: async ()` on an async callback (`func() : async () { ... }`) — it is what makes the body async, and removing it fails with M0096
 
 **ALWAYS use:**
 
@@ -47,21 +48,37 @@ All configuration is in `mops.toml`. Load the `mops-cli` skill for `mops.toml` c
 
 ### Dependency management
 
-- Never hand-edit `mops.toml` or `mops.lock`; use the `mops` CLI so dependency metadata and the lockfile stay atomic.
+- Never hand-edit dependency entries in `mops.toml`, and never touch `mops.lock`; use the `mops` CLI so dependency metadata and the lockfile stay atomic. (`[toolchain]` has a CLI too: `mops toolchain use <tool> [version]`.)
+- Leave `[moc] args` alone. Compiler flags are a one-time project-setup concern, and many platforms own `mops.toml` and set them for you — do not inspect or change them while writing code. If you are setting up a project yourself, see [references/project-setup.md](references/project-setup.md).
 - `mops add <pkg>` installs and exact-pins a published package. Use `@x.y.z` for a specific version, `<url>[#ref]` for GitHub, `./path` for a local package, and `--dev` for development dependencies.
 - `mops add` accepts exactly one package name. To install several packages, chain one-package commands with `&&`; never run multiple `mops add` invocations in parallel — they race on `mops.toml` and `mops.lock`.
 - `mops update [pkg]` updates a package and rewrites its exact pin.
 - `mops sync` reconciles imports after bulk `.mo` changes by adding missing dependencies and removing unused ones.
 - `mops.lock` is rewritten only by `mops add`, `mops update`, `mops sync`, `mops install`, and related supported mops commands.
-- On `Integrity check failed` or `Mismatched number of resolved packages`, run `mops install --lock update`. Never use `--lock ignore`, and never `chmod`, remove, or text-edit `mops.lock`.
+- On a lock or integrity failure, run `mops install` — it regenerates a `mops.lock` that is missing, stale, or inconsistent with `mops.toml`. `mops verify` reports a file-hash mismatch it cannot repair; `mops cache clean` forces a verified re-download. Never `chmod`, remove, or text-edit `mops.lock`.
 
 ### Check and build
 
-- **`mops install --lock update`** — Install dependencies and reconcile `mops.lock`. The explicit `--lock update` matters when `CI` is set, where the implicit action checks a stale lock instead of updating it.
-- **`mops check --fix`** (fast — use for iteration) — Auto-fixes warnings (dot-notation, redundant type instantiation, redundant implicit arguments) and reports remaining compile errors. Exit 0 = success. Error format: `file:startLine.startCol-endLine.endCol: severity [code], message`. Iterate on this until it passes.
+- **`mops install`** — Install dependencies and reconcile `mops.lock`, regenerating it when it is missing or no longer matches `mops.toml`.
+- **`mops check --fix`** (fast — use for iteration) — Reports compile errors and auto-fixes the style warnings, where the project has them enabled (dot-notation, redundant type instantiation, redundant implicit arguments). Follow this skill's rules whether or not `--fix` enforces them. Exit 0 = success. Error format: `file:startLine.startCol-endLine.endCol: severity [code], message`. Iterate on this until it passes.
 - **`mops build`** (slow — run ONCE at the end) — Produces the compiled `.wasm` and the candid interface file `.did`. Use only as final verification after `mops check --fix` passes; never put `mops build` inside the fix loop. The `.did` file drives generated client bindings — never edit it manually.
 
 If `mops check --fix` fails: read stderr first. Do NOT call `moc` directly. Fix `.mo` source and rerun the check.
+
+### Build feedback
+
+When building through Caffeine, enable complete subprocess output with `CAFFEINE_VERBOSE=1 caffeine build`; successful subprocess warnings are otherwise hidden. Hosted Caffeine sandboxes set this environment variable globally.
+
+- **`MOPS-WASM-COMPLEXITY`**: Focus on the canister, function, severity, limit usage, primary contributors, result, and suggested correction. Refactor the implicated function according to its largest contributors. This check is advisory; PocketIC is authoritative.
+- **`MOPS-CHECK-DEPLOY-SKIPPED`**: Focus on the canister and compatibility diagnostic. The canister was not tested, so NEVER treat this as deployment success.
+- **PocketIC failure**: Focus on the canister, descriptive message, semantic error code, measured values, and suggested correction.
+  - For `CanisterInvalidWasm`, use the descriptive message to identify the exact validation failure.
+  - For `CanisterWasmMemoryLimitExceeded`, compare peak usage with the configured limit and reduce or relocate the implicated allocations.
+  - For traps or Candid failures, inspect the trap details or generated constructor interface.
+
+**RULE:** For unfamiliar deployment failures, follow the documentation URL in the diagnostic before changing code. Do not guess when the descriptive message is unclear.
+
+Caffeine may repeat failed subprocess output. Deduplicate diagnostics, fix each distinct issue, and rerun the relevant check.
 
 ## Modern Motoko Features
 
@@ -87,11 +104,15 @@ Principal.toText(caller) Nat.toText(myNat) // WRONG (M0236)
 // Chaining
 let doubled = numbers.map(func x = x * 2).filter(func x = x > 10);
 
-// Two-arg functions are NOT dot notation
+// Equality: Principal declares `equal` with a self parameter, so it is dot notation too
+a.equal(b) // PREFERRED
 Principal.equal(a, b) // OK
-a == b // also OK
 
 ```
+
+**Prefer `equal` / `compare` over `==`.** `==` is compiler-generated structural equality and exists only for **shared** types, so one `var` field takes a record out of shared and `==` stops compiling (M0060). Use `==` only for the numeric primitives that have no receiver form: `Nat`, `Int`, `Float`, and the sized int types declare `equal(x, y)` without a `self` parameter, so `myNat.equal(other)` fails with M0070 and `a == b` is the right call. Other receiver methods on those types (`myNat.toText()`) are fine.
+
+Your own records and variants get nothing derived — a record `compare` must be an explicit function, and custom variants need both `equal` and `compare` written out. See [references/equality.md](references/equality.md).
 
 ### Mixins
 
@@ -184,7 +205,7 @@ Prefer `??` over a two-arm `switch` that only unwraps an option or supplies a de
 let name = optName ?? "anonymous";
 
 // Fail-fast unwrap — null means a bug / missing invariant
-let user = users.find(func(u : User) : Bool { u.id == caller })
+let user = users.find(func u = u.id == caller)
   ?? Runtime.trap("User not found");
 
 // Nested options — chain instead of nested switches
@@ -214,23 +235,43 @@ See [references/control-flow.md](references/control-flow.md).
 
 ### Implicit Parameters
 
-Compiler infers comparison functions automatically:
+`Map` and `Set` operations take the comparison function as an **implicit** argument. `Map.empty()` itself takes no arguments — the comparator is resolved at the operations that need it (`add`, `get`, `remove`, …), not at construction.
+
+Inference works by finding a `compare` in the module imported **for the key type**. So the import is what makes it work:
 
 ```motoko
+import Map "mo:core/Map";
+import Nat "mo:core/Nat"; // this import is what supplies Nat.compare
+
 let map = Map.empty<Nat, Text>();
-map.add(5, "hello"); // Nat.compare inferred
+map.add(5, "hello"); // compare resolved from the imported Nat
+```
 
-let ages = Map.empty<Text, Nat>();
-ages.add(Text.compare, "Alice", 30); // explicit when needed
+Without `import Nat`, the same code fails — the type is known, but there is no module to take `compare` from:
 
-// Define module with compare for custom types → auto-inferred
+```text
+type error [M0230], Cannot determine implicit argument `compare` of type (Nat, Nat) -> Order
+note: Did you mean to import mo:core/Int or mo:core/Nat?
+```
+
+Do **not** pass the comparator explicitly when it can be inferred; that is M0237, which `mops check --fix` removes:
+
+```motoko
+ages.add("Alice", 30);               // CORRECT
+ages.add(Text.compare, "Alice", 30); // WRONG (M0237)
+```
+
+A custom key type works the same way — give its module a `compare` and it is inferred:
+
+```motoko
 module Point {
   public func compare(a : Point, b : Point) : Order.Order { ... };
 };
 let points = Map.empty<Point, Text>();
 points.add({ x = 1; y = 2 }, "A"); // Point.compare inferred
-
 ```
+
+Type instantiation on `empty()` follows the usual rule — needed only when the binding is unannotated. `let m : Map.Map<Nat, Text> = Map.empty();` infers it, and `Map.empty<Nat, Text>()` there would be M0223.
 
 ## Architecture Pattern
 
@@ -269,6 +310,10 @@ import Types "backend/types";
 
 **Migration files** (`migrations/*.mo`) must be self-contained — they may only import from `mo:core/...`, never from `../types` or any project module. See `migrating-motoko-actors` for the full rules.
 
+### The Actor Must Come Last
+
+Imports and `type`/`let` declarations may precede the actor. Nothing may follow it — the actor is the file's result, so a trailing declaration makes the actor a non-`()` statement and fails with M0096 (`expression of type actor {...} cannot produce expected type ()`). Prefer keeping shared types in `types.mo` regardless.
+
 ### Import Hygiene
 
 Add an import only to the file that uses the imported identifier. `Time.now()` usually belongs in a domain `lib/*.mo` implementation file, so `import Time "mo:core/Time";` belongs in that file, not `main.mo`, unless `main.mo` itself calls `Time.now()`. Every capitalized namespace call must have a matching import in the same file: if a mixin calls `TodosLib.listTodos(...)`, the file must import `TodosLib "../lib/todos"` (or use the alias it actually imported). Treat unused-import warnings as failures: remove stale `Debug`, `Time`, or helper-module imports before finishing.
@@ -287,7 +332,7 @@ public type PostInternal = { id : Nat; likedBy : Set.Set<Principal> }; // intern
 public type Post = { id : Nat; likedBy : [Principal] }; // shared
 
 public func toPublic(self : Types.PostInternal) : Types.Post {
-  { self with likedBy = Set.toArray(self.likedBy) };
+  { self with likedBy = self.likedBy.toArray() };
 };
 
 ```
@@ -335,15 +380,13 @@ When a domain helper receives a core collection, type the parameter as the concr
 Core collections (`List.List<T>`, `Map.Map<K, V>`, `Set.Set<T>`, `Queue.Queue<T>`, `Stack.Stack<T>`) have receiver helpers because their modules define self-parameter APIs. A value of type `[T]` or `[var T]` is an array snapshot, not a `List.List<T>`.
 
 - After `let snapshot = list.toArray()`, only use array operations whose exact signatures are shown here or verified in the API reference — with receiver dot notation: `snapshot.filter(pred)`, `snapshot.map(mapper)`, `snapshot.sort(comparator)`, `snapshot.concat([item])`. Do not call those as module functions such as `Array.filter<T>(snapshot, pred)` or `Array.append(snapshot, [item])`.
-- If a value is an array (`[T]`) or came from `.toArray()` / `.filter(...)`, then `.map(...)` already returns an array; do not append `.toArray()` to that array-map result. (`List.List<T>.map(...)` may still need explicit type instantiation and `.toArray()` when mapping records to another type.)
+- If a value is an array (`[T]`) or came from `.toArray()` / `.filter(...)`, then `.map(...)` already returns an array; do not append `.toArray()` to that array-map result. (`List.List<T>.map(...)` returns a `List`, so it still needs `.toArray()` when the caller expects an array.)
 - Arrays DO support predicate search: `.find(predicate) : ?T`, `.findIndex(predicate) : ?Nat`, `.any(predicate)`, and `.all(predicate)` are all in `mo:core/Array` (see the API reference). The JS spellings `.some(...)` / `.every(...)` do not exist — use `.any` / `.all`.
 - Arrays have NO `.contains(...)`. Test membership with `.indexOf(element) != null` or a predicate:
 
 ```motoko
 // Overlap between two tag arrays
-let matched = leftTags.any(func(left : Text) : Bool {
-  rightTags.any(func(right : Text) : Bool { left == right })
-});
+let matched = leftTags.any(func left = rightTags.any(func right = left == right));
 ```
 
 - Do not copy a collection just to search it: prefer `templates.find(func ...)` on the original `List.List<T>` over `templates.toArray().find(func ...)` — the intermediate array is a wasted copy.
@@ -351,11 +394,37 @@ let matched = leftTags.any(func(left : Text) : Bool {
 
 **CRUD List patterns:** Do not invent helpers on `List`. There is no `filterInPlace`, and record spread fails on records with `var` fields.
 
-When a predicate uses a block body, declare the return type as `: Bool`. Do not write `func(todo : Types.Todo) { todo.id == id }`; that block can compile as a `()`-returning callback in argument position. Use `func(todo : Types.Todo) : Bool { todo.id == id }`.
+**An inline `func` passed as a call argument takes no type annotations.** The call already fixes the parameter and result types, so annotating repeats them and lets them drift as the code changes. Use the expression form `func x = <expr>`:
+
+```motoko
+todos.find(func todo = todo.id == targetId);            // CORRECT
+todos.find(func(todo : Types.Todo) : Bool { todo.id == targetId }); // WRONG: annotated
+```
+
+This is about **argument position only**. A named declaration still carries its full signature, and a lambda bound on its own has nothing to infer from — `let f = func x = x > 1` fails with M0103 (`cannot infer type of variable`).
+
+```motoko
+public func toView(t : Types.Todo) : Types.TodoView { ... }; // annotated, as always
+```
+
+When the types are not obvious to a reader, or a generic cannot be inferred, say it **on the call** rather than on the lambda — it reads better and keeps one source of truth:
+
+```motoko
+photos.map(func p = { id = p.id; url = p.url.toText() }); // inferred — preferred
+photos.map<PhotoInternal, Photo>(func p = { ... });       // when M0098 demands it
+```
+
+Add `<In, Out>` only when the compiler actually reports M0098; adding it when inference already succeeded is M0223 (redundant type instantiation).
+
+The one exception is a callback that must return `async`. There `: async ()` is load-bearing — it is what makes the body async, and there is no unannotated form (`func() = async { ... }` does not work either). Without it the lambda infers `() -> ()` and the call fails with M0096:
+
+```motoko
+Timer.recurringTimer<system>(#seconds(3600), func() : async () { cleanup() });
+```
 
 ```motoko
 // Toggle a mutable field by finding the record and mutating the var field.
-switch (todos.find(func(todo : Types.Todo) : Bool { todo.id == targetId })) {
+switch (todos.find(func todo = todo.id == targetId)) {
   case (?todo) {
     todo.completed := not todo.completed;
     ?toView(todo);
@@ -401,7 +470,7 @@ For delete-style operations that return whether a record was removed, prefer a `
 ```motoko
 let doubled = numbers.map(func x = x * 2).filter(func x = x > 10);
 let sum = scores.filter(func s = s > 15).foldLeft(0, func(acc, s) = acc + s);
-switch (numbers.find(func(n : Nat) : Bool { n > 5 })) {
+switch (numbers.find(func n = n > 5)) {
   case (?found) { /* use */ };
   case null {};
 };
@@ -414,18 +483,18 @@ switch (numbers.find(func(n : Nat) : Bool { n > 5 })) {
 
 ```motoko
 let all = todos.toArray();
-let sorted = all.sort(func(a : Types.Todo, b : Types.Todo) : { #less; #equal; #greater } {
+let sorted = all.sort(func (a, b) =
   if (a.createdAt > b.createdAt) { #less }
   else if (a.createdAt < b.createdAt) { #greater }
   else { #equal }
-});
-sorted.map<Types.Todo, Types.TodoView>(func(todo) {
-  { id = todo.id; text = todo.text; completed = todo.completed; createdAt = todo.createdAt }
+);
+sorted.map(func todo = {
+  id = todo.id; text = todo.text; completed = todo.completed; createdAt = todo.createdAt
 });
 
 // WRONG: `.sort(...)` returns an array, so this is not a valid statement.
-all.sort(func(a, b) { Int.compare(b.createdAt, a.createdAt) });
-all.map<Types.Todo, Types.TodoView>(func(todo) { ... });
+all.sort(func (a, b) = Int.compare(b.createdAt, a.createdAt));
+all.map(func todo = { ... });
 ```
 
 ### `contains` vs `find`
@@ -435,9 +504,9 @@ all.map<Types.Todo, Types.TodoView>(func(todo) { ... });
 - `[T]` arrays have no `contains` at all — use `.indexOf(element) != null` or `.any(func x = x == element)` for membership.
 
 ```motoko
-numbers.contains(3); // implicit Nat.equal
-friends.contains(Principal.equal, p); // explicit equality
-todos.find(func(todo : Types.Todo) : Bool { todo.id == targetId }); // returns ?Todo
+numbers.contains(3); // equal inferred from the imported Nat
+friends.contains(p); // likewise from Principal — passing Principal.equal here is M0237
+todos.find(func todo = todo.id == targetId); // returns ?Todo
 // WRONG: friends.contains(func(f) { f == p })  → M0096/M0103
 
 ```
@@ -451,16 +520,43 @@ let term = searchTerm.toLower();
 textValue.toLower().contains(#text term)
 ```
 
-### Explicit Type Instantiation
+### Joining Text
 
-When `.map()` transforms to a **different** type, provide type parameters explicitly (M0098 without):
+`join` takes the **iterator as its receiver and the separator as its argument** — easy to invert. Use dot notation; the module form is an M0236 violation that `mops check --fix` rewrites for you.
 
 ```motoko
-let photos = internalPhotos.map<PhotoInternal, Photo>(
-  func(p) { { id = p.id; url = p.url; uploadedBy = p.uploadedBy.toText() } }
-);
-
+["a", "b"].values().join(", ");     // CORRECT → "a, b"
+Text.join(["a", "b"].values(), ", "); // WRONG (M0236)
 ```
+
+Note the receiver is an **iterator**, not an array: call `.values()` on an array first.
+
+### Variant Tag Arguments
+
+Always parenthesize a variant tag's argument. A tag binds only to the atom immediately after it, tighter than any operator, so an unparenthesized argument silently loses everything past the first term:
+
+```motoko
+#tag(n + 1) // CORRECT
+#tag n + 1  // WRONG: parses as (#tag n) + 1 → M0060, operator is not defined for operand types
+```
+
+### Explicit Type Instantiation
+
+Let inference work first. With unannotated lambdas the compiler resolves `.map()` to a different type on its own, so write the plain call:
+
+```motoko
+let photos = internalPhotos.map(
+  func p = { id = p.id; url = p.url; uploadedBy = p.uploadedBy.toText() }
+);
+```
+
+Add explicit type parameters **only** when the compiler reports M0098 (`no best choice for type parameter`):
+
+```motoko
+let photos = internalPhotos.map<PhotoInternal, Photo>(func p = { ... });
+```
+
+Adding them when inference already succeeded is a warning of its own — M0223, redundant type instantiation — which `mops check --fix` strips. Annotating the lambda instead of instantiating the call is always wrong.
 
 ### Function Literals as Arguments
 
@@ -517,19 +613,19 @@ Avoid `Nat` subtraction unless the compiler can prove the result is non-negative
 
 ```motoko
 // Unwrap with trap when null means something is wrong
-let user = users.find(func(u : User) : Bool { u.id == caller })
+let user = users.find(func u = u.id == caller)
   ?? Runtime.trap("User not found");
 
 // Default when absence is fine
-let label = optLabel ?? "(untitled)";
+let caption = optLabel ?? "(untitled)"; // not `label` — reserved word
 
 // Only return ?T when absence is a normal, expected outcome
 public query func findUserByName(name : Text) : async ?User {
-  users.find(func(u : User) : Bool { u.name == name });
+  users.find(func u = u.name == name);
 };
 
 // Keep switch when the Some arm maps / mutates / has side effects
-switch (todos.find(func(todo : Types.Todo) : Bool { todo.id == targetId })) {
+switch (todos.find(func todo = todo.id == targetId)) {
   case (?todo) {
     todo.completed := not todo.completed;
     ?toView(todo);
@@ -663,9 +759,18 @@ Attaching cycles to an inter-canister call (`await (with cycles = ...) <call>`) 
 | `M0255` stable signature downgrade                     | Chain or migrations config removed | Restore it — enhanced migration is one-way; load `troubleshooting-motoko-migrations` |
 | `shared function has non-shared parameter/return type` | Mutable type in API          | Return `[T]` not `List<T>`, no `var` fields |
 | `send capability required`                             | Async in non-async           | Add `<system>` capability                   |
-| `unexpected token '<name>'` at an identifier declaration | Reserved word used as an identifier | Rename the identifier consistently across its contract and callers |
-| `unexpected token 'break'`                             | `break` reserved             | Use helper function with early return       |
+| `unexpected token '<name>'` at an identifier declaration | Reserved word used as an identifier | Rename it consistently across its contract and callers; see [references/reserved-keywords.md](references/reserved-keywords.md) |
 | `unexpected token 'public'` after a function           | Missing declaration `;`      | End function declarations with `};`         |
+| `M0219` implicitly transient                           | Actor not persistent         | Write `persistent actor`; see [references/project-setup.md](references/project-setup.md) |
+| `M0220` actor should be declared `persistent`          | Actor not persistent         | Write `persistent actor`; see [references/project-setup.md](references/project-setup.md) |
+| `M0218` redundant `stable` keyword                     | `stable` under EOP           | Remove `stable` — a plain `let`/`var` is already stable |
+| `M0064` misplaced `'!'`                                | `!` outside an option block  | Wrap in `do ? { ... }`                      |
+| `M0145` `does not cover value`                         | Non-exhaustive switch        | Add the missing cases or a `case _`         |
+| `M0060` operator not defined for `{#tag : T}`          | Unparenthesized variant tag  | `#tag(x)`, never `#tag x`                   |
+| `M0060` operator not defined, on `==`                  | `==` on a record with a `var` field (not shared) | Use an `equal` function instead |
+| `M0230` cannot determine implicit argument `compare`   | Record/variant key with no findable `compare` | Add `compare` to the type's module; or `import` the module for a primitive key |
+| `M0070` expected object type, produces `Nat`           | Receiver `.equal`/`.compare` on a number | Use `==` or `Nat.equal(a, b)`   |
+| `M0096` actor cannot produce expected type `()`        | Declaration after the actor  | The actor must be the last declaration in the file |
 | `field compare does not exist` on Time                 | No Time.compare              | Use `Int.compare`                           |
 | `unexpected token ';'` in function call                | Semicolon after func literal | Remove `;` before `)`                       |
 | `unbound variable X`                                   | Missing import               | `import X "mo:core/X"`                      |
@@ -701,13 +806,17 @@ Attaching cycles to an inter-canister call (`await (with cycles = ...) <call>`) 
 8. Iterator chaining to avoid intermediate collections
 9. Record spread `{ self with ... }` for immutable records; mutate or rebuild records that contain `var` fields
 10. No inline initializers on stable actor fields — initial values come from the migration chain
+11. Inline `func` arguments carry no type annotations (except `: async ()` on async callbacks); instantiate the call instead, and only when the compiler reports M0098
 
 ## Additional References
 
-- **Control flow**: [references/control-flow.md](references/control-flow.md) — `??`, switch statements, loops, `break` / `continue`
+- **Control flow**: [references/control-flow.md](references/control-flow.md) — `??`, `do ? { ... }` option chaining, switch statements, loops, `break` / `continue`
+- **Reserved keywords**: [references/reserved-keywords.md](references/reserved-keywords.md) — full list to check identifiers against
+- **Equality & comparison**: [references/equality.md](references/equality.md) — which types support receiver `.equal`, and when `==` differs from `equal`
 - **Type conversions**: [references/type-conversions.md](references/type-conversions.md) — Nat/Int size conversions
+- **Project setup**: [references/project-setup.md](references/project-setup.md) — one-time `[moc] args` flags. Skip this if your platform manages `mops.toml`
 - **Actor migrations**: Load `migrating-motoko-actors` when upgrading canisters or changing actor state shape
 - **Migration failures**: Load `troubleshooting-motoko-migrations` for unexplained compatibility diagnostics, frozen migration files, or converted legacy projects
 - **API signatures**: [api-reference.md](references/api-reference.md) — complete function signatures
-- **Complete examples**: [references/examples.md](references/examples.md) — full working code samples
+- **Complete examples**: [examples.md](references/examples.md) — full working code samples
 - **mops tooling**: Load `mops-cli` for `mops.toml` configuration, dependency management, and `mops check`/`mops build`/toolchain setup
