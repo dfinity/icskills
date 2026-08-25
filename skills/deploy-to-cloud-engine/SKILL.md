@@ -327,7 +327,7 @@ There is no `icp` command and no agent-drivable API for this: the console endpoi
 
 1. Open the engine in the console → **Canisters** in the engine's sidebar (not **Applications**, which lists deployed apps) → the **Proxy canisters** section.
 2. **Deploy a proxy** — choose the initial balance (**minimum $5**, maximum $1000 per spend). The saved card is charged for that amount and the proxy is provisioned in under a minute; if no card is saved yet, the console opens a hosted Stripe Checkout to capture one first.
-3. Optionally turn on **Automatic top-up** and pick a recharge amount. The console then charges the card and refills the proxy whenever its balance falls below a low threshold (500 G cycles), so a signing app does not stall at 3am. Without it the proxy is **Manual** — its balance is still refreshed and shown, but it is never charged.
+3. Optionally turn on **Automatic top-up** and pick a recharge amount. The console then charges the card and refills the proxy whenever its balance falls below a low threshold (500 G cycles by default), so a signing app does not stall at 3am. Without it the proxy is **Manual** — its balance is still refreshed and shown, but it is never charged.
 4. Copy the **proxy canister id** from the table. That id is what the app calls.
 
 Also on that table: **Refresh balance** (a live read, since the displayed figure is cached), **Top up** (charge the card and deliver cycles now), and **Delete proxy** (stops and deletes the canister and refunds the remaining balance to the payment method).

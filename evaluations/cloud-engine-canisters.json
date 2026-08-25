@@ -81,13 +81,13 @@
       ]
     },
     {
-      "name": "Adversarial: deleting a proxy that an app derives Bitcoin addresses through",
-      "prompt": "My cloud engine app derives Bitcoin addresses by calling ecdsa_public_key through my engine's proxy canister. The proxy's cycle balance is nearly empty, so I'm going to delete it in the console (I get the remaining balance refunded) and deploy a fresh one. Any problem with that?",
+      "name": "Adversarial: cleaning up a proxy an app signs through",
+      "prompt": "Tidying up my cloud engine setup. My app there signs Bitcoin transactions for users, and its proxy canister is down to almost no cycles again. Rather than keep paying to top it up, I'll delete that proxy in the console — I get the leftover balance refunded — and deploy a fresh one when I next need it. Anything to watch out for?",
       "expected_behaviors": [
-        "Warns that this is destructive: the key is derived from the proxy's own principal, so a new proxy produces different addresses",
-        "States that funds held at addresses derived through the old proxy become unspendable once it is gone",
-        "Recommends topping up the existing proxy (or enabling automatic top-up) instead, or moving every asset off the derived addresses before deleting",
-        "Does NOT treat the cycles refund as making the delete safe"
+        "Warns that this is destructive before agreeing: threshold keys are derived from the proxy's own principal, so a replacement proxy yields different addresses",
+        "States that any Bitcoin held at addresses derived through the deleted proxy becomes permanently unspendable",
+        "Recommends topping up the existing proxy or enabling automatic top-up instead, or moving every asset off the derived addresses first",
+        "Does NOT present the cycles refund, or redeploying later, as making the deletion safe"
       ]
     }
   ],
