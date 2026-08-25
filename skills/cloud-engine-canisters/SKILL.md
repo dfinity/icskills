@@ -208,7 +208,7 @@ func viaProxy(method : Text, arg : Blob, cycles : Nat) : async Blob {
   });
   switch (res) {
     case (#Ok { result }) { result };
-    case (#Err e) { Debug.trap("proxy: " # debug_show e) };  // real code: return an error
+    case (#Err e) { Runtime.trap("proxy: " # debug_show e) };  // real code: return an error
   };
 };
 
@@ -219,7 +219,7 @@ let pkArg = to_candid ({
   key_id = keyId;
 } : EcdsaPublicKeyArgs);
 let ?pk : ?EcdsaPublicKeyReply = from_candid (await viaProxy("ecdsa_public_key", pkArg, 0))
-  else Debug.trap("decode ecdsa_public_key");
+  else Runtime.trap("decode ecdsa_public_key");
 
 // Signature: pays the fee. `message_hash` must be exactly 32 bytes.
 let sigArg = to_candid ({
@@ -228,7 +228,7 @@ let sigArg = to_candid ({
   key_id = keyId;
 } : SignWithEcdsaArgs);
 let ?sig : ?SignWithEcdsaReply = from_candid (await viaProxy("sign_with_ecdsa", sigArg, signFee))
-  else Debug.trap("decode sign_with_ecdsa");
+  else Runtime.trap("decode sign_with_ecdsa");
 ```
 
 Note that `sign_with_ecdsa` has **no** `canister_id` field — the key it signs with is always the caller's, and behind the proxy the caller is the proxy. That is precisely why the public key you publish and the signature you produce must both come through the **same** proxy.
@@ -253,7 +253,7 @@ let dkArg = to_candid ({
   key_id = vetKeyId;
 } : VetkdDeriveKeyArgs);
 let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key", dkArg, 30_000_000_000))
-  else Debug.trap("decode vetkd_derive_key");
+  else Runtime.trap("decode vetkd_derive_key");
 ```
 
 **Rust** is the same flow with `candid::encode_one` / `decode_one` and a bounded-wait call — see the shape in the `Call::bounded_wait(proxy_id, "proxy")` example under Rule 2.
