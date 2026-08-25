@@ -151,12 +151,13 @@
     },
     {
       "name": "Adversarial: SVG logo and partial validation of ii-app-metadata",
-      "prompt": "My /.well-known/ii-app-metadata has \"logo\": \"/logo.svg\" and a 200-character description. II will just skip the description that's too long and still show my SVG logo and name, right? Answer briefly.",
+      "prompt": "My /.well-known/ii-app-metadata has \"logo\": \"/logo.svg\" and a 200-character description. II will just skip the description that's too long and still show my SVG logo and name, right? Tell me what each of the two problems actually costs me.",
       "expected_behaviors": [
-        "Says no — one invalid field invalidates the WHOLE document, so II ignores all of the metadata rather than dropping only the bad field",
+        "Says no — the over-long description is a field that fails validation, and one invalid field invalidates the WHOLE document rather than being dropped on its own",
         "States the description limit is 120 Unicode code points, so a 200-character description fails validation",
         "States that image/svg+xml is not accepted — the logo must be a raster image (image/png, image/jpeg, image/webp, image/gif, or image/avif)",
-        "Does NOT claim sign-in itself breaks — invalid metadata only falls back to showing the origin"
+        "Distinguishes the two failure modes: an SVG logo on its own costs only the logo (name and description would still render), so it is the description — not the SVG — that takes the whole document down",
+        "Does NOT claim sign-in itself breaks, and does not assert the screen necessarily shows the bare origin — an ignored document falls back to II's curated entry for a known app, and to the origin otherwise"
       ]
     },
     {
