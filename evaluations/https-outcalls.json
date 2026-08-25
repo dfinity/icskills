@@ -25,7 +25,8 @@
       "prompt": "My IC canister calls a REST API whose JSON body is about 800 bytes. I planned to set max_response_bytes to 1024 and strip all response headers in my transform function to stay under it. Will that work? A few sentences, no code.",
       "expected_behaviors": [
         "States that max_response_bytes covers HTTP header names and values plus the body, not the body alone",
-        "States that stripping headers in the transform does NOT bring an oversized response under the cap, because max_response_bytes also bounds the transform's own output",
+        "States that stripping headers in the transform will NOT rescue this request, because the raw response is checked against the cap before the transform runs",
+        "Also notes that max_response_bytes separately bounds the transform's own output, so the cap is enforced twice rather than only on the raw response",
         "Advises sizing the cap against headers + body as received from the server (real APIs often send 1-2 KB of headers), so 1024 is too tight",
         "Does NOT claim the 1024-byte cap will work because the transform removes the headers"
       ]

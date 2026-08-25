@@ -39,7 +39,7 @@ You do not deploy anything extra. The management canister is built into every su
 
 4. **Sizing `max_response_bytes` against the expected body — the limit is not body-only.** The spec defines the size of an HTTP request or response as *the total number of bytes representing the names and values of HTTP headers and the HTTP body*. Response **headers count against `max_response_bytes`**, and a real API commonly sends 1–2 KB of response headers (a unique request id, `Date`, the rate-limit family, CDN headers) before a single byte of body — against a tight cap that is a large share of the budget. Size the cap for **headers + body as they arrive from the server**, then add margin. The failure mode is total: the call fails every time rather than returning a truncated response. The maximum is 2MB = `2_000_000` bytes (decimal, not 2^21), and the same headers-plus-body definition caps the **request** you send at `2_000_000` bytes.
 
-5. **Expecting the transform function to shrink the response under the cap.** It cannot. `max_response_bytes` bounds the transform's **output** as well as the raw response, and that byte count includes the Candid serialization overhead of the record the transform returns. Stripping headers in the transform is for consensus, not for fitting under the cap — it does not buy room the raw response already blew past. Never set a tight cap on the theory that you will strip headers afterwards.
+5. **Expecting the transform function to shrink an oversized response under the cap.** The cap is enforced **twice**: once on the raw response as it arrives from the server (headers first, then the body against what remains), and again on the transform's Candid-encoded **output**, which includes serialization overhead. Stripping headers in the transform cannot rescue a raw response that already exceeded the cap, because that first check fails before the transform ever runs. It *can* keep the transform's own output under the cap — worth doing when the transform would otherwise echo the headers back and its encoded output would exceed the limit. So: size `max_response_bytes` for the raw response, and keep the transform's output small; never set a tight cap on the theory that stripping headers afterwards will make an oversized response fit.
 
 6. **Ignoring the header limits.** Independent of `max_response_bytes`, the spec caps HTTP requests and responses at **64 headers**, **8 KiB** per header name or value, and **48 KiB** for all header names and values combined. The URL must not exceed **8192** bytes. On the request side these are enforced when the replica decodes your arguments, so an over-limit request never leaves the subnet and fails with `InvalidManagementPayload` — e.g. `Deserialize error: The number of elements exceeds maximum allowed 64` — rather than with any HTTP-looking error. If you send no `user-agent` header the IC adds `user-agent: ic/1.0`, and that added header does not count toward these limits.
 
@@ -47,7 +47,9 @@ You do not deploy anything extra. The management canister is built into every su
 
 8. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
 
-9. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. If the external server does not respond within the timeout (~30 seconds), the call does not trap — it comes back as a `SysTransient` reject with the message `Canister http request timed out`, which is retryable. In Motoko the `await` raises a catchable `Error`; in Rust the wrapper returns `Err`.
+9. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. There are **two distinct timeouts**, and neither traps — both come back as rejects (in Motoko the `await` raises a catchable `Error`; in Rust the wrapper returns `Err`):
+   - The remote server does not respond within **30 seconds**: `SysFatal`, message `Timeout expired`.
+   - The subnet does not produce a response within **60 seconds**: `SysTransient`, message `Canister http request timed out`. This one is the retryable one.
 
 10. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
 
@@ -411,8 +413,11 @@ If an outcall fails:
 
 # Exact reject messages from the replica (match on these, not on paraphrases):
 #
+# "Timeout expired"                                                     [SysFatal]
+#     The remote server did not respond within 30s.
+#
 # "Canister http request timed out"                                  [SysTransient]
-#     External server took too long. Retryable.
+#     The subnet did not produce a response within 60s. Retryable.
 #
 # "No consensus could be reached. Replicas had different responses.
 #  Details: request_id: <id>, hashes: <...>"                         [SysTransient]
@@ -422,7 +427,7 @@ If an outcall fails:
 # headers are counted against max_response_bytes BEFORE the body is read:
 #
 # "Header size exceeds specified response size limit <N>"
-#     The response headers ALONE met or exceeded max_response_bytes.
+#     The response headers ALONE exceeded max_response_bytes.
 #
 # "Http body exceeds size limit of <N> bytes."
 #     The body exceeded the allowance REMAINING after header bytes were
@@ -434,10 +439,11 @@ If an outcall fails:
 #     The Candid-encoded output of your transform exceeded max_response_bytes.
 #
 #     Raising max_response_bytes fixes all three. Stripping headers in the
-#     transform fixes none of them.
+#     transform fixes ONLY this last one: the first two are checked before
+#     the transform runs.
 #
 # "http_request request sent with <X> cycles, but <Y> cycles are required."
-#                                                        [CanisterRejectedMessage]
+#                                                              [CanisterReject]
 #     Attached less than the computed cost. Use the wrapper rather than a
 #     hand-picked number.
 ```
