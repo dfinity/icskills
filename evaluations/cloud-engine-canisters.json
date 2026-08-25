@@ -62,7 +62,7 @@
     },
     {
       "name": "Threshold ECDSA address and signature from an engine canister",
-      "prompt": "My Motoko canister runs on a cloud engine and my engine already has a proxy canister deployed. I need its secp256k1 public key and then a signature over a 32-byte hash, using the production key. Show just the two calls and the cycles figures — no project setup, no deploy steps.",
+      "prompt": "My Motoko canister runs on a cloud engine and my engine already has a proxy canister deployed. I need its secp256k1 public key and then a signature over a 32-byte hash, using the production key. Show just the two calls and the cycles figures, no project setup, no deploy steps.",
       "expected_behaviors": [
         "Routes both calls through the proxy's `proxy` method with `canister_id` set to the management canister (aaaaa-aa), not directly to aaaaa-aa",
         "Makes the engine->proxy call bounded-wait (e.g. `(with timeout = 30)`) and attaches NO cycles to it; the fee goes inside `ProxyArgs.cycles`",
@@ -82,7 +82,7 @@
     },
     {
       "name": "Adversarial: cleaning up a proxy an app signs through",
-      "prompt": "Tidying up my cloud engine setup. My app there signs Bitcoin transactions for users, and its proxy canister is down to almost no cycles again. Rather than keep paying to top it up, I'll delete that proxy in the console — I get the leftover balance refunded — and deploy a fresh one when I next need it. Anything to watch out for?",
+      "prompt": "Tidying up my cloud engine setup. My app there signs Bitcoin transactions for users, and its proxy canister is down to almost no cycles again. Rather than keep paying to top it up, I'll delete that proxy in the console (I get the leftover balance refunded) and deploy a fresh one when I next need it. Anything to watch out for?",
       "expected_behaviors": [
         "Warns that this is destructive before agreeing: threshold keys are derived from the proxy's own principal, so a replacement proxy yields different addresses",
         "States that any Bitcoin held at addresses derived through the deleted proxy becomes permanently unspendable",

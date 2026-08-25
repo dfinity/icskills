@@ -107,18 +107,18 @@ The workaround is the **console proxy canister**: deployed on a normal Applicati
 
 ### Getting a proxy
 
-The proxy is not something your canister code creates — it is deployed and funded outside the app, then its canister id is handed to the app as configuration. Two different canisters can play the role, and they are **not** interchangeable:
+The proxy is not something your canister code creates: it is deployed and funded outside the app, then its canister id is handed to the app as configuration. Two different canisters can play the role, and they are **not** interchangeable:
 
 | | **Console proxy** (the engine's) | **Self-deployed proxy** (`icp new … --subfolder proxy`) |
 |---|---|---|
 | Who may call it | The engine's **canister-id ranges**, plus controllers | **Controllers only** |
 | Your engine canisters can call it | Yes, with no extra setup | Only if you add each of them as a controller |
-| Threshold-key derivation | **Caller-isolated** (see below) | No isolation — raw pass-through |
+| Threshold-key derivation | **Caller-isolated** (see below) | No isolation: raw pass-through |
 | Funded with | A card, from the console | Cycles you already hold (`icp cycles mint`) |
 
-For engine canisters, **use the console proxy**. A self-deployed proxy is the right tool for calls *you* make from the CLI (`icp canister call --proxy`, `icp deploy --proxy`) — and the console proxy cannot serve that purpose, because it rejects ingress calls from any principal that is not one of its controllers, which your CLI identity is not.
+For engine canisters, **use the console proxy**. A self-deployed proxy is the right tool for calls *you* make from the CLI (`icp canister call --proxy`, `icp deploy --proxy`), and the console proxy cannot serve that purpose, because it rejects ingress calls from any principal that is not one of its controllers, which your CLI identity is not.
 
-Deploying and funding either one is not a canister-code task. It is covered in the **`deploy-to-cloud-engine`** skill; from here you need only the resulting **proxy canister id**. Take it from the user or from the app's configuration — never hardcode a guess, and read the derivation warning below before assuming one proxy id can be swapped for another.
+Deploying and funding either one is not a canister-code task. It is covered in the **`deploy-to-cloud-engine`** skill; from here you need only the resulting **proxy canister id**. Take it from the user or from the app's configuration, never hardcode a guess, and read the derivation warning below before assuming one proxy id can be swapped for another.
 
 ### Call through the proxy from your canister
 
@@ -142,8 +142,8 @@ service : {
 - `args` is the **candid-encoded argument of the _target_ method** (you encode it); `result` is the target's **raw reply bytes** (you decode it).
 - `cycles` is what the proxy attaches to the relayed call — size it to what the target charges (e.g. the XRC or signing fee). The platform team confirms the **caller** chooses how much the proxy attaches, and the proxy receives `args` as an **opaque blob**, so it cannot size the amount for you: a constant you pass is exactly what it will require, and the `required` field of `InsufficientCycles` echoes your own number back rather than reporting a proxy-side reservation. Do **not** attach cycles to the outer `proxy` call itself; the engine subnet forbids that and it is unnecessary.
 - Handle `ProxyError`: `InsufficientCycles` means the proxy's balance is too low (top it up in the console), `UnauthorizedUser` means the caller is outside the engine's range, `CallFailed` carries the downstream reject reason.
-- **Over-attaching is safe; under-attaching is not.** The callee refunds what it does not consume, and the refund goes back to the **proxy** (the proxy is the caller on that leg), so a generous `cycles` figure costs nothing and survives a fee increase. `available` in `InsufficientCycles` is the proxy's *liquid* balance — its freezing reserve is already excluded — so a proxy can report `InsufficientCycles` while still showing a balance in the console.
-- **A `CallFailed` is not proof the call did not happen.** The proxy relays with a bounded-wait call, so a downstream `SYS_UNKNOWN` reaches you as `CallFailed` with that reject code in `reason`. The target may have executed and the cycles may already be spent. Treat it as "outcome unknown", not "failed" — the `multi-canister` skill covers the patterns.
+- **Over-attaching is safe; under-attaching is not.** The callee refunds what it does not consume, and the refund goes back to the **proxy** (the proxy is the caller on that leg), so a generous `cycles` figure costs nothing and survives a fee increase. `available` in `InsufficientCycles` is the proxy's *liquid* balance (its freezing reserve is already excluded), so a proxy can report `InsufficientCycles` while still showing a balance in the console.
+- **A `CallFailed` is not proof the call did not happen.** The proxy relays with a bounded-wait call, so a downstream `SYS_UNKNOWN` reaches you as `CallFailed` with that reject code in `reason`. The target may have executed and the cycles may already be spent. Treat it as "outcome unknown", not "failed": the `multi-canister` skill covers the patterns.
 
 Motoko sketch (Rust is analogous with `candid::encode_one` / `decode_one`):
 
@@ -166,26 +166,26 @@ switch (res) {
 
 Threshold ECDSA, Schnorr, and vetKD are the proxy's main job on an engine, and the one place where getting the call *wrong* costs more than an error message: a key you cannot reproduce is a Bitcoin or Ethereum address whose funds you cannot move.
 
-**The helper libraries do not work here.** `ic-vetkeys`, `ic-cdk-management-canister`, and Motoko's `mo:ic-vetkeys/ManagementCanister` all call `aaaaa-aa` directly and attach the fee for you. On an engine that is a cross-subnet, cycle-bearing call — rejected twice over (Rules 1 and 2). Their convenience is exactly what you must give up: encode the management-canister argument yourself and send it through the proxy. The `vetkeys` skill's code is written for a normal subnet and needs this rewrite before it will run on an engine.
+**The helper libraries do not work here.** `ic-vetkeys`, `ic-cdk-management-canister`, and Motoko's `mo:ic-vetkeys/ManagementCanister` all call `aaaaa-aa` directly and attach the fee for you. On an engine that is a cross-subnet, cycle-bearing call: rejected twice over (Rules 1 and 2). Their convenience is exactly what you must give up: encode the management-canister argument yourself and send it through the proxy. The `vetkeys` skill's code is written for a normal subnet and needs this rewrite before it will run on an engine.
 
 **What the proxy rewrites.** For the six key methods (`sign_with_ecdsa`, `ecdsa_public_key`, `sign_with_schnorr`, `schnorr_public_key`, `vetkd_derive_key`, `vetkd_public_key`) the console proxy decodes your argument, **isolates the derivation to you**, and re-encodes it:
 
 - ECDSA / Schnorr: your calling canister's principal is inserted as the **first element of `derivation_path`**.
-- vetKD: your principal is prepended to `context`, **length-tagged** — one byte holding the principal's length, then the principal bytes, then your context.
+- vetKD: your principal is prepended to `context`, **length-tagged**: one byte holding the principal's length, then the principal bytes, then your context.
 - On the three `*_public_key` methods, `canister_id` is additionally forced to `None`.
 
-The principal comes from `msg_caller()`, so it cannot be forged and one engine canister can never reach another's keys. (Verified: `cargo test -p proxy-canister --lib`, 10/10 — `ecdsa_sign_prepends_caller_and_preserves_the_rest`, `vetkd_prefixes_caller_into_context_length_tagged`, `distinct_callers_get_distinct_derivations`.)
+The principal comes from `msg_caller()`, so it cannot be forged and one engine canister can never reach another's keys. (Verified: `cargo test -p proxy-canister --lib`, 10/10; `ecdsa_sign_prepends_caller_and_preserves_the_rest`, `vetkd_prefixes_caller_into_context_length_tagged`, `distinct_callers_get_distinct_derivations`.)
 
-**Fees.** `ecdsa_public_key`, `schnorr_public_key`, and `vetkd_public_key` are **free** — pass `cycles = 0`. The paying methods are charged by the subnet that holds the key, not yours:
+**Fees.** `ecdsa_public_key`, `schnorr_public_key`, and `vetkd_public_key` are **free**: pass `cycles = 0`. The paying methods are charged by the subnet that holds the key, not yours:
 
 | Key name | `sign_with_ecdsa` / `sign_with_schnorr` / `vetkd_derive_key` |
 |---|---|
 | `key_1` (production) | 26_153_846_153 |
 | `test_key_1` (testing) | 10_000_000_000 |
 
-Round up rather than passing the exact figure — the unused remainder is refunded to the proxy.
+Round up rather than passing the exact figure: the unused remainder is refunded to the proxy.
 
-**Worked example — ECDSA, Motoko.** Declare the management-canister types yourself; field names and variant tags must match the candid interface exactly, because the proxy decodes and re-encodes the blob and a missing or misnamed field — or an unknown variant tag — fails the decode (surfacing as `CallFailed`, not a mis-derived key). A field the proxy does not model is not caught: candid's record subtyping skips it on decode and the re-encode drops it.
+**Worked example: ECDSA, Motoko.** Declare the management-canister types yourself; field names and variant tags must match the candid interface exactly, because the proxy decodes and re-encodes the blob; a missing or misnamed field, or an unknown variant tag, fails the decode (surfacing as `CallFailed`, not a mis-derived key). A field the proxy does not model is not caught: candid's record subtyping skips it on decode and the re-encode drops it.
 
 ```motoko
 type EcdsaKeyId = { curve : { #secp256k1 }; name : Text };
@@ -231,9 +231,9 @@ let ?sig : ?SignWithEcdsaReply = from_candid (await viaProxy("sign_with_ecdsa", 
   else Runtime.trap("decode sign_with_ecdsa");
 ```
 
-Note that `sign_with_ecdsa` has **no** `canister_id` field — the key it signs with is always the caller's, and behind the proxy the caller is the proxy. That is precisely why the public key you publish and the signature you produce must both come through the **same** proxy.
+Note that `sign_with_ecdsa` has **no** `canister_id` field: the key it signs with is always the caller's, and behind the proxy the caller is the proxy. That is precisely why the public key you publish and the signature you produce must both come through the **same** proxy.
 
-**Worked example — vetKD, Motoko.** Same shape, different types. `vetkd_public_key` is free; `vetkd_derive_key` pays.
+**Worked example: vetKD, Motoko.** Same shape, different types. `vetkd_public_key` is free; `vetkd_derive_key` pays.
 
 ```motoko
 type VetkdKeyId = { curve : { #bls12_381_g2 }; name : Text };
@@ -256,13 +256,13 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
   else Runtime.trap("decode vetkd_derive_key");
 ```
 
-**Rust** is the same flow with `candid::encode_one` / `decode_one` and a bounded-wait call — see the shape in the `Call::bounded_wait(proxy_id, "proxy")` example under Rule 2.
+**Rust** is the same flow with `candid::encode_one` / `decode_one` and a bounded-wait call, see the shape in the `Call::bounded_wait(proxy_id, "proxy")` example under Rule 2.
 
 **The derived key belongs to the proxy, not to your app.** The management canister derives from *its* caller, which is the proxy, so the key you get depends on **which proxy canister id you went through**:
 
-- Point the app at a different proxy — a second one from the console's "Deploy another proxy", or a self-deployed one — and every address changes. The old address is not recoverable from the new proxy.
+- Point the app at a different proxy (a second one from the console's "Deploy another proxy", or a self-deployed one) and every address changes. The old address is not recoverable from the new proxy.
 - **Deleting a proxy destroys access to its keys.** The console's delete button refunds the remaining cycles; it cannot give back the derivation. Any Bitcoin or Ethereum funds held at an address derived through that proxy become permanently unspendable. Treat the proxy id of a signing app as permanent infrastructure, and never delete a proxy to "save cycles" without first moving every asset off the addresses derived through it.
-- A self-deployed upstream proxy does **no** isolation at all (no principal prefix, no forced `canister_id = None`), so its keys differ again from the console proxy's — the two are not substitutes even before the id changes.
+- A self-deployed upstream proxy does **no** isolation at all (no principal prefix, no forced `canister_id = None`), so its keys differ again from the console proxy's: the two are not substitutes even before the id changes.
 - Anything reproducing a derivation off-chain (deriving the same public key in a frontend, say) must replicate the prefix the proxy injects, including vetKD's length tag.
 
 ## Common Pitfalls
@@ -274,16 +274,16 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
 5. **Topping up an engine canister with cycles.** Engine canisters hold 0 cycles by design; you cannot and need not send cycles to them. A "0 cycles" reading from an engine canister is normal, not an emergency — do not add top-up logic or cycles-balance alarms ported from Application-subnet apps.
 6. **Calling the XRC / threshold signing / vetKD directly from an engine canister.** Cloud engines do not provide threshold signing at all (platform team), so `sign_with_ecdsa` / `sign_with_schnorr` / vetKD must be reached on mainnet — and a cross-subnet, cycle-bearing call is exactly what a CloudEngine-subnet canister cannot send. Route them through the funded console proxy (Rule 4). Plain same-subnet or cycle-less calls do not need the proxy.
 7. **Attaching cycles to the outer `proxy` call.** The engine subnet forbids cycle-bearing cross-subnet messages — that is the whole reason for the proxy. Put the cycles inside `ProxyArgs.cycles` (the proxy attaches them locally); never `with cycles` on the call to `proxy` itself.
-8. **Topping up the proxy without first asking what it was relaying.** On `ProxyError::InsufficientCycles`, check the call type before treating it as a funding problem. **An HTTPS outcall does not belong on the proxy at all** (Rule 3, pitfall 4): move it onto your own canister, where it is free, rather than buying budget for work that should cost nothing — raising the balance only delays the same stall. A drained balance is a genuine funding problem only for the proxy's real jobs (XRC, threshold signing, vetKD): top it up, or enable auto top-up, in the **Proxy canisters** section of the engine's **Canisters** page. Deploying and funding the console proxy is a console action, not an `icp` command — see `deploy-to-cloud-engine`.
+8. **Topping up the proxy without first asking what it was relaying.** On `ProxyError::InsufficientCycles`, check the call type before treating it as a funding problem. **An HTTPS outcall does not belong on the proxy at all** (Rule 3, pitfall 4): move it onto your own canister, where it is free, rather than buying budget for work that should cost nothing; raising the balance only delays the same stall. A drained balance is a genuine funding problem only for the proxy's real jobs (XRC, threshold signing, vetKD): top it up, or enable auto top-up, in the **Proxy canisters** section of the engine's **Canisters** page. Deploying and funding the console proxy is a console action, not an `icp` command, see `deploy-to-cloud-engine`.
 9. **Expecting a direct-call key through the proxy.** Threshold-key derivation via the proxy is caller-isolated, so the derived key/address is not the same as a direct management-canister call. Fetch the public key and sign through the proxy consistently; do not mix direct and proxied key calls for the same identity.
-10. **Using a chain-key helper library on an engine.** `ic-vetkeys`, `ic-cdk-management-canister`, and `mo:ic-vetkeys/ManagementCanister` call `aaaaa-aa` directly and attach the fee themselves — a cross-subnet, cycle-bearing call, which the engine rejects under Rules 1 and 2. Their whole value proposition (correct types, automatic cycles) is what has to go: hand-encode the management-canister argument and relay it through the proxy. Code copied from the `vetkeys` skill will not run on an engine unmodified.
-11. **Deleting or swapping the proxy of a signing app.** The management canister derives keys from *its* caller — the proxy — so the proxy's canister id is part of every address the app owns. Deleting a proxy (the console refunds its cycles) or repointing the app at another one silently produces different addresses and leaves any Bitcoin or Ethereum funds at the old ones permanently unspendable. A signing app's proxy id is permanent infrastructure, not a fungible resource.
-12. **Reading `CallFailed` as "it did not happen".** The proxy relays with a bounded-wait call, so a downstream `SYS_UNKNOWN` arrives as `ProxyError::CallFailed` with that reject code in `reason`. The target may have run and the cycles may be gone. Retrying a signature is harmless; retrying a stateful call on this basis is not — treat it as an unknown outcome (see `multi-canister`).
-13. **Calling the console proxy from the CLI.** `icp canister call --proxy <console-proxy-id>` fails: the console proxy admits only the engine's canister-id ranges and its own controllers, and an ingress call from your CLI identity is neither (it is rejected by `inspect_message` before it reaches replicated state). For CLI-side proxying, deploy your own proxy — `icp new … --subfolder proxy` — which authorizes controllers, i.e. you.
+10. **Using a chain-key helper library on an engine.** `ic-vetkeys`, `ic-cdk-management-canister`, and `mo:ic-vetkeys/ManagementCanister` call `aaaaa-aa` directly and attach the fee themselves: a cross-subnet, cycle-bearing call, which the engine rejects under Rules 1 and 2. Their whole value proposition (correct types, automatic cycles) is what has to go: hand-encode the management-canister argument and relay it through the proxy. Code copied from the `vetkeys` skill will not run on an engine unmodified.
+11. **Deleting or swapping the proxy of a signing app.** The management canister derives keys from *its* caller (the proxy), so the proxy's canister id is part of every address the app owns. Deleting a proxy (the console refunds its cycles) or repointing the app at another one silently produces different addresses and leaves any Bitcoin or Ethereum funds at the old ones permanently unspendable. A signing app's proxy id is permanent infrastructure, not a fungible resource.
+12. **Reading `CallFailed` as "it did not happen".** The proxy relays with a bounded-wait call, so a downstream `SYS_UNKNOWN` arrives as `ProxyError::CallFailed` with that reject code in `reason`. The target may have run and the cycles may be gone. Retrying a signature is harmless; retrying a stateful call on this basis is not: treat it as an unknown outcome (see `multi-canister`).
+13. **Calling the console proxy from the CLI.** `icp canister call --proxy <console-proxy-id>` fails: the console proxy admits only the engine's canister-id ranges and its own controllers, and an ingress call from your CLI identity is neither (it is rejected by `inspect_message` before it reaches replicated state). For CLI-side proxying, deploy your own proxy (`icp new … --subfolder proxy`) which authorizes controllers, i.e. you.
 
 ## Additional References
 
-- Load `deploy-to-cloud-engine` for getting the app onto the engine: CLI identity linking, subnet-targeted deploy, console app metadata — and for **deploying and funding the proxy** this skill's Rule 4 depends on, including the card-funded console flow, automatic top-up, and the self-deployed CLI alternative.
-- Load `vetkeys` for what vetKD is and how its keys are used (IBE, encrypted maps, transport keys). Its call code targets a normal subnet and attaches cycles through helper libraries — on an engine, keep the concepts and replace the calls with the proxied form above.
+- Load `deploy-to-cloud-engine` for getting the app onto the engine: CLI identity linking, subnet-targeted deploy, console app metadata, and for **deploying and funding the proxy** this skill's Rule 4 depends on, including the card-funded console flow, automatic top-up, and the self-deployed CLI alternative.
+- Load `vetkeys` for what vetKD is and how its keys are used (IBE, encrypted maps, transport keys). Its call code targets a normal subnet and attaches cycles through helper libraries: on an engine, keep the concepts and replace the calls with the proxied form above.
 - Load `https-outcalls` for everything about outcalls that is not engine-specific: transform functions, `max_response_bytes`, idempotency, debugging consensus failures.
 - Load `multi-canister` for inter-canister call design, bounded vs unbounded wait semantics, and `SYS_UNKNOWN` handling.
