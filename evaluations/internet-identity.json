@@ -168,6 +168,16 @@
         "Explains that the alternative origins that derivation origin lists are then presented with the same name, description, and logo — no per-origin copy to keep in sync",
         "Does NOT tell the user to publish a copy on each alternative origin"
       ]
+    },
+    {
+      "name": "Adversarial: absolute logo URL on a canister gateway domain",
+      "prompt": "My ii-app-metadata is served from https://<canister-id>.icp.net, which is also my derivationOrigin, and I set \"logo\": \"https://<canister-id>.icp.net/logo.png\". Same canister, same domain — that's fine, right? Two or three sentences.",
+      "expected_behaviors": [
+        "Says no, or flags it as a real risk — II normalizes a canister gateway origin onto ic0.app and falls back through the icp0.io / icp.net twins, so the document may be fetched from a sibling gateway domain of the same canister",
+        "Explains the logo's same-origin check runs against whichever origin actually served the document, so an absolute icp.net URL is cross-origin when ic0.app answered",
+        "States the consequence is losing the WHOLE document, not just the logo, because the logo URL's same-origin shape is part of document validation",
+        "Recommends a relative URL such as /logo.png"
+      ]
     }
   ],
   "trigger_evals": {
