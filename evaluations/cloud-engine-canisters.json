@@ -59,6 +59,36 @@
         "Puts the XRC fee inside `ProxyArgs.cycles` (the proxy attaches them locally), with candid-encoded target args passed as a blob",
         "Does NOT attach cycles to the outer call to the proxy itself"
       ]
+    },
+    {
+      "name": "Threshold ECDSA address and signature from an engine canister",
+      "prompt": "My Motoko canister runs on a cloud engine and my engine already has a proxy canister deployed. I need its secp256k1 public key and then a signature over a 32-byte hash, using the production key. Show just the two calls and the cycles figures — no project setup, no deploy steps.",
+      "expected_behaviors": [
+        "Routes both calls through the proxy's `proxy` method with `canister_id` set to the management canister (aaaaa-aa), not directly to aaaaa-aa",
+        "Makes the engine->proxy call bounded-wait (e.g. `(with timeout = 30)`) and attaches NO cycles to it; the fee goes inside `ProxyArgs.cycles`",
+        "States that `ecdsa_public_key` is free (cycles = 0) while `sign_with_ecdsa` costs 26_153_846_153 for key_1, and that over-attaching is safe because the excess is refunded",
+        "Uses the same `derivation_path` for both calls and names key_1 as the production key",
+        "Does NOT use a helper library that attaches cycles itself (ic-cdk management_canister bindings, ic-vetkeys), and does NOT attach cycles to the outer proxy call"
+      ]
+    },
+    {
+      "name": "Adversarial: reaching for a chain-key helper library on an engine",
+      "prompt": "On my cloud engine canister I want to derive a vetKD key. I'll just add the ic-vetkeys library and call vetkd_derive_key through its ManagementCanister helper like the docs show. Will that work? Keep it short.",
+      "expected_behaviors": [
+        "Says no: the helper calls aaaaa-aa directly and attaches the fee itself, which is a cross-subnet cycle-bearing call that a CloudEngine subnet rejects",
+        "Directs the call through the engine's proxy canister with a hand-encoded `vetkd_derive_key` argument and the fee placed in `ProxyArgs.cycles`",
+        "Does NOT suggest topping up the engine canister with cycles or setting cycles = 0 on the helper as the fix"
+      ]
+    },
+    {
+      "name": "Adversarial: deleting a proxy that an app derives Bitcoin addresses through",
+      "prompt": "My cloud engine app derives Bitcoin addresses by calling ecdsa_public_key through my engine's proxy canister. The proxy's cycle balance is nearly empty, so I'm going to delete it in the console (I get the remaining balance refunded) and deploy a fresh one. Any problem with that?",
+      "expected_behaviors": [
+        "Warns that this is destructive: the key is derived from the proxy's own principal, so a new proxy produces different addresses",
+        "States that funds held at addresses derived through the old proxy become unspendable once it is gone",
+        "Recommends topping up the existing proxy (or enabling automatic top-up) instead, or moving every asset off the derived addresses before deleting",
+        "Does NOT treat the cycles refund as making the delete safe"
+      ]
     }
   ],
   "trigger_evals": {
@@ -71,7 +101,10 @@
       "Call the exchange rate canister from my engine canister",
       "My outcall through the console proxy fails with 'No consensus could be reached. Replicas had different responses'",
       "Writing Motoko code for an app that runs on a cloud engine — anything special about inter-canister calls?",
-      "Every outcall through my engine's proxy canister fails with InsufficientCycles — can we raise the outcall budget?"
+      "Every outcall through my engine's proxy canister fails with InsufficientCycles — can we raise the outcall budget?",
+      "Sign a Bitcoin transaction from my canister running on a cloud engine",
+      "Can I use the ic-vetkeys helper library on a cloud engine canister?",
+      "If I swap my engine's proxy canister, does my app's derived Ethereum address change?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
@@ -79,7 +112,9 @@
       "Give my deployed app an icon in the OpenCloud engine console",
       "My canister on mainnet needs to fetch a price from a REST API",
       "How many cycles does an HTTPS outcall cost on a 13-node subnet?",
-      "How do inter-canister calls work between my two canisters?"
+      "How do inter-canister calls work between my two canisters?",
+      "Deploy a proxy canister for my engine and put $20 of cycles on it",
+      "Turn on automatic top-up for my engine's proxy"
     ]
   }
 }
