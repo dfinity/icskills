@@ -1,6 +1,6 @@
 ---
 name: internet-identity
-description: "Integrate Internet Identity authentication. Covers passkey and OpenID sign-in flows, delegation handling, and principal-per-app isolation. Use when adding sign-in, login, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
+description: "Integrate Internet Identity authentication. Covers passkey and OpenID sign-in flows, delegation handling, principal-per-app isolation, and the /.well-known/ii-app-metadata document that shows your app's name, description, and logo on the sign-in screen. Use when adding sign-in, login, auth, passkeys, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows — use wallet-integration instead."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.4, Node.js >= 22, moc >= 1.6.0"
 metadata:
@@ -56,6 +56,10 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
     - `email` is the raw email string from the user's II-linked account. II does not check it. Treat it as user-supplied input.
     - `verified_email` is the same email as `email`, but only present when the source OpenID provider (e.g., Google) marked it as verified and II surfaced that signal through.
     Use `verified_email` for any access gating (admin allowlists, capability checks). Use `email` only for soft uses like contact info or mailing lists. Request both for fallback behaviour: both are returned with the same value when the source provider marked the email as verified, only `email` when it didn't.
+
+13. **Serving `/.well-known/ii-app-metadata` on the wrong origin, or without CORS.** II reads app metadata from the origin identities are derived for — your validated `derivationOrigin` when the request sets one, the request's own origin otherwise. A document published only on the alternative origin the user visits is never fetched. Both the document *and* the logo it points at are read cross-origin, so both need `Access-Control-Allow-Origin`; without it the sign-in screen silently falls back to showing the bare origin. See "Showing your app's name, description, and logo on the sign-in screen".
+
+14. **Assuming a bad field in `ii-app-metadata` is just dropped, or pointing `logo` at an SVG.** One field that fails validation invalidates the **whole document** — the app is then shown with no metadata at all, not with the remaining fields. `logo` must be a raster image (`image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/avif`) on the **same origin** as the document; `image/svg+xml` is rejected outright. `name` is capped at 40 Unicode code points and `description` at 120, counted on the value as served.
 
 ## Using II during local development
 
@@ -182,6 +186,47 @@ A maximum of 10 alternative origins can be listed. Entries are origins — no tr
 Do **not** reach for `.ic-assets.json5` — that is the legacy asset canister's config file, and the static-site recipe does not read or even upload it, so the headers would silently never apply. See the `static-site` skill.
 
 **Order matters.** Pin the derivation origin before an origin has users. Repointing an origin that has already collected sign-ins orphans every account made under it.
+
+### Showing your app's name, description, and logo on the sign-in screen
+
+By default the II sign-in screens identify your app by its **origin** alone. To have II also show a name, a short tagline, and a logo, serve a JSON document at `/.well-known/ii-app-metadata`. This is permissionless — there is no list to join and no approval step — and it supersedes the curated entry II still ships for a small set of known apps.
+
+```json
+{
+  "name": "Example App",
+  "description": "A short tagline shown on the sign-in screen",
+  "logo": "/logo.png"
+}
+```
+
+**Publish it on the derivation origin, not on every origin.** II fetches the document from the origin identities are derived for: your `derivationOrigin` once validated when the auth request sets one, and the request's own origin otherwise. Publish it once on the derivation origin and every alternative origin that origin certifies is presented with the same name, description, and logo — there is nothing to keep in sync. A copy served only on the alternative origin the user actually visits is never read.
+
+All three fields are optional and unknown fields are ignored, so a document stays valid as II adds fields. The rules that decide whether yours is used:
+
+- `name` is at most 40 characters and `description` at most 120, counted in **Unicode code points on the value as served** — before whitespace collapsing, which is display-only and never rescues an over-long value.
+- Each field must contain at least one visible character. A field holding only whitespace or invisible characters is rejected, not treated as absent.
+- Control characters (other than the ASCII whitespace `\t`, `\n`, `\v`, `\f`, `\r`), `U+FEFF`, and the bidirectional embeddings and overrides `U+202A`–`U+202E` are rejected: they can make rendered text read differently from what it contains. The characters mixed-direction and non-Latin names legitimately need are accepted — the marks `U+200E`, `U+200F`, `U+061C`, the isolates `U+2066`–`U+2069`, and the zero-width characters `U+200B`–`U+200D` — but isolates must be **balanced**: a field must close every isolate it opens and close none it did not open.
+- **One bad field invalidates the whole document**, which is then ignored; the offending field is not dropped on its own. The app is shown with no metadata rather than half of it. II logs which field is at fault to the browser console — check the console on the sign-in screen when metadata does not appear. A document carrying no field II recognises is likewise ignored; a valid one replaces the curated fallback entry wholesale.
+- `logo` must be a **raster** image URL on the **same origin** as the document (relative URLs resolve against it), served as `image/png`, `image/jpeg`, `image/webp`, `image/gif`, or `image/avif`, at most 1 MiB, and at most 4096 pixels per axis. `image/svg+xml` is rejected — serve a rasterised copy of a vector logo. II downloads the image (it is never hotlinked), redraws it at up to 512 pixels on its longest side (an animated image is flattened to its first frame), and renders that copy, so a roughly square PNG or WebP of about 512 pixels is the right thing to ship.
+- Only the *shape* of `logo` — a non-empty URL on the document's own origin — is part of the validation above. Once it passes, a logo that cannot be fetched or decoded, or that breaks the content-type, size, or dimension rules, costs you the logo alone: the name and description still render.
+- The document must not exceed 8 KiB, must be answered with `200`, and must not redirect (II follows redirects for neither the document nor the logo). II requests it without credentials and gives up after 10 seconds.
+
+**Both the document and the logo are read cross-origin, so both need CORS headers.** With `@dfinity/static-site`, extend the same `_headers` file used for alternative origins:
+
+```
+/.well-known/ii-app-metadata
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/logo.png
+  Access-Control-Allow-Origin: *
+```
+
+`.well-known/` is uploaded automatically, but this file has no extension either, so set its media type with the bare `Content-Type:` form. As above, `.ic-assets.json5` is the legacy asset canister's config and is not read by this recipe.
+
+Missing, unreachable, or invalid metadata never blocks sign-in: the screen falls back to the curated entry, and to your origin alone otherwise. And because the file is under the sole control of the origin serving it, publishing it verifies nothing about your app — II keeps displaying the origin alongside whatever you provide, since the origin is the part users can actually check.
+
+The normative rules, including a JSON Schema you can validate the document against in CI, are in the **App metadata** section of the [Internet Identity specification](https://internetcomputer.org/docs/references/internet-identity-spec). The schema expresses every rule above except isolate balancing.
 
 ### Frontend: Requesting Identity Attributes
 

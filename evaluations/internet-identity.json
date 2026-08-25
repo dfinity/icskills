@@ -137,6 +137,36 @@
         "Adds a _headers entry setting Content-Type: application/json AND Access-Control-Allow-Origin: * for /.well-known/ii-alternative-origins",
         "Does NOT create a .ic-assets.json5 file — that is the legacy asset canister config, which the static-site recipe does not read or upload"
       ]
+    },
+    {
+      "name": "App metadata document on the static-site recipe",
+      "prompt": "IC frontend on the @dfinity/static-site recipe. I want Internet Identity's sign-in screen to show my app name and logo instead of just the URL. List ONLY the files I add under my build dir and their exact contents. No prose, no explanation.",
+      "expected_behaviors": [
+        "Serves a JSON document at .well-known/ii-app-metadata with name, description, and/or logo fields",
+        "Adds a _headers entry setting Access-Control-Allow-Origin: * for /.well-known/ii-app-metadata AND for the logo asset — both are read cross-origin by II",
+        "Sets Content-Type: application/json for /.well-known/ii-app-metadata (the file has no extension)",
+        "Uses a raster logo (PNG/JPEG/WebP/GIF/AVIF) on the same origin as the document — not an SVG and not a cross-origin URL",
+        "Does NOT create a .ic-assets.json5 file — that is the legacy asset canister config, which the static-site recipe does not read or upload"
+      ]
+    },
+    {
+      "name": "Adversarial: SVG logo and partial validation of ii-app-metadata",
+      "prompt": "My /.well-known/ii-app-metadata has \"logo\": \"/logo.svg\" and a 200-character description. II will just skip the description that's too long and still show my SVG logo and name, right? Answer briefly.",
+      "expected_behaviors": [
+        "Says no — one invalid field invalidates the WHOLE document, so II ignores all of the metadata rather than dropping only the bad field",
+        "States the description limit is 120 Unicode code points, so a 200-character description fails validation",
+        "States that image/svg+xml is not accepted — the logo must be a raster image (image/png, image/jpeg, image/webp, image/gif, or image/avif)",
+        "Does NOT claim sign-in itself breaks — invalid metadata only falls back to showing the origin"
+      ]
+    },
+    {
+      "name": "Which origin serves ii-app-metadata with alternative origins",
+      "prompt": "My app is served at https://shop.example.com with derivationOrigin https://<canister-id>.icp.net. Do I need to publish /.well-known/ii-app-metadata on both origins, and which one does Internet Identity actually read? Two or three sentences.",
+      "expected_behaviors": [
+        "Says to publish it only on the derivation origin (https://<canister-id>.icp.net), because II fetches the document from the origin identities are derived for",
+        "Explains that the alternative origins that derivation origin lists are then presented with the same name, description, and logo — no per-origin copy to keep in sync",
+        "Does NOT tell the user to publish a copy on each alternative origin"
+      ]
     }
   ],
   "trigger_evals": {
@@ -147,7 +177,8 @@
       "I need passkey authentication for my dapp",
       "Set up sign-in with Internet Identity",
       "How does delegation work with II?",
-      "Add auth to my canister frontend"
+      "Add auth to my canister frontend",
+      "How do I get my app's name and logo to show on the Internet Identity sign-in screen?"
     ],
     "should_not_trigger": [
       "Connect a wallet to my dapp",
