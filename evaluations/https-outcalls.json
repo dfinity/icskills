@@ -1,6 +1,6 @@
 {
   "skill": "https-outcalls",
-  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21), the correct cycle cost for omitting max_response_bytes on a 13-node subnet, and that the Application-subnet cost formula does not apply on a cloud engine.",
+  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21), the correct cycle cost for omitting max_response_bytes on a 13-node subnet, that the Application-subnet cost formula does not apply on a cloud engine, that max_response_bytes covers header bytes and bounds the transform's output, and that over-attaching cycles costs outcall concurrency.",
   "output_evals": [
     {
       "name": "2MB limit is 2,000,000 bytes and the default-size cost",
@@ -18,6 +18,36 @@
         "States the cost is 0 on a cloud engine, not the ~20.8 billion Application-subnet figure",
         "Says no cycles need to be attached and the standard wrapper already handles this correctly",
         "Does NOT instruct topping up the canister with cycles or attaching a hardcoded non-zero fee"
+      ]
+    },
+    {
+      "name": "Adversarial: max_response_bytes covers headers and bounds the transform output",
+      "prompt": "My IC canister calls a REST API whose JSON body is about 800 bytes. I planned to set max_response_bytes to 1024 and strip all response headers in my transform function to stay under it. Will that work? A few sentences, no code.",
+      "expected_behaviors": [
+        "States that max_response_bytes covers HTTP header names and values plus the body, not the body alone",
+        "States that stripping headers in the transform does NOT bring an oversized response under the cap, because max_response_bytes also bounds the transform's own output",
+        "Advises sizing the cap against headers + body as received from the server (real APIs often send 1-2 KB of headers), so 1024 is too tight",
+        "Does NOT claim the 1024-byte cap will work because the transform removes the headers"
+      ]
+    },
+    {
+      "name": "Adversarial: over-attaching cycles is safe but not free",
+      "prompt": "My IC canister makes one HTTPS outcall per user action. The computed cost is about 200M cycles. Since unused cycles are refunded, should I just attach 1B to be safe? A few sentences, no code.",
+      "expected_behaviors": [
+        "Confirms unused cycles are refunded but states that over-attaching is still not free",
+        "Explains that attached cycles are held for the duration of the call, so a margin reduces how many outcalls can be in flight (caps concurrency)",
+        "Recommends attaching the exact computed amount via the wrapper (Call.httpRequest / ic_cdk::management_canister::http_request) or cost_http_request rather than a hand-picked buffer",
+        "Does NOT endorse attaching the 1B round number as a harmless safety margin"
+      ]
+    },
+    {
+      "name": "Adversarial: 'Http body exceeds size limit' fires on a body well under the cap",
+      "prompt": "My IC canister's HTTPS outcall fails with: Http body exceeds size limit of 10000 bytes. But the JSON body the API returns is only about 3 KB, well under 10000. What is going on? A few sentences, no code.",
+      "expected_behaviors": [
+        "Explains that response header bytes are subtracted from max_response_bytes first, so the body was measured against the remaining allowance, not the full 10000",
+        "Notes the message prints the full cap rather than the remaining allowance, which is why a 3 KB body can trip a 10000-byte cap",
+        "Recommends raising max_response_bytes to cover headers plus body",
+        "Does NOT suggest that stripping headers in the transform function will fix this error"
       ]
     }
   ],

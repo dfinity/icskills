@@ -37,17 +37,21 @@ You do not deploy anything extra. The management canister is built into every su
 
 3. **Using HTTP instead of HTTPS.** The IC only supports HTTPS outcalls. Plain HTTP URLs are rejected. The target server must have a valid TLS certificate.
 
-4. **Exceeding the 2MB response limit.** The maximum response body is 2MB, which the spec defines as 2_000_000 bytes (decimal, not 2^21). If the external API returns more, the call fails. Use the `max_response_bytes` field to set a limit and design your queries to return small responses.
+4. **Sizing `max_response_bytes` against the expected body — the limit is not body-only.** The spec defines the size of an HTTP request or response as *the total number of bytes representing the names and values of HTTP headers and the HTTP body*. Response **headers count against `max_response_bytes`**, and a real API commonly sends 1–2 KB of response headers (a unique request id, `Date`, the rate-limit family, CDN headers) before a single byte of body — against a tight cap that is a large share of the budget. Size the cap for **headers + body as they arrive from the server**, then add margin. The failure mode is total: the call fails every time rather than returning a truncated response. The maximum is 2MB = `2_000_000` bytes (decimal, not 2^21), and the same headers-plus-body definition caps the **request** you send at `2_000_000` bytes.
 
-5. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 20.85 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response.
+5. **Expecting the transform function to shrink the response under the cap.** It cannot. `max_response_bytes` bounds the transform's **output** as well as the raw response, and that byte count includes the Candid serialization overhead of the record the transform returns. Stripping headers in the transform is for consensus, not for fitting under the cap — it does not buy room the raw response already blew past. Never set a tight cap on the theory that you will strip headers afterwards.
 
-6. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
+6. **Ignoring the header limits.** Independent of `max_response_bytes`, the spec caps HTTP requests and responses at **64 headers**, **8 KiB** per header name or value, and **48 KiB** for all header names and values combined. The URL must not exceed **8192** bytes. On the request side these are enforced when the replica decodes your arguments, so an over-limit request never leaves the subnet and fails with `InvalidManagementPayload` — e.g. `Deserialize error: The number of elements exceeds maximum allowed 64` — rather than with any HTTP-looking error. If you send no `user-agent` header the IC adds `user-agent: ic/1.0`, and that added header does not count toward these limits.
 
-7. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. On the IC, if the external server does not respond within the timeout (~30 seconds), the call traps.
+7. **Omitting `max_response_bytes`.** If you do not set `max_response_bytes`, the system assumes the maximum (2MB) and charges cycles accordingly — roughly 20.85 billion cycles on a 13-node subnet. Always set this to a reasonable upper bound for your expected response (see pitfall 4 for what counts toward it).
 
-8. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
+8. **Non-idempotent POST requests without caution.** Because multiple replicas make the same request, a POST endpoint that is not idempotent (e.g., "create order") will be called N times (once per replica, typically 13 on a 13-node subnet). Use idempotency keys or design endpoints to handle duplicate requests.
 
-9. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
+9. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. If the external server does not respond within the timeout (~30 seconds), the call does not trap — it comes back as a `SysTransient` reject with the message `Canister http request timed out`, which is retryable. In Motoko the `await` raises a catchable `Error`; in Rust the wrapper returns `Err`.
+
+10. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
+
+11. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
 
 ## Implementation
 
@@ -81,7 +85,10 @@ persistent actor {
 
     let request : IC.http_request_args = {
       url = url;
-      max_response_bytes = ?(10_000 : Nat64); // Always set — omitting defaults to 2MB and charges accordingly
+      // Always set — omitting defaults to 2MB and charges accordingly.
+      // Budget for response headers + body: the cap covers both, and the
+      // transform cannot bring an oversized response back under it.
+      max_response_bytes = ?(10_000 : Nat64);
       headers = [
         { name = "User-Agent"; value = "ic-canister" },
       ];
@@ -200,6 +207,8 @@ async fn fetch_price() -> String {
 
     let request = HttpRequestArgs {
         url: url.to_string(),
+        // Budget for response headers + body: the cap covers both, and the
+        // transform cannot bring an oversized response back under it.
         max_response_bytes: Some(10_000),
         method: HttpMethod::GET,
         headers: vec![
@@ -334,7 +343,9 @@ Omitting max_response_bytes assumes the 2MB maximum (2_000_000 bytes) and costs
 per-request-byte term.
 ```
 
-Unused cycles are refunded to the canister, so it is safe to over-budget.
+Unused cycles are refunded when the call returns, so over-budgeting is **safe but not free**. Attached cycles leave the canister's spendable balance for the *duration* of the call, so a hand-attached margin directly caps how many outcalls the canister can have in flight before it runs out of balance. For a canister making one outcall per user action, that margin is a concurrency limit. This is why both wrappers attach the exact computed amount rather than a round number — as the `ic` mops package puts it: *"Only minimal amount of cycles are added to the call. This helps the canister to make more calls in parallel without running out of cycles."*
+
+Do not hand-attach a buffer "to be safe". Call the wrapper, or compute the exact cost with `Prim.costHttpRequest` / `ic_cdk::api::cost_http_request` and attach that. The way to lower the cost of an outcall is a tighter `max_response_bytes`, never a larger attachment.
 
 This formula applies on a normal **Application subnet**. It does not apply on a **cloud engine** (`CloudEngine` subnet): there, `ic0.cost_http_request` returns 0 regardless of `request_size` or `max_response_bytes`, because engines run under a free cost schedule. Load the `cloud-engine-canisters` skill for the engine's call rules before writing or debugging outcall code that will run there.
 
@@ -398,11 +409,37 @@ If an outcall fails:
 # Local: icp output shows errors inline
 # Mainnet: check the canister logs
 
-# Common errors:
-# "Timeout" -- external server took too long (>30s)
-# "No consensus" -- transform function is missing or not stripping enough
-# "Body size exceeds limit" -- response > max_response_bytes
-# "Not enough cycles" -- attach more cycles to the call
+# Exact reject messages from the replica (match on these, not on paraphrases):
+#
+# "Canister http request timed out"                                  [SysTransient]
+#     External server took too long. Retryable.
+#
+# "No consensus could be reached. Replicas had different responses.
+#  Details: request_id: <id>, hashes: <...>"                         [SysTransient]
+#     Transform is missing or not stripping enough non-determinism.
+#
+# There are THREE distinct size-limit messages, all [SysFatal], because response
+# headers are counted against max_response_bytes BEFORE the body is read:
+#
+# "Header size exceeds specified response size limit <N>"
+#     The response headers ALONE met or exceeded max_response_bytes.
+#
+# "Http body exceeds size limit of <N> bytes."
+#     The body exceeded the allowance REMAINING after header bytes were
+#     subtracted. Note the message prints the full cap <N>, not the remainder,
+#     so the body that failed can be well under <N>. Do not read this message
+#     as "my body is too big" -- it means headers + body are too big.
+#
+# "Transformed http response exceeds limit: <N>"
+#     The Candid-encoded output of your transform exceeded max_response_bytes.
+#
+#     Raising max_response_bytes fixes all three. Stripping headers in the
+#     transform fixes none of them.
+#
+# "http_request request sent with <X> cycles, but <Y> cycles are required."
+#                                                        [CanisterRejectedMessage]
+#     Attached less than the computed cost. Use the wrapper rather than a
+#     hand-picked number.
 ```
 
 ### Transform Debugging
