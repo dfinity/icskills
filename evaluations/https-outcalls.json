@@ -1,6 +1,6 @@
 {
   "skill": "https-outcalls",
-  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21), the correct cycle cost for omitting max_response_bytes on a 13-node subnet, that the Application-subnet cost formula does not apply on a cloud engine, that max_response_bytes covers header bytes and bounds the transform's output, and that over-attaching cycles costs outcall concurrency.",
+  "description": "Evaluation cases for the https-outcalls skill. Tests whether agents use the correct 2MB response limit (2,000,000 bytes per the interface spec, not 2^21), the correct cycle cost for omitting max_response_bytes on a 13-node subnet, that the Application-subnet cost formula does not apply on a cloud engine, that max_response_bytes covers header bytes and bounds the transform's output, that over-attaching cycles costs outcall concurrency, and that an outcall has two distinct timeouts with different reject codes rather than one that traps.",
   "output_evals": [
     {
       "name": "2MB limit is 2,000,000 bytes and the default-size cost",
@@ -49,6 +49,16 @@
         "Notes the message prints the full cap rather than the remaining allowance, which is why a 3 KB body can trip a 10000-byte cap",
         "Recommends raising max_response_bytes to cover headers plus body",
         "Does NOT suggest that stripping headers in the transform function will fix this error"
+      ]
+    },
+    {
+      "name": "Adversarial: two distinct outcall timeouts, neither of which traps",
+      "prompt": "My IC canister makes an HTTPS outcall to a third-party API that is sometimes very slow. What timeouts apply to the outcall, and what does my canister see when one is hit? A few sentences, no code.",
+      "expected_behaviors": [
+        "Identifies TWO distinct timeouts: about 30 seconds for the remote server to respond, and 60 seconds for the subnet to produce a response",
+        "Pairs each with the right reject: SysFatal with message 'Timeout expired' for the 30s remote-server timeout, and SysTransient with message 'Canister http request timed out' for the 60s subnet timeout",
+        "States the call is rejected rather than trapped, so it is catchable (in Motoko the await raises an Error, in Rust the wrapper returns Err)",
+        "Does NOT claim there is a single ~30 second timeout, and does NOT claim the call traps"
       ]
     }
   ],
