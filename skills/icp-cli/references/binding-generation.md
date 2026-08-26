@@ -1,6 +1,6 @@
 # Binding Generation
 
-icp-cli does not have a built-in `dfx generate` command. Use `@icp-sdk/bindgen` (>= 0.3.0) to generate TypeScript bindings from `.did` files. It depends on `@icp-sdk/core` (>= 5.0.0).
+icp-cli does not have a built-in `dfx generate` command. Use `@icp-sdk/bindgen` (>= 0.4.0) to generate TypeScript bindings from `.did` files. bindgen itself has no runtime dependency on `@icp-sdk/core` — the code it *generates* imports from `@icp-sdk/core` (`^5`).
 
 ## Vite plugin (recommended)
 
@@ -82,11 +82,11 @@ if (result !== null) { name = result; }
 
 Install both packages in the frontend project (note the minimum versions):
 ```bash
-npm install @icp-sdk/core@^5.0.0
-npm install -D @icp-sdk/bindgen@^0.3.0
+npm install '@icp-sdk/core@^5'
+npm install -D '@icp-sdk/bindgen@^0.4.0'
 ```
 
-**Important:** `@icp-sdk/core` starts at version 5.x — there is no 0.x or 1.x release. Do not guess a lower version.
+**Important — pin `@icp-sdk/core` to `^5`; do not take `latest`.** The published line is `1.0.0-beta.x` → `4.0.0`–`4.2.3` → `5.x` → `6.x`, so neither "the lowest number you can guess" nor "whatever `latest` gives you" is correct. `6.x` exists, but `@icp-sdk/auth` and `@icp-sdk/signer` still declare a peer dependency on `@icp-sdk/core@^5`, so installing core `6` alongside them fails with `ERESOLVE`, and forcing it with `--legacy-peer-deps` installs two copies of core — which breaks `instanceof` checks on `Principal` and `HttpAgent` across package boundaries. Every IC skill pins `^5` for this reason.
 
 - The `.did` file must exist on disk before the frontend builds. The recommended workflow: generate the `.did` file once (see SKILL.md pitfall #16), commit it to the repo, and specify `candid:` in the recipe config. If `candid` is omitted, the recipe auto-generates the `.did` into the build cache at a non-deterministic path that bindgen cannot reference — so always commit the `.did` and set `candid:` when using bindgen.
-- `@icp-sdk/bindgen` (>= 0.3.0) generates code that depends on `@icp-sdk/core` (>= 5.0.0). Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional — there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.
+- `@icp-sdk/bindgen` (>= 0.4.0) generates code that depends on `@icp-sdk/core` (`^5`). Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional — there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.
