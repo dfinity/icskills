@@ -192,7 +192,7 @@
       "expected_behaviors": [
         "Says no: on the engine's CloudEngine subnet the proxy would hold 0 cycles and could not send a cycle-bearing message either, so it cannot do its job",
         "Says to omit --subnet so it lands on a normal Application subnet",
-        "Notes that the self-deployed proxy authorizes controllers only, so each engine canister must be added as a controller before it can call it: unlike the console proxy, which authorizes the engine's canister-id range"
+        "Notes that the self-deployed proxy authorizes controllers only, so each engine canister must be added as a controller before it can call it, unlike the console proxy, which authorizes the engine's canister-id range"
       ]
     },
     {
