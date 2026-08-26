@@ -30,7 +30,7 @@ Build on the maintained libraries — do not hand-roll the cryptography or the C
 >
 > Use `0.7.0` or later. `0.5.0`/`0.6.0` declared core as a plain dependency, so they could install a second copy of it alongside auth instead of failing. The API is unchanged across all three.
 
-Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend `@icp-sdk/vetkeys@^0.7` with `@icp-sdk/core@^5.4` installed explicitly as its peer (the 5.x line — see the pin note above).
+Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend `@icp-sdk/vetkeys@^0.7` with `@icp-sdk/core@^5` installed explicitly as its peer (see the pin note above).
 
 ## Which skill / which feature
 

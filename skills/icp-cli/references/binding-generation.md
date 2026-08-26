@@ -86,7 +86,7 @@ npm install '@icp-sdk/core@^5'
 npm install -D '@icp-sdk/bindgen@^0.4.0'
 ```
 
-**Important — pin `@icp-sdk/core` to `^5`; do not take `latest`.** `6.x` is published, but `@icp-sdk/auth` and `@icp-sdk/signer` peer on `@icp-sdk/core@^5`, so core `6` alongside them fails with `ERESOLVE`. Do not reach for `--legacy-peer-deps` to get past it: that installs two copies of core in one tree, which degrades silently instead of failing. Every IC skill anchors core to the **5.x line** (written `^5` here, `^5.4` where a later minimum is needed).
+**Important — pin `@icp-sdk/core` to `^5`; do not take `latest`.** `6.x` is published, but `@icp-sdk/auth` and `@icp-sdk/signer` peer on `@icp-sdk/core@^5`, so core `6` alongside them fails with `ERESOLVE`. Do not reach for `--legacy-peer-deps` to get past it: that installs two copies of core in one tree, which degrades silently instead of failing. Every IC skill pins `@icp-sdk/core@^5` for this reason.
 
 - The `.did` file must exist on disk before the frontend builds. The recommended workflow: generate the `.did` file once (see SKILL.md pitfall #16), commit it to the repo, and specify `candid:` in the recipe config. If `candid` is omitted, the recipe auto-generates the `.did` into the build cache at a non-deterministic path that bindgen cannot reference — so always commit the `.did` and set `candid:` when using bindgen.
 - `@icp-sdk/bindgen` (>= 0.4.0) generates code that depends on `@icp-sdk/core` (`^5`). Projects using `@dfinity/agent` must upgrade to `@icp-sdk/core` + `@icp-sdk/bindgen`. This is not optional — there is no way to generate TypeScript bindings with icp-cli while staying on `@dfinity/agent`.
