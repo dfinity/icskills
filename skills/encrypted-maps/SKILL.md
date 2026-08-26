@@ -21,7 +21,7 @@ Use the **`vetkeys` skill** instead when you need lower-level primitives: identi
 
 > Use `@icp-sdk/vetkeys` **`^0.7`**, not the legacy `@dfinity/vetkeys` (deprecated on npm, frozen at 0.4). Frontend agent/identity come from `@icp-sdk/core`, not `@dfinity/agent`.
 
-> **Install `@icp-sdk/core` explicitly at `^5`.** vetKeys `0.7.0` peers core as `^5.0.0 || ^6.0.0`, so `npm i @icp-sdk/vetkeys` alone resolves core to `6.1.0` — while `@icp-sdk/auth` still requires `^5`. Encrypted-storage apps authenticate users, so always install both together: `npm i '@icp-sdk/vetkeys@^0.7' '@icp-sdk/core@^5'`. (Avoid `0.5.0`/`0.6.0`, which declared core as a regular dependency; `0.6.0` beside auth silently produced two copies of core.)
+> **Name `@icp-sdk/core` in the install, pinned to `^5`.** vetKeys peers core as `^5 || ^6`, so installing it alone resolves core to `6.x`, while `@icp-sdk/auth` requires `^5`. Encrypted-storage apps authenticate users, so always install both: `npm i '@icp-sdk/vetkeys@^0.7' '@icp-sdk/core@^5'`.
 
 ## Concepts
 

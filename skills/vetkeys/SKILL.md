@@ -22,13 +22,13 @@ Build on the maintained libraries — do not hand-roll the cryptography or the C
 
 > **`@dfinity/vetkeys` is legacy** (frozen at 0.4.0). The package was renamed to `@icp-sdk/vetkeys` at 0.5.0. Frontend agent/identity types come from `@icp-sdk/core` (`@icp-sdk/core/agent`, `@icp-sdk/core/principal`), **not** `@dfinity/agent`/`@dfinity/principal`.
 
-> **Install `@icp-sdk/core` explicitly, pinned to `^5`.** From `0.7.0`, vetKeys declares core as a **peer** dependency spanning both majors (`^5.0.0 || ^6.0.0`), so it no longer forces a core version — but that also means `npm i @icp-sdk/vetkeys` on its own resolves core to **6.1.0**, the highest in the range. `@icp-sdk/auth`, `@icp-sdk/signer` and `@dfinity/oisy-wallet-signer` still require `^5`, so name core explicitly and keep the whole project on one major:
+> **Name `@icp-sdk/core` in the install, pinned to `^5`.** vetKeys peers core as `^5 || ^6`, so installing it alone resolves core to `6.x`, while `@icp-sdk/auth` and `@icp-sdk/signer` require `^5`. Pin both so the project stays on one major:
 >
 > ```bash
 > npm i '@icp-sdk/vetkeys@^0.7' '@icp-sdk/core@^5'
 > ```
 >
-> Avoid `0.5.0` and `0.6.0`: both declared core as a regular *dependency* rather than a peer, and `0.6.0` pinned it to `^6.1.0` — installing it beside `@icp-sdk/auth` silently produced two copies of `@icp-sdk/core` instead of an `ERESOLVE`. `0.7.0` is API-identical to `0.5.0`; only packaging changed.
+> Use `0.7.0` or later. `0.5.0`/`0.6.0` declared core as a plain dependency, so they could install a second copy of it alongside auth instead of failing. The API is unchanged across all three.
 
 Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend `@icp-sdk/vetkeys@^0.7` with `@icp-sdk/core@^5.4` installed explicitly as its peer (the 5.x line — see the pin note above).
 

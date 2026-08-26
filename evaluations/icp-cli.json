@@ -64,8 +64,8 @@
       "prompt": "How do I generate TypeScript bindings for my backend canister so I can call it from my React frontend?",
       "expected_behaviors": [
         "Does NOT suggest 'dfx generate' — it does not exist in icp-cli",
-        "Recommends @icp-sdk/bindgen with a version constraint (>= 0.4.0) or references references/binding-generation.md which contains the version",
-        "Pins @icp-sdk/core to ^5 (equivalently >= 5 and < 6) — does NOT recommend 6.x and does NOT leave the install unpinned",
+        "Recommends @icp-sdk/bindgen with an explicit version constraint, or references references/binding-generation.md which carries it",
+        "Pins @icp-sdk/core to ^5 — does NOT leave the install unpinned",
         "Shows npm install commands for both packages (@icp-sdk/core and @icp-sdk/bindgen)",
         "Mentions that the .did file must exist on disk before the frontend builds",
         "Shows a Vite plugin setup using icpBindgen from @icp-sdk/bindgen, or references references/binding-generation.md for the full setup"
@@ -161,8 +161,8 @@
         "icp.yaml has Motoko backend with @dfinity/motoko@v5.0.0 (no recipe.configuration block) and a version-pinned asset canister for the frontend",
         "mops.toml has a [toolchain] section (concrete moc version) and a [canisters.backend] section with a main field",
         "Uses 'mops generate candid backend' (or 'mops generate candid') as the command that produces the committed .did file — NOT the older 'mops build' + 'cp .mops/.build/backend.did' two-step",
-        "Uses @icp-sdk/bindgen (>= 0.4.0) Vite plugin with a didFile path pointing to the committed .did file",
-        "Pins @icp-sdk/core to ^5 if a version is referenced — does NOT use 6.x, and does NOT use a 0.x or 1.x version",
+        "Uses the @icp-sdk/bindgen Vite plugin with a didFile path pointing to the committed .did file",
+        "Pins @icp-sdk/core to ^5 if a version is referenced",
         "Does NOT use dfx commands, dfx.json, .env files, or process.env for canister IDs"
       ]
     },

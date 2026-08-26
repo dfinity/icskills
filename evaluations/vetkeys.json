@@ -52,8 +52,8 @@
       "prompt": "My dapp already uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add the vetKeys frontend library. No integration code.",
       "expected_behaviors": [
         "Installs @icp-sdk/vetkeys — NOT the legacy @dfinity/vetkeys",
-        "Names @icp-sdk/core explicitly in the install, pinned to ^5, rather than letting it resolve implicitly",
-        "Explains that @icp-sdk/vetkeys peers @icp-sdk/core as ^5 || ^6, so an install that omits core resolves it to 6.x while @icp-sdk/auth still requires ^5"
+        "Names @icp-sdk/core explicitly in the install, pinned to ^5",
+        "Explains that vetKeys accepts more than one @icp-sdk/core major, so an install that omits core resolves the highest one — which @icp-sdk/auth may not accept"
       ]
     }
   ],
