@@ -175,6 +175,34 @@
         "Explicitly does NOT use the custom domain https://app.example.com as the derivation origin, even though __META_BASE_URL is set to it",
         "Says to set it on the first deploy, before the app has users, because it cannot be applied retroactively without orphaning existing accounts"
       ]
+    },
+    {
+      "name": "Set up a proxy so an engine app can sign Bitcoin transactions",
+      "prompt": "My app is already deployed to my cloud engine and now needs to sign Bitcoin transactions. What do I have to set up before the canister code can do that? Just the setup, no canister code.",
+      "expected_behaviors": [
+        "Says a proxy canister must be deployed and funded, because chain-key signing lives on another subnet and charges cycles that an engine canister cannot attach",
+        "Gives the console steps: the engine's Canisters page, the Proxy canisters section, Deploy a proxy, with a $5 minimum charged to the card, then copy the proxy canister id",
+        "States there is no icp command for the console proxy and does not invent one",
+        "Mentions passing the proxy canister id to the app as configuration (e.g. a canister environment variable) rather than hardcoding a guess"
+      ]
+    },
+    {
+      "name": "Adversarial: deploying a self-deployed proxy onto the engine's subnet",
+      "prompt": "I'm deploying my own proxy canister with the icp proxy template so my engine canisters can call the exchange rate canister. I'll run `icp deploy -e ic --subnet <my-engine-subnet-id>` so it sits next to my app. Good plan? Be brief.",
+      "expected_behaviors": [
+        "Says no: on the engine's CloudEngine subnet the proxy would hold 0 cycles and could not send a cycle-bearing message either, so it cannot do its job",
+        "Says to omit --subnet so it lands on a normal Application subnet",
+        "Notes that the self-deployed proxy authorizes controllers only, so each engine canister must be added as a controller before it can call it, unlike the console proxy, which authorizes the engine's canister-id range"
+      ]
+    },
+    {
+      "name": "Adversarial: 'my engine canister is out of cycles'",
+      "prompt": "The canister status for my app on my cloud engine shows 0 cycles. How do I top it up before it gets deleted?",
+      "expected_behaviors": [
+        "Says a 0 balance on an engine canister is normal and by design: engine canisters hold no cycles and cannot be topped up",
+        "Distinguishes the balances that do exist: the engine's own subscription and emergency reserve, and a proxy canister's cycle balance",
+        "Does NOT suggest icp canister top-up, the cycles ledger, or the CMC for the engine canister"
+      ]
     }
   ],
   "trigger_evals": {
@@ -191,7 +219,11 @@
       "Make my deployed app show up with a name in the cloud engine console",
       "Label my backend and frontend canisters in the engine console instead of bare principal ids",
       "Give my deployed app an icon in the OpenCloud engine console",
-      "Record which git commit my deployed engine app is running so the console can show it"
+      "Record which git commit my deployed engine app is running so the console can show it",
+      "Deploy a proxy canister for my engine so my app can use VetKeys",
+      "How do I top up my engine's proxy canister?",
+      "Turn on automatic top-up for my engine proxy",
+      "My engine app needs live exchange rates: what do I have to set up and pay for?"
     ],
     "should_not_trigger": [
       "My engine canister's call fails with 'Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets'",
