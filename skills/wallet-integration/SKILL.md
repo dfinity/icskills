@@ -63,7 +63,7 @@ npm i '@dfinity/oisy-wallet-signer@^4.1.3' @dfinity/utils @dfinity/zod-schemas \
       @icp-sdk/canisters '@icp-sdk/core@^5' zod
 ```
 
-`@icp-sdk/core` is pinned to `^5` across every IC skill: `@icp-sdk/auth`, `@icp-sdk/signer` and `@icp-sdk/vetkeys` all still require `^5`, so an app combining wallet integration with Internet Identity login resolves cleanly. Core `6.x` is published but nothing else supports it yet.
+Every IC skill anchors `@icp-sdk/core` to the **5.x line** (written `^5` here, `^5.4` where a later minimum is needed). `@icp-sdk/auth`, `@icp-sdk/signer` and `@icp-sdk/canisters` all peer on `@icp-sdk/core@^5`, so an app combining wallet integration with Internet Identity login resolves cleanly. Core `6.x` is published, but the only package that has moved to it is `@icp-sdk/vetkeys@0.6.0` — which is why the `vetkeys` and `encrypted-maps` skills pin `@icp-sdk/vetkeys@^0.5`. Two packages' `latest` tags leave the 5.x line in opposite directions: oisy `6.0.0` falls back to core `^4`, vetKeys `0.6.0` jumps to core `^6`. Pin both.
 
 ## How It Works
 

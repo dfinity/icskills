@@ -16,13 +16,15 @@ Build on the maintained libraries — do not hand-roll the cryptography or the C
 
 | Layer | Rust | Motoko | Frontend |
 |-------|------|--------|----------|
-| Package | `ic-vetkeys` **0.9** ([crates.io](https://crates.io/crates/ic-vetkeys)) | `ic-vetkeys` **0.6** ([mops](https://mops.one/ic-vetkeys)) | `@icp-sdk/vetkeys` **0.5** ([npm](https://www.npmjs.com/package/@icp-sdk/vetkeys)) |
+| Package | `ic-vetkeys` **0.9** ([crates.io](https://crates.io/crates/ic-vetkeys)) | `ic-vetkeys` **0.6** ([mops](https://mops.one/ic-vetkeys)) | `@icp-sdk/vetkeys` **`^0.5`** ([npm](https://www.npmjs.com/package/@icp-sdk/vetkeys)) — **not `0.6`**, see below |
 | Management API | `ic-cdk-management-canister`, `ic_vetkeys::management_canister` | `mo:ic-vetkeys/ManagementCanister` | — |
 | Low-level primitives | crate root (`ic_vetkeys::…`) | — (**not available**, see below) | package root (`@icp-sdk/vetkeys`) |
 
 > **`@dfinity/vetkeys` is legacy** (frozen at 0.4.0). The package was renamed to `@icp-sdk/vetkeys` at 0.5.0. Frontend agent/identity types come from `@icp-sdk/core` (`@icp-sdk/core/agent`, `@icp-sdk/core/principal`), **not** `@dfinity/agent`/`@dfinity/principal`.
 
-Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend also `@icp-sdk/core ^5.4`.
+> **Pin `@icp-sdk/vetkeys` to `^0.5` — do not install `0.6.0`.** `0.6.0` is the current `latest`, and it depends on `@icp-sdk/core@^6.1.0`, whereas `@icp-sdk/auth`, `@icp-sdk/signer` and `@icp-sdk/canisters` all still peer on `@icp-sdk/core@^5`. vetKeys declares core as a **dependency**, not a peer, so npm does not raise `ERESOLVE` — it silently installs **two** copies of `@icp-sdk/core` (6.1.0 nested for vetKeys, 5.4.0 for auth). The vetKeys clients take a caller-supplied agent (`constructor(agent: HttpAgent, canisterId: string)`), so an `HttpAgent` built from core 5 is passed into code typed against core 6, and `Principal`/`HttpAgent` class identity no longer matches across that boundary. Install `'@icp-sdk/vetkeys@^0.5'` explicitly. The pin can be dropped only for an app that uses no other `@icp-sdk` package — which excludes anything with Internet Identity login.
+
+Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend `@icp-sdk/vetkeys@^0.5` with `@icp-sdk/core@^5.4` (the 5.x line — see the pin note above).
 
 ## Which skill / which feature
 
@@ -198,7 +200,7 @@ A vetKey can be turned into **verifiable randomness**: a Rust canister calls `ic
 
 ## Pitfalls
 
-1. **Wrong package / imports.** Use `@icp-sdk/vetkeys` (≥0.5), not `@dfinity/vetkeys` (frozen at 0.4). Import agent/identity from `@icp-sdk/core` (`@icp-sdk/core/agent`, `@icp-sdk/core/principal`), and build the agent with `await HttpAgent.create({ identity, host, rootKey })` — the client classes take a ready `HttpAgent`, not options. Get `rootKey` from `safeGetCanisterEnv()` (`@icp-sdk/core/agent/canister-env`); never call `fetchRootKey()` in shipped code (see the `icp-cli` skill).
+1. **Wrong package / imports.** Use `@icp-sdk/vetkeys` pinned to `^0.5` (**not** `0.6.0`, which pulls `@icp-sdk/core@^6` alongside auth's `^5` — see the pin note under the version table), not `@dfinity/vetkeys` (frozen at 0.4). Import agent/identity from `@icp-sdk/core` (`@icp-sdk/core/agent`, `@icp-sdk/core/principal`), and build the agent with `await HttpAgent.create({ identity, host, rootKey })` — the client classes take a ready `HttpAgent`, not options. Get `rootKey` from `safeGetCanisterEnv()` (`@icp-sdk/core/agent/canister-env`); never call `fetchRootKey()` in shipped code (see the `icp-cli` skill).
 
 2. **`toDerivedKeyMaterial()` does not exist.** For symmetric encryption: `const dkm = await vetKey.asDerivedKeyMaterial()`, then `await dkm.encryptMessage(msg, domainSep, associatedData)` / `await dkm.decryptMessage(ct, domainSep, associatedData)` (all async). Never use the raw decrypted vetKey bytes directly as an AES key.
 

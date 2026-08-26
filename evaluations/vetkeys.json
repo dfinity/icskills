@@ -46,6 +46,16 @@
         "Passes a DerivedPublicKey object as the first argument via `DerivedPublicKey.deserialize(publicKeyBytes)` — NOT raw public-key bytes",
         "Passes the message and signature as the remaining arguments"
       ]
+    },
+    {
+      "name": "Adversarial: vetkeys 0.6.0 duplicates @icp-sdk/core",
+      "prompt": "My dapp uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add the vetKeys frontend library. No integration code.",
+      "expected_behaviors": [
+        "Pins @icp-sdk/vetkeys to ^0.5 — does NOT install 0.6.0 or leave the version unpinned",
+        "Explains that @icp-sdk/vetkeys 0.6.0 requires @icp-sdk/core ^6 while @icp-sdk/auth requires ^5",
+        "Warns that the result is duplicated/mismatched @icp-sdk/core copies rather than a clean install failure",
+        "Installs @icp-sdk/vetkeys — NOT the legacy @dfinity/vetkeys"
+      ]
     }
   ],
   "trigger_evals": {
