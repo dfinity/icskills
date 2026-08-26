@@ -48,13 +48,12 @@
       ]
     },
     {
-      "name": "Adversarial: vetkeys 0.6.0 duplicates @icp-sdk/core",
-      "prompt": "My dapp uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add the vetKeys frontend library. No integration code.",
+      "name": "Adversarial: vetkeys peer range drifts core to 6",
+      "prompt": "My dapp already uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add the vetKeys frontend library. No integration code.",
       "expected_behaviors": [
-        "Pins @icp-sdk/vetkeys to ^0.5 — does NOT install 0.6.0 or leave the version unpinned",
-        "Explains that @icp-sdk/vetkeys 0.6.0 requires @icp-sdk/core ^6 while @icp-sdk/auth requires ^5",
-        "Warns that the result is duplicated/mismatched @icp-sdk/core copies rather than a clean install failure",
-        "Installs @icp-sdk/vetkeys — NOT the legacy @dfinity/vetkeys"
+        "Installs @icp-sdk/vetkeys — NOT the legacy @dfinity/vetkeys",
+        "Names @icp-sdk/core explicitly in the install, pinned to ^5, rather than letting it resolve implicitly",
+        "Explains that @icp-sdk/vetkeys peers @icp-sdk/core as ^5 || ^6, so an install that omits core resolves it to 6.x while @icp-sdk/auth still requires ^5"
       ]
     }
   ],

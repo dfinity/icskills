@@ -63,7 +63,7 @@ npm i '@dfinity/oisy-wallet-signer@^4.1.3' @dfinity/utils @dfinity/zod-schemas \
       @icp-sdk/canisters '@icp-sdk/core@^5' zod
 ```
 
-Every IC skill anchors `@icp-sdk/core` to the **5.x line** (written `^5` here, `^5.4` where a later minimum is needed). `@icp-sdk/auth`, `@icp-sdk/signer` and `@icp-sdk/canisters` all peer on `@icp-sdk/core@^5`, so an app combining wallet integration with Internet Identity login resolves cleanly. Core `6.x` is published, but the only package that has moved to it is `@icp-sdk/vetkeys@0.6.0` — which is why the `vetkeys` and `encrypted-maps` skills pin `@icp-sdk/vetkeys@^0.5`. Two packages' `latest` tags leave the 5.x line in opposite directions: oisy `6.0.0` falls back to core `^4`, vetKeys `0.6.0` jumps to core `^6`. Pin both.
+Every IC skill anchors `@icp-sdk/core` to the **5.x line** (written `^5` here, `^5.4` where a later minimum is needed). `@icp-sdk/auth`, `@icp-sdk/signer` and `@icp-sdk/canisters` all peer on `@icp-sdk/core@^5`, so an app combining wallet integration with Internet Identity login resolves cleanly. Core `6.x` is published, but nothing in this stack requires it — `@icp-sdk/vetkeys` `0.7.0` accepts either major (`^5 || ^6`), which means an install that does not name core explicitly drifts to `6.x`. Name `@icp-sdk/core@^5` in the install command, and pin `@dfinity/oisy-wallet-signer` below `6.0.0` (its `latest` peers core `^4`).
 
 ## How It Works
 
