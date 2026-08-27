@@ -215,19 +215,19 @@ https://hcv4s-uaaaa-aaabq-qaaba-cai.icp.net
 
 - If the derivation origin is just the app's own visible origin, you may omit the file; its absence means "derive for the visible / requested origin itself."
 - Generate it at deploy time with the same `presync` pattern when the origin is a per-network canister URL; for a custom domain it is a one-line static file (e.g. `public/.well-known/ii-derivation-origin`).
-- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list answers "who may point here," not "where does this app point" — there is no reverse lookup from an app URL to its derivation origin, and reading it backwards silently produces the wrong principal. Note that on the default `*.icp0.io` / `ic0.app` canister origins you do **not** set a custom `derivationOrigin` at all (the `internet-identity` skill's Mistake #8 explains why adding it there breaks auth); a custom `derivationOrigin` goes hand in hand with a custom domain — see the `custom-domains` skill.
+- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list is the inverse relation — "who may point here," not "where does this app point" (Pitfall 8). On the default `*.icp0.io` / `ic0.app` canister origins, do **not** set a custom `derivationOrigin` at all (the `internet-identity` skill's Mistake #8 explains why it breaks auth); a custom one goes hand in hand with a custom domain — see the `custom-domains` skill.
 
 ## How an Agent Traverses This
 
-The layers are published independently but consumed in one order. Knowing that order is what tells you which fields have to be good: each step exists to let the agent skip work at the next.
+Published independently, the layers are consumed in one order — each step exists to let the agent skip work at the next:
 
-1. **`GET /.well-known/ic-architecture`** — one request against the URL the user gave. The agent now holds every canister ID and, from `role`/`description`, knows which one to talk to. This step has to be self-sufficient: if the labels do not identify the backend, the agent falls back to fetching `candid:service` for every canister and guessing from method names.
-2. **`candid:service` on the chosen canister** — exact signatures and types, so calls encode and decode correctly. It also reveals `getApiDoc` and, when present, `schema`/`execute`, which is why those names must appear in the interface rather than in a side channel.
-3. **`getApiDoc()`** — one query call returning the behavior the types cannot carry (units, auth, polling, irreversibility). It is the only defense against an agent encoding a correctly-typed call that means the wrong thing.
-4. **`schema()` once, then `execute(...)` per question** — for data-rich canisters. Server-side filtering and aggregation keep rows out of the agent's context; without them the agent pulls whole tables and pages through them.
-5. **Derivation origin** — read `/.well-known/ii-derivation-origin`, or fall back to the visible origin when it is absent, then derive the user's delegation for that origin. Calls now carry the user's own principal, so your existing access control applies unchanged.
+1. `GET /.well-known/ic-architecture` → every canister ID, and which one to call (from `role`/`description`).
+2. `candid:service` on that canister → exact signatures and types, plus the names `getApiDoc` / `schema` / `execute`, which is why those must live in the interface and not a side channel.
+3. `getApiDoc()` → the semantics the types cannot carry.
+4. `schema()` once, then `execute(...)` per question, filtered and aggregated server-side.
+5. `/.well-known/ii-derivation-origin`, or the visible origin when absent → derive the user's delegation and act as the signed-in user, so existing access control applies unchanged.
 
-Steps 1-3 take an agent from a bare URL to a correctly-encoded, correctly-understood call in three round trips. Every layer left unpublished pushes it back onto guessing.
+Steps 1-3 take an agent from a bare URL to a correctly-encoded, correctly-understood call in three round trips. Each layer left unpublished replaces one of them with guessing — unlabeled manifest entries alone cost a `candid:service` fetch per canister (Pitfall 10).
 
 ## Deployment Checklist
 
@@ -275,7 +275,7 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 7. **A missing `tmpl.<env>.json`, or templates in the wrong directory.** `$ICP_CLI_ENVIRONMENT` selects the template by name; if the file for the current environment is absent — or lives at the repo root while `presync` runs from the canister directory — `envsubst` reads nothing and writes an empty manifest. Keep one template per environment, under the frontend canister directory.
 
-8. **Reading `ii-alternative-origins` to find the derivation origin.** It is the inverse relation (who may derive against this origin), not a pointer to it. There is no reverse lookup; using it backwards yields the wrong principal. Publish and read `ii-derivation-origin` for the forward fact.
+8. **Reading `ii-alternative-origins` to find the derivation origin.** It is the inverse relation (who may derive against this origin), not a pointer to it. There is no reverse lookup; using it backwards **silently** yields the wrong principal — a plausible wrong answer, not an error. Publish and read `ii-derivation-origin` for the forward fact.
 
 9. **Naming the behavior method undiscoverably.** The name must appear in `candid:service`, so use `getApiDoc` / `get_api_doc`. A method reachable only via an out-of-band hint defeats zero-knowledge discovery.
 
