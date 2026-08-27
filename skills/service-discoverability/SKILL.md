@@ -60,7 +60,7 @@ Field rules:
 - `version` — the manifest schema version.
 - `id` — **required**, a canister principal.
 - `name`, `role` — human-readable labels; `description` is optional. These fields are untrusted, so a consumer sanitizes them before use.
-- Unknown fields must be ignored, so the format can grow without breaking older readers.
+- Unknown fields must be ignored, so the format can grow (e.g. per-canister network hints, or an api-doc pointer) without breaking older readers.
 
 ### Generate it at deploy time (the `presync` pattern)
 
@@ -217,10 +217,23 @@ https://hcv4s-uaaaa-aaabq-qaaba-cai.icp.net
 - Generate it at deploy time with the same `presync` pattern when the origin is a per-network canister URL; for a custom domain it is a one-line static file (e.g. `public/.well-known/ii-derivation-origin`).
 - **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list answers "who may point here," not "where does this app point" — there is no reverse lookup from an app URL to its derivation origin, and reading it backwards silently produces the wrong principal. Note that on the default `*.icp0.io` / `ic0.app` canister origins you do **not** set a custom `derivationOrigin` at all (the `internet-identity` skill's Mistake #8 explains why adding it there breaks auth); a custom `derivationOrigin` goes hand in hand with a custom domain — see the `custom-domains` skill.
 
+## How an Agent Traverses This
+
+The layers are published independently but consumed in one order. Knowing that order is what tells you which fields have to be good: each step exists to let the agent skip work at the next.
+
+1. **`GET /.well-known/ic-architecture`** — one request against the URL the user gave. The agent now holds every canister ID and, from `role`/`description`, knows which one to talk to. This step has to be self-sufficient: if the labels do not identify the backend, the agent falls back to fetching `candid:service` for every canister and guessing from method names.
+2. **`candid:service` on the chosen canister** — exact signatures and types, so calls encode and decode correctly. It also reveals `getApiDoc` and, when present, `schema`/`execute`, which is why those names must appear in the interface rather than in a side channel.
+3. **`getApiDoc()`** — one query call returning the behavior the types cannot carry (units, auth, polling, irreversibility). It is the only defense against an agent encoding a correctly-typed call that means the wrong thing.
+4. **`schema()` once, then `execute(...)` per question** — for data-rich canisters. Server-side filtering and aggregation keep rows out of the agent's context; without them the agent pulls whole tables and pages through them.
+5. **Derivation origin** — read `/.well-known/ii-derivation-origin`, or fall back to the visible origin when it is absent, then derive the user's delegation for that origin. Calls now carry the user's own principal, so your existing access control applies unchanged.
+
+Steps 1-3 take an agent from a bare URL to a correctly-encoded, correctly-understood call in three round trips. Every layer left unpublished pushes it back onto guessing.
+
 ## Deployment Checklist
 
 - [ ] **Composition:** the deploy pipeline emits `/.well-known/ic-architecture` (real JSON, extensionless path) with real per-environment canister IDs.
 - [ ] **Content type:** a `_headers` rule serves the manifest as `application/json`.
+- [ ] **Routing (non-static-site hosts only):** `/.well-known/*` is exempt from the SPA catch-all rewrite. Automatic on the static-site (certified-assets) canister, where a real file wins over the rewrite; needed on the legacy `@dfinity/asset-canister` or any non-IC host.
 - [ ] **Interface:** `candid:service` metadata is present (not stripped).
 - [ ] **Behavior:** the backend exposes `getApiDoc` / `get_api_doc` returning markdown.
 - [ ] **Data (if applicable):** data-rich canisters expose OQL `schema` + `execute`.
@@ -266,7 +279,9 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 9. **Naming the behavior method undiscoverably.** The name must appear in `candid:service`, so use `getApiDoc` / `get_api_doc`. A method reachable only via an out-of-band hint defeats zero-knowledge discovery.
 
-10. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
+10. **Listing canisters without labels that identify them.** `id` is the only required field, so a manifest of bare IDs is valid — and useless: an agent cannot tell the backend from the frontend without fetching `candid:service` for every entry and inferring from method names, which is the exact work the manifest exists to avoid. Give every entry a `role`, and a `description` wherever the purpose is not obvious from the name.
+
+11. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
 
 ## Additional References
 
@@ -277,4 +292,5 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 - Load `icp-cli` for `icp.yaml` / `canister.yaml`, environments, and the recipe system.
 - Load `canister-security` for access control on the methods agents call.
 - Authoritative human guide: [Service discoverability](https://docs.internetcomputer.org/guides/frontends/service-discoverability/).
+- Candid interface reference for the typed interface agents read: [Candid interface](https://docs.internetcomputer.org/guides/canister-calls/candid/).
 - Community example of the Layer 1 generation (a personal repo — illustrative, not a stable dependency): [`raymondk/demo-ic-architecture`](https://github.com/raymondk/demo-ic-architecture/tree/main/frontend/ic-architecture).
