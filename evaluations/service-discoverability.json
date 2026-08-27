@@ -37,7 +37,7 @@
       "expected_behaviors": [
         "Explains a real uploaded file beats the /* SPA rewrite on certified-assets, so the manifest is served directly (the rewrite only catches paths with no matching file)",
         "Notes .well-known/ is uploaded automatically by the static-site recipe, with no .ic-assets.json5 or un-ignore rule needed",
-        "Notes an explicit /.well-known/* SPA exemption is only needed on the legacy @dfinity/asset-canister or a non-IC host",
+        "Does NOT claim the legacy @dfinity/asset-canister needs a /.well-known/* SPA exemption; its enable_aliasing likewise only serves index.html when no file matches, and its actual requirement is an .ic-assets.json5 un-ignore rule so the hidden directory is uploaded",
         "Does NOT claim you must add .ic-assets.json5 on the static-site canister"
       ]
     },
@@ -70,23 +70,24 @@
       ]
     },
     {
-      "name": "Adversarial: manifest entries need role labels, not just IDs",
+      "name": "Adversarial: manifest entries need identifying labels, not just IDs",
       "prompt": "My /.well-known/ic-architecture manifest lists all four of my canisters with just their \"id\" fields, since id is the only required field. Is that enough for an AI agent handed my app's URL? Just the key point.",
       "expected_behaviors": [
-        "Says bare IDs are schema-valid but defeat the manifest's purpose: the agent cannot tell which canister is the backend",
-        "Explains the agent would fall back to fetching candid:service for every canister and guessing from method names",
-        "Recommends adding a role for every entry, plus a description where the purpose is not obvious from the name",
-        "Does NOT claim the manifest is fine as-is because id is the only required field"
+        "Says a bare-ID manifest is schema-valid and still useful for enumerating the canisters without out-of-band discovery",
+        "Identifies the real cost: with nothing to tell the canisters apart, the agent pays a candid:service fetch per entry and infers roles from method names",
+        "Recommends labelling each entry with whatever identifies it (name, role, and description where the name is not self-explanatory)",
+        "Does NOT insist that `role` specifically is required, since an identifying `name` can distinguish the backend"
       ]
     },
     {
       "name": "Discovery traversal order from a bare URL",
       "prompt": "An AI agent is handed only https://myapp.com and nothing else. What sequence of requests gets it to a correctly-encoded call against my backend canister? Just the ordered steps, no config.",
       "expected_behaviors": [
-        "Step 1: GET /.well-known/ic-architecture at that origin to enumerate canister IDs and pick the backend by its role/description",
+        "Step 1: GET /.well-known/ic-architecture at that origin to enumerate canister IDs and pick the backend by its identifying labels",
         "Step 2: fetch candid:service metadata on the chosen canister ID for exact method signatures and types",
         "Step 3: call the getApiDoc query method for behavior the Candid types cannot express (units, auth, polling, irreversibility)",
         "Mentions the derivation origin (/.well-known/ii-derivation-origin, defaulting to the visible origin when absent) for acting as the signed-in user",
+        "Resolves the user's delegation BEFORE any call that getApiDoc says needs a signed principal, rather than leaving identity until after the data calls",
         "Does NOT require a human to supply a canister ID out of band"
       ]
     }
