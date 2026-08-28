@@ -60,6 +60,24 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 ---
 
+## reviewing-motoko
+
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
+- **Commit:** 90a2433578d0ea53fdbce3f51fb1dd3b8145ac04
+- **Upstream version:** 0.1.0 (skill frontmatter `version:`)
+- **Last synced:** 2026-08-28
+- **Pin note:** added at `90a2433` while the other three `caffeinelabs/skills` entries were still pinned at `9274f9b` (the skill did not exist there). Pins realign on the next full `caffeinelabs/skills` sync — until then, a sync issue may re-show this skill's content as newly added; verify against the local file instead of re-applying.
+- **Upstream files:**
+  - `skills/reviewing-motoko/SKILL.md`
+  - `skills/reviewing-motoko/references/state-and-persistence.md → references/state-and-persistence.md`
+  - `skills/reviewing-motoko/references/type-encoding.md → references/type-encoding.md`
+- **icskills-owned sections (do not overwrite from upstream):**
+  - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description` tuned for repo-wide trigger evals, `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.6.0, mops >= 3.0.0`), `metadata.title`/`category`).
+  - **`## Additional resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
+
+---
+
 ## static-site
 
 - **Upstream:** https://github.com/dfinity/certified-assets

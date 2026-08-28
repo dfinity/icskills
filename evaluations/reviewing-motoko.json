@@ -1,0 +1,52 @@
+{
+  "skill": "reviewing-motoko",
+  "description": "Evaluations for the reviewing-motoko skill — design review of existing Motoko backends.",
+  "output_evals": [
+    {
+      "name": "text-status-and-correlated-fields",
+      "prompt": "Design-review this Motoko stable type and report findings with a severity level each, as in a code review. Just the findings — no full rewrite, no deploy steps:\n\n```motoko\npublic type Task = {\n  id : Nat;\n  var status : Text; // \"open\", \"claimed\", or \"done\"\n  hasDeadline : Bool;\n  deadline : ?Time.Time;\n};\n```",
+      "expected_behaviors": [
+        "Flags `status : Text` for a closed set of values as a defect and recommends a variant type (e.g. `{ #open; #claimed; #done }`) rather than runtime string comparison",
+        "Flags the correlated `hasDeadline : Bool` + `deadline : ?Time.Time` pair as encoding invalid states and recommends collapsing to a single field (the `?Time.Time` alone or a variant)",
+        "Notes that changing a type reachable from stable actor state requires a migration"
+      ]
+    },
+    {
+      "name": "mixin-var-by-value",
+      "prompt": "Under Motoko enhanced migration my actor declares `var nextId : Nat;` (value supplied by the migration chain) and passes it to a mixin with `include TasksApi(nextId)`. The mixin increments it, but the actor's field never changes. Review this and give the finding plus the fix, briefly.",
+      "expected_behaviors": [
+        "Identifies that `var` parameters are passed by value, so the mixin mutates a copy and the actor's field is never updated",
+        "Fix is to wrap the counter in a record (e.g. `let state : { var nextId : Nat }`) and pass that record binding to the mixin",
+        "Warns against constructing a fresh record literal at the include site (e.g. `include TasksApi({ var nextId = ... })`), which would again give the mixin its own copy"
+      ]
+    },
+    {
+      "name": "stable-inline-initializer",
+      "prompt": "Code review, brief — one finding with severity plus the exact fix, nothing else: my Motoko project uses the enhanced migration chain (`[canisters.backend.migrations]` in mops.toml). In main.mo the actor declares this top-level field holding durable user data that must survive upgrades:\n\n```motoko\nlet tasks = Map.empty<Nat, Types.Task>();\n```",
+      "expected_behaviors": [
+        "Flags the inline initializer on a stable field as invalid under enhanced migration — stable fields are declared type-only (compiler reports M0250 / M0014)",
+        "The proposed fix is to declare the field type-only (`let tasks : Map.Map<Nat, Types.Task>;`) and supply the initial value from the migration chain (the pending migration's NewActor)",
+        "The proposed fix keeps the field stable — it does not convert this durable user data to `transient`"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' are review/audit/refactor tasks on existing Motoko code; 'should_not_trigger' are writing new code (writing-motoko), migration authoring (migrating-motoko-actors), tooling, or non-Motoko reviews.",
+    "should_trigger": [
+      "Review my Motoko backend for design issues",
+      "Can you audit this Motoko canister code and report findings by severity?",
+      "Refactor this existing Motoko actor — the types feel sloppy",
+      "Do a code review of my .mo files before I merge",
+      "Is holding the task status as Text good design in my Motoko type?",
+      "My Motoko project is one monolithic main.mo — review the structure"
+    ],
+    "should_not_trigger": [
+      "Write a Motoko canister with a counter",
+      "Fix this Motoko compilation error M0220",
+      "Write a migration to rename an actor field",
+      "How do I deploy my canister to mainnet?",
+      "Review my Rust canister for security issues",
+      "Run mops check on my project"
+    ]
+  }
+}

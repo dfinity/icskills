@@ -269,7 +269,8 @@
       "Generate TypeScript bindings for my canister",
       "What is the cycles cost of a canister?",
       "How do I pin the moc version in mops.toml?",
-      "Run mops check on my project"
+      "Run mops check on my project",
+      "Review my existing Motoko backend for design issues and report findings by severity"
     ]
   }
 }
