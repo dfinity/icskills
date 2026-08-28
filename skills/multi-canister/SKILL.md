@@ -16,7 +16,7 @@ Splitting an IC application across multiple canisters for scaling, separation of
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.1.0"` in mops.toml — `Runtime.envVar`, used below to discover a sibling canister's ID, was added in motoko-core 2.1.0
+- For Motoko: `mops` package manager, `core >= 2.1.0` in mops.toml — `Runtime.envVar`, used below to discover a sibling canister's ID, was added in motoko-core 2.1.0
 - For Rust: `ic-cdk >= 0.19`, `candid`, `serde`, `ic-stable-structures`
 
 ## How It Works

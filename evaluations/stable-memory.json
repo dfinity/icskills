@@ -46,7 +46,7 @@
       "prompt": "Give me the mops.toml for a Motoko canister project that uses mo:core and will be compiled with mops. Just the TOML, no explanation.",
       "expected_behaviors": [
         "Includes a [toolchain] section that pins moc to a specific version",
-        "Includes a [dependencies] section pinning core",
+        "Includes a [dependencies] section pinning core to a concrete version (mops has no range syntax -- a wildcard like core = \"*\" or a caret/>= range is not a valid pin and fails to install)",
         "Does NOT emit a mops.toml whose only sections are [package] and [dependencies] -- without a moc pin mops falls back to the dfx cache and the build fails with `dfx: not found`"
       ]
     }

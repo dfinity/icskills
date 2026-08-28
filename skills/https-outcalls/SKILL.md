@@ -16,7 +16,7 @@ HTTPS outcalls allow canisters to make HTTP requests to external web services di
 
 ## Prerequisites
 
-- For Motoko: `mo:core` 2.0 and `ic >= 2.1.0` in mops.toml
+- For Motoko: `core >= 2.0.0` and `ic >= 2.1.0` in mops.toml
 - For Rust: `ic-cdk >= 0.19`, `serde_json` for JSON parsing
 
 ## Canister IDs

@@ -15,7 +15,7 @@ Security patterns for IC canisters in Motoko and Rust. The async messaging model
 
 ## Prerequisites
 
-- For Motoko: `mops` package manager, `core = "2.0.0"` in mops.toml
+- For Motoko: `mops` package manager, `core >= 2.0.0` in mops.toml
 - For Rust: `ic-cdk = "0.19"`, `candid = "0.10"`
 
 ## Security Pitfalls

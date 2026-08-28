@@ -18,7 +18,7 @@ Stable memory is persistent storage on Internet Computer that survives canister 
 
 ## Prerequisites
 
-- For Motoko: mops with `core = "2.0.0"` in mops.toml, and `moc >= 1.7.0` (dot notation on `Map`/`List` needs it)
+- For Motoko: mops with `core >= 2.0.0` in mops.toml, and `moc >= 1.7.0` (dot notation on `Map`/`List` needs both)
 - For Rust: `ic-stable-structures = "0.7"` in Cargo.toml
 
 ## Canister IDs
