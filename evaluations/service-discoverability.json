@@ -1,7 +1,6 @@
 {
   "skill": "service-discoverability",
   "description": "Evaluation cases for the service-discoverability skill. Tests whether agents make a canister app discoverable to an AI agent: generate the /.well-known/ic-architecture manifest at deploy time (presync, not hard-coded IDs), serve it correctly as JSON, expose candid:service and a discoverable getApiDoc, understand the OQL data surface, and publish/read ii-derivation-origin without confusing it with ii-alternative-origins.",
-
   "output_evals": [
     {
       "name": "Generate ic-architecture at deploy time (not hard-coded IDs)",
@@ -38,7 +37,7 @@
       "expected_behaviors": [
         "Explains a real uploaded file beats the /* SPA rewrite on certified-assets, so the manifest is served directly (the rewrite only catches paths with no matching file)",
         "Notes .well-known/ is uploaded automatically by the static-site recipe, with no .ic-assets.json5 or un-ignore rule needed",
-        "Notes an explicit /.well-known/* SPA exemption is only needed on the legacy @dfinity/asset-canister or a non-IC host",
+        "Does NOT claim the legacy @dfinity/asset-canister needs a /.well-known/* SPA exemption; its enable_aliasing likewise only serves index.html when no file matches, and its actual requirement is an .ic-assets.json5 un-ignore rule so the hidden directory is uploaded",
         "Does NOT claim you must add .ic-assets.json5 on the static-site canister"
       ]
     },
@@ -69,9 +68,30 @@
         "Uses `icp canister metadata <canister-id> candid:service --network ic` (a raw canister ID has no project environment, so --network targets mainnet directly rather than -e)",
         "Uses icp-cli, NOT dfx"
       ]
+    },
+    {
+      "name": "Adversarial: manifest entries need identifying labels, not just IDs",
+      "prompt": "My /.well-known/ic-architecture manifest lists all four of my canisters with just their \"id\" fields, since id is the only required field. Is that enough for an AI agent handed my app's URL? Just the key point.",
+      "expected_behaviors": [
+        "Does NOT dismiss a bare-ID manifest as invalid or useless — acknowledges it is schema-valid and still enumerates the canisters without out-of-band discovery",
+        "Identifies the real cost: with nothing to tell the canisters apart, the agent pays a candid:service fetch per entry and infers roles from method names",
+        "Recommends labelling each entry with whatever identifies it (name, role, and description where the name is not self-explanatory)",
+        "Does NOT insist that `role` specifically is required, since an identifying `name` can distinguish the backend"
+      ]
+    },
+    {
+      "name": "Discovery traversal order from a bare URL",
+      "prompt": "An AI agent is handed only https://myapp.com and nothing else. What sequence of requests gets it to a correctly-encoded call against my backend canister? Just the ordered steps, no config.",
+      "expected_behaviors": [
+        "Step 1: GET /.well-known/ic-architecture at that origin to enumerate canister IDs and pick the backend by its identifying labels",
+        "Step 2: fetch candid:service metadata on the chosen canister ID for exact method signatures and types",
+        "Step 3: call the getApiDoc query method for behavior the Candid types cannot express (units, auth, polling, irreversibility)",
+        "Mentions the derivation origin (/.well-known/ii-derivation-origin, defaulting to the visible origin when absent) for acting as the signed-in user",
+        "Resolves the user's delegation BEFORE any call that getApiDoc says needs a signed principal, rather than leaving identity until after the data calls",
+        "Does NOT require a human to supply a canister ID out of band"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
@@ -82,7 +102,8 @@
       "How do agents discover which canisters make up my app?",
       "Expose a getApiDoc method so agents understand my canister's behavior",
       "How do I publish my app's ii-derivation-origin so agents use the right principal?",
-      "Serve a service discovery manifest for my IC app"
+      "Serve a service discovery manifest for my IC app",
+      "What sequence of requests does an agent make to discover my IC app from just its URL?"
     ],
     "should_not_trigger": [
       "Sign an AI agent in to oisy.com and act as me",

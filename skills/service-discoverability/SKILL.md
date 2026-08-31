@@ -60,7 +60,7 @@ Field rules:
 - `version` — the manifest schema version.
 - `id` — **required**, a canister principal.
 - `name`, `role` — human-readable labels; `description` is optional. These fields are untrusted, so a consumer sanitizes them before use.
-- Unknown fields must be ignored, so the format can grow without breaking older readers.
+- Unknown fields must be ignored, so the format can grow (e.g. per-canister network hints, or an api-doc pointer) without breaking older readers.
 
 ### Generate it at deploy time (the `presync` pattern)
 
@@ -121,7 +121,7 @@ with the template using `${FRONTEND_ID}` / `${BACKEND_ID}` instead. `icp caniste
 ### Serve it correctly
 
 - **`.well-known/` is uploaded automatically** by the static-site recipe (it traverses `.well-known/` even though it skips other dotfiles). A file at `dist/.well-known/ic-architecture` is served at `/.well-known/ic-architecture` with **no extra config** — no `.ic-assets.json5`, no SPA-exemption rule.
-- **A real file beats the SPA fallback.** With the static-site `/*  /index.html  200` rewrite, the manifest is a real file, so it is served directly; the rewrite only catches paths with no matching file. (This is the certified-assets behavior. On the *legacy* `@dfinity/asset-canister` — or any non-IC host — you must explicitly exempt `/.well-known/*` from the SPA catch-all, or it returns `index.html`.)
+- **A real file beats the SPA fallback.** With the static-site `/*  /index.html  200` rewrite, the manifest is a real file, so it is served directly; the rewrite only catches paths with no matching file. (The *legacy* `@dfinity/asset-canister` resolves the same way — its `index.html` fallback likewise fires only when no file matches — but there the manifest has to be uploaded in the first place: `.ic-assets.json5` needs `{ "match": ".well-known", "ignore": false }`, or the hidden directory never ships. On a non-IC host, check that host's own routing precedence; where rewrites shadow real files, exempt `/.well-known/*`.)
 - **Set the content type.** Extensionless files do not get `application/json` automatically. Add a `_headers` file (at the root of `dir`, e.g. via `public/_headers`) so the manifest is served as JSON:
 
 ```text
@@ -215,12 +215,27 @@ https://hcv4s-uaaaa-aaabq-qaaba-cai.icp.net
 
 - If the derivation origin is just the app's own visible origin, you may omit the file; its absence means "derive for the visible / requested origin itself."
 - Generate it at deploy time with the same `presync` pattern when the origin is a per-network canister URL; for a custom domain it is a one-line static file (e.g. `public/.well-known/ii-derivation-origin`).
-- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list answers "who may point here," not "where does this app point" — there is no reverse lookup from an app URL to its derivation origin, and reading it backwards silently produces the wrong principal. Note that on the default `*.icp0.io` / `ic0.app` canister origins you do **not** set a custom `derivationOrigin` at all (the `internet-identity` skill's Mistake #8 explains why adding it there breaks auth); a custom `derivationOrigin` goes hand in hand with a custom domain — see the `custom-domains` skill.
+- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list is the inverse relation — "who may point here," not "where does this app point" (Pitfall 8). On the default `*.icp0.io` / `ic0.app` canister origins, do **not** set a custom `derivationOrigin` at all (the `internet-identity` skill's Mistake #8 explains why it breaks auth); a custom one goes hand in hand with a custom domain — see the `custom-domains` skill.
+
+## How an Agent Traverses This
+
+Published independently, the layers are consumed in one order — each step exists to let the agent skip work at the next:
+
+1. `GET /.well-known/ic-architecture` → every canister ID, and which one to call, from whichever labels identify it (`name`, `role`, `description`).
+2. `candid:service` on that canister → exact signatures and types, plus the names `getApiDoc` / `schema` / `execute`, which is why those must live in the interface and not a side channel.
+3. `getApiDoc()` → the semantics the types cannot carry, including **which calls need a signed principal**.
+4. `/.well-known/ii-derivation-origin`, or the visible origin when absent → derive the user's delegation and act as the signed-in user, so existing access control applies unchanged.
+5. `schema()` once, then `execute(...)` per question, filtered and aggregated server-side.
+
+The identity step is numbered 5 as a layer but happens **before the first protected call**: step 3 is where the agent learns which methods require a signed principal, so anything gated — a protected `execute`, or any update call — has to wait for the delegation. Only unauthenticated reads can run ahead of it.
+
+Steps 1-3 take an agent from a bare URL to a correctly-encoded, correctly-understood call in three round trips. Each layer left unpublished replaces one of them with guessing — an unlabeled manifest alone costs a `candid:service` fetch per canister (Pitfall 10).
 
 ## Deployment Checklist
 
 - [ ] **Composition:** the deploy pipeline emits `/.well-known/ic-architecture` (real JSON, extensionless path) with real per-environment canister IDs.
 - [ ] **Content type:** a `_headers` rule serves the manifest as `application/json`.
+- [ ] **Reachability (non-static-site hosts only):** `/.well-known/ic-architecture` actually resolves. Automatic on the static-site canister; on the legacy `@dfinity/asset-canister` the directory needs an `.ic-assets.json5` un-ignore rule to be uploaded at all; on a non-IC host, exempt `/.well-known/*` from the SPA catch-all if that host's rewrites shadow real files.
 - [ ] **Interface:** `candid:service` metadata is present (not stripped).
 - [ ] **Behavior:** the backend exposes `getApiDoc` / `get_api_doc` returning markdown.
 - [ ] **Data (if applicable):** data-rich canisters expose OQL `schema` + `execute`.
@@ -254,7 +269,7 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 3. **Assuming the manifest is served, without setting its content type.** The extensionless file is served, but not as `application/json` unless a `_headers` rule says so. Add the `Content-Type: application/json` block above.
 
-4. **Expecting `.ic-assets.json5` to matter.** That is the *legacy* asset canister's config; the static-site (certified-assets) canister ignores it. `.well-known/` is uploaded automatically and needs no un-ignore rule. Only the legacy canister — or a non-IC host — needs an explicit `/.well-known/*` SPA exemption.
+4. **Expecting `.ic-assets.json5` to matter.** That is the *legacy* asset canister's config; the static-site (certified-assets) canister ignores it. `.well-known/` is uploaded automatically and needs no un-ignore rule. The legacy canister is the reverse: it needs `{ "match": ".well-known", "ignore": false }` or the directory is never deployed — an upload problem, not a routing one.
 
 5. **Writing the file with a `.json` extension.** The path is exactly `/.well-known/ic-architecture` (and `/.well-known/ii-derivation-origin`) — no extension, matching the IC `.well-known` convention (`ic-domains`, `ii-alternative-origins`).
 
@@ -262,11 +277,13 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 7. **A missing `tmpl.<env>.json`, or templates in the wrong directory.** `$ICP_CLI_ENVIRONMENT` selects the template by name; if the file for the current environment is absent — or lives at the repo root while `presync` runs from the canister directory — `envsubst` reads nothing and writes an empty manifest. Keep one template per environment, under the frontend canister directory.
 
-8. **Reading `ii-alternative-origins` to find the derivation origin.** It is the inverse relation (who may derive against this origin), not a pointer to it. There is no reverse lookup; using it backwards yields the wrong principal. Publish and read `ii-derivation-origin` for the forward fact.
+8. **Reading `ii-alternative-origins` to find the derivation origin.** It is the inverse relation (who may derive against this origin), not a pointer to it. There is no reverse lookup; using it backwards **silently** yields the wrong principal — a plausible wrong answer, not an error. Publish and read `ii-derivation-origin` for the forward fact.
 
 9. **Naming the behavior method undiscoverably.** The name must appear in `candid:service`, so use `getApiDoc` / `get_api_doc`. A method reachable only via an out-of-band hint defeats zero-knowledge discovery.
 
-10. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
+10. **Listing canisters without labels that identify them.** `id` is the only required field, so a manifest of bare IDs is valid, and it still earns its keep: the agent gets the app's canisters without discovering them out of band. What it loses is the routing — with nothing to tell the backend from the frontend, the agent pays a `candid:service` fetch per entry and infers roles from method names. Label every entry with whatever identifies it (`name` is often enough; add `role`, and `description` where the purpose is not obvious from the name).
+
+11. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
 
 ## Additional References
 
@@ -277,4 +294,5 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 - Load `icp-cli` for `icp.yaml` / `canister.yaml`, environments, and the recipe system.
 - Load `canister-security` for access control on the methods agents call.
 - Authoritative human guide: [Service discoverability](https://docs.internetcomputer.org/guides/frontends/service-discoverability/).
+- Candid interface reference for the typed interface agents read: [Candid interface](https://docs.internetcomputer.org/guides/canister-calls/candid/).
 - Community example of the Layer 1 generation (a personal repo — illustrative, not a stable dependency): [`raymondk/demo-ic-architecture`](https://github.com/raymondk/demo-ic-architecture/tree/main/frontend/ic-architecture).
