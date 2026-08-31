@@ -4,6 +4,9 @@ Complete API signatures from `mo:core` library.
 
 Use this as a reference when using contextual dot notation.
 
+Generated from motoko-core's API lock by `scripts/generate-motoko-api-reference.mjs`.
+Deprecated APIs are omitted — if a symbol is not here, do not write it.
+
 ## Array
 
 - `public func all<T>(self : [T], predicate : T -> Bool) : Bool`
@@ -11,6 +14,7 @@ Use this as a reference when using contextual dot notation.
 - `public func binarySearch<T>(self : [T], compare : (implicit : (T, T) -> Order.Order), element : T) : { #found : Nat; #insertionIndex : Nat }`
 - `public func compare<T>(self : [T], other : [T], compare : (implicit : (T, T) -> Order.Order)) : Order.Order`
 - `public func concat<T>(self : [T], other : [T]) : [T]`
+- `public func contains<T>(self : [T], equal : (implicit : (T, T) -> Bool), element : T) : Bool`
 - `public func empty<T>() : [T]`
 - `public func enumerate<T>(self : [T]) : Types.Iter<(Nat, T)>`
 - `public func equal<T>(self : [T], other : [T], equal : (implicit : (T, T) -> Bool)) : Bool`
@@ -23,8 +27,6 @@ Use this as a reference when using contextual dot notation.
 - `public func foldLeft<T, A>(self : [T], base : A, combine : (A, T) -> A) : A`
 - `public func foldRight<T, A>(self : [T], base : A, combine : (T, A) -> A) : A`
 - `public func forEach<T>(self : [T], f : T -> ())`
-- `public func fromIter<T>(iter : Types.Iter<T>) : [T]`
-- `public func fromVarArray<T>(varArray : [var T]) : [T]`
 - `public func indexOf<T>(self : [T], equal : (implicit : (T, T) -> Bool), element : T) : ?Nat`
 - `public func isEmpty<T>(self : [T]) : Bool`
 - `public func isSorted<T>(self : [T], compare : (implicit : (T, T) -> Order.Order)) : Bool`
@@ -47,11 +49,114 @@ Use this as a reference when using contextual dot notation.
 - `public func toVarArray<T>(self : [T]) : [var T]`
 - `public func values<T>(self : [T]) : Types.Iter<T>`
 - `public let tabulate : <T>(size : Nat, generator : Nat -> T) -> [T]`
+- `public let toBlob : (self : [Nat8]) -> Blob`
+
+## Blob
+
+- `public func compare(self : Blob, other : Blob) : Order.Order`
+- `public func empty() : Blob`
+- `public func equal(self : Blob, other : Blob) : Bool`
+- `public func greater(self : Blob, other : Blob) : Bool`
+- `public func greaterOrEqual(self : Blob, other : Blob) : Bool`
+- `public func isEmpty(self : Blob) : Bool`
+- `public func less(self : Blob, other : Blob) : Bool`
+- `public func lessOrEqual(self : Blob, other : Blob) : Bool`
+- `public func notEqual(self : Blob, other : Blob) : Bool`
+- `public func size(self : Blob) : Nat`
+- `public let hash : (self : Blob) -> Types.Hash`
+- `public let toArray : (self : Blob) -> [Nat8]`
+- `public let toVarArray : (self : Blob) -> [var Nat8]`
+- `public type Blob`
+
+## Bool
+
+- `public func allValues() : Iter.Iter<Bool>`
+- `public func compare(self : Bool, other : Bool) : Order.Order`
+- `public func equal(self : Bool, other : Bool) : Bool`
+- `public func logicalAnd(self : Bool, other : Bool) : Bool`
+- `public func logicalNot(self : Bool) : Bool`
+- `public func logicalOr(self : Bool, other : Bool) : Bool`
+- `public func logicalXor(self : Bool, other : Bool) : Bool`
+- `public func toText(self : Bool) : Text`
+- `public type Bool`
+
+## Char
+
+- `public func compare(self : Char, other : Char) : { #less; #equal; #greater }`
+- `public func equal(self : Char, other : Char) : Bool`
+- `public func greater(self : Char, other : Char) : Bool`
+- `public func greaterOrEqual(self : Char, other : Char) : Bool`
+- `public func isAlphabetic(self : Char) : Bool`
+- `public func isDigit(self : Char) : Bool`
+- `public func less(self : Char, other : Char) : Bool`
+- `public func lessOrEqual(self : Char, other : Char) : Bool`
+- `public func notEqual(self : Char, other : Char) : Bool`
+- `public let isLower : (self : Char) -> Bool`
+- `public let isUpper : (self : Char) -> Bool`
+- `public let isWhitespace : (self : Char) -> Bool`
+- `public let toNat32 : (self : Char) -> Nat32`
+- `public let toText : (self : Char) -> Text`
+- `public type Char`
 
 ## Debug
 
 - `public func todo() : None`
 - `public let print : (text : Text) -> ()`
+
+## Error
+
+- `public func isCleanReject(self : Error) : Bool`
+- `public func isRetryPossible(self : Error) : Bool`
+- `public let code : (self : Error) -> ErrorCode`
+- `public let message : (self : Error) -> Text`
+- `public let reject : (message : Text) -> Error`
+- `public type Error`
+- `public type ErrorCode`
+
+## Float
+
+- `public func add(x : Float, y : Float) : Float`
+- `public func compare(x : Float, y : Float) : Order.Order`
+- `public func div(x : Float, y : Float) : Float`
+- `public func equal(x : Float, y : Float, epsilon : Float) : Bool`
+- `public func format(self : Float, fmt : { #fix : Nat8; #exp : Nat8; #gen : Nat8; #exact }) : Text`
+- `public func greater(x : Float, y : Float) : Bool`
+- `public func greaterOrEqual(x : Float, y : Float) : Bool`
+- `public func isNaN(self : Float) : Bool`
+- `public func less(x : Float, y : Float) : Bool`
+- `public func lessOrEqual(x : Float, y : Float) : Bool`
+- `public func mul(x : Float, y : Float) : Float`
+- `public func neg(x : Float) : Float`
+- `public func notEqual(x : Float, y : Float, epsilon : Float) : Bool`
+- `public func pow(x : Float, y : Float) : Float`
+- `public func rem(x : Float, y : Float) : Float`
+- `public func sub(x : Float, y : Float) : Float`
+- `public let abs : (x : Float) -> Float`
+- `public let arccos : (x : Float) -> Float`
+- `public let arcsin : (x : Float) -> Float`
+- `public let arctan : (x : Float) -> Float`
+- `public let arctan2 : (y : Float, x : Float) -> Float`
+- `public let ceil : (x : Float) -> Float`
+- `public let copySign : (x : Float, y : Float) -> Float`
+- `public let cos : (x : Float) -> Float`
+- `public let e : Float`
+- `public let exp : (x : Float) -> Float`
+- `public let floor : (x : Float) -> Float`
+- `public let fromInt64 : (x : Int64) -> Float`
+- `public let log : (x : Float) -> Float`
+- `public let max : (x : Float, y : Float) -> Float`
+- `public let min : (x : Float, y : Float) -> Float`
+- `public let nearest : (x : Float) -> Float`
+- `public let pi : Float`
+- `public let sin : (x : Float) -> Float`
+- `public let sqrt : (x : Float) -> Float`
+- `public let tan : (x : Float) -> Float`
+- `public let toFloat32 : (self : Float) -> Prim.Types.Float32`
+- `public let toInt : (self : Float) -> Int`
+- `public let toInt64 : (self : Float) -> Int64`
+- `public let toText : (self : Float) -> Text`
+- `public let trunc : (x : Float) -> Float`
+- `public type Float`
 
 ## Int
 
@@ -59,7 +164,6 @@ Use this as a reference when using contextual dot notation.
 - `public func compare(x : Int, y : Int) : Order.Order`
 - `public func div(x : Int, y : Int) : Int`
 - `public func equal(x : Int, y : Int) : Bool`
-- `public func fromNat(nat : Nat) : Int`
 - `public func fromText(text : Text) : ?Int`
 - `public func greater(x : Int, y : Int) : Bool`
 - `public func greaterOrEqual(x : Int, y : Int) : Bool`
@@ -81,10 +185,6 @@ Use this as a reference when using contextual dot notation.
 - `public func toNat(self : Int) : Nat`
 - `public func toText(self : Int) : Text`
 - `public let abs : (x : Int) -> Nat`
-- `public let fromInt16 : (x : Int16) -> Int`
-- `public let fromInt32 : (x : Int32) -> Int`
-- `public let fromInt64 : (x : Int64) -> Int`
-- `public let fromInt8 : (x : Int8) -> Int`
 - `public let toFloat : (self : Int) -> Float`
 - `public let toInt16 : (self : Int) -> Int16`
 - `public let toInt32 : (self : Int) -> Int32`
@@ -111,8 +211,6 @@ Use this as a reference when using contextual dot notation.
 - `public func foldLeft<T, R>(self : Iter<T>, initial : R, combine : (R, T) -> R) : R`
 - `public func foldRight<T, R>(self : Iter<T>, initial : R, combine : (T, R) -> R) : R`
 - `public func forEach<T>( self : Iter<T>, f : (T) -> () )`
-- `public func fromArray<T>(array : [T]) : Iter<T>`
-- `public func fromVarArray<T>(array : [var T]) : Iter<T>`
 - `public func infinite<T>(item : T) : Iter<T>`
 - `public func map<T, R>(self : Iter<T>, f : T -> R) : Iter<R>`
 - `public func max<T>(self : Iter<T>, compare : (implicit : (T, T) -> Order.Order)) : ?T`
@@ -172,6 +270,7 @@ Use this as a reference when using contextual dot notation.
 - `public func fromArray<T>(array : [T]) : List<T>`
 - `public func fromIter<T>(iter : Types.Iter<T>) : List<T>`
 - `public func fromVarArray<T>(array : [var T]) : List<T>`
+- `public func get<T>(self : List<T>, index : Nat) : ?T`
 - `public func indexOf<T>(self : List<T>, equal : (implicit : (T, T) -> Bool), element : T) : ?Nat`
 - `public func isEmpty<T>(self : List<T>) : Bool`
 - `public func isSorted<T>(self : List<T>, compare : (implicit : (T, T) -> Types.Order)) : Bool`
@@ -192,6 +291,7 @@ Use this as a reference when using contextual dot notation.
 - `public func reader<T>(self : List<T>, start : Nat) : () -> T`
 - `public func removeLast<T>(self : List<T>) : ?T`
 - `public func repeat<T>(initValue : T, size : Nat) : List<T>`
+- `public func retain<T>(self : List<T>, predicate : T -> Bool)`
 - `public func reverse<T>(self : List<T>) : List<T>`
 - `public func reverseEnumerate<T>(self : List<T>) : Types.Iter<(Nat, T)>`
 - `public func reverseForEach<T>(self : List<T>, f : T -> ())`
@@ -241,10 +341,13 @@ Use this as a reference when using contextual dot notation.
 - `public func maxEntry<K, V>(self : Map<K, V>) : ?(K, V)`
 - `public func minEntry<K, V>(self : Map<K, V>) : ?(K, V)`
 - `public func remove<K, V>(self : Map<K, V>, compare : (implicit : (K, K) -> Order.Order), key : K)`
+- `public func replace<K, V>(self : Map<K, V>, compare : (implicit : (K, K) -> Order.Order), key : K, value : V) : ?V`
 - `public func reverseEntries<K, V>(self : Map<K, V>) : Types.Iter<(K, V)>`
 - `public func reverseEntriesFrom<K, V>( self : Map<K, V>, compare : (implicit : (K, K) -> Order.Order), key : K ) : Types.Iter<(K, V)>`
 - `public func singleton<K, V>(key : K, value : V) : Map<K, V>`
 - `public func size<K, V>(self : Map<K, V>) : Nat`
+- `public func swap<K, V>(self : Map<K, V>, compare : (implicit : (K, K) -> Order.Order), key : K, value : V) : ?V`
+- `public func take<K, V>(self : Map<K, V>, compare : (implicit : (K, K) -> Order.Order), key : K) : ?V`
 - `public func toArray<K, V>(self : Map<K, V>) : [(K, V)]`
 - `public func toMap<K, V>(self : Types.Iter<(K, V)>, compare : (implicit : (K, K) -> Order.Order)) : Map<K, V>`
 - `public func toText<K, V>(self : Map<K, V>, keyFormat : (implicit : (toText : K -> Text)), valueFormat : (implicit : (toText : V -> Text))) : Text`
@@ -278,10 +381,6 @@ Use this as a reference when using contextual dot notation.
 - `public func toInt(self : Nat) : Int`
 - `public let bitshiftLeft : (x : Nat, y : Nat32) -> Nat`
 - `public let bitshiftRight : (x : Nat, y : Nat32) -> Nat`
-- `public let fromNat16 : Nat16 -> Nat`
-- `public let fromNat32 : Nat32 -> Nat`
-- `public let fromNat64 : Nat64 -> Nat`
-- `public let fromNat8 : Nat8 -> Nat`
 - `public let toFloat : (self : Nat) -> Float`
 - `public let toNat : (self : Text) -> ?Nat`
 - `public let toNat16 : (self : Nat) -> Nat16`
@@ -336,8 +435,9 @@ Use this as a reference when using contextual dot notation.
 - `public func notEqual(self : Principal, other : Principal) : Bool`
 - `public func toLedgerAccount(self : Principal, subAccount : ?Blob) : Blob`
 - `public func toText(self : Principal) : Text`
-- `public let fromActor : (a : actor`
-- `public let fromBlob : (self : Blob) -> Principal`
+- `public let fromActor : (a : actor {}) -> Principal`
+- `public let fromBlob : (blob : Blob) -> Principal`
+- `public let toActor : <A <: actor {}>(p : Principal) -> A`
 - `public let toBlob : (self : Principal) -> Blob`
 - `public type Principal`
 
@@ -375,9 +475,32 @@ Use this as a reference when using contextual dot notation.
 - `public func values<T>(self : Queue<T>) : Iter.Iter<T>`
 - `public type Queue<T>`
 
+## Result
+
+- `public func assertErr(self : Result<Any, Any>)`
+- `public func assertOk(self : Result<Any, Any>)`
+- `public func chain<Ok1, Ok2, Err>( self : Result<Ok1, Err>, f : Ok1 -> Result<Ok2, Err> ) : Result<Ok2, Err>`
+- `public func compare<Ok, Err>( self : Result<Ok, Err>, other : Result<Ok, Err>, compareOk : (implicit : (compare : (Ok, Ok) -> Order.Order)), compareErr : (implicit : (compare : (Err, Err) -> Order.Order)) ) : Order.Order`
+- `public func equal<Ok, Err>( self : Result<Ok, Err>, other : Result<Ok, Err>, equalOk : (implicit : (equal : Ok, Ok) -> Bool), equalErr : (implicit : (equal : (Err, Err) -> Bool)) ) : Bool`
+- `public func flatten<Ok, Err>( self : Result<Result<Ok, Err>, Err> ) : Result<Ok, Err>`
+- `public func forErr<Ok, Err>(self : Result<Ok, Err>, f : Err -> ())`
+- `public func forOk<Ok, Err>(self : Result<Ok, Err>, f : Ok -> ())`
+- `public func fromOption<Ok, Err>(x : ?Ok, err : Err) : Result<Ok, Err>`
+- `public func fromUpper<Ok, Err>( result : { #Ok : Ok; #Err : Err } ) : Result<Ok, Err>`
+- `public func isErr(self : Result<Any, Any>) : Bool`
+- `public func isOk(self : Result<Any, Any>) : Bool`
+- `public func mapErr<Ok, Err1, Err2>( self : Result<Ok, Err1>, f : Err1 -> Err2 ) : Result<Ok, Err2>`
+- `public func mapOk<Ok1, Ok2, Err>( self : Result<Ok1, Err>, f : Ok1 -> Ok2 ) : Result<Ok2, Err>`
+- `public func toOption<Ok, Err>(self : Result<Ok, Err>) : ?Ok`
+- `public func toUpper<Ok, Err>( self : Result<Ok, Err> ) : { #Ok : Ok; #Err : Err }`
+- `public type Result<Ok, Err>`
+
 ## Runtime
 
-- `public func trap(message : Text)`
+- `public func envVar<system>(name : Text) : ?Text`
+- `public func envVarNames<system>() : [Text]`
+- `public func trap(errorMessage : Text) : None`
+- `public func unreachable() : None`
 
 ## Set
 
@@ -389,6 +512,7 @@ Use this as a reference when using contextual dot notation.
 - `public func clone<T>(self : Set<T>) : Set<T>`
 - `public func compare<T>(self : Set<T>, other : Set<T>, compare : (implicit : (T, T) -> Order.Order)) : Order.Order`
 - `public func contains<T>(self : Set<T>, compare : (implicit : (T, T) -> Order.Order), element : T) : Bool`
+- `public func deleteAll<T>(self : Set<T>, compare : (implicit : (T, T) -> Order.Order), iter : Types.Iter<T>) : Bool`
 - `public func difference<T>(self : Set<T>, other : Set<T>, compare : (implicit : (T, T) -> Order.Order)) : Set<T>`
 - `public func empty<T>() : Set<T>`
 - `public func equal<T>(self : Set<T>, other : Set<T>, compare : (implicit : (T, T) -> Types.Order)) : Bool`
@@ -400,6 +524,7 @@ Use this as a reference when using contextual dot notation.
 - `public func forEach<T>(self : Set<T>, operation : T -> ())`
 - `public func fromArray<T>(array : [T], compare : (implicit : (T, T) -> Order.Order)) : Set<T>`
 - `public func fromIter<T>(iter : Types.Iter<T>, compare : (implicit : (T, T) -> Order.Order)) : Set<T>`
+- `public func insertAll<T>(self : Set<T>, compare : (implicit : (T, T) -> Order.Order), iter : Types.Iter<T>) : Bool`
 - `public func intersection<T>(self : Set<T>, other : Set<T>, compare : (implicit : (T, T) -> Order.Order)) : Set<T>`
 - `public func isEmpty<T>(self : Set<T>) : Bool`
 - `public func isSubset<T>(self : Set<T>, other : Set<T>, compare : (implicit : (T, T) -> Order.Order)) : Bool`
@@ -408,6 +533,7 @@ Use this as a reference when using contextual dot notation.
 - `public func max<T>(self : Set<T>) : ?T`
 - `public func min<T>(self : Set<T>) : ?T`
 - `public func remove<T>(self : Set<T>, compare : (implicit : (T, T) -> Order.Order), element : T) : ()`
+- `public func retainAll<T>(self : Set<T>, compare : (implicit : (T, T) -> Order.Order), predicate : T -> Bool) : Bool`
 - `public func reverseValues<T>(self : Set<T>) : Types.Iter<T>`
 - `public func reverseValuesFrom<T>( self : Set<T>, compare : (implicit : (T, T) -> Order.Order), element : T ) : Types.Iter<T>`
 - `public func singleton<T>(element : T) : Set<T>`
@@ -494,7 +620,6 @@ Use this as a reference when using contextual dot notation.
 - `public func trimStart(self : Text, p : Pattern) : Text`
 - `public let decodeUtf8 : (self : Blob) -> ?Text`
 - `public let encodeUtf8 : (self : Text) -> Blob`
-- `public let fromChar : (c : Char) -> Text`
 - `public let toLower : (self : Text) -> Text`
 - `public let toUpper : (self : Text) -> Text`
 - `public type Pattern`
@@ -507,4 +632,12 @@ Use this as a reference when using contextual dot notation.
 - `public type Duration`
 - `public type Time`
 - `public type TimerId`
-  // No Time.compare -->> use Int.compare to compare times.
+
+> No `Time.compare` — use `Int.compare` to compare times.
+
+## Timer
+
+- `public func recurringTimer<system>(duration : Time.Duration, job : () -> async ()) : TimerId`
+- `public func setTimer<system>(duration : Time.Duration, job : () -> async ()) : TimerId`
+- `public let cancelTimer : TimerId -> ()`
+- `public type TimerId`
