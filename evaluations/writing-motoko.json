@@ -236,6 +236,37 @@
         "Mentions `persistent actor { ... }` as the per-actor alternative if the flag can't be set",
         "Does NOT suggest adding a `stable` keyword to fix M0220"
       ]
+    },
+    {
+      "name": "Arrays have contains for membership",
+      "prompt": "In Motoko with mo:core, write a single expression that checks whether the `[Text]` array `tags` contains the exact string \"urgent\". Just the expression, no surrounding function.",
+      "expected_behaviors": [
+        "Uses `tags.contains(\"urgent\")` — `[T]` arrays DO have `contains` in mo:core",
+        "Passes only the element — `equal` is an implicit argument, so does NOT pass `Text.equal` explicitly",
+        "Does NOT claim arrays have no `contains`",
+        "Does NOT fall back to `tags.indexOf(\"urgent\") != null` or `tags.any(func t = t == \"urgent\")` as the primary answer"
+      ]
+    },
+    {
+      "name": "Numeric conversion uses toX on the source value",
+      "prompt": "In Motoko with mo:core, `sum` and `count` are both `Nat`. Write the expression computing their average as a `Float`, plus the import it needs. No surrounding function, no deploy steps.",
+      "expected_behaviors": [
+        "Uses receiver conversions on the source values: `sum.toFloat() / count.toFloat()`",
+        "Does NOT use deprecated `Module.fromX` calls such as `Float.fromInt(...)`, `Float.fromInt64(...)`, or `Nat64.fromNat(...)`",
+        "Does NOT chain through the sized numeric modules (`Nat64` / `Int64`) to reach `Float`",
+        "Imports `mo:core/Nat` (the module supplying `Nat.toFloat`), not `Float`/`Int64`/`Nat64` for the conversion"
+      ]
+    },
+    {
+      "name": "Result error type is a variant, not Text",
+      "prompt": "Write the Motoko error type and the update-method signature for `book(roomId : Nat)`, which can fail because the room is unknown, the slot is already taken, or the caller is not authorized. Just the type and the signature — no body, no deploy steps.",
+      "expected_behaviors": [
+        "Returns `async Result.Result<Ok, Err>` using `mo:core/Result`",
+        "Declares the error as a variant with one tag per failure (e.g. `#unknownRoom : Nat`, `#slotTaken`, `#notAuthorized`)",
+        "Does NOT use `Result<Ok, Text>` or any `Text` error as the discriminator",
+        "Does NOT propose trapping (`Runtime.trap`) for these caller-fixable failures",
+        "Uses `public shared ({ caller }) func` since authorization is one of the failure cases"
+      ]
     }
   ],
   "trigger_evals": {

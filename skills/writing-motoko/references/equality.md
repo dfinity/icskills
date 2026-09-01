@@ -4,7 +4,7 @@ Load when choosing between `==`, `equal`, and `compare`, or when a `.equal(...)`
 
 ## `==` vs `equal`
 
-**Default to `equal` / `compare`. Use `==` only for the primitives that have no receiver form** — `Nat`, `Int`, `Float`, and the sized int types, where `a == b` is shorter than `Nat.equal(a, b)` and needs no import.
+**`==` compares two values; `equal` and `compare` are functions you can pass.** Collections need the function form, so write it for the records and variants you use as keys or elements. For a direct comparison of primitives or shared fields, `==` is fine — and on `Nat`, `Int`, `Float`, and the sized int types it is the only receiver form available, where `a == b` is shorter than `Nat.equal(a, b)` and needs no import.
 
 `==` is compiler-generated structural equality, and it only exists for **shared** types. That is the catch: a single `var` field takes a record out of shared, and `==` stops compiling:
 
@@ -14,7 +14,7 @@ a == b
 // type error [M0060], operator is not defined for operand types
 ```
 
-Internal state records routinely have `var` fields, so code written around `==` breaks the moment a field becomes mutable. `equal`/`compare` functions do not have that failure mode, which is why they are the default even where `==` would work today.
+Internal state records routinely have `var` fields, so code written around `==` breaks the moment a field becomes mutable. `equal`/`compare` functions do not have that failure mode, which is why record and variant comparisons belong in them rather than in `==`.
 
 `equal` and `compare` are also what **collections** take, as implicit arguments: `Map`, `Set`, `contains`, and the collection-level `equal`/`compare` helpers. The compiler infers them, so you rarely name them:
 
@@ -71,6 +71,7 @@ type error [M0230], Cannot determine implicit argument `compare`
 **Record `compare` must be an explicit function.** There is no sensible default — which field dominates, and in what direction, is a decision only you can make. Write it out and be deliberate about the tie-breaking:
 
 ```motoko
+type Point = { x : Nat; y : Nat };
 module Point {
   public func compare(a : Point, b : Point) : Order.Order {
     switch (Nat.compare(a.x, b.x)) {
