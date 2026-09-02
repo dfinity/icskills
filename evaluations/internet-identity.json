@@ -181,11 +181,11 @@
     },
     {
       "name": "Adversarial: maximum number of alternative origins",
-      "prompt": "One IC frontend canister, and I want about 40 white-label custom domains to all share the same Internet Identity principals via derivationOrigin. Can one ii-alternative-origins file cover all 40? Answer in 3 sentences max and state the exact maximum number of entries allowed. No setup steps, no DNS.",
+      "prompt": "My IC frontend lists white-label custom domains in ii-alternative-origins and the list keeps growing. State the exact maximum number of entries allowed, and say what happens to sign-in if I push the file past that maximum. 3 sentences max, no setup steps, no DNS.",
       "expected_behaviors": [
         "States the maximum is 100 alternative origins",
-        "Does NOT claim the limit is 10",
-        "Confirms roughly 40 domains fit within the limit in a single ii-alternative-origins file"
+        "Says exceeding the cap invalidates the ENTIRE list — every alternative origin stops authenticating, not just the entries past the limit",
+        "Does NOT describe the over-cap behavior as truncation, ignoring the extras, or only the excess entries failing"
       ]
     }
   ],
