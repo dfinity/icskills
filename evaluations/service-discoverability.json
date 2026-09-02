@@ -1,6 +1,6 @@
 {
   "skill": "service-discoverability",
-  "description": "Evaluation cases for the service-discoverability skill. Tests whether agents make a canister app discoverable to an AI agent: generate the /.well-known/ic-architecture manifest at deploy time (presync, not hard-coded IDs), serve it correctly as JSON, expose candid:service and a discoverable getApiDoc, understand the OQL data surface, and publish/read ii-derivation-origin without confusing it with ii-alternative-origins.",
+  "description": "Evaluation cases for the service-discoverability skill. Tests whether agents make a canister app discoverable to an AI agent: surface the ICP MCP App Operator Terms that publishing the manifest accepts and get the operator's confirmation first, generate the /.well-known/ic-architecture manifest at deploy time (presync, not hard-coded IDs), serve it correctly as JSON, expose candid:service and a discoverable getApiDoc, understand the OQL data surface, and publish/read ii-derivation-origin without confusing it with ii-alternative-origins.",
   "output_evals": [
     {
       "name": "Generate ic-architecture at deploy time (not hard-coded IDs)",
@@ -90,6 +90,39 @@
         "Resolves the user's delegation BEFORE any call that getApiDoc says needs a signed principal, rather than leaving identity until after the data calls",
         "Does NOT require a human to supply a canister ID out of band"
       ]
+    },
+    {
+      "name": "Publishing the manifest accepts the ICP MCP App Operator Terms",
+      "prompt": "I'm about to add a /.well-known/ic-architecture manifest to my IC app so AI agents can discover my canisters. Is there anything I need to agree to first? Just the key point, no deploy config.",
+      "expected_behaviors": [
+        "States that publishing a valid /.well-known/ic-architecture manifest opts the app into ICP MCP and is itself the act that accepts the ICP MCP App Operator Terms, an agreement with the DFINITY Foundation",
+        "Makes clear there is no separate signature, checkbox, or registration step — publishing the file is sufficient on its own to accept",
+        "Tells the user to confirm before publishing that they are the app's operator (or authorized to bind it), noting that someone who develops but does not operate the app cannot accept for its operator",
+        "Points to the terms at internetcomputer.org/icp-mcp/app-operator-terms/ (or names them so the user can read them) rather than only summarizing",
+        "Describes what participation permits: ICP MCP reading the declared canisters' metadata and submitting query calls and, for users who authorized actions, state-changing/update calls to them",
+        "Does NOT present the manifest as purely technical configuration to add without asking the user"
+      ]
+    },
+    {
+      "name": "Adversarial: registration is neither the opt-in nor the opt-out",
+      "prompt": "I emailed mcp@dfinity.org and registered my app as an ICP MCP app operator, but I haven't deployed the /.well-known/ic-architecture manifest yet. Is my app participating? And to stop participating later, do I unregister? Just the key points.",
+      "expected_behaviors": [
+        "Says the app is NOT participating without a published valid manifest: ICP MCP will not retrieve canister metadata or submit query or state-changing calls, though it may still fetch and describe the app's public website",
+        "States registration is optional and is not what opts the app in — publishing the manifest is",
+        "States the off switch is removing the manifest (effective once ICP MCP observes the removal, whether or not the operator registered), NOT unregistering",
+        "Notes that removing the manifest does not stop ICP MCP fetching the public website or describing public information, and that full delisting is requested from DFINITY at mcp@dfinity.org",
+        "Does NOT claim registration is required before publishing the manifest"
+      ]
+    },
+    {
+      "name": "Adversarial: declaring canisters the operator does not control",
+      "prompt": "Should my /.well-known/ic-architecture manifest also list the ICP ledger canister and the Internet Identity canister that my app calls, so an agent understands the whole picture? Just the key point.",
+      "expected_behaviors": [
+        "Says no — declare only canisters the operator runs or is authorized to expose, not third-party or ecosystem canisters the app merely calls",
+        "Explains that serving the manifest is a repeated representation that every declared canister is operated by the operator or under their authority",
+        "Notes that declaring a canister makes it eligible for ICP MCP calls under the app's participation",
+        "Does NOT recommend adding the ledger or Internet Identity canister to the manifest"
+      ]
     }
   ],
   "trigger_evals": {
@@ -103,7 +136,9 @@
       "Expose a getApiDoc method so agents understand my canister's behavior",
       "How do I publish my app's ii-derivation-origin so agents use the right principal?",
       "Serve a service discovery manifest for my IC app",
-      "What sequence of requests does an agent make to discover my IC app from just its URL?"
+      "What sequence of requests does an agent make to discover my IC app from just its URL?",
+      "How do I make my app available through ICP MCP?",
+      "Do I have to agree to anything before publishing an ic-architecture manifest for my canister app?"
     ],
     "should_not_trigger": [
       "Sign an AI agent in to oisy.com and act as me",
