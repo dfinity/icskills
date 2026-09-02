@@ -178,6 +178,15 @@
         "States the consequence is losing the WHOLE document, not just the logo, because the logo URL's same-origin shape is part of document validation",
         "Recommends a relative URL such as /logo.png"
       ]
+    },
+    {
+      "name": "Adversarial: maximum number of alternative origins",
+      "prompt": "My IC frontend lists white-label custom domains in ii-alternative-origins and the list keeps growing. State the exact maximum number of entries allowed, and say what happens to sign-in if I push the file past that maximum. 3 sentences max, no setup steps, no DNS.",
+      "expected_behaviors": [
+        "States the maximum is 100 alternative origins",
+        "Says exceeding the cap invalidates the ENTIRE list — every alternative origin stops authenticating, not just the entries past the limit",
+        "Does NOT describe the over-cap behavior as truncation, ignoring the extras, or only the excess entries failing"
+      ]
     }
   ],
   "trigger_evals": {
