@@ -178,6 +178,15 @@
         "States the consequence is losing the WHOLE document, not just the logo, because the logo URL's same-origin shape is part of document validation",
         "Recommends a relative URL such as /logo.png"
       ]
+    },
+    {
+      "name": "Adversarial: maximum number of alternative origins",
+      "prompt": "One IC frontend canister, and I want about 40 white-label custom domains to all share the same Internet Identity principals via derivationOrigin. Can one ii-alternative-origins file cover all 40? Answer in 3 sentences max and state the exact maximum number of entries allowed. No setup steps, no DNS.",
+      "expected_behaviors": [
+        "States the maximum is 100 alternative origins",
+        "Does NOT claim the limit is 10",
+        "Confirms roughly 40 domains fit within the limit in a single ii-alternative-origins file"
+      ]
     }
   ],
   "trigger_evals": {
