@@ -95,7 +95,7 @@
       "name": "Publishing the manifest accepts the ICP MCP App Operator Terms",
       "prompt": "I'm about to add a /.well-known/ic-architecture manifest to my IC app so AI agents can discover my canisters. Is there anything I need to agree to first? Just the key point, no deploy config.",
       "expected_behaviors": [
-        "States that publishing a valid /.well-known/ic-architecture manifest opts the app into ICP MCP and is itself the act that accepts the ICP MCP App Operator Terms, an agreement with the DFINITY Foundation",
+        "States that publishing a valid /.well-known/ic-architecture manifest opts the app into ICP MCP and is itself the act that accepts the ICP MCP App Operator Terms, an agreement with DFINITY",
         "Makes clear there is no separate signature, checkbox, or registration step — publishing the file is sufficient on its own to accept",
         "Tells the user to confirm before publishing that they are the app's operator (or authorized to bind it), noting that someone who develops but does not operate the app cannot accept for its operator",
         "Points to the terms at internetcomputer.org/icp-mcp/app-operator-terms/ (or names them so the user can read them) rather than only summarizing",

@@ -28,7 +28,7 @@ The load-bearing move for Layers 1 and 5 is **generating the well-known files at
 
 ## Before Layer 1: The Operator Must Accept the ICP MCP App Operator Terms
 
-**Stop here before you create, generate, or deploy `/.well-known/ic-architecture`.** That file is not only configuration. Availability through [ICP MCP](https://internetcomputer.org/icp-mcp/) is governed by the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) (v1.0, effective 2026-09-01), an agreement between DFINITY Stiftung and the app's **operator** — and **publishing a valid manifest is, on its own, the act that accepts them** and opts the app in. No signature step, no checkbox, nothing further. An agent that adds the manifest to a build on its own initiative has entered its user into a contract without asking.
+**Stop here before you create, generate, or deploy `/.well-known/ic-architecture`.** That file is not only configuration. Availability through [ICP MCP](https://internetcomputer.org/icp-mcp/) is governed by the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) (v1.0, effective 2026-09-01), an agreement between DFINITY Stiftung (the "DFINITY Foundation") and the app's **operator** — and **publishing a valid manifest is, on its own, the act that accepts them** and opts the app in. No signature step, no checkbox, nothing further. An agent that adds the manifest to a build on its own initiative has entered its user into a contract without asking.
 
 **Do not publish until the user has confirmed both points below.** Put them in your own words, link the terms, and let the user read before they answer.
 
