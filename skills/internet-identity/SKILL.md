@@ -175,7 +175,7 @@ const authClient = new AuthClient({
 
 A maximum of **100** alternative origins can be listed. Entries are origins — no trailing slashes and no paths.
 
-The cap was **10** until II `release-2026-08-21` ([internet-identity#4261](https://github.com/dfinity/internet-identity/pull/4261)) and is 100 from that release on. Older docs, blog posts, and model priors still say 10 — do not carry that number over. Going over the cap is not a truncation: II rejects the entire list with `has too many entries: To prevent misuse at most 100 alternative origins are allowed`, so **every** alternative origin stops authenticating, not just the ones past the limit.
+Going over the cap is not a truncation: II rejects the entire list with `has too many entries: To prevent misuse at most 100 alternative origins are allowed`, so **every** alternative origin stops authenticating, not just the ones past the limit.
 
 **3. With `@dfinity/static-site`, add a `_headers` block.** `.well-known/` is uploaded automatically, but this file has no extension, so its media type is not `application/json`, and the certified-assets canister sets no CORS header by default. II needs both:
 
