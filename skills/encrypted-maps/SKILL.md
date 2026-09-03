@@ -16,10 +16,12 @@ Use the **`vetkeys` skill** instead when you need lower-level primitives: identi
 
 | Layer | Rust | Motoko | Frontend |
 |-------|------|--------|----------|
-| Package | `ic-vetkeys` **0.9** | `ic-vetkeys` **0.6** (moc ≥ 1.13.0, core ≥ 2.6.1) | `@icp-sdk/vetkeys` **0.5** |
+| Package | `ic-vetkeys` **0.9** | `ic-vetkeys` **0.6** (moc ≥ 1.13.0, core ≥ 2.6.1) | `@icp-sdk/vetkeys` **`^0.7`** |
 | Backend | `export_encrypted_maps_canister!` macro | `EncryptedMapsCanister` mixin | `@icp-sdk/vetkeys/encrypted_maps` |
 
-> Use `@icp-sdk/vetkeys` (≥0.5), not the legacy `@dfinity/vetkeys` (frozen at 0.4). Frontend agent/identity come from `@icp-sdk/core`, not `@dfinity/agent`.
+> Use `@icp-sdk/vetkeys` **`^0.7`**, not the legacy `@dfinity/vetkeys` (deprecated on npm, frozen at 0.4). Frontend agent/identity come from `@icp-sdk/core`, not `@dfinity/agent`.
+
+> **Name `@icp-sdk/core` in the install, pinned to `^5`.** vetKeys peers core as `^5 || ^6`, so installing it alone resolves core to `6.x`, while `@icp-sdk/auth` requires `^5`. Encrypted-storage apps authenticate users, so always install both: `npm i '@icp-sdk/vetkeys@^0.7' '@icp-sdk/core@^5'`.
 
 ## Concepts
 

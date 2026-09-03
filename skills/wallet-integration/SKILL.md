@@ -52,13 +52,18 @@ This skill covers integration using `@dfinity/oisy-wallet-signer`. Other integra
 
 ## Prerequisites
 
-- `@dfinity/oisy-wallet-signer` (>= 4.1.0)
-- Peer dependencies: `@dfinity/utils` (>= 4.2.0), `@dfinity/zod-schemas` (>= 3.2.0), `@icp-sdk/canisters` (>= 3.5.0), `@icp-sdk/core` (>= 5.0.0), `zod`
+- `@dfinity/oisy-wallet-signer` — pin to `^4.1.3`. **Do not install `6.0.0`** (the current `latest`); see pitfall 11.
+- Peer dependencies of `4.1.3`: `@dfinity/utils` (`^4.2.1`), `@dfinity/zod-schemas` (`^3`), `@icp-sdk/canisters` (`^3.2`), `@icp-sdk/core` (`^5`), `zod` (`^4`)
 - A non-anonymous identity on the signer side (e.g. `Ed25519KeyIdentity`)
 
+Pin both the signer and `@icp-sdk/core`, or npm resolves a tree two majors below the rest of the IC skills:
+
 ```bash
-npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/canisters @icp-sdk/core zod
+npm i '@dfinity/oisy-wallet-signer@^4.1.3' @dfinity/utils @dfinity/zod-schemas \
+      @icp-sdk/canisters '@icp-sdk/core@^5' zod
 ```
+
+The pin that matters here is `@dfinity/oisy-wallet-signer`: its `latest` (`6.0.0`) peers `@icp-sdk/core@^4` and drags the whole tree down a major. Pinned below `6.0.0`, this stack resolves on the 5.x line that `@icp-sdk/auth` and `@icp-sdk/canisters` also require, so wallet integration and Internet Identity login coexist. `@icp-sdk/core` is named explicitly for the same reason every IC skill names it — see the `icp-cli` skill for the repo-wide rationale.
 
 ## How It Works
 
@@ -106,6 +111,8 @@ npm i @dfinity/oisy-wallet-signer @dfinity/utils @dfinity/zod-schemas @icp-sdk/c
 9. **Ignoring permission expiration.** Permissions default to a 7-day validity period. After expiry, they silently revert to `ask_on_use`. Don't cache permission state client-side beyond a session.
 
 10. **Auto-triggering signing on connect.** Never fire a canister call immediately after `connect()`. Let the user initiate the action. The signer is designed for intentional, user-driven operations.
+
+11. **Installing `@dfinity/oisy-wallet-signer` unpinned.** The `latest` tag is `6.0.0`, whose peer dependencies moved *backwards*: `@icp-sdk/core` from `^5` to `^4`, `@dfinity/utils` to `~4.0.3`, `@icp-sdk/canisters` to `~3.1.0`. An unpinned `npm i` therefore silently resolves `@icp-sdk/core@4.2.3` and downgrades the rest — two majors below every other IC skill, and unusable alongside `@icp-sdk/auth` (peer `@icp-sdk/core@^5`), which fails with `ERESOLVE`. Pin `^4.1.3`, the last release that peers `@icp-sdk/core@^5`.
 
 ## Implementation
 

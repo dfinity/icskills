@@ -46,6 +46,15 @@
         "Passes a DerivedPublicKey object as the first argument via `DerivedPublicKey.deserialize(publicKeyBytes)` — NOT raw public-key bytes",
         "Passes the message and signature as the remaining arguments"
       ]
+    },
+    {
+      "name": "Adversarial: vetkeys peer range drifts core to 6",
+      "prompt": "My dapp already uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add the vetKeys frontend library. No integration code.",
+      "expected_behaviors": [
+        "Installs @icp-sdk/vetkeys — NOT the legacy @dfinity/vetkeys",
+        "Names @icp-sdk/core explicitly in the install, pinned to ^5",
+        "Explains that vetKeys accepts more than one @icp-sdk/core major, so an install that omits core resolves the highest one — which @icp-sdk/auth may not accept"
+      ]
     }
   ],
   "trigger_evals": {
