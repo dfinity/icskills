@@ -28,7 +28,9 @@ The load-bearing move for Layers 1 and 5 is **generating the well-known files at
 
 ## Before Layer 1: The Operator Must Accept the ICP MCP App Operator Terms
 
-**Stop here before you create, generate, or deploy `/.well-known/ic-architecture`.** That file is not only configuration. Availability through [ICP MCP](https://internetcomputer.org/icp-mcp/) is governed by the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/), an agreement between DFINITY Stiftung (the "DFINITY Foundation") and the app's **operator** — and **publishing a valid manifest is, on its own, the act that accepts them** and opts the app in. No signature step, no checkbox, nothing further. An agent that adds the manifest to a build on its own initiative has entered its user into a contract without asking.
+**Stop here before you create, generate, or deploy `/.well-known/ic-architecture`.** That file is not only configuration. Availability through [ICP MCP](https://internetcomputer.org/icp-mcp/) is governed by the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) — **version 1.1, effective 2026-09-02**, the version current when this skill was written — an agreement between DFINITY Stiftung (the "DFINITY Foundation") and the app's **operator** — and **publishing a valid manifest is, on its own, the act that accepts them** and opts the app in. No signature step, no checkbox, nothing further. An agent that adds the manifest to a build on its own initiative has entered its user into a contract without asking.
+
+Name that version to the user: it is what they are accepting. **Check the top of the terms page before you do** — the terms are versioned independently of this skill (section 14), so if the page shows a version later than the one above, the page is right and this skill is stale. Tell the user the version the page shows, and say the skill's copy is out of date so it gets fixed.
 
 **Do not publish until the user has confirmed both points below.** Put them in your own words, link the terms, and let the user read before they answer.
 
@@ -55,7 +57,7 @@ Participation is free in both directions: DFINITY charges nothing for it and owe
 
 Registration is **not** a condition of participation and is **not** what opts the app in — the manifest already did that. It exists so DFINITY knows who the operator is: to reach them with the notices the terms provide for (sections 10, 11, 14), and to have a record of who accepted and of which version, which publication alone does not show.
 
-To register, the operator emails `mcp@dfinity.org` with: the operator's legal name and country; the name, role, and email of the accepting representative; the app's origin domain(s); the canister IDs the manifest declares; the URL of the app's own privacy policy, so ICP MCP can present it to users considering the app; and the version of the terms being accepted — read from the top of the terms page at that moment, which is where section 3 says it is shown. Never copy a version number from here or from any other summary: the page is the only current source, and it is versioned independently of this skill. Keep the registration current as any of those change.
+To register, the operator emails `mcp@dfinity.org` with: the operator's legal name and country; the name, role, and email of the accepting representative; the app's origin domain(s); the canister IDs the manifest declares; the URL of the app's own privacy policy, so ICP MCP can present it to users considering the app; and the version of the terms being accepted — read from the top of the terms page at that moment, which is where section 3 says it is shown. The version named in **Before Layer 1** is the one current when this skill was written; if the page disagrees, the page wins and its value is what goes in the email. Keep the registration current as any of those change.
 
 ### Obligations that outlive the deploy
 

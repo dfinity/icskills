@@ -99,6 +99,7 @@
         "Makes clear there is no separate signature, checkbox, or registration step — publishing the file is sufficient on its own to accept",
         "Tells the user to confirm before publishing that they are the app's operator (or authorized to bind it), noting that someone who develops but does not operate the app cannot accept for its operator",
         "Points to the terms at internetcomputer.org/icp-mcp/app-operator-terms/ (or names them so the user can read them) rather than only summarizing",
+        "Names the version of the terms the operator would be accepting",
         "Describes what participation permits: ICP MCP reading the declared canisters' metadata and submitting query calls and, for users who authorized actions, state-changing/update calls to them",
         "Does NOT present the manifest as purely technical configuration to add without asking the user"
       ]
@@ -132,6 +133,16 @@
         "Distinguishes deactivating participation from terminating the agreement itself, which is a separate notice to mcp@dfinity.org",
         "Notes neither undoes calls already executed on the Internet Computer, and that some sections (personal data, warranties, liability, governing law) survive termination",
         "Does NOT present deleting the manifest as the single complete exit, and does NOT say unregistering is what stops participation"
+      ]
+    },
+    {
+      "name": "The named terms version is a snapshot; the live page decides",
+      "prompt": "Which version of the ICP MCP App Operator Terms would my app's operator be accepting by publishing the manifest, and how do I make sure that's actually the current one before they register? Just the key points.",
+      "expected_behaviors": [
+        "Names the version of the terms recorded in the skill as the one current when it was written, rather than presenting it as guaranteed current",
+        "Says to check the top of the terms page (internetcomputer.org/icp-mcp/app-operator-terms/) for the version shown there, because the terms are versioned independently of the skill",
+        "States that if the page shows a later version, the page wins and that value is what goes in the registration email to mcp@dfinity.org",
+        "Does NOT present the version named in the skill as authoritative without directing the user to verify it against the terms page"
       ]
     }
   ],
