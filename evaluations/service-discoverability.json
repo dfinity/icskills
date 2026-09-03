@@ -108,9 +108,8 @@
       "prompt": "I emailed mcp@dfinity.org and registered my app as an ICP MCP app operator, but I haven't deployed the /.well-known/ic-architecture manifest yet. Is my app participating? And to stop participating later, do I unregister? Just the key points.",
       "expected_behaviors": [
         "Says the app is NOT participating without a published valid manifest: ICP MCP will not retrieve canister metadata or submit query or state-changing calls, though it may still fetch and describe the app's public website",
-        "States registration is optional and is not what opts the app in — publishing the manifest is",
+        "States registration is not what opts the app in — publishing a valid manifest is what switches participation on",
         "States the off switch is removing the manifest (effective once ICP MCP observes the removal, whether or not the operator registered), NOT unregistering",
-        "Notes that removing the manifest does not stop ICP MCP fetching the public website or describing public information, and that full delisting is requested from DFINITY at mcp@dfinity.org",
         "Does NOT claim registration is required before publishing the manifest"
       ]
     },
@@ -122,6 +121,17 @@
         "Explains that serving the manifest is a repeated representation that every declared canister is operated by the operator or under their authority",
         "Notes that declaring a canister makes it eligible for ICP MCP calls under the app's participation",
         "Does NOT recommend adding the ledger or Internet Identity canister to the manifest"
+      ]
+    },
+    {
+      "name": "Exiting ICP MCP: deactivation, delisting, and termination are three different things",
+      "prompt": "My app's /.well-known/ic-architecture manifest is published and the app is participating in ICP MCP. I want out. What do I actually do, and what does each step stop? Just the key points.",
+      "expected_behaviors": [
+        "Removing the manifest deactivates participation — once ICP MCP observes the removal, new canister metadata reads and query/update calls stop, whether or not the operator registered",
+        "Notes removal does NOT stop ICP MCP fetching the app's public website or describing publicly available information, and that being dropped from user-facing presentation is requested from DFINITY at mcp@dfinity.org",
+        "Distinguishes deactivating participation from terminating the agreement itself, which is a separate notice to mcp@dfinity.org",
+        "Notes neither undoes calls already executed on the Internet Computer, and that some sections (personal data, warranties, liability, governing law) survive termination",
+        "Does NOT present deleting the manifest as the single complete exit, and does NOT say unregistering is what stops participation"
       ]
     }
   ],
