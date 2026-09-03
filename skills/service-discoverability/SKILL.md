@@ -1,6 +1,6 @@
 ---
 name: service-discoverability
-description: "Make a canister app discoverable to an AI agent from just its URL. Covers publishing a /.well-known/ic-architecture manifest of your canisters — generated at deploy time from real canister IDs via the static-site recipe's presync hook and envsubst — plus exposing candid:service (interface), a getApiDoc query method (behavior), an optional OQL schema/execute data surface, and a /.well-known/ii-derivation-origin file (identity). Use when making an app agent-ready, for agent/service discovery, the well-known ic-architecture manifest, or generating that manifest at deploy time. Do NOT use for the sign-in flows that consume the derivation origin: use agent-web-identity for the agent/CLI web-identity link, or internet-identity for adding II login to a frontend."
+description: "Make a canister app discoverable to an AI agent from just its URL, including through ICP MCP. Covers publishing a /.well-known/ic-architecture manifest of your canisters — generated at deploy time from real canister IDs via the static-site recipe's presync hook and envsubst — plus exposing candid:service (interface), a getApiDoc query method (behavior), an optional OQL schema/execute data surface, and a /.well-known/ii-derivation-origin file (identity). Publishing that manifest opts the app into ICP MCP and is itself the operator's acceptance of the ICP MCP App Operator Terms, so confirm with the app's operator before deploying it. Use when making an app agent-ready or available through ICP MCP, for agent/service discovery, the well-known ic-architecture manifest, or generating that manifest at deploy time. Do NOT use for the sign-in flows that consume the derivation origin: use agent-web-identity for the agent/CLI web-identity link, or internet-identity for adding II login to a frontend."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.3.0 with the @dfinity/static-site recipe; envsubst (gettext) for templating"
 metadata:
@@ -14,7 +14,7 @@ metadata:
 
 When an AI agent is handed only your app's URL (e.g. `https://yourapp.com`), it should be able to work out the rest on its own: which canisters the app comprises, what each one does, how to call them, how to query their data, and how to act as the signed-in user. No human supplying canister IDs, no bespoke integration.
 
-This skill covers what a canister app **publishes** to make that possible, across five independently adoptable layers. Each layer is useful on its own; together they make an app agent-ready.
+This skill covers what a canister app **publishes** to make that possible, across five layers. Layer 1 is gated: it is what an app publishes to participate in [ICP MCP](https://internetcomputer.org/icp-mcp/), and publishing it accepts an agreement on the operator's behalf — read **Before Layer 1** before writing that file. Layers 2-5 are ungated and independently adoptable; each is useful on its own, and together they make an app agent-ready.
 
 | Layer | Question it answers | Mechanism |
 |-------|---------------------|-----------|
@@ -26,6 +26,48 @@ This skill covers what a canister app **publishes** to make that possible, acros
 
 The load-bearing move for Layers 1 and 5 is **generating the well-known files at deploy time**, because the canister IDs (and the mainnet origin) differ per network. This skill uses the [`@dfinity/static-site`](https://github.com/dfinity/icp-cli-recipes/blob/main/recipes/static-site/README.md) recipe's `presync` hook to do that — the same pattern demonstrated by the community example [`raymondk/demo-ic-architecture`](https://github.com/raymondk/demo-ic-architecture/tree/main/frontend/ic-architecture).
 
+## Before Layer 1: The Operator Must Accept the ICP MCP App Operator Terms
+
+**Stop here before you create, generate, or deploy `/.well-known/ic-architecture`.** That file is not only configuration. Availability through [ICP MCP](https://internetcomputer.org/icp-mcp/) is governed by the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) — **version 1.1, effective 2026-09-02**, the version current when this skill was written — an agreement between DFINITY Stiftung (the "DFINITY Foundation") and the app's **operator** — and **publishing a valid manifest is, on its own, the act that accepts them** and opts the app in. No signature step, no checkbox, nothing further. An agent that adds the manifest to a build on its own initiative has entered its user into a contract without asking.
+
+Name that version to the user: it is what they are accepting. **Check the top of the terms page before you do** — the terms are versioned independently of this skill (section 14), so if the page shows a version later than the one above, the page is right and this skill is stale. Tell the user the version the page shows, and say the skill's copy is out of date so it gets fixed.
+
+**Do not publish until the user has confirmed both points below.** Put them in your own words, link the terms, and let the user read before they answer.
+
+**1. They are the operator, or authorized to bind it.** The operator is the person or entity legally authorized to operate the app and declare its canisters. Building the app is not the same as operating it — section 1: *"If you develop an application but do not operate it, these Terms are for its operator to accept, not you."* A contractor, agency, or employee on someone else's app routes the decision to the operator rather than publishing and moving on.
+
+**2. They accept what publishing permits.** Under section 2, participation lets the ICP MCP server, acting for users who have authorized their AI assistant through Internet Identity:
+
+- read the manifest, the `candid:service` metadata of the **canisters the manifest declares**, and what `getApiDoc` / `get_api_doc` returns;
+- index and cache that metadata, and describe the app and its API to assistants and their users, including in any public listing of participating apps;
+- submit **query calls and, for users who authorized actions, state-changing (update) calls** to those declared canisters, signed with the per-application Internet Identity identities of those users; and
+- fetch the app's published files from its origin to keep the above current.
+
+Participation is free in both directions: DFINITY charges nothing for it and owes nothing for it.
+
+### The manifest is the switch, and it is the whole scope
+
+- **Only declared canisters are in scope.** ICP MCP retrieves canister metadata and submits query or update calls **only** to canisters listed in a valid manifest. Never list a canister the operator does not run or is not entitled to expose — section 5 is a standing representation, repeated every time the file is served, that every declared canister is operated by the operator or under their authority.
+- **Without a valid manifest, none of that happens.** ICP MCP may still fetch and describe the app's public website, but metadata retrieval and canister calls are refused.
+- **Removing the manifest is the off switch** — registered or not. Once ICP MCP observes the removal, new metadata reads and query/update calls stop; this is also the fastest mitigation if the origin or a declared canister is compromised (section 7). It does **not** stop ICP MCP fetching the public website or describing public information; for that, ask DFINITY to suspend participation at `mcp@dfinity.org`.
+- **Deactivating is not terminating.** Removing the manifest ends participation; ending the *agreement* is a separate act — notice to `mcp@dfinity.org` (section 11). Neither undoes calls already executed on the Internet Computer, and sections 8, 12, 13 and 15 (personal data, warranties, liability, governing law) survive termination. Tell an operator asking how to get out both halves, not just the file deletion.
+- **Keeping the manifest published is continuing acceptance**, including of an updated version of the terms. An operator who does not accept a new version ends participation before it takes effect.
+
+### Registration is optional
+
+Registration is **not** a condition of participation and is **not** what opts the app in — the manifest already did that. It exists so DFINITY knows who the operator is: to reach them with the notices the terms provide for (sections 10, 11, 14), and to have a record of who accepted and of which version, which publication alone does not show.
+
+To register, the operator emails `mcp@dfinity.org` with: the operator's legal name and country; the name, role, and email of the accepting representative; the app's origin domain(s); the canister IDs the manifest declares; the URL of the app's own privacy policy, so ICP MCP can present it to users considering the app; and the version of the terms being accepted — read from the top of the terms page at that moment, which is where section 3 says it is shown. The version named in **Before Layer 1** is the one current when this skill was written; if the page disagrees, the page wins and its value is what goes in the email. Keep the registration current as any of those change.
+
+### Obligations that outlive the deploy
+
+These bind for as long as the manifest is published, so raise them with the user while the app is being made discoverable, not after:
+
+- **Accuracy (section 6).** The manifest, the Candid interface, and the `getApiDoc` text must identify the app correctly, describe what each method actually does, and stay in sync as the app changes. Never present a state-changing method as read-only or harmless, and never conceal a fee or transfer it performs.
+- **No assistant manipulation (section 6).** Published metadata and API docs describe the API and nothing more — no instructions telling the assistant to ignore its user, change its safety behavior, exfiltrate data, or avoid or disparage other apps. A hard constraint on `getApiDoc` content.
+- **Security (section 7).** The operator is responsible for control of the origin, the canisters' security and upgrade paths, and the integrity of the discoverability files.
+- **Personal data (section 8).** Requests reaching the app carry personal data — call arguments, per-application identities, and whatever the canisters return. Each party is an independent controller; the operator handles that data lawfully and keeps an accurate privacy policy available to the app's users. The [ICP MCP Privacy Policy](https://internetcomputer.org/icp-mcp/privacy-policy/) covers what ICP MCP discloses to the app, not what the app then does with it.
+
 ## Prerequisites
 
 - `icp-cli` **and** `ic-wasm`, installed together: `npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm`. See the `icp-cli` skill.
@@ -33,6 +75,8 @@ The load-bearing move for Layers 1 and 5 is **generating the well-known files at
 - `envsubst` (from GNU gettext) for templating the manifest. Any other templating mechanism works too (a small Node/`jq` script); `envsubst` is just the simplest.
 
 ## Layer 1: Composition — the `ic-architecture` manifest
+
+> **Gated.** Publishing this file opts the app into ICP MCP and accepts the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) on the operator's behalf. Confirm with the operator first — see **Before Layer 1** above.
 
 Publish a JSON document at the origin's `/.well-known/ic-architecture` that lists every canister and its role:
 
@@ -174,6 +218,8 @@ fn get_api_doc() -> String {
 
 Cover the non-obvious semantics: units and encoding (integer money scaled by `10^8`, fractions vs tenth-bps, timestamp units), which calls need a signed principal and how anonymous access differs, staged or asynchronous operations that return before completing and must be polled, what is irreversible and any dead-man switches, and the gotchas that routinely trip up new integrators.
 
+Once the app participates in ICP MCP, section 6 of the App Operator Terms constrains this text: it must not present a state-changing method as read-only or harmless or conceal a fee it charges, and it must describe the API only — never instructing the calling assistant to ignore its user, change its safety behavior, exfiltrate data, or disparage other apps. An agent acts on what `getApiDoc` returns, so prompt-injection-shaped content there is a breach, not a feature.
+
 ## Layer 4: Data — OQL (optional, for data-rich apps)
 
 For apps with a lot of queryable data, expose a self-describing query surface so an agent can answer open-ended questions without you writing a method per question. OQL is one such convention — two query methods that speak JSON-in-text:
@@ -233,6 +279,8 @@ Steps 1-3 take an agent from a bare URL to a correctly-encoded, correctly-unders
 
 ## Deployment Checklist
 
+- [ ] **Terms accepted:** the app's **operator** — not a developer or agent acting for them — has read the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) and confirmed, *before* the manifest ships. Publishing it is the acceptance; there is no separate step.
+- [ ] **Registration (optional):** if the operator wants notices and a record of who accepted which version, they email `mcp@dfinity.org` with the details in **Before Layer 1**, including the app's own privacy-policy URL.
 - [ ] **Composition:** the deploy pipeline emits `/.well-known/ic-architecture` (real JSON, extensionless path) with real per-environment canister IDs.
 - [ ] **Content type:** a `_headers` rule serves the manifest as `application/json`.
 - [ ] **Reachability (non-static-site hosts only):** `/.well-known/ic-architecture` actually resolves. Automatic on the static-site canister; on the legacy `@dfinity/asset-canister` the directory needs an `.ic-assets.json5` un-ignore rule to be uploaded at all; on a non-IC host, exempt `/.well-known/*` from the SPA catch-all if that host's rewrites shadow real files.
@@ -285,6 +333,14 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 
 11. **Stripping `candid:service`.** Some minified/size-optimized builds drop wasm metadata. Keep it — it is what makes the interface fetchable. Verify with `icp canister metadata <id> candid:service --network ic`.
 
+12. **Publishing the manifest without asking the operator.** The likeliest agent failure here is treating `/.well-known/ic-architecture` as ordinary build config and adding it unprompted. It is the act that accepts the [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/) and opts the app into query and update calls from AI assistants. Confirm with the user first, and confirm they are the **operator** — section 1 says a developer who does not operate the app cannot accept for its operator.
+
+13. **Mistaking registration for the opt-in, or for the opt-out.** Registration is optional and changes nothing about participation: an unregistered app whose manifest is published is fully participating and fully bound. Registration only tells DFINITY who accepted, which version, and where to send notices. Symmetrically, there is nothing to "unregister" to stop participating — **removing the manifest** is the off switch. Removing it deactivates participation; *terminating the agreement* is a separate act, a notice to `mcp@dfinity.org` (section 11). Neither undoes calls already executed on the Internet Computer, and sections 8, 12, 13 and 15 — personal data, warranties, liability and governing law — survive termination. "Delete the file and you are done" is wrong, not merely incomplete.
+
+14. **Expecting manifest removal to delist the app entirely.** Deleting it stops new metadata reads and query/update calls once ICP MCP observes the removal, but ICP MCP may still fetch the app's public website and describe publicly available information. To be dropped from user-facing presentation, the operator asks DFINITY at `mcp@dfinity.org`.
+
+15. **Declaring canisters the operator does not control.** It is tempting to list a third-party ledger or an ecosystem canister the app merely calls. Serving the manifest is a repeated representation (section 5) that **every** declared canister is operated by the operator or under their authority, and it makes those canisters eligible for update calls under the app's participation. List only your own.
+
 ## Additional References
 
 - Load `static-site` for the `@dfinity/static-site` recipe: `presync`/`build`, `_redirects`/`_headers`, `.well-known/` auto-upload, and canister-ID injection.
@@ -294,5 +350,7 @@ Locally, the static-site recipe serves the same paths — e.g. `curl http://fron
 - Load `icp-cli` for `icp.yaml` / `canister.yaml`, environments, and the recipe system.
 - Load `canister-security` for access control on the methods agents call.
 - Authoritative human guide: [Service discoverability](https://docs.internetcomputer.org/guides/frontends/service-discoverability/).
+- The terms publishing the manifest accepts: [ICP MCP App Operator Terms](https://internetcomputer.org/icp-mcp/app-operator-terms/), and what ICP MCP is: [ICP MCP](https://internetcomputer.org/icp-mcp/).
+- What ICP MCP discloses to a participating app, and what it processes on registration: [ICP MCP Privacy Policy](https://internetcomputer.org/icp-mcp/privacy-policy/).
 - Candid interface reference for the typed interface agents read: [Candid interface](https://docs.internetcomputer.org/guides/canister-calls/candid/).
 - Community example of the Layer 1 generation (a personal repo — illustrative, not a stable dependency): [`raymondk/demo-ic-architecture`](https://github.com/raymondk/demo-ic-architecture/tree/main/frontend/ic-architecture).
