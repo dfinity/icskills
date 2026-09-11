@@ -10,84 +10,52 @@ metadata:
 
 # Set up automatic `icp` CLI upgrades
 
-This skill installs a small amount of project configuration so that **every new
-Claude Code session checks whether `icp` and `ic-wasm` are current** — and, if the
-user wants, upgrades them before any work starts.
+A **one-time installer**: it adds a `SessionStart` hook that checks whether `icp` and
+`ic-wasm` are current and — if the user wants — upgrades them before work starts. Once
+these steps are done the user never needs this skill again.
 
-It is a **one-time installer**. After you complete the steps below, the user never
-needs this link again — the installed `SessionStart` hook does the work from then on.
+`ic-wasm` is covered alongside `icp` because the official recipes (`@dfinity/motoko`,
+`@dfinity/rust`, `@dfinity/static-site`, `@dfinity/asset-canister`) invoke it on every
+build. An `ic-wasm` left behind while `icp` moves forward produces build failures that
+read as recipe bugs, so upgrading only one of the pair is the worse default.
 
-Both tools are covered because they ship as a pair (`npm install -g @icp-sdk/icp-cli
-@icp-sdk/ic-wasm`) and the official recipes (`@dfinity/motoko`, `@dfinity/rust`,
-`@dfinity/static-site`, `@dfinity/asset-canister`) call `ic-wasm` during every build.
-An `ic-wasm` left behind while `icp` moves forward produces build failures that look
-like recipe bugs, so upgrading only one of them is the worse default.
-
-## Why this beats the CLI's own update check
-
-`icp` already has a built-in check (`icp settings update-check`), and it is worth
-leaving enabled — but it only speaks when the user runs an `icp` command, and by then
-the agent has already chosen which commands to write. This hook runs **before** the
-session's first prompt, so:
-
-- The version lands in Claude's context up front, so it can pick flags and recipe
-  versions that exist in the installed CLI instead of discovering the mismatch from a
-  failed command.
-- `ic-wasm` is checked too, which the built-in check does not cover.
-- The upgrade command matches the channel the tool was **actually** installed from,
-  and in auto mode it is applied rather than printed.
-
-## What you will create
-
-1. `.claude/upgrade-icp-cli.sh` — the version-check script.
-2. A `SessionStart` hook in `.claude/settings.json` that runs it.
-3. An immediate first run, so the user sees the current state right away.
+`icp` has its own check (`icp settings update-check`) that is worth leaving on, but it
+only speaks once the user runs an `icp` command — by which point the agent has already
+chosen what to write. This hook runs before the session's first prompt, so the version
+reaches Claude's context up front, and it covers `ic-wasm` too.
 
 ## Step 1 — Ask the user which mode they want
 
-This is the one decision the installer cannot make for the user, so ask before writing
-anything. A CLI upgrade can change build behaviour mid-project, and some teams pin the
-toolchain deliberately:
+The installer cannot make this call for the user, so ask before writing anything:
 
 > "Two options for how the hook behaves when a newer version exists:
 > **notify** — it prints the versions and the exact upgrade command, and nothing is
 > installed until you run it. **auto** — it runs that upgrade itself at session start.
 > Which do you want? You can switch later by editing one flag in the hook."
 
-Default to **notify** if the user has no preference — it is the reversible choice, and
-switching to auto later is a one-word edit.
+Default to **notify** if the user has no preference — it is the reversible choice.
 
-Also tell the user what adding a hook means:
+Also tell them what adding a hook means, and do not attempt to bypass the approval:
 
 > "I'm adding a `SessionStart` hook that runs `.claude/upgrade-icp-cli.sh`. Claude Code
 > will ask you to approve/trust it before it runs automatically."
 
-Do **not** attempt to bypass that approval.
-
 ## Step 2 — Check prerequisites
 
-The script needs `curl` (virtually always present) and at least one of the two tools
-installed — it reports on what is there and never installs a tool the user does not
-already have:
-
 ```bash
-command -v curl    >/dev/null 2>&1 && echo "curl: ok"    || echo "curl: MISSING"
-icp --version      2>/dev/null     || echo "icp: not installed"
-ic-wasm --version  2>/dev/null     || echo "ic-wasm: not installed"
+command -v curl   >/dev/null 2>&1 && echo "curl: ok" || echo "curl: MISSING"
+icp --version     2>/dev/null     || echo "icp: not installed"
+ic-wasm --version 2>/dev/null     || echo "ic-wasm: not installed"
 ```
 
 If either tool is missing, mention the install command
 (`npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm`) but do not run it unprompted —
 installing a toolchain is a different decision from keeping one current.
 
-Note that no `jq` is needed here (unlike `autosync-ic-skills`); the script parses
-versions with POSIX tools only.
-
 ## Step 3 — Download the script
 
-The script is published as a file alongside this skill, so fetch it verbatim rather
-than transcribing it — that guarantees byte-exact content and keeps the channel
-detection correct as it is updated upstream:
+Fetch the published script verbatim rather than transcribing it, so the channel
+detection stays correct as it is updated upstream:
 
 ```bash
 mkdir -p .claude
@@ -99,14 +67,10 @@ Do **not** hand-write or paraphrase it.
 
 ## Step 4 — Register the SessionStart hook (idempotently)
 
-Add a `SessionStart` hook to `.claude/settings.json`.
-
-- If `.claude/settings.json` does **not** exist, create it with the content below.
-- If it **does** exist, **merge** — preserve all existing keys, hooks, and permissions.
-  Only add the `SessionStart` entry, and **only if an equivalent
-  `bash .claude/upgrade-icp-cli.sh` command is not already present** (do not create a
-  duplicate). Parse the existing JSON, insert into the `hooks.SessionStart` array, and
-  write it back; never blindly overwrite the file.
+If `.claude/settings.json` does not exist, create it with the content below. If it
+does, **merge**: preserve every existing key, hook, and permission, add the
+`SessionStart` entry only if an equivalent `bash .claude/upgrade-icp-cli.sh` command is
+not already there, and write the parsed JSON back. Never overwrite the file.
 
 **Notify mode** (the default):
 
@@ -124,9 +88,9 @@ Add a `SessionStart` hook to `.claude/settings.json`.
 }
 ```
 
-**Auto mode** — same entry with `--mode auto`, plus a raised `timeout`. Installing a
-CLI binary can take well over the default 60 s hook timeout on a slow connection, and
-a timed-out upgrade leaves the tool half-installed:
+**Auto mode** — same entry with `--mode auto`, plus a raised `timeout`, because
+installing a CLI binary can exceed the default 60 s and a timed-out install leaves the
+tool half-written:
 
 ```json
 {
@@ -142,102 +106,68 @@ a timed-out upgrade leaves the tool half-installed:
 }
 ```
 
-Switching modes later is just editing that `--mode` flag (and adding or dropping the
-`timeout`).
-
 Whenever you hand someone an auto-mode hook, say the thing that makes it a real
-choice: it upgrades the build toolchain **while a project is open**, so a session can
-start against a different `icp` than the last one ended with. That is exactly what
-some teams want and exactly what others pin against.
+choice: it upgrades the build toolchain **while a project is open** and blocks session
+start while it runs, so a session can begin against a different `icp` than the last one
+ended with — which can change build behaviour and output for a project that built fine
+yesterday. That is what some teams want and what others pin against.
 
-## Step 5 — Run it once now
+## Step 5 — Run it once, verify, report
 
 ```bash
 bash .claude/upgrade-icp-cli.sh --mode notify   # or --mode auto, matching the hook
 ```
 
-Run it with the same mode you registered, so the user sees exactly what the hook will
-do. When both tools are current the script prints nothing and exits 0 — silence is the
-success case, not a failure.
+Silence means both tools are current — that is the success case, not a failure. A
+hand-run always checks the network; the hook throttles (below), so this is also the
+command for whenever someone wants an answer now.
 
-A hand-run always checks the network; the hook does not (see the throttle below), so
-this is also the command to reach for whenever someone wants an answer *now*.
-
-## Step 6 — Verify and report
-
-- Confirm `.claude/upgrade-icp-cli.sh` exists and the hook entry is in
-  `.claude/settings.json` exactly once.
-- Report the versions the run found, whether anything was upgraded, and which mode is
-  now installed.
-- Remind the user they will be prompted to trust the hook before it auto-runs next
-  session.
-- If the project commits `.claude/`, add `.claude/.icp-upgrade-check` to `.gitignore` —
-  it is a per-machine timestamp, not shared configuration.
+Then confirm the hook entry appears exactly once, report the versions found and
+whether anything was upgraded, and remind the user of the trust prompt. If the project
+commits `.claude/`, add `.claude/.icp-upgrade-check` to `.gitignore` — it is a
+per-machine timestamp, not shared configuration.
 
 ## How the script decides what to run
 
 It resolves each binary through its symlinks and reads the install channel off the
-path, because the upgrade command is different for each and guessing wrong leaves two
+path, because the upgrade command differs per channel and guessing wrong leaves two
 copies of the CLI on `PATH` shadowing each other:
 
-| Where the binary resolves to | Channel | Upgrade command | Latest version read from |
-|---|---|---|---|
-| `…/node_modules/@icp-sdk/…` | npm | `npm install -g <pkg>@latest` | GitHub release tag |
-| `…/Cellar/…` | Homebrew | `brew upgrade <formula>` | `formulae.brew.sh` API |
-| a cargo-dist receipt in `~/.config/<app>/` | shell installer | `icp-cli-update` / `ic-wasm-update` | GitHub release tag |
-| anything else | unknown | *(none — reports the release URL instead)* | GitHub release tag |
+| Where the binary resolves to | Channel | Upgrade command (`icp` / `ic-wasm`) |
+|---|---|---|
+| `…/node_modules/@icp-sdk/…` | npm | `npm install -g @icp-sdk/icp-cli@latest` / `npm install -g @icp-sdk/ic-wasm@latest` |
+| `…/Cellar/…` | Homebrew | `brew upgrade icp-cli` / `brew upgrade ic-wasm` |
+| a cargo-dist receipt in `~/.config/<app>/` | shell installer | `icp-cli-update` / `ic-wasm-update` |
+| anything else | unknown | *(none — reports the release URL instead)* |
 
-Homebrew is asked for its own formula version rather than the GitHub tag: the formula
-can trail a release by a day or two, and nagging about a version `brew upgrade` cannot
-yet install is pure noise.
+That last row is deliberate: an unrecognised install is reported, never guessed at.
 
-The GitHub lookup follows the `/releases/latest` redirect instead of calling the API,
-so it needs no token and cannot hit the 60-requests-per-hour anonymous rate limit —
-which a hook that fires on every session start otherwise would.
+Two consequences worth passing on to users:
 
-## Behaviour worth knowing
+- **A shadowed install never moves.** If an upgrade succeeds but `PATH` still resolves
+  to the old version, a second copy from another channel is winning — commonly an npm
+  global under `nvm` alongside a shell-installer copy in `~/.cargo/bin`. Upgrading one
+  channel can never touch the other's copy; resolve the binary (`command -v icp`) to
+  see which wins, then remove one or upgrade the one actually on `PATH`.
+- **Auto mode never runs `sudo`.** A non-writable npm prefix is reported as a `sudo …`
+  command instead, since a password prompt inside a hook has no terminal to answer it.
 
-- **Silent when there is nothing to say.** Output appears only when a tool is behind,
-  missing, or an upgrade failed. A `SessionStart` hook's plain stdout reaches Claude as
-  context but is never shown to the user, so the script emits one JSON object instead:
-  `systemMessage` (rendered to the user as a system notice) and `additionalContext`
-  (given to Claude). Run from a terminal it prints plain text. Diagnostics go to stderr
-  and are not displayed either way.
-- **Never fails the session.** Network failures, an unreachable registry, or a failed
-  package manager all exit 0 with a note. A broken upgrade must not block work.
-- **Throttled, because the hook blocks session start.** The two version probes cost
-  roughly a second, which is too much to pay on every session, so a check that reached
-  a release feed is stamped in `.claude/.icp-upgrade-check` and not repeated for 6
-  hours — a throttled run costs about 10 ms. Releases land every few weeks, so this
-  loses nothing. Override with `ICP_UPGRADE_CHECK_INTERVAL=<seconds>` (`0` disables the
-  throttle entirely), and bypass it once with `--force`. A run from a terminal always
-  checks. A failed probe is deliberately not stamped, so an offline session retries at
-  the next one instead of going quiet for six hours.
-- **Never installs what is absent.** A missing tool is reported with its install
-  command, even in auto mode — installing a toolchain the user never had is a
-  different decision from upgrading one they did.
-- **Never sudo.** If the global npm prefix is not writable, auto mode reports
-  `sudo npm install -g …` rather than running it; a password prompt inside a hook has
-  no terminal to type into and would hang session start.
-- **Pre-releases are not downgraded.** A `1.6.0-beta.1` install compares as `1.6.0`,
-  so running a beta does not produce an upgrade nag back to the release.
-- **Shadowed installs are caught.** If an upgrade succeeds but `PATH` still resolves to
-  the old version, the script says so — that means a second copy of the tool (commonly
-  an npm global under `nvm` plus a shell-installer copy in `~/.cargo/bin`) is winning
-  on `PATH`, and upgrading one will never fix the other.
+## Throttling
+
+A check that reached a release feed is stamped in `.claude/.icp-upgrade-check` and not
+repeated for 6 hours, so the hook costs ~10 ms on most session starts instead of ~1 s.
+Override with `ICP_UPGRADE_CHECK_INTERVAL=<seconds>` (`0` disables it) or bypass once
+with `--force`; a run from a terminal always checks. A failed probe is not stamped, so
+an offline session retries at the next one.
 
 ## What this does *not* upgrade
 
-The hook manages the two CLI binaries only. These are pinned per project and stay the
-user's call:
+The hook manages the two CLI binaries only. Recipe versions in `icp.yaml`
+(`@dfinity/motoko@v5.0.0` and friends) and the Motoko toolchain (`moc`, `mops`, the
+`[toolchain]` pin in `mops.toml`) are pinned per project and stay the user's call —
+load `icp-cli` and `mops-cli` respectively for those.
 
-- **Recipe versions** in `icp.yaml` (`@dfinity/motoko@v5.0.0` and friends) — a newer
-  `icp` does not change them. Load `icp-cli` for the recipe table and how to bump one.
-- **The Motoko toolchain** (`moc`, `mops`, and the `[toolchain]` pin in `mops.toml`) —
-  load `mops-cli`.
-
-Upgrading the CLI mid-project can change build output, so if a build starts failing
-right after an auto upgrade, check the [icp-cli release
+If a build starts failing right after an auto upgrade, check the [icp-cli release
 notes](https://github.com/dfinity/icp-cli/releases) before assuming the project broke.
 
 ## Additional References
