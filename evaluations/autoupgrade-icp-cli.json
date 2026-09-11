@@ -1,0 +1,81 @@
+{
+  "skill": "autoupgrade-icp-cli",
+  "description": "Evaluation cases for the autoupgrade-icp-cli skill. Tests whether agents set the hook up correctly (ask for a mode, fetch the published script, merge settings.json, raise the timeout for auto mode) and whether they diagnose toolchain-version problems the way the skill describes: channel-correct upgrade commands, ic-wasm skew, and a shadowed second copy on PATH.",
+  "output_evals": [
+    {
+      "name": "Setup plan and settings.json entry",
+      "prompt": "I want every Claude Code session in this project to check whether my icp CLI is out of date. Describe the exact steps you'd take and show the .claude/settings.json entry you'd add. Don't run anything or edit files.",
+      "expected_behaviors": [
+        "Asks the user (or explicitly offers the choice) whether the hook should only notify or should upgrade automatically, rather than silently picking one",
+        "Registers a SessionStart hook whose command runs the script, e.g. `bash .claude/upgrade-icp-cli.sh`",
+        "Says the script is downloaded from https://skills.internetcomputer.org/.well-known/skills/autoupgrade-icp-cli/scripts/upgrade-icp-cli.sh rather than hand-written",
+        "Says an existing .claude/settings.json must be merged (preserving other keys/hooks) and the entry not duplicated, never overwritten",
+        "Mentions the user will be asked to approve/trust the new hook before it runs automatically",
+        "Does NOT invent a settings.json schema — the entry nests under hooks.SessionStart with a hooks array of {type: command, command: ...}"
+      ]
+    },
+    {
+      "name": "Auto mode needs a raised hook timeout",
+      "prompt": "Set my SessionStart hook to actually install the new icp version automatically instead of just telling me about it. Just show me the final hook JSON and note anything I should watch out for.",
+      "expected_behaviors": [
+        "Uses the auto mode flag on the command (e.g. `--mode auto`)",
+        "Raises the hook timeout above the 60 second default (e.g. \"timeout\": 300), because downloading and installing a CLI binary can exceed it",
+        "Explains the risk of auto mode: a CLI upgrade can change build behaviour mid-project",
+        "Does NOT claim the upgrade runs in the background — the hook blocks session start while it runs"
+      ]
+    },
+    {
+      "name": "Channel-correct upgrade command",
+      "prompt": "I installed icp a while ago with the curl shell installer from the icp-cli releases page, not with npm. icp --version says 1.2.0 and there's a newer one. What's the single command to upgrade it? Just the command and one line of why.",
+      "expected_behaviors": [
+        "Gives `icp-cli-update` (the updater the shell installer places on PATH) as the upgrade command",
+        "Does NOT tell the user to run `npm install -g @icp-sdk/icp-cli@latest`, which would install a second copy from a different channel",
+        "Explains that the upgrade command depends on the channel the CLI was installed from"
+      ]
+    },
+    {
+      "name": "ic-wasm version skew after upgrading icp",
+      "prompt": "I just upgraded icp to the latest version with npm. Now `icp build` fails inside the @dfinity/motoko recipe with a metadata/optimization error, and nothing in my project changed. What should I check first? Keep it brief.",
+      "expected_behaviors": [
+        "Points at ic-wasm being left behind while icp moved forward, since the official recipes invoke ic-wasm during every build",
+        "Tells the user to check `ic-wasm --version` and upgrade it (e.g. `npm install -g @icp-sdk/ic-wasm@latest`)",
+        "Does NOT send the user straight into debugging their Motoko code or recipe config as the first step"
+      ]
+    },
+    {
+      "name": "Upgrade ran but the version did not move",
+      "prompt": "I ran `npm install -g @icp-sdk/icp-cli@latest`, it finished with no errors, but `icp --version` still prints the old version. What's going on? Just the diagnosis and how to confirm it.",
+      "expected_behaviors": [
+        "Identifies that a second copy of icp from a different install channel is earlier on PATH and shadowing the npm one (commonly ~/.cargo/bin/icp from the shell installer)",
+        "Suggests resolving the actual binary being used, e.g. `command -v icp` / `which icp` (and following the symlink) to see which copy wins",
+        "Says upgrading through one channel will never move a copy installed through another — remove one, or upgrade the one that is actually on PATH",
+        "Does NOT blame the npm cache or recommend reinstalling npm as the primary explanation"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "Can you make this project always use the latest icp CLI?",
+      "Set up a hook so I stop working with an outdated icp version",
+      "I keep forgetting to update icp-cli. Automate it for me.",
+      "How do I upgrade the ICP CLI to the newest release?",
+      "My icp is on 1.2.0 and the latest is 1.5.0 — what's the upgrade command?",
+      "Install something that keeps icp and ic-wasm current at the start of every session",
+      "I ran npm install -g @icp-sdk/icp-cli@latest but icp --version hasn't changed",
+      "Is my ic-wasm too old for the version of icp I'm running?",
+      "Add automatic ICP toolchain updates to .claude/settings.json"
+    ],
+    "should_not_trigger": [
+      "Upgrade my canister without wiping its state — I think I need icp deploy --mode upgrade",
+      "Bump the @dfinity/motoko recipe in my icp.yaml to the latest version",
+      "Keep my Internet Computer skills in .claude/skills up to date automatically",
+      "Update the moc compiler version in my mops.toml toolchain section",
+      "My icp deploy is failing with a build error in the rust recipe",
+      "What's the latest version of @icp-sdk/core I should depend on in my frontend?",
+      "Write a GitHub Actions workflow that deploys my canister on every push to main",
+      "How do I upgrade a canister's Wasm module on mainnet without losing stable memory?",
+      "Add a SessionStart hook that runs my test suite before I start working"
+    ]
+  }
+}
