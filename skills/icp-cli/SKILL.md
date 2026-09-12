@@ -354,12 +354,9 @@ icp deploy --mode reinstall   # Clear all state (dangerous)
 
 ```bash
 icp project bundle --output my-app.icp      # gzipped tar; --output accepts any path
-
-mkdir app && tar -xzf my-app.icp -C app     # deploy from a bundle: extract, then deploy
-cd app && icp deploy -e <environment>       # no build toolchain needed — steps are prebuilt
 ```
 
-For what the archive contains, the conditions that make bundling fail, and uploading a package to a Caffeine cloud engine, read `references/bundling.md`.
+For how to deploy from a bundle, what the archive contains, the conditions that make bundling fail, and uploading a package to a Caffeine cloud engine, see `references/bundling.md`.
 
 ## Configuration
 
