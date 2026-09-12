@@ -178,7 +178,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     ```bash
     icp network stop --project-root-override /path/to/other-project
     ```
-    To run both networks at once instead of stopping one — e.g. parallel git worktrees — set `gateway.port: 0` so each gets a free port. See "Parallel local networks (git worktrees)" under How It Works.
+    To run both networks at once instead of stopping one — e.g. parallel git worktrees — set `gateway.port: 0` so each gets a free port. See "Parallel agents and worktrees" under How It Works.
 
     **Scenario B — a non-icp service holds the port.** Configure an alternate port in `icp.yaml` and read the actual URLs dynamically via `icp network status --json` rather than hardcoding localhost:8000:
     ```yaml
@@ -291,7 +291,9 @@ environments:
         freezing_threshold: 7776000
 ```
 
-### Parallel local networks (git worktrees)
+### Parallel agents and worktrees
+
+#### Isolating the gateway port
 
 Local networks are project-local — keyed by project root (Pitfall 9). Separate git worktrees of the same repo are separate project roots, so each worktree can run its own independent local network. This lets multiple agents or branches build and deploy in parallel without interfering. The only obstacle is the gateway port: every worktree defaults to `8000`, so the second `icp network start` fails with a port conflict.
 
@@ -316,6 +318,27 @@ icp network status --json | jq -r '.gateway_url'   # http://localhost:58157/
 ```
 
 Never hardcode `localhost:8000` when using `port: 0` — the port changes on every start, so read `gateway_url` (or `api_url`) from `icp network status --json` each time. To target a specific worktree's network from outside its directory, pass the global `--project-root-override <path>` flag (e.g. `icp network status --json --project-root-override /path/to/worktree`).
+
+#### Isolating global CLI state (`ICP_HOME`)
+
+Project-local networks isolate *per-project* state only. Identities, settings, and the downloaded package cache are **global** — one directory per OS user, at `~/.local/share/icp-cli/` (Linux), `~/Library/Application Support/org.dfinity.icp-cli/` (macOS), or `%APPDATA%\icp-cli\data\` (Windows). Each of `identity/`, `settings/`, and `pkg/` inside it is guarded by a blocking advisory lock (`.lock`), so concurrent `icp` invocations touching the same one **serialize** — they wait for the lock, they do not fail. Several agents building at once contend on the package cache lock while recipes or the network launcher download.
+
+`ICP_HOME` overrides that directory, giving each agent its own copy:
+
+```bash
+export ICP_HOME=/path/to/worktree/.icp-home
+icp identity new dev --storage plaintext
+icp deploy
+```
+
+Caveats, in the order they bite:
+
+- **The OS keyring is still shared.** Keyring entries are keyed by service `icp-cli` plus the identity name — `ICP_HOME` is not part of the key. Two isolated homes that each run `icp identity new dev` (keyring is the default storage) write the same entry and overwrite one another. Pass `--storage plaintext` so the key lands at `$ICP_HOME/identity/keys/<name>.pem` and the isolation is real. The same applies to `icp identity import` and `icp identity link web`, whose session key also defaults to the keyring. Plaintext keys are for throwaway local and CI identities only — never for an identity that controls mainnet canisters or holds value (Pitfall 20).
+- **A fresh home is empty.** No identities, no settings, no cache. The default identity is anonymous, which managed local networks seed automatically but which is unusable on mainnet.
+- **The package cache is re-downloaded per home.** `pkg/` holds the network launcher and every recipe, and reaches hundreds of MB. Seed a new home by copying a warm `pkg/` into it, or point all homes at one shared launcher binary with `ICP_CLI_NETWORK_LAUNCHER_PATH=/path/to/icp-cli-network-launcher`.
+- **`ICP_HOME` must be set for every `icp` invocation** in that agent's session, not just the first. A command that misses it silently falls back to the shared default home and a different default identity.
+
+Reach for this only when agents actually contend. Separate worktrees that share one identity set and tolerate serialized cache access do not need it.
 
 ### Install Modes
 

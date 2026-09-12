@@ -301,6 +301,18 @@
         "Explains that the default host resolution uses the page origin on known gateway hosts (ic0.app/icp0.io/localhost) and falls back to https://icp-api.io elsewhere, so custom domains work even though they do not serve /api/v2",
         "Does NOT set host to window.location.origin (conditionally or unconditionally)"
       ]
+    },
+    {
+      "name": "Parallel agents sharing global CLI state (ICP_HOME)",
+      "prompt": "I'm running several coding agents against the same icp-cli repo in separate git worktrees and they keep blocking each other on icp commands and stepping on each other's identity. How do I isolate them? Just the environment setup and identity commands, no deploy walkthrough.",
+      "expected_behaviors": [
+        "Sets ICP_HOME to a per-worktree/per-agent directory to isolate global CLI state",
+        "Sets the managed local network gateway.port to 0 so each worktree gets a free port",
+        "Warns that the OS keyring is shared across ICP_HOME values, so identity names collide between agents",
+        "Recommends 'icp identity new <name> --storage plaintext' for the per-agent identity",
+        "Does NOT claim that ICP_HOME alone isolates keyring-stored identities",
+        "Mentions that a fresh ICP_HOME re-downloads the package cache (recipes, network launcher)"
+      ]
     }
   ],
   "trigger_evals": {
