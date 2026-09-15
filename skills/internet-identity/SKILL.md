@@ -178,7 +178,9 @@ function App() {
   );
 
   useEffect(() => {
-    // Releases the browser listeners and the re-mint this client scheduled.
+    // dispose() drops this client's foreground and activity listeners, its
+    // state-store subscription, and the timer that re-mints the delegation. It
+    // is not a sign-out: the session stands and other clients keep using it.
     return () => authClient.dispose();
   }, [authClient]);
 
