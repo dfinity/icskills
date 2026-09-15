@@ -1,7 +1,6 @@
 {
   "skill": "wallet-integration",
   "description": "Evaluation cases for the wallet-integration skill. Tests whether agents produce correct ICRC signer protocol code, avoid top-level await, and use the right wallet classes.",
-
   "output_evals": [
     {
       "name": "No top-level await in wallet code",
@@ -41,9 +40,18 @@
         "Registers ICRC25_REQUEST_PERMISSIONS and ICRC27_ACCOUNTS prompts",
         "Registers ICRC21_CALL_CONSENT_MESSAGE and ICRC49_CALL_CANISTER prompts"
       ]
+    },
+    {
+      "name": "Adversarial: unpinned oisy-wallet-signer resolves core 4",
+      "prompt": "My dapp already uses @icp-sdk/auth for Internet Identity login. Give me the npm install command to add OISY wallet integration. No integration code.",
+      "expected_behaviors": [
+        "Pins @dfinity/oisy-wallet-signer below 6.0.0 (e.g. ^4.1.3)",
+        "Pins @icp-sdk/core to ^5",
+        "Does NOT give an unpinned install command for @dfinity/oisy-wallet-signer or @icp-sdk/core",
+        "Notes that the latest oisy-wallet-signer (6.0.0) peers @icp-sdk/core ^4 and is therefore incompatible with @icp-sdk/auth"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
