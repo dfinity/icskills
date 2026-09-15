@@ -159,35 +159,37 @@ async function init() {
 init();
 ```
 
-The client is an external store: `getStatus()` hands back the same object until
-something changes it, so `useSyncExternalStore` renders on it directly. Dispose
-of the client when the view that owns it unmounts, which releases its browser
-listeners and the re-mint it has scheduled.
+The client is an external store, so a framework can render on it directly. In
+React, for example:
 
 ```jsx
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
 
 function App() {
-  // The initialiser runs once per mount, so no render builds a second client.
+  // A client per mounted view is fine: several read the same sign-in.
   const [authClient] = useState(() => new AuthClient());
 
+  // subscribe() fires on every change, including one made in another tab, and
+  // getStatus() returns the same object until something changes it.
   const status = useSyncExternalStore(
     onChange => authClient.subscribe(onChange),
     () => authClient.getStatus(),
   );
 
-  useEffect(() => () => authClient.dispose(), [authClient]);
+  useEffect(() => {
+    // Releases the browser listeners and the re-mint this client scheduled.
+    return () => authClient.dispose();
+  }, [authClient]);
 
   switch (status.state) {
     case "signed-in":
       return <Dashboard principal={status.principal} onSignOut={() => authClient.signOut()} />;
     case "expired":
-      // Names the account whose session ended, so this is "your session ended"
-      // rather than a bare signed-out screen.
+      // The record outlives the session, so this screen can name whose ended.
       return <SessionEnded principal={status.principal} onSignIn={() => authClient.signIn()} />;
     case "signed-in-elsewhere":
-      // Only when the sign-in is shared across sibling subdomains.
+      // A sibling subdomain signed in and this origin holds nothing yet.
       return <Resume principal={status.principal} onSignIn={() => authClient.signIn()} />;
     case "signed-out":
       return <SignInButton onClick={() => authClient.signIn()} />;
