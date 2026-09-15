@@ -157,10 +157,50 @@ async function init() {
 }
 
 init();
+```
 
-// Release the browser listeners and the scheduled refresh when this view goes
-// away. In a framework, call it from the unmount hook.
-window.addEventListener("pagehide", () => authClient.dispose());
+The client's lifecycle belongs to whatever renders: construct one when a view
+mounts, dispose of it when that view unmounts. Several clients may exist at once
+and read the same sign-in, so this costs nothing. In React:
+
+```jsx
+import { useEffect, useState } from "react";
+import { AuthClient } from "@icp-sdk/auth/client";
+
+function useAuth() {
+  const [client] = useState(() => new AuthClient());
+  const [status, setStatus] = useState(() => client.getStatus());
+
+  useEffect(() => {
+    const unsubscribe = client.subscribe(() => setStatus(client.getStatus()));
+    return () => {
+      unsubscribe();
+      // Releases the browser listeners and the scheduled re-mint. Without it
+      // every mount leaves another client running.
+      client.dispose();
+    };
+  }, [client]);
+
+  return { status, signIn: () => client.signIn(), signOut: () => client.signOut() };
+}
+
+function App() {
+  const { status, signIn, signOut } = useAuth();
+
+  switch (status.state) {
+    case "signed-in":
+      return <Dashboard principal={status.principal} onSignOut={signOut} />;
+    case "expired":
+      // Names the account whose session ended, so this is "your session ended"
+      // rather than a bare signed-out screen.
+      return <SessionEnded principal={status.principal} onSignIn={signIn} />;
+    case "signed-in-elsewhere":
+      // Only when the sign-in is shared across sibling subdomains.
+      return <Resume principal={status.principal} onSignIn={signIn} />;
+    case "signed-out":
+      return <SignInButton onClick={signIn} />;
+  }
+}
 ```
 
 ### Serving an app at more than one origin
