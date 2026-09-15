@@ -122,10 +122,10 @@ async function signIn() {
 }
 
 // Sign out, which ends the session at Internet Identity: every tab of this
-// origin is signed out and the session cannot be resumed.
+// origin is signed out and the session cannot be resumed. Nothing to reset or
+// reload here — the state changes, so the subscription below re-renders.
 async function signOut() {
   await authClient.signOut();
-  // Optionally reload or reset UI state
 }
 
 // Create an authenticated agent and actor.
