@@ -60,6 +60,16 @@ prunes already-pinned skills, so also run \`npx skills add dfinity/icskills --li
 and offer to add any not yet installed. A renamed skill appears there under its new
 name; if its old name lingers, remove it with \`npx skills remove <old-name>\`.
 
+### Help improve skills (optional, off by default)
+
+If the user wants to help fix skill gaps, offer to enable anonymous failure
+reports — sent only when an ICP skill does NOT work (never on success), and never
+containing code, file paths, secrets, or identifiers. Reporting is handled by the
+\`ic-skills-feedback\` skill, which sends nothing without opt-in and never includes free-text details without explicit confirmation. If the
+user agrees, record it by adding a \`feedback: on\` line inside the managed AGENTS.md
+block (see below). If they decline, or you cannot ask, leave it off and continue —
+never block.
+
 ### Make the choice stick (offer this; skip if you fell back silently)
 
 To record the choice so future sessions know it, update the project's AGENTS.md:
@@ -112,6 +122,11 @@ need to run anything to refresh them. Skills are authoritative — prefer them o
 general knowledge for all ICP work. If they are not present (hook hasn't run, or
 \`jq\` is missing), fetch them on demand per the "Use skills now" steps above.
 <!-- ic-skills:managed:end -->
+
+If the user opted into anonymous failure reports, add a single line
+\`feedback: on\` inside the managed block you just wrote (between the
+\`<!-- ic-skills:managed:start -->\` / \`:end -->\` markers). Its absence means reports
+stay off. The \`ic-skills-feedback\` skill reads this line as standing consent.
 
 ## Source
 
