@@ -9,14 +9,17 @@
         "All await calls are inside async functions — no bare top-level await at module scope",
         "Does NOT recommend changing build.target to 'esnext' or 'es2022' in Vite config",
         "Uses AuthClient from '@icp-sdk/auth/client' (submodule import, not root '@icp-sdk/auth')",
-        "Shows an initialization pattern like async function init() or equivalent lifecycle hook"
+        "Shows an initialization pattern like async function init() or equivalent lifecycle hook",
+        "Constructs the client with no identityProvider, or with the { authorizeUrl, canisterId } pair — never a bare URL string"
       ]
     },
     {
       "name": "Local II URL",
-      "prompt": "My Internet Identity login works on mainnet but fails locally — the popup never opens. What URL should I use for the local identityProvider? Just the URL and a one-line explanation.",
+      "prompt": "My Internet Identity login works on mainnet but fails locally — the popup never opens. What do I pass as identityProvider for a local Internet Identity? Just the value and a one-line explanation.",
       "expected_behaviors": [
-        "Local URL uses the well-known II canister ID: http://id.ai.localhost:8000",
+        "identityProvider is an object with both authorizeUrl and canisterId, not a bare URL string (9.x throws a TypeError on a string)",
+        "Local authorizeUrl uses the well-known II frontend alias: http://id.ai.localhost:8000/authorize",
+        "canisterId is the well-known II backend canister, rdmx6-jaaaa-aaaaa-aaadq-cai, which is the same locally as on mainnet",
         "Does NOT suggest dynamic lookup via ic_env cookie, environment variables, or dfx commands for the II canister ID — it is a well-known, hardcoded ID"
       ]
     },
@@ -46,7 +49,7 @@
       "expected_behaviors": [
         "Identifies 2vxsx-fae as the anonymous principal",
         "Explains that authentication silently failed or the identity was not properly extracted",
-        "Suggests checking the identityProvider URL passed to the AuthClient constructor",
+        "Suggests checking the authorizeUrl passed to the AuthClient constructor (including the /authorize path)",
         "Suggests checking that authClient.signIn() did not reject (use try/catch around the awaited promise) and that the identity from await authClient.getIdentity() is passed to HttpAgent"
       ]
     },

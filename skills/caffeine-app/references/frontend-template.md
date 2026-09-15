@@ -65,7 +65,7 @@ deps once the app works). Verified to install with pnpm and build with Vite.
   },
   "dependencies": {
     "@caffeineai/core-infrastructure": "^1.0.0",
-    "@icp-sdk/auth": "^7.1.0",
+    "@icp-sdk/auth": "^9.0.0",
     "@icp-sdk/core": "^5.3.0",
     "@react-three/cannon": "~6.6.0",
     "@react-three/drei": "~10.0.8",

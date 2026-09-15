@@ -16,7 +16,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Prerequisites
 
-- `@icp-sdk/auth` (>= 7.0.0), `@icp-sdk/core` (>= 5.3.0) (`AttributesIdentity` was added in core v5.3.0)
+- `@icp-sdk/auth` (>= 9.0.0), `@icp-sdk/core` (>= 5.3.0) (`AttributesIdentity` was added in core v5.3.0)
 - For the Motoko backend example: `mo:identity-attributes` >= 0.4.0 (mops) — the mixin that injects the two sign-in methods and verifies the bundle for you. It pulls in `mo:core` >= 2.5.0 and requires `moc` >= 1.6.0 for the `include` mixin.
 
 ## Canister IDs
@@ -28,17 +28,17 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 ## Mistakes That Break Your Build
 
-1. **Using the wrong II URL for the environment.** The identity provider URL must point to the **frontend** canister (`uqzsh-gqaaa-aaaaq-qaada-cai`), not the backend. Mainnet uses `https://id.ai/authorize`. Local-only II (when `ii: true` is set in `icp.yaml`) uses `http://id.ai.localhost:8000/authorize`. Both canister IDs are well-known and identical on mainnet and local replicas — hardcode them rather than doing a dynamic lookup.
+1. **Using the wrong II URL for the environment.** `authorizeUrl` must point to the **frontend** canister (`uqzsh-gqaaa-aaaaq-qaada-cai`), not the backend. Mainnet uses `https://id.ai/authorize`. Local-only II (when `ii: true` is set in `icp.yaml`) uses `http://id.ai.localhost:8000/authorize`. Both canister IDs are well-known and identical on mainnet and local replicas — hardcode them rather than doing a dynamic lookup.
 
-2. **Forgetting `/authorize` in the `identityProvider` URL.** In `@icp-sdk/auth` 7.x the URL is used verbatim; the client does **not** append `/authorize` for you (it did in 5.x). Passing `https://id.ai` opens the II home page in the popup and never returns a delegation — the login button appears to do nothing. Always include the `/authorize` path.
+2. **Passing `identityProvider` as a URL string, or naming only half of it.** In 9.x it is an object — `{ authorizeUrl, canisterId }` — and both fields are required together: the page a ceremony renders at and the canister that mints delegations are separate facts, and neither is derived from the other. A string or a `URL` throws a `TypeError`. Omit the option entirely to get mainnet Internet Identity, which is what most apps want. The URL is used verbatim, so include the `/authorize` path: `https://id.ai` opens the II home page and never returns a delegation.
 
-3. **Setting delegation expiry too long.** Maximum delegation expiry is 30 days (2_592_000_000_000_000 nanoseconds). Longer values are silently clamped, which causes confusing session behavior. Use 8 hours for normal apps, 30 days maximum for "remember me" flows.
+3. **Treating `maxTimeToLive` as the lifetime of the key the frontend signs with.** In 9.x it bounds the **session** at Internet Identity, and `maxTimeToIdle` ends a session nobody has used; the delegation your calls are signed with is short-lived and replaced for you. Leave both unset unless the app has a policy of its own — the provider applies seven days of idleness and thirty days in total. Bound them where the data is sensitive, not to keep key material fresh.
 
 4. **Not awaiting `signIn()` or skipping the `try`/`catch`.** `authClient.signIn()` returns a promise that rejects when the user closes the popup or authentication fails. Without `await` and a `catch`, those failures are silently swallowed.
 
 5. **Using `shouldFetchRootKey` or `fetchRootKey()` instead of the `ic_env` cookie.** The `ic_env` cookie (set by the frontend canister or the Vite dev server) already contains the root key as `IC_ROOT_KEY`. Pass it via the `rootKey` option to `HttpAgent.create()` — this works in both local and production environments without environment branching. See the icp-cli skill's `references/binding-generation.md` for the pattern. Never call `fetchRootKey()` — it fetches the root key from the replica at runtime, which lets a man-in-the-middle substitute a fake key on mainnet.
 
-6. **Getting `2vxsx-fae` as the principal after sign-in.** That is the anonymous principal -- it means authentication silently failed. Common causes: wrong `identityProvider` URL passed to the `AuthClient` constructor (especially missing `/authorize`), an unhandled rejection from `signIn()`, or reading `getIdentity()` before `signIn()` resolved.
+6. **Getting `2vxsx-fae` as the principal after sign-in.** That is the anonymous principal -- it means authentication silently failed. Common causes: a wrong `authorizeUrl` on the `AuthClient` constructor (especially missing `/authorize`), an unhandled rejection from `signIn()`, or reading `getIdentity()` before `signIn()` resolved. Note that `getIdentity()` throws `SessionNotHeldError` rather than handing back an anonymous identity when a sign-in exists that this origin holds no credential for.
 
 7. **Passing principal as string to backend.** The `AuthClient` gives you an `Identity` object. Backend canister methods receive the caller principal automatically via the IC protocol -- you do not pass it as a function argument. The caller principal is available on the backend via `shared(msg) { msg.caller }` in Motoko or `ic_cdk::api::msg_caller()` in Rust. For backend access control patterns, see the **canister-security** skill.
 
@@ -65,7 +65,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 **Default: use mainnet II from your local network.** Starting with `icp-cli >= 0.2.4`, the local network (pocket-ic, launched by `icp-cli-network-launcher`) is configured to trust the mainnet subnet's BLS signatures. Delegations signed by `https://id.ai` are accepted by your local replica, so both the sign-in flow *and* authenticated calls to a locally-deployed backend just work — no extra config in `icp.yaml`, no local II canister to manage, and the UI is the real one your users will see.
 
-Point your frontend at `https://id.ai/authorize` unconditionally and you're done.
+Construct the client with no `identityProvider` at all: mainnet Internet Identity is what it defaults to, and you're done.
 
 ### Fallback: deploy II locally
 
@@ -78,7 +78,7 @@ networks:
     ii: true
 ```
 
-This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, and the `identityProvider` URL becomes `http://id.ai.localhost:8000/authorize`. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **static-site** skills.
+This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, so the client is constructed with `identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' }` — the canister id is the same locally, since system canisters keep their mainnet ids on the local network. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **static-site** skills.
 
 ### Frontend: Vanilla JavaScript/TypeScript Sign-In Flow
 
@@ -93,25 +93,26 @@ import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 // Contains the root key and canister IDs — works in both local and production.
 const canisterEnv = safeGetCanisterEnv();
 
-// Construct once — identityProvider (and optionally derivationOrigin or
-// openIdProvider for one-click sign-in: 'google' | 'apple' | 'microsoft')
-// are configured at construction time, not per sign-in. Always include the
-// `/authorize` path — the client uses the URL verbatim in 7.x.
+// Mainnet Internet Identity is the default, so no identityProvider is needed:
+// pocket-ic (icp-cli >= 0.2.4) trusts mainnet subnet signatures, so this works
+// from local dev too. Pass { authorizeUrl, canisterId } only for a local II
+// (`ii: true` in icp.yaml) or another deployment; both halves are required
+// together, and a bare URL string throws.
 //
-// Use mainnet II even from local dev: pocket-ic (icp-cli >= 0.2.4) trusts
-// mainnet subnet signatures. Override to http://id.ai.localhost:8000/authorize
-// only if you have `ii: true` in icp.yaml and want fully-offline dev.
-const authClient = new AuthClient({
-  identityProvider: "https://id.ai/authorize",
-});
+// derivationOrigin, and openIdProvider for one-click sign-in
+// ('google' | 'apple' | 'microsoft'), are also constructor options.
+//
+// Several clients may share an origin and read the same sign-in, so construct
+// one where you need it and dispose of it when that view goes away.
+const authClient = new AuthClient();
 
 // Sign in: signIn() returns the new Identity directly and rejects if the user
-// closes the popup or authentication fails.
+// closes the popup or authentication fails. The session's bounds
+// (maxTimeToIdle, maxTimeToLive) are optional; unset means Internet Identity's
+// own, currently seven days idle and thirty days in total.
 async function signIn() {
   try {
-    const identity = await authClient.signIn({
-      maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
-    });
+    const identity = await authClient.signIn();
     console.log("Signed in as:", identity.getPrincipal().toText());
     return identity;
   } catch (error) {
@@ -120,7 +121,8 @@ async function signIn() {
   }
 }
 
-// Sign out
+// Sign out, which ends the session at Internet Identity: every tab of this
+// origin is signed out and the session cannot be resumed.
 async function signOut() {
   await authClient.signOut();
   // Optionally reload or reset UI state
@@ -147,9 +149,18 @@ async function init() {
     const actor = await createAuthenticatedActor(identity, canisterId, idlFactory);
     // Use actor to call backend methods
   }
+
+  // Re-render when who is signed in here changes, including in another tab:
+  // getStatus() is 'signed-in' | 'signed-in-elsewhere' | 'expired' |
+  // 'signed-out', and the last three each want a different screen.
+  authClient.subscribe(() => render(authClient.getStatus()));
 }
 
 init();
+
+// Release the browser listeners and the scheduled refresh when this view goes
+// away. In a framework, call it from the unmount hook.
+window.addEventListener("pagehide", () => authClient.dispose());
 ```
 
 ### Serving an app at more than one origin
@@ -162,7 +173,6 @@ Pick the **canister address** as the derivation origin. Custom domains can be ch
 
 ```js
 const authClient = new AuthClient({
-  identityProvider: "https://id.ai/authorize",
   derivationOrigin: "https://<canister-id>.icp.net",
 });
 ```
@@ -276,17 +286,15 @@ async function signInWithAttributes(authClient, canisterId, idl) {
   const anonymousAgent = await HttpAgent.create();
   const anonymousActor = Actor.createActor(idl, { agent: anonymousAgent, canisterId });
 
-  // Mint the nonce, sign in, and request attributes in parallel. Passing the
-  // nonce as a promise lets requestAttributes start before it resolves, so the
-  // user still sees a single Internet Identity interaction. A frontend-generated
-  // nonce would defeat replay protection — see Mistake #9.
-  const noncePromise = anonymousActor._internet_identity_sign_in_start();
-  const signInPromise = authClient.signIn({
-    maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours in nanoseconds
-  });
+  // Mint the nonce, sign in, and request attributes in parallel. `nonce` is the
+  // function that fetches it, called when the client needs the value, so the
+  // request is in flight while the Internet Identity window opens and the user
+  // still sees a single interaction. A frontend-generated nonce would defeat
+  // replay protection — see Mistake #9.
+  const signInPromise = authClient.signIn();
   const attributesPromise = authClient.requestAttributes({
     keys: ["name", "verified_email"], // library reads verified_email for its email field
-    nonce: noncePromise,
+    nonce: () => anonymousActor._internet_identity_sign_in_start(),
   });
 
   const identity = await signInPromise;
@@ -324,7 +332,6 @@ For OpenID one-click sign-in, scope the attributes to the provider with the `sco
 import { AuthClient, scopedKeys } from "@icp-sdk/auth/client";
 
 const authClient = new AuthClient({
-  identityProvider: "https://id.ai/authorize",
   openIdProvider: "google",
 });
 
@@ -333,7 +340,7 @@ const authClient = new AuthClient({
 // and the mo:identity-attributes library maps them onto the same name/email fields.
 const attributesPromise = authClient.requestAttributes({
   keys: scopedKeys({ openIdProvider: "google", keys: ["name", "verified_email"] }),
-  nonce: noncePromise,
+  nonce: () => anonymousActor._internet_identity_sign_in_start(),
 });
 ```
 
@@ -541,9 +548,20 @@ fn _internet_identity_sign_in_finish() -> SignInResult {
 
 Backend access control (anonymous principal rejection, role guards, caller binding in async functions) is not II-specific — the same patterns apply regardless of authentication method. See the **canister-security** skill for complete Motoko and Rust examples.
 
-## 5.x API notes
+## Older API notes
 
-If you are pinned to `@icp-sdk/auth` 5.x, the same flow uses a different (callback-based) API:
+Everything above targets `@icp-sdk/auth` 9.x. On an older major the same flow differs:
+
+**8.x** — what 9.x changed:
+
+- `identityProvider` was a URL string; it is now `{ authorizeUrl, canisterId }`, and a string throws.
+- `storage` and its `IdbStorage` / `LocalStorage` classes became `credentialStorage` with `IdbCredentialStorage` (the default), `LocalCredentialStorage`, `MemoryCredentialStorage` and `SharedMemoryCredentialStorage`. `stateStorage` is new and holds the record of who is signed in, which is what makes tabs converge; `CookieStateStorage` extends that to sibling subdomains.
+- `IdleManager` and its options (`idleOptions`, `onIdle`, `idleTimeout`, `disableIdle`) were removed. The session is bounded at Internet Identity instead, via `maxTimeToIdle` and `maxTimeToLive` on `signIn()`.
+- `maxTimeToLive` bounded a delegation and defaulted to 8 hours; it now bounds the session and defaults to the provider's 30 days.
+- `getStatus()`, `subscribe()`, `getPrincipal()` and `dispose()` are new; the `identity`, `keyType` and `targets` options are gone.
+- See the [v9 upgrade guide](https://js.icp.build/auth/latest/upgrading/v9/) for the full list.
+
+**5.x** — a callback-based API:
 
 - `await AuthClient.create({...})` instead of `new AuthClient({...})`
 - `identityProvider` passed per-call to `login({...})` rather than at construction
@@ -551,7 +569,7 @@ If you are pinned to `@icp-sdk/auth` 5.x, the same flow uses a different (callba
 - `authClient.logout()` instead of `authClient.signOut()`
 - `await authClient.isAuthenticated()` (async) instead of sync
 - `authClient.getIdentity()` (sync) instead of async
-- 5.x auto-appends `/authorize` to the `identityProvider` URL, so you can pass just `https://id.ai`. In 7.x the path is required.
-- No `requestAttributes` / `AttributesIdentity` support — the identity-attributes flow above requires 7.x.
+- 5.x auto-appends `/authorize` to the `identityProvider` URL, so you can pass just `https://id.ai`.
+- No `requestAttributes` / `AttributesIdentity` support — the identity-attributes flow above requires 7.x or later.
 
-Upgrade to 7.x when you can — the promise-based API is harder to misuse and the callback variant has been removed.
+Upgrade when you can: the promise-based API is harder to misuse, the callback variant has been removed, and 9.x re-mints the delegation your calls are signed with instead of leaving one key alive for the whole session.
