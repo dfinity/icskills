@@ -167,7 +167,7 @@ and read the same sign-in, so this costs nothing. In React:
 import { useEffect, useState } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
 
-function useAuth() {
+function App() {
   const [client] = useState(() => new AuthClient());
   const [status, setStatus] = useState(() => client.getStatus());
 
@@ -181,24 +181,18 @@ function useAuth() {
     };
   }, [client]);
 
-  return { status, signIn: () => client.signIn(), signOut: () => client.signOut() };
-}
-
-function App() {
-  const { status, signIn, signOut } = useAuth();
-
   switch (status.state) {
     case "signed-in":
-      return <Dashboard principal={status.principal} onSignOut={signOut} />;
+      return <Dashboard principal={status.principal} onSignOut={() => client.signOut()} />;
     case "expired":
       // Names the account whose session ended, so this is "your session ended"
       // rather than a bare signed-out screen.
-      return <SessionEnded principal={status.principal} onSignIn={signIn} />;
+      return <SessionEnded principal={status.principal} onSignIn={() => client.signIn()} />;
     case "signed-in-elsewhere":
       // Only when the sign-in is shared across sibling subdomains.
-      return <Resume principal={status.principal} onSignIn={signIn} />;
+      return <Resume principal={status.principal} onSignIn={() => client.signIn()} />;
     case "signed-out":
-      return <SignInButton onClick={signIn} />;
+      return <SignInButton onClick={() => client.signIn()} />;
   }
 }
 ```
