@@ -160,13 +160,12 @@ init();
 ```
 
 The client is an external store: `getStatus()` hands back the same object until
-something changes it, so `useSyncExternalStore` renders on it directly. A client
-that lives as long as the page needs no teardown; one scoped to a view is
-disposed when that view unmounts, which releases its browser listeners and the
-re-mint it has scheduled.
+something changes it, so `useSyncExternalStore` renders on it directly. Dispose
+of the client when the view that owns it unmounts, which releases its browser
+listeners and the re-mint it has scheduled.
 
 ```jsx
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
 
 const authClient = new AuthClient();
@@ -176,6 +175,8 @@ function App() {
     onChange => authClient.subscribe(onChange),
     () => authClient.getStatus(),
   );
+
+  useEffect(() => () => authClient.dispose(), []);
 
   switch (status.state) {
     case "signed-in":
@@ -190,33 +191,6 @@ function App() {
     case "signed-out":
       return <SignInButton onClick={() => authClient.signIn()} />;
   }
-}
-```
-
-A client that belongs to one view is created where that view is and disposed
-when it goes. `prompt: 'none'` is the case that calls for a second client: it
-asks Internet Identity to answer from the session it already holds, which is a
-different authorize intent from an interactive sign-in, and `hint` names the
-account the record already reports.
-
-```jsx
-import { useEffect } from "react";
-import { AuthClient } from "@icp-sdk/auth/client";
-
-// Rendered for 'signed-in-elsewhere': a sibling subdomain signed in, and this
-// origin holds no credential for that account yet.
-function Resume({ principal }) {
-  useEffect(() => {
-    const client = new AuthClient({ prompt: "none", hint: principal });
-    // Resolves silently where the provider can, and rejects with
-    // InteractionRequiredError where a real ceremony is needed.
-    client.signIn().catch(() => {});
-    // Without this the client outlives the dialog, still listening and still
-    // re-minting.
-    return () => client.dispose();
-  }, [principal]);
-
-  return <p>Signing you in…</p>;
 }
 ```
 
