@@ -165,11 +165,12 @@ of the client when the view that owns it unmounts, which releases its browser
 listeners and the re-mint it has scheduled.
 
 ```jsx
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
 
 function App() {
-  const authClient = useMemo(() => new AuthClient(), []);
+  // The initialiser runs once per mount, so no render builds a second client.
+  const [authClient] = useState(() => new AuthClient());
 
   const status = useSyncExternalStore(
     onChange => authClient.subscribe(onChange),
