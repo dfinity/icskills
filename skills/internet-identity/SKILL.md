@@ -193,6 +193,33 @@ function App() {
 }
 ```
 
+A client that belongs to one view is created where that view is and disposed
+when it goes. `prompt: 'none'` is the case that calls for a second client: it
+asks Internet Identity to answer from the session it already holds, which is a
+different authorize intent from an interactive sign-in, and `hint` names the
+account the record already reports.
+
+```jsx
+import { useEffect } from "react";
+import { AuthClient } from "@icp-sdk/auth/client";
+
+// Rendered for 'signed-in-elsewhere': a sibling subdomain signed in, and this
+// origin holds no credential for that account yet.
+function Resume({ principal }) {
+  useEffect(() => {
+    const client = new AuthClient({ prompt: "none", hint: principal });
+    // Resolves silently where the provider can, and rejects with
+    // InteractionRequiredError where a real ceremony is needed.
+    client.signIn().catch(() => {});
+    // Without this the client outlives the dialog, still listening and still
+    // re-minting.
+    return () => client.dispose();
+  }, [principal]);
+
+  return <p>Signing you in…</p>;
+}
+```
+
 ### Serving an app at more than one origin
 
 II derives a principal per **origin**, so `https://<canister-id>.icp.net` and `https://shop.example.com` are two different users to the same person. To keep one account per person, pick **one** origin as the derivation origin and list the others as alternative origins.
