@@ -159,40 +159,36 @@ async function init() {
 init();
 ```
 
-The client's lifecycle belongs to whatever renders: construct one when a view
-mounts, dispose of it when that view unmounts. Several clients may exist at once
-and read the same sign-in, so this costs nothing. In React:
+The client is an external store: `getStatus()` hands back the same object until
+something changes it, so `useSyncExternalStore` renders on it directly. A client
+that lives as long as the page needs no teardown; one scoped to a view is
+disposed when that view unmounts, which releases its browser listeners and the
+re-mint it has scheduled.
 
 ```jsx
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
 
-function App() {
-  const [client] = useState(() => new AuthClient());
-  const [status, setStatus] = useState(() => client.getStatus());
+const authClient = new AuthClient();
 
-  useEffect(() => {
-    const unsubscribe = client.subscribe(() => setStatus(client.getStatus()));
-    return () => {
-      unsubscribe();
-      // Releases the browser listeners and the scheduled re-mint. Without it
-      // every mount leaves another client running.
-      client.dispose();
-    };
-  }, [client]);
+function App() {
+  const status = useSyncExternalStore(
+    onChange => authClient.subscribe(onChange),
+    () => authClient.getStatus(),
+  );
 
   switch (status.state) {
     case "signed-in":
-      return <Dashboard principal={status.principal} onSignOut={() => client.signOut()} />;
+      return <Dashboard principal={status.principal} onSignOut={() => authClient.signOut()} />;
     case "expired":
       // Names the account whose session ended, so this is "your session ended"
       // rather than a bare signed-out screen.
-      return <SessionEnded principal={status.principal} onSignIn={() => client.signIn()} />;
+      return <SessionEnded principal={status.principal} onSignIn={() => authClient.signIn()} />;
     case "signed-in-elsewhere":
       // Only when the sign-in is shared across sibling subdomains.
-      return <Resume principal={status.principal} onSignIn={() => client.signIn()} />;
+      return <Resume principal={status.principal} onSignIn={() => authClient.signIn()} />;
     case "signed-out":
-      return <SignInButton onClick={() => client.signIn()} />;
+      return <SignInButton onClick={() => authClient.signIn()} />;
   }
 }
 ```
