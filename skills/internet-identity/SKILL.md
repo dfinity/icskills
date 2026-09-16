@@ -574,7 +574,7 @@ Everything above targets `@icp-sdk/auth` 9.x. On an older major the same flow di
 - `identityProvider` was a URL string; it is now `{ authorizeUrl, canisterId }`, and a string throws.
 - `storage` and its `IdbStorage` / `LocalStorage` classes became `credentialStorage` with `IdbCredentialStorage` (the default), `LocalCredentialStorage`, `MemoryCredentialStorage` and `SharedMemoryCredentialStorage`. `stateStorage` is new and holds the record of who is signed in, which is what makes tabs converge; `CookieStateStorage` extends that to sibling subdomains.
 - `IdleManager` and its options (`idleOptions`, `onIdle`, `idleTimeout`, `disableIdle`) were removed. The session is bounded at Internet Identity instead, via `maxTimeToIdle` and `maxTimeToLive` on `signIn()`.
-- `maxTimeToLive` bounded a delegation and defaulted to 8 hours; it now bounds the session and defaults to the provider's 30 days.
+- `maxTimeToLive` bounded a delegation and capped every sign-in at 8 hours; it now bounds the session, and unset means the provider's own 30 days.
 - `getStatus()`, `subscribe()`, `getPrincipal()` and `dispose()` are new; the `identity`, `keyType` and `targets` options are gone.
 - See the [v9 upgrade guide](https://js.icp.build/auth/latest/upgrading/v9/) for the full list.
 
