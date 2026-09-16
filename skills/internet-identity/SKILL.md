@@ -159,45 +159,26 @@ async function init() {
 init();
 ```
 
-The client is an external store, so a framework can render on it directly. In
-React, for example:
+### The client's lifecycle
 
-```jsx
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { AuthClient } from "@icp-sdk/auth/client";
+One client for the page, or one per component: both work, and they read and write
+the same sign-in.
 
-function App() {
-  // A client per mounted view is fine: several read the same sign-in.
-  const [authClient] = useState(() => new AuthClient());
+```javascript
+// Page-lifetime: one client, nothing to dispose. A view stops listening when it
+// stops rendering.
+const authClient = new AuthClient();
+const unsubscribe = authClient.subscribe(() => render(authClient.getStatus()));
+unsubscribe();
 
-  // subscribe() fires on every change, including one made in another tab, and
-  // getStatus() returns the same object until something changes it.
-  const status = useSyncExternalStore(
-    onChange => authClient.subscribe(onChange),
-    () => authClient.getStatus(),
-  );
-
-  useEffect(() => {
-    // dispose() drops this client's foreground and activity listeners, its
-    // state-store subscription, and the timer that re-mints the delegation. It
-    // is not a sign-out: the session stands and other clients keep using it.
-    return () => authClient.dispose();
-  }, [authClient]);
-
-  switch (status.state) {
-    case "signed-in":
-      return <Dashboard principal={status.principal} onSignOut={() => authClient.signOut()} />;
-    case "expired":
-      // The record outlives the session, so this screen can name whose ended.
-      return <SessionEnded principal={status.principal} onSignIn={() => authClient.signIn()} />;
-    case "signed-in-elsewhere":
-      // A sibling subdomain signed in and this origin holds nothing yet.
-      return <Resume principal={status.principal} onSignIn={() => authClient.signIn()} />;
-    case "signed-out":
-      return <SignInButton onClick={() => authClient.signIn()} />;
-  }
-}
+// Component-lifetime: dispose the client when the view that owns it goes.
+// dispose() covers its subscription too, and does not sign the user out.
+const silent = new AuthClient({ prompt: "none", hint: principal });
+silent.dispose();
 ```
+
+The client is browser-only, so under a server-rendering framework whatever owns it
+must be client-rendered.
 
 ### Serving an app at more than one origin
 

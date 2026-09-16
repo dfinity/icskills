@@ -50,7 +50,8 @@
         "Identifies 2vxsx-fae as the anonymous principal",
         "Explains that authentication silently failed or the identity was not properly extracted",
         "Suggests checking the authorizeUrl passed to the AuthClient constructor (including the /authorize path)",
-        "Suggests checking that authClient.signIn() did not reject (use try/catch around the awaited promise) and that the identity from await authClient.getIdentity() is passed to HttpAgent"
+        "Suggests checking that authClient.signIn() did not reject, with try/catch around the awaited promise",
+        "Suggests checking that the identity from await authClient.getIdentity() is the one passed to HttpAgent"
       ]
     },
     {
@@ -189,6 +190,25 @@
         "States the maximum is 100 alternative origins",
         "Says exceeding the cap invalidates the ENTIRE list — every alternative origin stops authenticating, not just the entries past the limit",
         "Does NOT describe the over-cap behavior as truncation, ignoring the extras, or only the excess entries failing"
+      ]
+    },
+    {
+      "name": "Session bounds are the session's, not a delegation's",
+      "prompt": "How long does a sign-in last with @icp-sdk/auth, and how do I make it shorter for a banking app? Just the answer and one code snippet, no setup or deploy steps.",
+      "expected_behaviors": [
+        "Says the bounds are passed to signIn() as maxTimeToIdle and/or maxTimeToLive",
+        "Does NOT present maxTimeToLive as the lifetime of the delegation the frontend signs calls with",
+        "Does NOT recommend the v8 default of 8 hours (BigInt(8) * BigInt(3_600_000_000_000)) as the value to set",
+        "States that leaving them unset means Internet Identity's own defaults rather than a library default"
+      ]
+    },
+    {
+      "name": "Disposing a client a component owns",
+      "prompt": "I create an AuthClient inside a component that mounts and unmounts a lot. Is there anything I need to do when it unmounts? Answer in two sentences, no code.",
+      "expected_behaviors": [
+        "Says to call dispose() on the client when the component unmounts",
+        "Does NOT claim the application must keep a single shared AuthClient instance",
+        "Does NOT describe dispose() as signing the user out or ending the session"
       ]
     }
   ],
