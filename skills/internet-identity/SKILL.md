@@ -59,7 +59,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 13. **Sharing a cookie domain without a shared `derivationOrigin`.** Sibling subdomains only share a sign-in when they share a principal, and principals are per origin: without one derivation origin authorized for all of them, the shared record names an account the reading origin can never hold, so `/reauth` bounces the user back forever. Set the derivation origin first, then the cookie domain.
 
-14. **A silent re-issue without `hint`, or on the default transport.** `prompt: 'none'` asks the provider to answer from the session it holds; without `hint` it may answer for a different account and overwrite the shared record with it. And the re-issue runs on page load with no user gesture, so the default `window` transport is popup-blocked: use `transport: 'redirect'` on a route of its own.
+14. **A silent re-issue without `hint`, on the default transport, or to an undeclared callback.** `prompt: 'none'` asks the provider to answer from the session it holds. Without `hint`, a provider holding more than one session refuses rather than guessing — `InteractionRequiredError` with `reason` `account_selection_required` — so what you lose is the resume, not the user's identity: a mint for an unexpected account is rejected client-side as `AccountMismatchError`. The re-issue also runs on page load with no user gesture, so the default `window` transport is popup-blocked: use `transport: 'redirect'` on a route of its own, and declare that route in the origin's `/.well-known/ii-auth-callbacks`, or the redirect never comes back.
 
 15. **Serving `/.well-known/ii-app-metadata` on the wrong origin, or without CORS.** II reads app metadata from the origin identities are derived for — your validated `derivationOrigin` when the request sets one, the request's own origin otherwise. A document published only on the alternative origin the user visits is never fetched. The document *and* the logo it points at are both read cross-origin, and they fail differently: without `Access-Control-Allow-Origin` on the document none of your metadata is used (II falls back to its curated entry if it ships one for your app, and to your origin alone otherwise), while an unreadable logo costs you the logo alone — the name and description still render. See "Showing your app's name, description, and logo on the sign-in screen".
 
@@ -288,6 +288,31 @@ if (status.state === "signed-in-elsewhere") {
   location.replace("/");
 }
 ```
+
+**Each app origin declares the callback.** A redirect sign-in is delivered only to
+a callback the returning origin itself declares, so every app serves
+`/.well-known/ii-auth-callbacks` on its own origin, listing its own `/reauth`:
+
+```json
+{ "callbacks": ["https://chat.example.com/reauth"] }
+```
+
+One file per app origin, not one on the derivation origin. The entry is matched
+exactly, so it must be the full URL with no fragment, and II reads the document
+cross-origin, so serve it as `application/json` with CORS. With
+`@dfinity/static-site`, that is another `_headers` block, for the same reason
+`ii-alternative-origins` needs one:
+
+```
+/.well-known/ii-auth-callbacks
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+```
+
+Validation fails closed: undeclared, unreadable, or not exactly matching, and the
+sign-in never comes back. A declared callback also has to terminate locally, since
+the response arrives in the URL fragment and a `3xx` that carries none re-attaches
+it to wherever it forwards.
 
 **3. Pick it up on load, on every page.** Not only the pages that require a
 sign-in: a visitor who is already signed in on a sibling would otherwise land on
