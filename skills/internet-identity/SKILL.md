@@ -169,17 +169,25 @@ One client for the page, or one per component: both work, and they read and writ
 the same sign-in.
 
 ```javascript
-// Page-lifetime: one client, nothing to dispose. A view stops listening when it
-// stops rendering.
+// Page-lifetime: one client for the app, nothing to dispose. Views come and go,
+// so each hands back the teardown for its own listener.
 const authClient = new AuthClient();
-const unsubscribe = authClient.subscribe(() => render(authClient.getStatus()));
-unsubscribe();
 
-// Component-lifetime: dispose the client when the view that owns it goes.
-// dispose() covers its subscription too, and does not sign the user out.
-const silent = new AuthClient({ prompt: "none", hint: principal });
-silent.dispose();
+function watchHeader() {
+  const unsubscribe = authClient.subscribe(() => render(authClient.getStatus()));
+  return unsubscribe; // when the header goes; the client carries on
+}
+
+// Component-lifetime: the client belongs to the view, so it goes with the view.
+function openReauthDialog(principal) {
+  const client = new AuthClient({ prompt: "none", hint: principal });
+  return () => client.dispose(); // covers its subscription, and is not a sign-out
+}
 ```
+
+`prompt: "none"` with `hint` is a silent re-issue, which an app wants when a
+sibling subdomain is already signed in: see "Sharing a sign-in across sibling
+subdomains" below.
 
 The client is browser-only, so under a server-rendering framework whatever owns it
 must be client-rendered.
