@@ -311,6 +311,23 @@ if (status.state === "signed-in-elsewhere") {
 `/reauth` reads that `next` and passes it as `returnTo`, so the user lands back on
 the page they asked for, signed in, having seen nothing.
 
+**4. Jump on load, ask afterwards.** Step 3 redirects because the page has only
+just started. Once a page is open the status can still turn `signed-in-elsewhere`,
+when someone signs in on a sibling in another tab, and redirecting a page the user
+is working on would throw away what they are doing. So subscribe, and offer the
+same redirect behind a button:
+
+```javascript
+authClient.subscribe(() => {
+  if (authClient.getStatus().state === "signed-in-elsewhere") {
+    // A banner or dialog whose button runs the same redirect as step 3.
+    showResumeDialog(() =>
+      location.replace(`/reauth?next=${encodeURIComponent(location.pathname + location.search)}`),
+    );
+  }
+});
+```
+
 The full walkthrough, including what ends a session on its own and what a sign-out
 does to the siblings, is in the library's [shared sessions
 guide](https://js.icp.build/auth/latest/shared-sessions/).
