@@ -261,9 +261,14 @@ on a route of its own:
 ```javascript
 // /reauth — a route of its own, because this runs on page load with no user
 // gesture, and a popup opened without one is blocked.
-const status = new AuthClient(clientOptions).getStatus();
+async function reauth() {
+  const status = new AuthClient(clientOptions).getStatus();
 
-if (status.state === "signed-in-elsewhere") {
+  if (status.state !== "signed-in-elsewhere") {
+    location.replace("/");
+    return;
+  }
+
   // A second client: prompt and hint are set when a client is built.
   const authClient = new AuthClient({
     ...clientOptions,
@@ -284,9 +289,9 @@ if (status.state === "signed-in-elsewhere") {
     }
     location.replace("/");
   }
-} else {
-  location.replace("/");
 }
+
+reauth();
 ```
 
 **Each app origin declares the callback.** A redirect sign-in is delivered only to
