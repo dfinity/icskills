@@ -57,9 +57,13 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
     - `verified_email` is the same email as `email`, but only present when the source OpenID provider (e.g., Google) marked it as verified and II surfaced that signal through.
     Use `verified_email` for any access gating (admin allowlists, capability checks). Use `email` only for soft uses like contact info or mailing lists. Request both for fallback behaviour: both are returned with the same value when the source provider marked the email as verified, only `email` when it didn't.
 
-13. **Serving `/.well-known/ii-app-metadata` on the wrong origin, or without CORS.** II reads app metadata from the origin identities are derived for — your validated `derivationOrigin` when the request sets one, the request's own origin otherwise. A document published only on the alternative origin the user visits is never fetched. The document *and* the logo it points at are both read cross-origin, and they fail differently: without `Access-Control-Allow-Origin` on the document none of your metadata is used (II falls back to its curated entry if it ships one for your app, and to your origin alone otherwise), while an unreadable logo costs you the logo alone — the name and description still render. See "Showing your app's name, description, and logo on the sign-in screen".
+13. **Sharing a cookie domain without a shared `derivationOrigin`.** Sibling subdomains only share a sign-in when they share a principal, and principals are per origin: without one derivation origin authorized for all of them, the shared record names an account the reading origin can never hold, so `/reauth` bounces the user back forever. Set the derivation origin first, then the cookie domain.
 
-14. **Assuming a bad field in `ii-app-metadata` is just dropped, or confusing a rejected logo with a rejected document.** One field that fails validation invalidates the **whole document**: none of your metadata is applied, not just the offending field (II then falls back to its curated entry if it ships one for your app, and to your origin alone otherwise). `name` is capped at 40 Unicode code points and `description` at 120, counted on the value as served. `logo` straddles the two failure modes — a URL that is not on the **same origin** as the document fails document validation and takes the whole document down with it, and that includes your own canister on a sibling gateway domain, since II may fetch the document from any of `ic0.app`, `icp0.io`, or `icp.net` (write the URL relative) — while an SVG (`image/svg+xml` is not accepted; serve a raster copy), an oversized image, or one that cannot be fetched or decoded costs you the logo alone.
+14. **A silent re-issue without `hint`, or on the default transport.** `prompt: 'none'` asks the provider to answer from the session it holds; without `hint` it may answer for a different account and overwrite the shared record with it. And the re-issue runs on page load with no user gesture, so the default `window` transport is popup-blocked: use `transport: 'redirect'` on a route of its own.
+
+15. **Serving `/.well-known/ii-app-metadata` on the wrong origin, or without CORS.** II reads app metadata from the origin identities are derived for — your validated `derivationOrigin` when the request sets one, the request's own origin otherwise. A document published only on the alternative origin the user visits is never fetched. The document *and* the logo it points at are both read cross-origin, and they fail differently: without `Access-Control-Allow-Origin` on the document none of your metadata is used (II falls back to its curated entry if it ships one for your app, and to your origin alone otherwise), while an unreadable logo costs you the logo alone — the name and description still render. See "Showing your app's name, description, and logo on the sign-in screen".
+
+16. **Assuming a bad field in `ii-app-metadata` is just dropped, or confusing a rejected logo with a rejected document.** One field that fails validation invalidates the **whole document**: none of your metadata is applied, not just the offending field (II then falls back to its curated entry if it ships one for your app, and to your origin alone otherwise). `name` is capped at 40 Unicode code points and `description` at 120, counted on the value as served. `logo` straddles the two failure modes — a URL that is not on the **same origin** as the document fails document validation and takes the whole document down with it, and that includes your own canister on a sibling gateway domain, since II may fetch the document from any of `ic0.app`, `icp0.io`, or `icp.net` (write the URL relative) — while an SVG (`image/svg+xml` is not accepted; serve a raster copy), an oversized image, or one that cannot be fetched or decoded costs you the logo alone.
 
 ## Using II during local development
 
@@ -215,6 +219,93 @@ Going over the cap is not a truncation: II rejects the entire list with `has too
 Do **not** reach for `.ic-assets.json5` — that is the legacy asset canister's config file, and the static-site recipe does not read or even upload it, so the headers would silently never apply. See the `static-site` skill.
 
 **Order matters.** Pin the derivation origin before an origin has users. Repointing an origin that has already collected sign-ins orphans every account made under it.
+
+### Sharing a sign-in across sibling subdomains
+
+`chat.example.com` and `hr.example.com` can share one sign-in: sign in on one and
+the others are signed in without a second visit to the provider, and signing out
+on one signs the user out on all of them.
+
+This builds on the section above. Every app must derive from **one** derivation
+origin, listed in that origin's `ii-alternative-origins`, or each subdomain gets
+its own principal and there is nothing to share. A shared cookie does not change
+that. On top of it, two things:
+
+**1. Share the record.** Every app builds its client with the same cookie domain,
+so a sign-in on one writes a record the others read:
+
+```javascript
+import { AuthClient, CookieStateStorage, InteractionRequiredError } from "@icp-sdk/auth/client";
+
+const clientOptions = {
+  derivationOrigin: "https://auth.example.com",
+  stateStorage: new CookieStateStorage({ domain: "example.com" }),
+};
+```
+
+Choosing that domain means trusting every origin under it. Don't do it on a domain
+whose subdomains you don't control.
+
+**2. Acquire the sign-in where a sibling made it.** An app that reads
+`signed-in-elsewhere` asks the provider for its own credential for that account,
+on a route of its own:
+
+```javascript
+// /reauth — a route of its own, because this runs on page load with no user
+// gesture, and a popup opened without one is blocked.
+const status = new AuthClient(clientOptions).getStatus();
+
+if (status.state === "signed-in-elsewhere") {
+  // A second client: prompt and hint are set when a client is built.
+  const authClient = new AuthClient({
+    ...clientOptions,
+    transport: "redirect",
+    prompt: "none",
+    hint: status.principal, // answer for the account already signed in
+  });
+
+  try {
+    await authClient.signIn({
+      returnTo: new URLSearchParams(location.search).get("next") ?? "/",
+    });
+  } catch (error) {
+    if (error instanceof InteractionRequiredError) {
+      // The provider has nothing to resume, so the sign-in is stale: clear it,
+      // or every app on the domain keeps sending the user back here.
+      await authClient.signOut().catch(() => {});
+    }
+    location.replace("/");
+  }
+} else {
+  location.replace("/");
+}
+```
+
+**3. Pick it up on load, on every page.** Not only the pages that require a
+sign-in: a visitor who is already signed in on a sibling would otherwise land on
+a public page here and see a signed-out header. Each page reads the status as it
+loads and hands `signed-in-elsewhere` to `/reauth`, naming the page to come back
+to, which is what makes the sharing automatic rather than something the user has
+to click:
+
+```javascript
+// On load, on every page of the app.
+const status = new AuthClient(clientOptions).getStatus();
+
+// This state only: a sibling is signed in and this app can pick that up without
+// asking the user anything. signed-out and expired both mean a normal sign-in,
+// and sending those to /reauth just bounces the user back.
+if (status.state === "signed-in-elsewhere") {
+  location.replace(`/reauth?next=${encodeURIComponent(location.pathname + location.search)}`);
+}
+```
+
+`/reauth` reads that `next` and passes it as `returnTo`, so the user lands back on
+the page they asked for, signed in, having seen nothing.
+
+The full walkthrough, including what ends a session on its own and what a sign-out
+does to the siblings, is in the library's [shared sessions
+guide](https://js.icp.build/auth/latest/shared-sessions/).
 
 ### Showing your app's name, description, and logo on the sign-in screen
 

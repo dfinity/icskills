@@ -210,6 +210,38 @@
         "Does NOT claim the application must keep a single shared AuthClient instance",
         "Does NOT describe dispose() as signing the user out or ending the session"
       ]
+    },
+    {
+      "name": "Shared sign-in across sibling subdomains",
+      "prompt": "Two apps, chat.example.com and hr.example.com: a user who signs in on one should be signed in on the other with @icp-sdk/auth. Show four things and nothing else: the shared client options, what the derivation origin has to serve, the /reauth route, and the check every page runs on load. Code with short comments, no prose sections, no backend, no deploy steps.",
+      "expected_behaviors": [
+        "Requires one shared derivationOrigin across both apps, listed in that origin's /.well-known/ii-alternative-origins, and does not present a shared cookie as sufficient on its own",
+        "Uses CookieStateStorage with the parent domain (example.com) as stateStorage on both apps",
+        "Acquires a credential on the origin that reads signed-in-elsewhere, with a second AuthClient built with prompt: 'none'",
+        "Passes hint set to the principal the shared record names on that silent request",
+        "Uses transport: 'redirect' for the silent request rather than the default window transport",
+        "Does NOT pass resumable explicitly, since CookieStateStorage already asks for a resumable session",
+        "Every page, not only protected ones, checks getStatus() on load and redirects signed-in-elsewhere to the re-auth route, passing the current path as a next parameter it returns to"
+      ]
+    },
+    {
+      "name": "Adversarial: shared cookie but different principals per subdomain",
+      "prompt": "I set CookieStateStorage with domain 'example.com' on both my subdomains, but each one still signs the user in as a different principal, and my re-auth page keeps bouncing them back. What is wrong and what do I do? Three sentences, no code.",
+      "expected_behaviors": [
+        "Identifies that principals are derived per origin and that one shared derivationOrigin across both subdomains is what makes them the same",
+        "Says that derivation origin has to authorize the subdomains by listing them in its alternative-origins document",
+        "Connects the bouncing to the shared record naming an account this origin can never hold a credential for",
+        "Does NOT blame cookie attributes, SameSite, Secure, or the cookie domain itself as the cause"
+      ]
+    },
+    {
+      "name": "Adversarial: silent re-issue without hint",
+      "prompt": "Review this: on hr.example.com I detect signed-in-elsewhere and then run `await new AuthClient({ ...clientOptions, prompt: 'none' }).signIn()` on page load. Anything wrong? Two sentences, no rewrite.",
+      "expected_behaviors": [
+        "Flags the missing hint and says the provider may answer for a different account than the shared record names",
+        "Flags that a silent request on page load has no user gesture, so it needs transport: 'redirect' rather than the default window transport",
+        "Does NOT claim prompt: 'none' is wrong or unsupported"
+      ]
     }
   ],
   "trigger_evals": {
