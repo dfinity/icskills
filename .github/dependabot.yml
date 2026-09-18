@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+  # Version updates exist so that lockstep families can be bumped together.
+  # Without them dependabot runs security updates only, and those touch one
+  # package at a time: an astro security bump on its own may not resolve,
+  # because astro pins its @astrojs/* peers to a narrow range.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # astro and @astrojs/* release in lockstep; one PR per family so
+      # dependabot resolves them in a single pass.
+      astro:
+        applies-to: version-updates
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      # Only coalesces family members that each carry an advisory, so a single
+      # astro advisory still arrives as a one-package PR that may not resolve.
+      # The weekly version update above is what keeps that rare; when one does
+      # show up, take it over by hand.
+      astro-security:
+        applies-to: security-updates
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      # Everything else in one PR, to keep the weekly run to two PRs.
+      rest:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "astro"
+          - "@astrojs/*"
