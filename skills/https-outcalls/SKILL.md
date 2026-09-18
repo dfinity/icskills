@@ -29,7 +29,7 @@ Two other modes avoid that agreement step: **non-replicated** (`is_replicated = 
 
 Read this before writing code; what is available depends on the language and the dependency versions in the project. **Motoko code today is version 1 only**, and consistently so. The published `ic` 4.x `HttpRequestArgs` has no `pricing_version` field, Candid omits the absent optional, and the replica reads it as version 1 — which is exactly what `Call.httpRequest` funds. Nothing to work around; just do not expect version 2 economics from Motoko yet.
 
-For Rust the right code depends on which of three worlds the project is in. `ic-cdk` 0.19 has `ic_cdk::management_canister::http_request(&args)` (version 1; the module was removed in 0.20). `ic-cdk` 0.20 with `ic-cdk-management-canister` 0.1 has `ic_cdk_management_canister::http_request(&args)` (version 1). `ic-cdk` 0.20.3+ with `ic-cdk-management-canister` 0.2 has the builders, and is **version 2 only**: 0.2.0 removed the free `http_request` and the builder hard-codes `pricing_version: Some(2)` with no opt-out, so upgrading the crate *is* the migration. `HttpRequest::from_args` is the documented way to move an existing call site, and it **silently overwrites `pricing_version` with 2**, so a call that deliberately set 1 changes pricing version when you migrate it. Rust also needs `serde_json` for JSON parsing.
+For Rust the right code depends on which of three worlds the project is in. `ic-cdk` 0.19 has `ic_cdk::management_canister::http_request(&args)` (version 1; the module was removed in 0.20). `ic-cdk` 0.20 with `ic-cdk-management-canister` 0.1 has `ic_cdk_management_canister::http_request(&args)` (version 1). `ic-cdk` 0.20.3+ with `ic-cdk-management-canister` 0.2 has the builders, and is **version 2 only**: 0.2.0 removed the free `http_request` and the builder hard-codes `pricing_version: Some(2)` with no opt-out, so upgrading the crate *is* the migration. Rust also needs `serde_json` for JSON parsing.
 
 **Which version to write.** Version 1 is deprecated and version 2 is the direction, so *new* Rust code should use the 0.2 builders. But do **not** bump a project's pinned versions in order to migrate it as a side effect of an unrelated task: 0.2 is a breaking change (it deletes the free `http_request` and `HttpRequestArgs` gains a required field), so the upgrade is the caller's decision. Write correct code for the line the project is actually on, and tell them the upgrade exists.
 
@@ -63,7 +63,7 @@ You do not deploy anything extra. The management canister is built into every su
 
 9. **Not handling outcall failures.** External servers can be down, slow, or return errors. Always handle the error case. There are **two distinct timeouts**, and neither traps — both come back as rejects (in Motoko the `await` raises a catchable `Error`; in Rust the wrapper returns `Err`):
    - The remote server does not respond within **30 seconds**: `SysFatal`, message `Timeout expired`.
-   - The subnet does not produce a response within **60 seconds**: `SysTransient`, message `Canister http request timed out`. This one is normally the retryable one; the exception is a version 2 call that is under-funded *and* missing a node's report (see pitfall 12).
+   - The subnet does not produce a response within **60 seconds**: `SysTransient`, message `Canister http request timed out`. This one is normally the retryable one; the exception is a version 2 call that is under-funded *and* missing a node's report (see `references/pricing-version-2.md`).
 
 10. **Calling localhost or private IPs.** HTTPS outcalls can only reach public internet endpoints. Localhost, 10.x.x.x, 192.168.x.x, and other private ranges are blocked.
 
@@ -71,13 +71,17 @@ You do not deploy anything extra. The management canister is built into every su
 
 12. **Leaving the version 2 expectations unset.** Anything you do not declare is *reserved* at its maximum: a 60-second round trip, and a transform running to the full query instruction limit. For a 4,000-byte cap that is around 5.3 billion cycles held, nearly all of it the transform reserve, against about 112 million once you declare `with_expected_transform_instructions` and `with_expected_roundtrip_time_ms`. Declare those two. Leave `raw_response_bytes` alone, because the server decides it; lower `max_response_bytes` instead if the byte terms dominate. Declare `with_expected_transformed_response_bytes` when your transform bounds its own output, which is the one case where the cap cannot be the lever. The *charge* is unaffected by any of this unless the smaller budget actually cuts the call short. `references/pricing-version-2.md` has the figures, the per-resource reasoning, and the failure modes.
 
-13. **Setting `pricing_version` by hand and funding it with the wrong cost function.** The field and the attachment have to agree. Set `pricing_version = 2` while attaching a `cost_http_request` (version 1) amount and the call is *accepted*, because the up-front check is only the base fee — it then runs on a smaller per-node allowance than version 2 intended and can fail partway. The reverse, a version 1 call funded with a `cost_http_request_v2` amount, is rejected outright with `http_request request sent with <X> cycles, but <Y> cycles are required.`, because version 1 wants the whole `max_response_bytes` up front. Let the wrapper set both: Rust's `HttpRequest::send()` pairs version 2 with `cost_http_request_v2`, and Motoko's `Call.httpRequest` pairs version 1 with `cost_http_request`. Note also that the replica *filters* an unrecognised version to version 1 with no error, so a bogus value fails as a funding mismatch rather than as a validation error.
+13. **Expecting to reach version 1 through `ic-cdk-management-canister` 0.2.** You cannot. The builder is the only path the crate offers, it hard-codes `pricing_version: Some(2)`, and there is no `with_pricing_version`. `HttpRequest::from_args` looks like the escape hatch and is not: it is the documented way to migrate an existing call site, and it **silently overwrites `pricing_version` with 2**, so args that deliberately set 1 change version when you pass them through it. To stay on version 1, pin `ic-cdk-management-canister` 0.1, or call `aaaaa-aa` directly and price with `ic_cdk::api::cost_http_request`, which is still present in 0.20.3.
 
-14. **Hardcoding `total_requests` for a flexible outcall.** `total_requests` must not exceed the subnet size, which differs per subnet (13 or 34 on mainnet). Derive it:
+14. **Setting `pricing_version` by hand and funding it with the wrong cost function.** The field and the attachment have to agree. Set `pricing_version = 2` while attaching a `cost_http_request` (version 1) amount and the call is *accepted*, because the up-front check is only the base fee — it then runs on a smaller per-node allowance than version 2 intended and can fail partway. The reverse, a version 1 call funded with a `cost_http_request_v2` amount, is rejected outright with `http_request request sent with <X> cycles, but <Y> cycles are required.`, because version 1 wants the whole `max_response_bytes` up front. Let the wrapper set both: Rust's `HttpRequest::send()` pairs version 2 with `cost_http_request_v2`, and Motoko's `Call.httpRequest` pairs version 1 with `cost_http_request`. Note also that the replica *filters* an unrecognised version to version 1 with no error, so a bogus value fails as a funding mismatch rather than as a validation error.
+
+15. **Hardcoding `total_requests` for a flexible outcall.** `total_requests` must not exceed the subnet size, which differs per subnet (13 or 34 on mainnet). Derive it:
     ```rust
     let total_requests = subnet_self_node_count().min(5);
     let min_responses = total_requests / 2 + 1;
-    ``` Also handle **any** count between `min_responses` and `max_responses` in the success arm — fewer than `max_responses` is a normal success, not a degraded one — and check each response's `status` separately, because no node had to agree with any other. See `references/flexible-outcalls.md`.
+    ```
+
+    Also handle **any** count between `min_responses` and `max_responses` in the success arm — fewer than `max_responses` is a normal success, not a degraded one — and check each response's `status` separately, because no node had to agree with any other. See `references/flexible-outcalls.md`.
 
 ## Outcall modes
 
@@ -305,8 +309,8 @@ async fn post_data(json_payload: String) -> String {
         .with_transform(transform_context_from_query("transform_post".to_string(), vec![]))
         .with_expected_roundtrip_time_ms(10_000)
         .with_expected_transform_instructions(1_000_000);
-    // Replicated, so every node POSTs: hence the idempotency key above, and the
-    // transform below. `.non_replicated()` would send it once instead and make
+    // Replicated, so every node POSTs: hence the idempotency key above, and
+    // `transform_post`. `.non_replicated()` would send it once instead and make
     // both unnecessary, at the cost of trusting that one node (pitfall 8).
 
     match request.send().await {

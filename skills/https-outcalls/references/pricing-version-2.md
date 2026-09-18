@@ -109,10 +109,11 @@ a bigger allowance raises the deadline toward the 60-second ceiling and the tran
 the full query limit, so a slow endpoint or an expensive transform that a tight allowance would
 have cut off instead runs to completion and charges for it.
 
-**Under version 2, a larger attachment can raise the charge**, in the specific case where it lets
-the call consume more than a tighter budget would have allowed. Where the call would have completed
-either way, the charge is identical and only the hold differs, so do not read this as "a buffer
-makes every call dearer".
+**So under version 2 the attachment is not inert: it is the per-node allowance, and the allowance is
+what sets each node's byte cap, deadline and transform instruction limit.** A larger attachment
+therefore buys the call permission to consume more, and it is charged for what it consumes. Where a
+tighter budget would have cut the call short, a larger one can raise the charge; where the call
+completes either way, the charge is identical and only the hold differs.
 
 Version 1 cannot raise the charge at all: it is fixed when the call is made, so a margin is never
 billed. A margin is still not free there. It is held for the whole call, so it still caps how many
