@@ -109,9 +109,15 @@ a bigger allowance raises the deadline toward the 60-second ceiling and the tran
 the full query limit, so a slow endpoint or an expensive transform that a tight allowance would
 have cut off instead runs to completion and charges for it.
 
-**Under version 2, attaching more can cost more.** Version 1 cannot do that: there the charge is
-fixed when the call is made, so a margin is genuinely idle. Do not carry the "unused cycles are
-refunded, so a buffer is free" habit across.
+**Under version 2, a larger attachment can raise the charge**, in the specific case where it lets
+the call consume more than a tighter budget would have allowed. Where the call would have completed
+either way, the charge is identical and only the hold differs, so do not read this as "a buffer
+makes every call dearer".
+
+Version 1 cannot raise the charge at all: it is fixed when the call is made, so a margin is never
+billed. A margin is still not free there. It is held for the whole call, so it still caps how many
+outcalls the canister can have in flight. Neither version makes "attach a round number to be safe"
+a good habit; they just punish it differently.
 
 ## The four values fund ONE pooled budget
 
@@ -158,16 +164,25 @@ Practical rule, by who controls the value:
   the exception to "leave the byte expectations alone", and often the largest single saving.
 
 That last one deserves its own explanation, because it is the case where lowering
-`max_response_bytes` cannot help. Delivery is by far the most expensive byte: on a 13-node subnet a
-delivered byte costs about 9,490 cycles against about 650 for a raw byte downloaded, roughly 15
-times more. And `transformed_response_bytes` defaults to `max_response_bytes` plus 1,024, so a
-transform that *shrinks* the response a lot leaves the delivery reserve sized for the raw response.
+`max_response_bytes` cannot help. Delivery is by far the most expensive byte: on a 13-node subnet
+one costs about 9,490 cycles charged against about 650 for a raw byte downloaded, roughly 15 times
+more, and about 21 times more on the reservation for a fully replicated call (see the note below on
+why the two differ). And `transformed_response_bytes` defaults to `max_response_bytes` plus 1,024,
+so a transform that *shrinks* the response a lot leaves the delivery reserve sized for the raw
+response.
 
 Consider a 500 KB response that the transform reduces to a 2 KB extract. `max_response_bytes` has to
 stay around 500 KB, because the raw response must fit under it, so it is not available as a lever.
-The default transformed expectation of roughly 501 KB reserves on the order of 4.8 billion cycles
-for delivery; declaring 2,000 reserves about 19 million for it. Nothing else you can change comes
-close.
+For a fully replicated call the default transformed expectation of roughly 501 KB **reserves** about
+6.87 billion cycles for delivery, where declaring 2,000 reserves about 27.4 million. (Those settle
+at about 4.75 billion and 19.0 million respectively; the reservation is higher for the reason in the
+next paragraph.) Nothing else you can change comes close.
+
+The reservation and the charge differ by more than the 1 KB floor here. For a **fully replicated**
+call the quote divides the delivery fee by the agreement threshold and multiplies by the node count,
+`n / canister_http_threshold(n)`, which is 13/9 on a 13-node subnet, so each contributing node
+reserves enough to cover the whole delivery on its own. A non-replicated call is not scaled that
+way, so for it the reservation and the charge coincide.
 
 This is safe in a way that `raw_response_bytes` is not: your transform decides its own output size,
 so a fixed-shape extract has a bound you actually know. Two cautions. Size it from what your

@@ -20,7 +20,7 @@ Two other modes avoid that agreement step: **non-replicated** (`is_replicated = 
 
 | | Rust | Motoko |
 |---|---|---|
-| Package | `ic-cdk` **0.20.3+** with `ic-cdk-management-canister` **0.2+** | `ic` **4.x** (mops), `core` **2.6.1+**, `moc` **1.14.1+** |
+| Package | `ic-cdk` **0.20.3+** with `ic-cdk-management-canister` **0.2+** | `ic` **4.x** (mops), which requires `core` **2.5.0+** and `moc` **1.4.0+** |
 | Entry point | `HttpRequest::new(url)` builder, `.send()` | `Call.httpRequest(args)` |
 | Pricing version 1 (legacy) | only by pinning `ic-cdk-management-canister` **0.1**, or calling `aaaaa-aa` directly with `ic_cdk::api::cost_http_request` | **yes**, this is what `Call.httpRequest` does |
 | Pricing version 2 (pay-as-you-go) | **yes**, the builder always selects it | — (**not available**, needs an unreleased `moc`) |
@@ -29,7 +29,7 @@ Two other modes avoid that agreement step: **non-replicated** (`is_replicated = 
 
 Read this before writing code; what is available depends on the language and the dependency versions in the project. **Motoko code today is version 1 only**, and consistently so. The published `ic` 4.x `HttpRequestArgs` has no `pricing_version` field, Candid omits the absent optional, and the replica reads it as version 1 — which is exactly what `Call.httpRequest` funds. Nothing to work around; just do not expect version 2 economics from Motoko yet.
 
-For Rust the right code depends on which of three worlds the project is in. `ic-cdk` 0.19 has `ic_cdk::management_canister::http_request(&args)` (version 1; the module was removed in 0.20). `ic-cdk` 0.20 with `ic-cdk-management-canister` 0.1 has `ic_cdk_management_canister::http_request(&args)` (version 1). `ic-cdk` 0.20.3+ with `ic-cdk-management-canister` 0.2 has the builders, and is **version 2 only**: 0.2.0 removed the free `http_request` and the builder hard-codes `pricing_version: Some(2)` with no opt-out, so upgrading the crate *is* the migration. Rust also needs `serde_json` for JSON parsing.
+For Rust the right code depends on which of three worlds the project is in. `ic-cdk` 0.19 has `ic_cdk::management_canister::http_request(&args)` (version 1; the module was removed in 0.20). `ic-cdk` 0.20 with `ic-cdk-management-canister` 0.1 has `ic_cdk_management_canister::http_request(&args)` (version 1). `ic-cdk` 0.20.3+ with `ic-cdk-management-canister` 0.2 has the builders, and is **version 2 only**: 0.2.0 removed the free `http_request` and the builder hard-codes `pricing_version: Some(2)` with no opt-out, so upgrading the crate *is* the migration. `HttpRequest::from_args` is the documented way to move an existing call site, and it **silently overwrites `pricing_version` with 2**, so a call that deliberately set 1 changes pricing version when you migrate it. Rust also needs `serde_json` for JSON parsing.
 
 **Which version to write.** Version 1 is deprecated and version 2 is the direction, so *new* Rust code should use the 0.2 builders. But do **not** bump a project's pinned versions in order to migrate it as a side effect of an unrelated task: 0.2 is a breaking change (it deletes the free `http_request` and `HttpRequestArgs` gains a required field), so the upgrade is the caller's decision. Write correct code for the line the project is actually on, and tell them the upgrade exists.
 
@@ -69,11 +69,15 @@ You do not deploy anything extra. The management canister is built into every su
 
 11. **Forgetting the `Host` header.** Some API endpoints require the `Host` header to be explicitly set. The IC does not automatically set this from the URL.
 
-12. **Leaving the version 2 expectations unset.** Under version 2, anything you do not declare is reserved at its maximum: a 60-second round trip and a transform running to the full 5-billion-instruction query limit. For a 4,000-byte cap with a transform that only strips headers, that is around **5.3 billion cycles held** for the duration of the call, nearly all of it the transform reserve; declaring `with_expected_transform_instructions` and `with_expected_roundtrip_time_ms` brings it to about 112 million. Which term dominates flips with the cap, though: leave `max_response_bytes` unset and the same call reserves ~34 billion, mostly blockspace for delivering 2MB, and those two declarations only reach ~28.8 billion. For a call that completes within either reservation the *charge* is the same, and what differs is how many outcalls the canister can have in flight. But the allowance also sets each node's limits, so a larger attachment raises the response deadline and the transform instruction limit and can therefore be billed for more: under version 2, attaching more can cost more. Narrow the round trip and the instructions, and lower `max_response_bytes` if the byte terms dominate. Leave `raw_response_bytes` alone, since the server decides it. The exception is `with_expected_transformed_response_bytes`: your transform bounds its own output, delivery costs roughly 15x what a raw byte does, and it defaults to `max_response_bytes`, so a transform that shrinks a large response a lot leaves the delivery reserve sized for the raw one. That is the one case where the cap cannot be the lever. See `references/pricing-version-2.md`.
+12. **Leaving the version 2 expectations unset.** Anything you do not declare is *reserved* at its maximum: a 60-second round trip, and a transform running to the full query instruction limit. For a 4,000-byte cap that is around 5.3 billion cycles held, nearly all of it the transform reserve, against about 112 million once you declare `with_expected_transform_instructions` and `with_expected_roundtrip_time_ms`. Declare those two. Leave `raw_response_bytes` alone, because the server decides it; lower `max_response_bytes` instead if the byte terms dominate. Declare `with_expected_transformed_response_bytes` when your transform bounds its own output, which is the one case where the cap cannot be the lever. The *charge* is unaffected by any of this unless the smaller budget actually cuts the call short. `references/pricing-version-2.md` has the figures, the per-resource reasoning, and the failure modes.
 
 13. **Setting `pricing_version` by hand and funding it with the wrong cost function.** The field and the attachment have to agree. Set `pricing_version = 2` while attaching a `cost_http_request` (version 1) amount and the call is *accepted*, because the up-front check is only the base fee — it then runs on a smaller per-node allowance than version 2 intended and can fail partway. The reverse, a version 1 call funded with a `cost_http_request_v2` amount, is rejected outright with `http_request request sent with <X> cycles, but <Y> cycles are required.`, because version 1 wants the whole `max_response_bytes` up front. Let the wrapper set both: Rust's `HttpRequest::send()` pairs version 2 with `cost_http_request_v2`, and Motoko's `Call.httpRequest` pairs version 1 with `cost_http_request`. Note also that the replica *filters* an unrecognised version to version 1 with no error, so a bogus value fails as a funding mismatch rather than as a validation error.
 
-14. **Hardcoding `total_requests` for a flexible outcall.** `total_requests` must not exceed the subnet size, which differs per subnet (13 or 34 on mainnet). Derive it: `subnet_self_node_count().min(5)`. Also handle **any** count between `min_responses` and `max_responses` in the success arm — fewer than `max_responses` is a normal success, not a degraded one — and check each response's `status` separately, because no node had to agree with any other. See `references/flexible-outcalls.md`.
+14. **Hardcoding `total_requests` for a flexible outcall.** `total_requests` must not exceed the subnet size, which differs per subnet (13 or 34 on mainnet). Derive it:
+    ```rust
+    let total_requests = subnet_self_node_count().min(5);
+    let min_responses = total_requests / 2 + 1;
+    ``` Also handle **any** count between `min_responses` and `max_responses` in the success arm — fewer than `max_responses` is a normal success, not a degraded one — and check each response's `status` separately, because no node had to agree with any other. See `references/flexible-outcalls.md`.
 
 ## Outcall modes
 
@@ -221,7 +225,6 @@ use ic_cdk_management_canister::{
     transform_context_from_query, HttpMethod, HttpRequest, HttpRequestResult, TransformArgs,
 };
 use ic_cdk::{query, update};
-use serde::Deserialize;
 
 /// Transform function: strips non-deterministic headers so all replicas agree.
 /// MUST be a #[query] function.
@@ -275,28 +278,6 @@ async fn fetch_price() -> String {
     }
 }
 
-/// Typed response parsing example
-#[derive(Deserialize)]
-struct PriceResponse {
-    #[serde(rename = "internet-computer")]
-    internet_computer: PriceData,
-}
-
-#[derive(Deserialize)]
-struct PriceData {
-    usd: f64,
-}
-
-#[update]
-async fn get_icp_price_usd() -> String {
-    let body = fetch_price().await;
-
-    match serde_json::from_str::<PriceResponse>(&body) {
-        Ok(parsed) => format!("ICP price: ${:.2}", parsed.internet_computer.usd),
-        Err(e) => format!("Failed to parse price response: {}", e),
-    }
-}
-
 /// POST transform: strips headers AND body, because httpbin.org echoes the
 /// sender's IP in "origin", which differs across replicas.
 #[query(hidden = true)]
@@ -323,10 +304,10 @@ async fn post_data(json_payload: String) -> String {
         .with_body(json_payload.into_bytes())
         .with_transform(transform_context_from_query("transform_post".to_string(), vec![]))
         .with_expected_roundtrip_time_ms(10_000)
-        .with_expected_transform_instructions(1_000_000)
-        // One node sends the request instead of all N, which also removes the
-        // rate-limit pressure that makes an idempotency key necessary.
-        .non_replicated();
+        .with_expected_transform_instructions(1_000_000);
+    // Replicated, so every node POSTs: hence the idempotency key above, and the
+    // transform below. `.non_replicated()` would send it once instead and make
+    // both unnecessary, at the cost of trusting that one node (pitfall 8).
 
     match request.send().await {
         Ok(response) => {
@@ -400,9 +381,6 @@ icp canister call backend fetch_price '()'      # Rust example above
 icp canister call backend postData '("{\"test\": \"hello\"}")'    # Motoko
 icp canister call backend post_data '("{\"test\": \"hello\"}")'   # Rust
 
-# 3. Rust typed parser. Expected: '("ICP price: $12.34")'
-icp canister call backend get_icp_price_usd '()'
-
 # 4. Balance should have decreased. Under version 2 it keeps settling for about
 #    a minute afterwards as per-node refunds arrive, so re-read before judging.
 icp canister status backend
@@ -461,7 +439,20 @@ If an outcall fails:
 # "http_request request sent with <X> cycles, but <Y> cycles are required."
 #                                                              [CanisterReject]
 #     Attached less than the computed cost. Use the wrapper rather than a
-#     hand-picked number.
+#     hand-picked number. Version 1 only: version 2 checks just the base fee up
+#     front and fails later instead, as one of the next two.
+#
+# "Insufficient cycles"                                        [CanisterReject]
+#     Version 2: a node exhausted its own per-node allowance. Ordinary response
+#     content, so it reaches the canister only if a quorum produce the same
+#     reject; otherwise it becomes a divergence.
+#
+# "Out of cycles: <k> of the assigned replicas reported a collective spend of
+#  <n> cycles, leaving <m> cycles of the attached payment (after base fee
+#  deduction). Delivering a response would cost at least <min> cycles."
+#                                                              [CanisterReject]
+#     Version 2 pooled shortfall: the nodes agreed, but what they left unspent
+#     does not cover putting the response in a block. Raise the reservation.
 ```
 
 ### Transform Debugging
@@ -472,28 +463,11 @@ If you get "no consensus could be reached" errors, your transform function is no
 2. **JSON field ordering differs** -- parse and re-serialize the JSON in the transform
 3. **Timestamps in response body** -- extract only the fields you need
 
-Advanced transform that normalizes JSON:
-
-```rust
-#[query]
-fn transform_normalize(args: TransformArgs) -> HttpRequestResult {
-    // Parse and re-serialize to normalize field ordering
-    let body = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&args.response.body) {
-        serde_json::to_vec(&json).unwrap_or(args.response.body)
-    } else {
-        args.response.body
-    };
-
-    HttpRequestResult {
-        status: args.response.status,
-        body,
-        headers: vec![],
-    }
-}
-```
+For a typed JSON parser and a transform that normalizes field ordering, see `references/json-responses.md`.
 
 ## Additional References
 
 - **`references/pricing-version-2.md`** — the pay-as-you-go model: what it charges, the four expectations and their defaults, why they fund one pooled per-node budget, the reject messages for an under-funded call, and what to check before migrating.
+- **`references/json-responses.md`** — parsing a typed JSON body with `serde_json`, and a transform that re-serializes to normalize field ordering for consensus.
 - **`references/flexible-outcalls.md`** — `flexible_http_request` in full: replication counts derived from `subnet_self_node_count`, a compiling example, reconciliation strategies and their threat model, the four `global_error` values, the two separate size limits, why a local run never shows disagreement, and whether a transform pays for itself.
 - Load `cloud-engine-canisters` for canisters running on a cloud engine, including why outcall cost drops to 0 there and why outcalls must never be routed through the engine's console proxy.
