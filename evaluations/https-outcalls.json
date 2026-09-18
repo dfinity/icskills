@@ -4,7 +4,7 @@
   "output_evals": [
     {
       "name": "2MB limit is 2,000,000 bytes and the default-size cost",
-      "prompt": "For an IC HTTPS outcall: what is the exact maximum value in bytes I can pass for max_response_bytes, and roughly how many cycles does a 13-node subnet charge if I leave max_response_bytes unset? Just the two numbers with a one-line justification each.",
+      "prompt": "For an IC HTTPS outcall: what is the exact maximum value in bytes I can pass for max_response_bytes, and under the legacy version 1 pricing that is still the replica default, roughly how many cycles does a 13-node subnet charge if I leave max_response_bytes unset? Just the two numbers with a one-line justification each.",
       "expected_behaviors": [
         "States the maximum as 2,000,000 bytes (decimal), NOT 2_097_152 / 2^21 / 2 MiB",
         "Gives the omitted-max_response_bytes cost as roughly 20.8-20.9 billion cycles",
@@ -32,13 +32,16 @@
       ]
     },
     {
-      "name": "Adversarial: over-attaching cycles is safe but not free",
-      "prompt": "My IC canister makes one HTTPS outcall per user action. The computed cost is about 200M cycles. Since unused cycles are refunded, should I just attach 1B to be safe? A few sentences, no code.",
+      "name": "Adversarial: over-attaching cycles, and why version 2 changes the answer",
+      "prompt": "My IC canister makes one HTTPS outcall per user action. The computed cost is about 200M cycles. Since unused cycles are refunded, should I just attach 1B to be safe? A few sentences, no code. Say whether your answer depends on the pricing version.",
       "expected_behaviors": [
         "Confirms unused cycles are refunded but states that over-attaching is still not free",
         "Explains that attached cycles are held for the duration of the call, so a margin reduces how many outcalls can be in flight (caps concurrency)",
-        "Recommends attaching the exact computed amount via the wrapper (Call.httpRequest / ic_cdk::management_canister::http_request) or cost_http_request rather than a hand-picked buffer",
-        "Does NOT endorse attaching the 1B round number as a harmless safety margin"
+        "States that the answer DOES depend on the pricing version",
+        "For version 2, explains that the attachment beyond the base fee becomes the per-node allowance, which sets the node's response deadline and transform instruction limit, so a larger attachment lets the call consume more and can therefore be CHARGED more",
+        "Recommends attaching the computed amount via the wrapper rather than a hand-picked buffer: Rust HttpRequest::send() (ic-cdk-management-canister 0.2) or Motoko Call.httpRequest, or cost_http_request / cost_http_request_v2 directly",
+        "Does NOT endorse attaching the 1B round number as a harmless safety margin",
+        "Does NOT name ic_cdk::management_canister::http_request, which ic-cdk 0.20 removed"
       ]
     },
     {
@@ -60,6 +63,81 @@
         "States the call is rejected rather than trapped, so it is catchable (in Motoko the await raises an Error, in Rust the wrapper returns Err)",
         "Does NOT claim there is a single ~30 second timeout, and does NOT claim the call traps"
       ]
+    },
+    {
+      "name": "Adversarial: the four version 2 expectations fund one pooled budget",
+      "prompt": "I set with_expected_roundtrip_time_ms(300) on a version 2 HTTPS outcall from my Rust canister. Does that mean the nodes will give up after 300ms if the server is slow? Explain what that value actually controls.",
+      "expected_behaviors": [
+        "States that it does NOT impose a 300ms deadline on the request",
+        "Explains that the four expectations only decide how many cycles are attached, and are never sent to the replica",
+        "Explains that the attachment minus the base fee becomes a per-node allowance, and the deadline is derived from that whole remaining allowance at the per-millisecond price, so it lands far above the declared value",
+        "Does NOT claim the expectations are four independent per-dimension limits"
+      ]
+    },
+    {
+      "name": "Adversarial: an under-funded version 2 outcall is accepted, not rejected",
+      "prompt": "If I attach fewer cycles than a pricing-version-2 HTTPS outcall needs, do I get an error immediately when I make the call? What happens?",
+      "expected_behaviors": [
+        "States the up-front check is against the BASE FEE only, so the call is accepted rather than rejected",
+        "States it then runs with tighter per-node limits and can fail partway, possibly after the remote server was already contacted",
+        "Notes the failure is intermittent, depending on how slow the endpoint was and how much work the transform did",
+        "Mentions at least one of: CanisterReject 'Insufficient cycles' from a node exhausting its allowance, CanisterReject 'Out of cycles: ...' for a pooled shortfall, or the SysTransient no-consensus divergence",
+        "Does NOT claim the call is rejected up front the way an under-funded version 1 call is"
+      ]
+    },
+    {
+      "name": "Adversarial: version 1 is unreachable through ic-cdk-management-canister 0.2",
+      "prompt": "My Rust canister uses ic-cdk-management-canister 0.2. How do I make an HTTPS outcall with pricing_version set to 1?",
+      "expected_behaviors": [
+        "States that you cannot: the HttpRequest builder always sets pricing_version = 2 and there is no opt-out, and from_args overwrites the field",
+        "States that 0.2.0 removed the free http_request function, so the builder is the only path in that crate",
+        "Offers a correct escape hatch: pin ic-cdk-management-canister 0.1, or call aaaaa-aa directly and price with ic_cdk::api::cost_http_request",
+        "Does NOT invent a with_pricing_version setter or suggest setting the field on the args and passing them to the builder"
+      ]
+    },
+    {
+      "name": "Adversarial: Motoko has no pay-as-you-go pricing yet",
+      "prompt": "Show me how to make a pay-as-you-go (pricing version 2) HTTPS outcall from a Motoko canister using the ic mops package.",
+      "expected_behaviors": [
+        "States that Motoko has no version 2 path today: the published ic package (4.x) prices version 1 via Call.httpRequest",
+        "Does NOT fabricate a Motoko builder, a costHttpRequestV2 call, or a Cost.httpRequestV2 function as if it were available",
+        "Notes that ic 4.x's HttpRequestArgs has no pricing_version field at all, so a Motoko caller cannot set it and the call is version 1 by omission, consistently funded by the version 1 cost function",
+        "May note that Motoko support is planned but unreleased, and depends on a moc release"
+      ]
+    },
+    {
+      "name": "Adversarial: pricing_version and the attached amount must agree",
+      "prompt": "My Rust canister sets pricing_version = 2 on an HTTPS outcall but attaches the amount from ic_cdk::api::cost_http_request. Is that a problem, and what would I see?",
+      "expected_behaviors": [
+        "Identifies the mismatch: version 2 is in force but the attachment was computed with the version 1 cost function",
+        "States the call is ACCEPTED rather than rejected, because the up-front check is only the base fee",
+        "States it then runs on a smaller per-node allowance than version 2 intended, and can fail partway with tighter limits",
+        "Recommends letting one wrapper own both, e.g. HttpRequest::send() which pairs version 2 with cost_http_request_v2",
+        "Does NOT claim the replica rejects a version 2 call for an under-sized attachment up front",
+        "Does NOT claim pricing_version = 2 is unsupported or silently downgraded on current replicas"
+      ]
+    },
+    {
+      "name": "Adversarial: flexible outcall committee size and variable response count",
+      "prompt": "Write the replication counts for a flexible_http_request that asks 5 nodes and returns once a majority answer, and tell me what my canister has to handle in the success case.",
+      "expected_behaviors": [
+        "Derives total_requests from subnet_self_node_count() rather than hardcoding 5, noting total_requests must not exceed the subnet size",
+        "Gives min_responses as a strict majority of the committee (e.g. total_requests / 2 + 1)",
+        "States the canister must handle ANY count between min_responses and max_responses, and that fewer than max_responses is a normal success",
+        "States that responses are an unordered multiset that does not identify the producing node, and that each response's status must be checked separately",
+        "Does NOT claim the result arrives as a reject on failure: both arms of FlexibleHttpRequestResult are delivered as a reply"
+      ]
+    },
+    {
+      "name": "Adversarial: why a default version 2 outcall reserves billions of cycles",
+      "prompt": "My Rust version 2 HTTPS outcall has max_response_bytes of 4000 and a transform that just clears headers, but it attaches over 5 billion cycles. Why, and what do I change?",
+      "expected_behaviors": [
+        "Identifies the unset with_expected_transform_instructions defaulting to the 5,000,000,000 query instruction limit as almost the entire reservation",
+        "States that unset expectations reserve the maximum, including a 60-second round trip",
+        "Recommends declaring with_expected_transform_instructions and with_expected_roundtrip_time_ms, which brings it to roughly 112 million",
+        "Notes that for a call completing within either reservation the CHARGE does not change, only the cycles held during the call, so this is about outcalls in flight rather than the bill",
+        "Does NOT recommend lowering max_response_bytes as the primary fix, and does NOT recommend attaching a hand-picked smaller number"
+      ]
     }
   ],
   "trigger_evals": {
@@ -67,7 +145,10 @@
     "should_trigger": [
       "My canister needs to fetch a price from a REST API",
       "Why does my canister's outcall fail consensus with different responses per replica?",
-      "How much does it cost in cycles to call an external HTTPS endpoint from a canister?"
+      "How much does it cost in cycles to call an external HTTPS endpoint from a canister?",
+      "How do I use flexible_http_request so each node returns its own response?",
+      "Should I set pricing_version 2 on my canister's HTTPS outcalls?",
+      "What do the with_expected_* setters on the Rust HttpRequest builder do?"
     ],
     "should_not_trigger": [
       "How do I read an Ethereum contract's state from my canister?"
