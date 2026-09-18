@@ -77,6 +77,10 @@ You do not deploy anything extra. The management canister is built into every su
 
 15. **Hardcoding `total_requests` for a flexible outcall.** `total_requests` must not exceed the subnet size, which differs per subnet (13 or 34 on mainnet). Derive it:
     ```rust
+    // WRONG, even when you want five nodes: 5 may exceed the subnet size.
+    let replication = ReplicationCounts { total_requests: 5, min_responses: 3, max_responses: 5 };
+
+    // RIGHT: ask for five, but never more than the subnet has.
     let total_requests = subnet_self_node_count().min(5);
     let min_responses = total_requests / 2 + 1;
     ```

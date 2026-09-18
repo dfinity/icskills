@@ -109,16 +109,23 @@ a bigger allowance raises the deadline toward the 60-second ceiling and the tran
 the full query limit, so a slow endpoint or an expensive transform that a tight allowance would
 have cut off instead runs to completion and charges for it.
 
-**So under version 2 the attachment is not inert: it is the per-node allowance, and the allowance is
-what sets each node's byte cap, deadline and transform instruction limit.** A larger attachment
-therefore buys the call permission to consume more, and it is charged for what it consumes. Where a
-tighter budget would have cut the call short, a larger one can raise the charge; where the call
-completes either way, the charge is identical and only the hold differs.
+**So the attachment is not inert: beyond the base fee it is the per-node allowance, and the allowance
+is a ceiling on what the call may consume.** The charge follows what the call actually consumes, so
+the size of the attachment changes the bill only when that ceiling binds. The two cases are
+symmetric:
 
-Version 1 cannot raise the charge at all: it is fixed when the call is made, so a margin is never
-billed. A margin is still not free there. It is held for the whole call, so it still caps how many
-outcalls the canister can have in flight. Neither version makes "attach a round number to be safe"
-a good habit; they just punish it differently.
+- **Ceiling does not bind** (the usual case). The call completes comfortably under either budget, so
+  it consumes the same either way and is charged the same. Narrowing the expectations here changes
+  only the cycles held, not the bill, which is why narrowing is normally about how many outcalls you
+  can have in flight.
+- **Ceiling binds.** A slow endpoint or a long transform that a tight budget would have cut short
+  runs further under a larger one, and the call is charged for the extra. Over-attaching here raises
+  the bill, not merely the hold.
+
+Version 1 is no licence to over-attach either. Its charge is fixed when the call is made, so a
+margin is never billed, but **a margin is still not free**: it is held for the whole call, so it
+still caps how many outcalls the canister can have in flight. Neither version makes "attach a round
+number to be safe" a good habit; they just punish it differently.
 
 ## The four values fund ONE pooled budget
 
