@@ -25,8 +25,8 @@
       "name": "HTTPS outcall from an engine canister",
       "prompt": "My Motoko canister runs on a cloud engine and needs to call an external REST API over HTTPS. Does the outcall code need anything engine-specific, and what about the cycles? Just the call line and a one-sentence note on cycles.",
       "expected_behaviors": [
-        "Says no engine-specific outcall form is needed — keeps the standard wrapper `Call.httpRequest(request)` from `mo:ic` (or notes `ic_cdk::management_canister::http_request` for Rust)",
-        "Explains the wrapper consults the cost API (`ic0.cost_http_request`), which is cost-schedule aware and returns 0 on an engine, so nothing is attached",
+        "Says no engine-specific outcall form is needed — keeps the standard wrapper `Call.httpRequest(request)` from `mo:ic` (or, for Rust, whichever wrapper the project's crate line provides, e.g. `HttpRequest::new(url)…send()` from `ic-cdk-management-canister` 0.2)",
+        "Explains the wrapper consults the cost API (`ic0.cost_http_request`), which is cost-schedule aware and prices against the canister's own subnet, so it returns 0 on an engine and nothing is attached",
         "Does NOT attach a hardcoded or hand-computed cycles amount, and does NOT tell the user to top up the engine canister",
         "Does NOT route the outcall through the console proxy canister"
       ]
@@ -89,6 +89,27 @@
         "Recommends topping up the existing proxy or enabling automatic top-up instead, or moving every asset off the derived addresses first",
         "Does NOT present the cycles refund, or redeploying later, as making the deletion safe"
       ]
+    },
+    {
+      "name": "Adversarial: assuming ic-cdk-management-canister is unusable on an engine",
+      "prompt": "My Rust canister runs on a cloud engine and needs an HTTPS outcall. I read that the ic-cdk-management-canister helpers don't work on an engine — so should I hand-encode the http_request and relay it through the engine's proxy canister instead? Keep it short.",
+      "expected_behaviors": [
+        "Says no — the crate's HTTPS-outcall path (`HttpRequest::new(url)…send()`) is the supported way to make an outcall from an engine canister and works as written",
+        "Scopes the 'does not work' warning to the crate's chain-key functions (`sign_with_ecdsa`, `sign_with_schnorr`, `vetkd_derive_key`), which are cross-subnet and cycle-bearing and do need the proxy",
+        "Distinguishes by target subnet: `aaaaa-aa` `http_request` runs on the canister's own subnet and prices at 0, while chain-key methods are charged by the subnet holding the key",
+        "Does NOT route the HTTPS outcall through the proxy, and does NOT hand-encode it",
+        "Does NOT attach a hardcoded cycles amount or suggest topping up the engine canister"
+      ]
+    },
+    {
+      "name": "Adversarial: tuning pricing-version-2 budgets on an engine",
+      "prompt": "My Rust canister on a cloud engine uses ic-cdk-management-canister 0.2's HttpRequest builder, and one outcall failed. Should I set the with_expected_* values to size the cycles budget, and could a too-small budget be the cause? Keep it to three or four sentences.",
+      "expected_behaviors": [
+        "Says the `with_expected_*` setters make no difference on an engine — the free cost schedule never charges, so the attached amount never constrains the call",
+        "States that `InsufficientCycles` cannot be raised on an engine, so the failure is not an exhausted budget and the cause lies elsewhere",
+        "Notes that the canister's own `max_response_bytes` still bounds the response on an engine, so an oversized reply remains a genuine cause",
+        "Does NOT suggest attaching more cycles, widening the budget, or topping up the engine canister"
+      ]
     }
   ],
   "trigger_evals": {
@@ -104,7 +125,8 @@
       "Every outcall through my engine's proxy canister fails with InsufficientCycles — can we raise the outcall budget?",
       "Sign a Bitcoin transaction from my canister running on a cloud engine",
       "Can I use the ic-vetkeys helper library on a cloud engine canister?",
-      "If I swap my engine's proxy canister, does my app's derived Ethereum address change?"
+      "If I swap my engine's proxy canister, does my app's derived Ethereum address change?",
+      "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
