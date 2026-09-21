@@ -8,6 +8,11 @@
 # release-tracked repos, or a short commit SHA for commit-tracked repos like
 # caffeinelabs/skills). The actual diff is always between <old-sha> and <new-sha>.
 #
+# The body is capped to stay under GitHub's 65536-character issue-body limit
+# (BODY_BUDGET below). Diffs that do not fit are replaced by a stub carrying the
+# exact commands to reproduce them; the body always opens with those commands so
+# a stub is never a dead end.
+#
 # Exit codes:
 #   0 — no skill content changed (output file not meaningful)
 #   1 — changes found (output file contains issue body)
@@ -24,6 +29,10 @@ LATEST_TAG="$5"
 OUTPUT_FILE="$6"
 
 : "${GH_TOKEN:?GH_TOKEN environment variable is required}"
+
+# GitHub rejects issue bodies over 65536 characters. Stay under it with headroom
+# for the trailing notice the renderer appends when it omits any diff.
+BODY_BUDGET="${BODY_BUDGET:-60000}"
 
 if [ "$OLD_SHA" = "$NEW_SHA" ]; then
   echo "New tag $LATEST_TAG resolves to the same commit as $CURRENT_TAG — no content changes"
@@ -59,6 +68,11 @@ reviewing-motoko:reviewing-motoko"
 esac
 
 REPO_SHORT="${REPO##*/}"
+
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+INDEX="$WORK_DIR/index.tsv"
+: > "$INDEX"
 
 # Fetch a repo tree recursively ONCE per commit SHA, cached to a temp file and echoed as its
 # path. Git trees are immutable per SHA, so caching is safe and avoids re-fetching the same
@@ -106,23 +120,11 @@ for e in d.get('tree', []):
 " "$cache" "$2"
 }
 
-{
-  echo "## Upstream diff: \`${REPO}\` \`${CURRENT_TAG}\` → \`${LATEST_TAG}\`"
-  echo ""
-  echo "Commit: [\`${NEW_SHA:0:12}\`](https://github.com/${REPO}/commit/${NEW_SHA})"
-  echo ""
-  echo "To sync: create branch \`chore/sync-upstream-${REPO_SHORT}-${LATEST_TAG}\`, follow the"
-  echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
-  echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
-  echo ""
-  echo "**Before applying:** check \`.claude/upstream.md\` for icskills-owned sections."
-  echo "Do NOT overwrite those sections from upstream. Also check whether any owned"
-  echo "section is now covered by the upstream changes — if so, drop the icskills copy"
-  echo "and remove it from the owned list to avoid duplicating content."
-  echo ""
-} > "$OUTPUT_FILE"
-
+# Pass 1 — compute every per-file diff and record it in the index. Rendering and
+# the size budget are applied afterwards, so the budget can prioritise across all
+# skills rather than spending itself on whichever skill happens to come first.
 HAS_CHANGES=false
+seq=0
 
 while IFS= read -r skill_pair; do
   [ -z "$skill_pair" ] && continue
@@ -134,6 +136,8 @@ while IFS= read -r skill_pair; do
     skill_path="${upstream_name}"
   fi
 
+  printf 'SKILL\t%s\t%s\t%s\n' "$local_name" "$upstream_name" "$skill_path" >> "$INDEX"
+
   # Abort the whole run (exit 3) if either listing can't be trusted — the workflow's
   # diff step re-raises any non-0/1 code, so the job fails loudly instead of opening
   # (or skipping) an issue based on incomplete data.
@@ -142,54 +146,41 @@ while IFS= read -r skill_pair; do
 
   ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$' || true)
 
-  SKILL_HAS_CHANGES=false
-  > /tmp/skill-diff-body.md
-
   while IFS= read -r file; do
     [ -z "$file" ] && continue
 
     curl -sf "https://raw.githubusercontent.com/${REPO}/${OLD_SHA}/${skill_path}/${file}" \
-      > /tmp/upstream-old-file 2>/dev/null || > /tmp/upstream-old-file
+      > "$WORK_DIR/old" 2>/dev/null || : > "$WORK_DIR/old"
 
     curl -sf "https://raw.githubusercontent.com/${REPO}/${NEW_SHA}/${skill_path}/${file}" \
-      > /tmp/upstream-new-file 2>/dev/null || > /tmp/upstream-new-file
+      > "$WORK_DIR/new" 2>/dev/null || : > "$WORK_DIR/new"
 
-    DIFF=$(diff /tmp/upstream-old-file /tmp/upstream-new-file || true)
-    if [ -n "$DIFF" ]; then
-      SKILL_HAS_CHANGES=true
+    seq=$((seq + 1))
+    diff_path="$WORK_DIR/diff-${seq}.txt"
+    diff "$WORK_DIR/old" "$WORK_DIR/new" > "$diff_path" || true
+
+    if [ -s "$diff_path" ]; then
       HAS_CHANGES=true
-      {
-        echo "#### \`${file}\`"
-        echo ""
-        echo '<details><summary>Show diff (- old upstream, + new upstream)</summary>'
-        echo ""
-        echo '```diff'
-        echo "$DIFF"
-        echo '```'
-        echo ""
-        echo '</details>'
-        echo ""
-      } >> /tmp/skill-diff-body.md
+      printf 'DIFF\t%s\t%s\t%s\n' "$local_name" "$file" "$diff_path" >> "$INDEX"
     fi
   done <<< "$ALL_FILES"
-
-  if [ "$SKILL_HAS_CHANGES" = "true" ]; then
-    {
-      echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
-      echo ""
-      cat /tmp/skill-diff-body.md
-    } >> "$OUTPUT_FILE"
-  else
-    {
-      echo "### \`${local_name}\` — no changes"
-      echo ""
-    } >> "$OUTPUT_FILE"
-  fi
 done <<< "$SKILLS"
 
 if [ "$HAS_CHANGES" = "false" ]; then
   echo "No skill content changes detected between $CURRENT_TAG and $LATEST_TAG — skipping issue"
   exit 0
 fi
+
+# Pass 2 — render the body within the size budget.
+python3 scripts/lib/render-sync-issue.py \
+  --index "$INDEX" \
+  --repo "$REPO" \
+  --repo-short "$REPO_SHORT" \
+  --old-sha "$OLD_SHA" \
+  --new-sha "$NEW_SHA" \
+  --current-tag "$CURRENT_TAG" \
+  --latest-tag "$LATEST_TAG" \
+  --budget "$BODY_BUDGET" \
+  --output "$OUTPUT_FILE" || exit 3
 
 exit 1
