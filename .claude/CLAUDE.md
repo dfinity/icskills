@@ -177,7 +177,7 @@ When syncing a skill from a new upstream release, verify all of these before com
 
 - [ ] **`.claude/upstream.md` updated** — Commit (full SHA) + Last synced for every skill entry that shares the upstream repo, plus Tag (release-tracked) or Upstream version (commit-tracked). E.g. syncing `caffeinelabs/skills` means updating all four of `writing-motoko`, `migrating-motoko-actors`, `troubleshooting-motoko-migrations`, and `reviewing-motoko` — they share one pinned commit.
 - [ ] **All upstream skill folder files synced** — The sync issue diffs every file in the upstream skill folder (any type, not just `.md`) between old and new releases. Apply changes to all files that changed. If a file is new in upstream, add it to our `references/` directory. If a file was removed upstream, remove it from `references/` too. icskills always places reference files under `references/` regardless of how upstream organises them.
-- [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`)
+- [ ] **Compatibility versions updated** — `compatibility:` frontmatter matches new feature requirements (e.g., `moc >= X.Y.Z, core >= A.B.C`). `npm run validate` now enforces the moc half automatically: it fails if a skill documents a diagnostic newer than its declared `moc >=` floor. The `core`/`mops` halves are still manual — if the diff adds an API, confirm it exists at the declared `core` floor (check the tag in a `dfinity/motoko-core` checkout, not just latest). **`compatibility` is icskills-owned**, so fix the floor here rather than waiting on upstream; upstream declares its own and may lag (see caffeinelabs/skills#14).
 - [ ] **Version numbers in code examples** — All pinned versions in `mops.toml` snippets, `mops toolchain use` commands, and `mops add` examples reflect the new release
 - [ ] **All upstream additions applied** — Re-read every `+` line in the diff (lines new in upstream) systematically, including inside code blocks: added/changed inline comments, new sentences, modified expressions. These small changes are easy to miss but often carry clarifications or fixes.
 - [ ] **Icskills-owned sections preserved** — Sections listed as owned in `.claude/upstream.md` are NOT overwritten from upstream
@@ -215,6 +215,32 @@ This is a summary; the authoritative, per-skill owned-section list lives in `.cl
 3. Create **one branch** covering all affected skills — `chore/sync-upstream-<repo>-<new-tag-or-short-sha>` where `<repo>` is the upstream repo's short name (e.g. `skills` for `caffeinelabs/skills`, `mops-cli` for `caffeinelabs/mops`, `certified-assets` for `dfinity/certified-assets`). When two upstream repos are synced in the same branch, combine: `chore/sync-upstream-skills-02e5316-mops-cli-v2.14.0`. Load the `improve-ic-skill` skill — upstream sync is an improvement task and that skill knows our toolchain, eval location, and owned-section rules. Apply changes to all affected skills following the checklist, update all corresponding entries in `.claude/upstream.md`, run `npm run validate`, and open a PR that closes the issue.
 
 This is adapted from [dfinity/developer-docs sync-motoko.yml](https://github.com/dfinity/developer-docs/blob/main/.github/workflows/sync-motoko.yml), simplified for a curl-based approach (no submodules).
+
+## Verifying moc diagnostics
+
+Skills cite moc error codes (`M0268`) heavily — the error tables are the most-used part of several of them. Two things go wrong: citing a code that does not exist, and citing one newer than the skill's declared `moc >=` floor, which tells an agent to expect an error the user's toolchain cannot emit.
+
+`npm run validate` checks both against `scripts/data/moc-error-codes.json`, which maps every moc diagnostic to the first moc release containing it:
+
+- a cited code newer than the declared floor is an **error**
+- a cited code absent from the map is a **warning** (either the map is stale, or the code is not real)
+
+Regenerate the map when moc ships a release that adds diagnostics:
+
+```bash
+node scripts/update-moc-error-codes.js --motoko <path-to-dfinity/motoko>   # or MOTOKO_REPO=...
+```
+
+It resolves against the latest moc **release tag**, not `master`, on purpose: a code deleted on `master` but present in every shipped release is still one users hit. (`M0219`/`M0220` are exactly this — removed by the persistent-by-default change in September 2026, still live in 1.16.1.)
+
+To date a single code by hand, in a `dfinity/motoko` checkout:
+
+```bash
+git log -S'"M0268"' --format=%H -- src/lang_utils/error_codes.ml | tail -1   # introducing commit
+git tag --contains <commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | head -1
+```
+
+**Do not trust the inline comments in `error_codes.ml`** — several are wrong. `M0186`'s reads "calling shared from composite" while the message it actually emits in `src/mo_frontend/typing.ml` says the opposite. Read the emission site.
 
 ## Writing Guidelines
 
@@ -261,7 +287,9 @@ rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png
 skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
 scripts/lib/parse-skill.js    # Shared parsing utilities
-scripts/check-project.js      # Project-specific checks: metadata, evals (CI)
+scripts/check-project.js      # Project-specific checks: metadata, evals, moc floors (CI)
+scripts/update-moc-error-codes.js  # Regenerates the moc diagnostic -> release map
+scripts/data/moc-error-codes.json  # Generated; see "Verifying moc diagnostics"
 src/                           # Astro site source
   lib/skills.ts               # Build-time skill loader
   lib/site.ts                 # Site URL and base path config

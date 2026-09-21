@@ -267,6 +267,26 @@
         "Does NOT propose trapping (`Runtime.trap`) for these caller-fixable failures",
         "Uses `public shared ({ caller }) func` since authorization is one of the failure cases"
       ]
+    },
+    {
+      "name": "Query functions discard state changes",
+      "prompt": "In a Motoko canister with `posts : List.List<Post>`, write the declarations for `clearAll()` and `getPosts()`, plus one sentence on why each has the kind it does. Just the two declarations — no imports, no actor wrapper, no deploy steps.",
+      "expected_behaviors": [
+        "Declares `getPosts` as `public query func`",
+        "Declares `clearAll` WITHOUT the `query` keyword (a plain update func, e.g. `public shared ({ caller }) func` or `public func`)",
+        "Explains that a state change inside a `query` is silently discarded when the call returns — it compiles and runs with no error or warning",
+        "Does NOT declare `clearAll` as `public query func`"
+      ]
+    },
+    {
+      "name": "M0230: import the key type's module in that file",
+      "prompt": "Motoko with mo:core. `lib/index.mo` declares `let index : Map.Map<Text, Nat> = Map.empty()` and calls `index.get(k)`; moc reports M0230: cannot determine implicit argument `compare`. My `main.mo` already imports `mo:core/Text`, and `lib/index.mo`'s only mo:core import is `Map`. Give the fix in one or two sentences plus the changed import line.",
+      "expected_behaviors": [
+        "Fix is to add `import Text \"mo:core/Text\";` to `lib/index.mo` itself",
+        "Explains the existing `main.mo` import does not help — the key type's module must be imported in the file that operates on the `Map`",
+        "Explains the implicit `compare` is resolved from the imported key-type module, not from the type alone",
+        "Does NOT propose passing `Text.compare` explicitly to `Map.empty`/`get`"
+      ]
     }
   ],
   "trigger_evals": {
