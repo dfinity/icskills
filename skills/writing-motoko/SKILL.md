@@ -2,7 +2,7 @@
 name: writing-motoko
 description: "Motoko language pitfalls, modern syntax, and architecture patterns for the Internet Computer. Covers persistent actors, stable types, mo:core standard library, dot notation, mixins, and common compilation errors. Use when writing Motoko canister code, fixing Motoko compiler errors, or generating Motoko actors. Do NOT use for deployment, icp.yaml, or CLI commands; for design review or audit of existing Motoko code, load reviewing-motoko instead."
 license: Apache-2.0
-compatibility: "moc >= 1.11.2, core >= 2.6.0, mops >= 3.0.0"
+compatibility: "moc >= 1.12.0, core >= 2.6.0, mops >= 3.0.0"
 metadata:
   title: Writing Motoko
   category: Motoko

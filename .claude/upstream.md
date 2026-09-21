@@ -23,7 +23,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
   - `skills/writing-motoko/references/reserved-keywords.md → references/reserved-keywords.md`
   - `skills/writing-motoko/references/type-conversions.md → references/type-conversions.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`/`mops` CLI major), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.6.0, mops >= 3.0.0`), and `metadata.title`/`category`.
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`/`mops` CLI major), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.12.0, core >= 2.6.0, mops >= 3.0.0`), and `metadata.title`/`category`. The moc floor is **ours, not upstream's**: upstream declares `>=1.11.2` while documenting `M0267`, which first ships in moc 1.12.0 (see caffeinelabs/skills#14).
   - **mops docs link → `mops-cli` skill:** the body's `https://docs.mops.one/` reference is rewritten to "Load the `mops-cli` skill …". Do not restore the external link on sync.
   - **`## Additional Resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
   - **Reference-file paths:** upstream keeps `api-reference.md`/`examples.md` at the skill root; icskills places all non-SKILL files under `references/`, so intra-skill links are rewritten to `references/…`.
@@ -56,7 +56,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 - **Last synced:** 2026-09-21
 - **Upstream file:** `skills/troubleshooting-motoko-migrations/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** same transform as the other two. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
+  - **Frontmatter (entire block):** same transform as the other two, but **not the same moc floor** — ours is `moc >= 1.15.0, core >= 2.5.0` against upstream's `>=1.11.2`, because this skill's error table documents `M0268` (first ships in moc 1.15.0) and `M0267` (1.12.0). See caffeinelabs/skills#14. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
 
 ---
 
@@ -72,7 +72,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
   - `skills/reviewing-motoko/references/state-and-persistence.md → references/state-and-persistence.md`
   - `skills/reviewing-motoko/references/type-encoding.md → references/type-encoding.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description` tuned for repo-wide trigger evals, `license: Apache-2.0`, string `compatibility` (`moc >= 1.11.2, core >= 2.6.0, mops >= 3.0.0`), `metadata.title`/`category`).
+  - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description` tuned for repo-wide trigger evals, `license: Apache-2.0`, string `compatibility` (`moc >= 1.12.0, core >= 2.6.0, mops >= 3.0.0` — raised from upstream's `>=1.11.2` for the same `M0267` reason as `writing-motoko`), `metadata.title`/`category`).
   - **`## Additional resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
 
 ---

@@ -2,7 +2,7 @@
 name: troubleshooting-motoko-migrations
 description: "Deep reference for when the Motoko migration chain misbehaves — upgrade compatibility errors you cannot explain, migration files you cannot write, a first migration whose OldActor is non-empty, a project converted from legacy persistence, or a request to delete/remove the migrations directory or revert to inline (with migration = ...). Load only when the rules in migrating-motoko-actors do not explain what you are seeing."
 license: Apache-2.0
-compatibility: "moc >= 1.11.2, core >= 2.5.0"
+compatibility: "moc >= 1.15.0, core >= 2.5.0"
 metadata:
   title: Troubleshooting Motoko Migrations
   category: Motoko
