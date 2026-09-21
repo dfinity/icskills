@@ -279,16 +279,6 @@
       ]
     },
     {
-      "name": "M0186: a composite query is ingress-only",
-      "prompt": "In Motoko, `getAll` is a `public shared composite query func` that awaits queries on other canisters. It works when my frontend calls it, but calling it from an update func in the same canister fails with M0186. Why, and what are my options? Two or three sentences, no code.",
-      "expected_behaviors": [
-        "Explains a composite query can only be initiated as an ingress call — an update or oneway func cannot call one",
-        "Offers calling it from the frontend as one option",
-        "Offers making the callee a plain `query` so the update can call it as the other option",
-        "Does NOT propose adding a `<system>` capability, or making the caller a plain `query func` (which fails with M0188 instead)"
-      ]
-    },
-    {
       "name": "M0230: import the key type's module in that file",
       "prompt": "Motoko with mo:core. `lib/index.mo` declares `let index : Map.Map<Text, Nat> = Map.empty()` and calls `index.get(k)`; moc reports M0230: cannot determine implicit argument `compare`. My `main.mo` already imports `mo:core/Text`, and `lib/index.mo`'s only mo:core import is `Map`. Give the fix in one or two sentences plus the changed import line.",
       "expected_behaviors": [
