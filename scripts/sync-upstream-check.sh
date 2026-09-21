@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# Compute the upstream skill diff between two commits and write an issue body.
+# Summarise the upstream skill changes between two commits and write an issue body.
 #
 # Usage:
 #   scripts/sync-upstream-check.sh <org/repo> <old-sha> <new-sha> <current-label> <latest-label> <output-file>
 #
 # <current-label>/<latest-label> are display strings only (a release tag for
 # release-tracked repos, or a short commit SHA for commit-tracked repos like
-# caffeinelabs/skills). The actual diff is always between <old-sha> and <new-sha>.
+# caffeinelabs/skills). The actual comparison is always between <old-sha> and <new-sha>.
+#
+# The body reports WHICH files changed and how to regenerate any diff; it does not
+# inline the diffs themselves. Inlining is both redundant — an agent applying the
+# sync fetches the upstream files anyway — and unbounded: GitHub rejects issue
+# bodies over 65536 characters, which is what a single reworked reference file
+# once did. A fixed-size summary cannot hit that limit.
 #
 # Exit codes:
 #   0 — no skill content changed (output file not meaningful)
@@ -24,6 +30,8 @@ LATEST_TAG="$5"
 OUTPUT_FILE="$6"
 
 : "${GH_TOKEN:?GH_TOKEN environment variable is required}"
+
+RAW="https://raw.githubusercontent.com"
 
 if [ "$OLD_SHA" = "$NEW_SHA" ]; then
   echo "New tag $LATEST_TAG resolves to the same commit as $CURRENT_TAG — no content changes"
@@ -59,6 +67,13 @@ reviewing-motoko:reviewing-motoko"
 esac
 
 REPO_SHORT="${REPO##*/}"
+
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+TABLE="$WORK_DIR/table.md"
+UNCHANGED="$WORK_DIR/unchanged.txt"
+: > "$TABLE"
+: > "$UNCHANGED"
 
 # Fetch a repo tree recursively ONCE per commit SHA, cached to a temp file and echoed as its
 # path. Git trees are immutable per SHA, so caching is safe and avoids re-fetching the same
@@ -106,22 +121,6 @@ for e in d.get('tree', []):
 " "$cache" "$2"
 }
 
-{
-  echo "## Upstream diff: \`${REPO}\` \`${CURRENT_TAG}\` → \`${LATEST_TAG}\`"
-  echo ""
-  echo "Commit: [\`${NEW_SHA:0:12}\`](https://github.com/${REPO}/commit/${NEW_SHA})"
-  echo ""
-  echo "To sync: create branch \`chore/sync-upstream-${REPO_SHORT}-${LATEST_TAG}\`, follow the"
-  echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
-  echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
-  echo ""
-  echo "**Before applying:** check \`.claude/upstream.md\` for icskills-owned sections."
-  echo "Do NOT overwrite those sections from upstream. Also check whether any owned"
-  echo "section is now covered by the upstream changes — if so, drop the icskills copy"
-  echo "and remove it from the owned list to avoid duplicating content."
-  echo ""
-} > "$OUTPUT_FILE"
-
 HAS_CHANGES=false
 
 while IFS= read -r skill_pair; do
@@ -142,54 +141,113 @@ while IFS= read -r skill_pair; do
 
   ALL_FILES=$(printf '%s\n%s\n' "$OLD_FILES" "$NEW_FILES" | sort -u | grep -v '^$' || true)
 
-  SKILL_HAS_CHANGES=false
-  > /tmp/skill-diff-body.md
+  SKILL_CHANGED=false
 
   while IFS= read -r file; do
     [ -z "$file" ] && continue
 
-    curl -sf "https://raw.githubusercontent.com/${REPO}/${OLD_SHA}/${skill_path}/${file}" \
-      > /tmp/upstream-old-file 2>/dev/null || > /tmp/upstream-old-file
+    # Whether the file exists at each commit comes from the git trees, not from the
+    # fetch result. A transient fetch failure must not be read as "file added" —
+    # that would label the change wrongly and report the whole file as a diff.
+    old_exists=false
+    new_exists=false
+    grep -qxF "$file" <<< "$OLD_FILES" && old_exists=true
+    grep -qxF "$file" <<< "$NEW_FILES" && new_exists=true
 
-    curl -sf "https://raw.githubusercontent.com/${REPO}/${NEW_SHA}/${skill_path}/${file}" \
-      > /tmp/upstream-new-file 2>/dev/null || > /tmp/upstream-new-file
-
-    DIFF=$(diff /tmp/upstream-old-file /tmp/upstream-new-file || true)
-    if [ -n "$DIFF" ]; then
-      SKILL_HAS_CHANGES=true
-      HAS_CHANGES=true
-      {
-        echo "#### \`${file}\`"
-        echo ""
-        echo '<details><summary>Show diff (- old upstream, + new upstream)</summary>'
-        echo ""
-        echo '```diff'
-        echo "$DIFF"
-        echo '```'
-        echo ""
-        echo '</details>'
-        echo ""
-      } >> /tmp/skill-diff-body.md
+    if [ "$old_exists" = true ]; then
+      curl -sf "${RAW}/${REPO}/${OLD_SHA}/${skill_path}/${file}" > "$WORK_DIR/old" || {
+        echo "ERROR: could not fetch ${skill_path}/${file} at ${OLD_SHA}" >&2
+        exit 3
+      }
+    else
+      : > "$WORK_DIR/old"
     fi
+
+    if [ "$new_exists" = true ]; then
+      curl -sf "${RAW}/${REPO}/${NEW_SHA}/${skill_path}/${file}" > "$WORK_DIR/new" || {
+        echo "ERROR: could not fetch ${skill_path}/${file} at ${NEW_SHA}" >&2
+        exit 3
+      }
+    else
+      : > "$WORK_DIR/new"
+    fi
+
+    diff "$WORK_DIR/old" "$WORK_DIR/new" > "$WORK_DIR/diff" || true
+    [ -s "$WORK_DIR/diff" ] || continue
+
+    # Normal diff format: '<' lines come from old, '>' lines from new.
+    removed=$(grep -c '^<' "$WORK_DIR/diff" || true)
+    added=$(grep -c '^>' "$WORK_DIR/diff" || true)
+
+    if [ "$old_exists" = false ]; then
+      status="added"
+    elif [ "$new_exists" = false ]; then
+      status="removed"
+    else
+      status="modified"
+    fi
+
+    HAS_CHANGES=true
+    SKILL_CHANGED=true
+    # shellcheck disable=SC2016  # backticks are literal markdown, not expansion
+    printf '| `%s` | `%s/%s` | %s | +%s −%s |\n' \
+      "$local_name" "$skill_path" "$file" "$status" "$added" "$removed" >> "$TABLE"
   done <<< "$ALL_FILES"
 
-  if [ "$SKILL_HAS_CHANGES" = "true" ]; then
-    {
-      echo "### \`${local_name}\` ← upstream \`${upstream_name}\`"
-      echo ""
-      cat /tmp/skill-diff-body.md
-    } >> "$OUTPUT_FILE"
-  else
-    {
-      echo "### \`${local_name}\` — no changes"
-      echo ""
-    } >> "$OUTPUT_FILE"
-  fi
+  [ "$SKILL_CHANGED" = false ] && echo "$local_name" >> "$UNCHANGED"
 done <<< "$SKILLS"
 
 if [ "$HAS_CHANGES" = "false" ]; then
   echo "No skill content changes detected between $CURRENT_TAG and $LATEST_TAG — skipping issue"
   exit 0
 fi
+
+{
+  echo "## Upstream sync: \`${REPO}\` \`${CURRENT_TAG}\` → \`${LATEST_TAG}\`"
+  echo ""
+  echo "Commit: [\`${NEW_SHA:0:12}\`](https://github.com/${REPO}/commit/${NEW_SHA})"
+  echo "Compare: https://github.com/${REPO}/compare/${OLD_SHA}...${NEW_SHA}"
+  echo ""
+  echo "### Changed files"
+  echo ""
+  echo "| skill | upstream path | change | lines |"
+  echo "|---|---|---|---|"
+  cat "$TABLE"
+  echo ""
+  if [ -s "$UNCHANGED" ]; then
+    printf 'No changes: '
+    # shellcheck disable=SC2016  # backticks are literal markdown, not expansion
+    paste -sd' ' - < "$UNCHANGED" | sed 's/\([^ ][^ ]*\)/`\1`/g'
+    echo ""
+  fi
+  echo "### Regenerate a diff"
+  echo ""
+  echo "The diffs are not inlined — they are unbounded in size, and applying the sync"
+  echo "means fetching the upstream files anyway. Substitute an upstream path from the"
+  echo "table above:"
+  echo ""
+  echo '```bash'
+  echo "OLD=\"${OLD_SHA}\""
+  echo "NEW=\"${NEW_SHA}\""
+  echo "curl -sf \"${RAW}/${REPO}/\$OLD/<upstream path>\" > /tmp/upstream-old"
+  echo "curl -sf \"${RAW}/${REPO}/\$NEW/<upstream path>\" > /tmp/upstream-new"
+  echo "diff -u /tmp/upstream-old /tmp/upstream-new"
+  echo '```'
+  echo ""
+  echo "\`-\` lines were removed from upstream; \`+\` lines were added by upstream."
+  echo ""
+  echo "### To sync"
+  echo ""
+  echo "Create branch \`chore/sync-upstream-${REPO_SHORT}-${LATEST_TAG}\`, follow the"
+  echo "[Upstream Sync Strategy](https://github.com/dfinity/icskills/blob/main/.claude/CLAUDE.md#upstream-sync-strategy)"
+  echo "in CLAUDE.md, run \`npm run validate\`, and open a PR that closes this issue."
+  echo ""
+  echo "**Before applying:** check \`.claude/upstream.md\` for icskills-owned sections."
+  echo "Do NOT overwrite those sections from upstream. Also check whether any owned"
+  echo "section is now covered by the upstream changes — if so, drop the icskills copy"
+  echo "and remove it from the owned list to avoid duplicating content."
+} > "$OUTPUT_FILE"
+
+echo "Issue body: $(wc -c < "$OUTPUT_FILE" | tr -d ' ') chars, $(wc -l < "$TABLE" | tr -d ' ') changed file(s)"
 
 exit 1
