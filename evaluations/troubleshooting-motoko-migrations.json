@@ -29,6 +29,16 @@
         "Warns that rewriting it to `OldActor = {}` would discard live state / re-seed fields and must not be done",
         "Does NOT recommend flattening, pruning, or restarting the chain at `{}`"
       ]
+    },
+    {
+      "name": "M0268: restore the applied migration, do not edit it further",
+      "prompt": "`mops build` on my Motoko canister fails with M0268 — the migration directory disagrees with the deployed history — but `mops check` passed. What happened and what do I do? Two or three sentences, no code.",
+      "expected_behaviors": [
+        "Identifies the cause as an already-applied migration being edited, deleted, or reordered",
+        "Fix is to restore that migration to exactly what was deployed and express further changes as a NEW migration",
+        "Explains `mops check` can pass because `check-limit` trims that migration out, while `mops build` folds in the deployed stable baseline",
+        "Does NOT suggest editing the applied migration further, or deleting the migrations directory"
+      ]
     }
   ],
   "trigger_evals": {
