@@ -176,8 +176,9 @@ async function connect(signer: Signer, scopes: PermissionScope[]) {
 
   const accounts = await signer.getAccounts();
   // { owner: Principal, subaccount?: Uint8Array } — already an IcrcAccount.
-  // Keep both halves: a wallet account with a subaccount is a different
-  // account, and dropping it silently reads and spends the wrong one.
+  // Usually there is no subaccount: signers commonly offer only the default
+  // one. Return the element whole anyway — it costs nothing, and a signer
+  // that does offer subaccounts breaks code that assumed otherwise.
   return accounts[0];
 }
 ```
@@ -190,7 +191,7 @@ async function connect(signer: Signer, scopes: PermissionScope[]) {
 
 ```typescript
 import { SignerAgent } from '@icp-sdk/signer/agent';
-import { IcrcLedgerCanister, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { IcrcLedgerCanister, toCandidAccount, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 import { HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
 
@@ -216,17 +217,17 @@ async function connectLedger(signer: Signer, account: IcrcAccount) {
 
 ```typescript
 async function showBalanceThenTransfer(
-  signer: Signer, account: IcrcAccount, to: Principal, amount: bigint
+  signer: Signer, account: IcrcAccount, to: IcrcAccount, amount: bigint
 ) {
   const { read, write } = await connectLedger(signer, account);
 
-  // Pass the account whole: balance() takes { owner, subaccount? }.
+  // balance() takes an IcrcAccount directly.
   const balance = await read.balance(account);                            // silent
 
   const block = await write.transfer({                                    // prompts
-    to: { owner: to, subaccount: [] },
-    // The subaccount the tokens leave from. Omit it and the ledger spends
-    // the default subaccount, whatever the wallet handed you.
+    // The ledger's `to` is the Candid shape; convert rather than hand-roll it.
+    to: toCandidAccount(to),
+    // The subaccount the tokens leave from.
     from_subaccount: account.subaccount,
     amount
   });
@@ -311,10 +312,11 @@ function restoreAccount(): IcrcAccount | null {
 // On the first write after a reload: this reopens the popup briefly.
 async function ensureSignerAgent(signer: Signer, account: IcrcAccount, agent: HttpAgent) {
   const offered = await signer.getAccounts();  // re-establishes the channel
-  // The user may have switched accounts in the wallet while the page was gone,
-  // so the stored one is a guess until the wallet confirms it.
-  const text = account.owner.toText();
-  if (!offered.some(({ owner }) => owner.toText() === text)) {
+  // The user may have switched accounts while the page was gone, so the stored
+  // one is a guess until the wallet confirms it. Compare encodings, not owners:
+  // the same principal with a different subaccount is a different account.
+  const id = encodeIcrcAccount(account);
+  if (!offered.some((offer) => encodeIcrcAccount(offer) === id)) {
     sessionStorage.removeItem(SESSION_KEY);
     throw new Error('the wallet no longer offers the stored account; reconnect');
   }
@@ -333,7 +335,7 @@ import { Principal } from '@icp-sdk/core/principal';
 import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 
 async function safeTransfer(
-  signer: Signer, account: IcrcAccount, to: Principal, amount: bigint
+  signer: Signer, account: IcrcAccount, to: IcrcAccount, amount: bigint
 ) {
   try {
     await showBalanceThenTransfer(signer, account, to, amount);
@@ -402,7 +404,7 @@ Transport-level failures arrive as `PostMessageTransportError`, `UrlTransportErr
 
 11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5`, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
 
-12. **Dropping the account's subaccount.** `getAccounts()` returns `{ owner, subaccount? }`, and an account with a subaccount is a *different* account. `SignerAgent` has no subaccount field — it routes calls as a principal — so the subaccount has to travel in the ledger call arguments instead: pass the account whole to `balance({ owner, subaccount })`, and set `from_subaccount` on a transfer. Omit it and you read one balance while spending from another, with no error.
+12. **Treating an account as just a principal.** `getAccounts()` returns `{ owner, subaccount? }` — an `IcrcAccount`. The subaccount is usually absent, because signers commonly offer only the default one, so code that assumes a bare principal works until it meets a signer that does not. Carry the account whole and let the library helpers do the rest: **compare** with `encodeIcrcAccount()` and never `owner` alone (that encoding normalizes the default subaccount, so the same principal with a *different* one is correctly a different account), **persist** with `encodeIcrcAccount()` / `decodeIcrcAccount()`, and **send** with `from_subaccount` for the sender plus `toCandidAccount()` for the recipient. `SignerAgent` is the exception — its `account` is a `Principal`, which is why the subaccount travels in the ledger call arguments instead.
 
 13. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
 
