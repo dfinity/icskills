@@ -345,7 +345,7 @@ Transport-level failures arrive as `PostMessageTransportError`, `UrlTransportErr
 
 10. **Top-level `await` in wallet code.** Every call here is async. Vite's default `es2020` target rejects top-level `await`; wrap calls in functions rather than raising `build.target`.
 
-11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5`, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it installs two copies of core, which degrades silently instead of failing.
+11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5`, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
 
 12. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
 
