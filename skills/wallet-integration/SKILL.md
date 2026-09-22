@@ -61,7 +61,7 @@ The transport URL must be a **secure context** — HTTPS, `localhost`, or `127.0
 
 ## Pick a transport
 
-The transport is the only part that knows *how* the wallet is reached; the `Signer` API above it is identical either way.
+The transport is the only part that knows *how* the wallet is reached; the `Signer` API above it is identical whichever you choose.
 
 | Transport | Mechanism | Use when |
 |-----------|-----------|----------|
@@ -376,7 +376,7 @@ These are the ICRC-25 codes — the only ones portable across wallets:
 | `4000` | Network error | Reconnecting — the library also reports every transport failure here |
 | `4001` | Transport channel closed | Reconnecting (signer-reported only; see below) |
 
-Two other error classes are **not** `SignerError`, and they call for opposite reactions:
+Two failures do not arrive as the class you would expect, and they call for opposite reactions:
 
 - **Transport failures arrive as `SignerError` with code `4000`.** `Signer.openChannel()` catches whatever the transport threw — `PostMessageTransportError`, `UrlTransportError`, `BrowserExtensionTransportError` — and rethrows it as a `SignerError` with the original as `cause`. So a blocked popup is *not* `instanceof PostMessageTransportError`; test `err.cause` for that. The library also never emits `4001`: "channel closed before a response" is `4000` too, and `4001` reaches you only if the signer itself returns it.
 - **`SignerAgentError`** — the wallet *did* respond, and the response failed validation: the returned content map did not match the call you sent (canister, method, argument, sender, nonce), the certificate did not verify against the IC root key, or the reply was absent from the certified tree. `SignerAgent` runs those checks for you, so this is a wallet returning something it should not have. Do not treat it as a connectivity fault and retry — surface it.
@@ -419,7 +419,7 @@ Two other error classes are **not** `SignerError`, and they call for opposite re
 
 ## Testing against a real wallet
 
-There is no local signer to run: OISY is a hosted wallet, and a locally deployed frontend can talk to it because `localhost` is a secure context. Test on testnet tokens rather than mainnet value.
+There is no local signer to run: OISY is hosted, and the transport's secure-context requirement applies to the *signer's* URL, not to your origin — `https://oisy.com/sign` satisfies it. Serving your own frontend from `localhost` is fine, and it is a browser secure context, so WebCrypto key generation works there too. Test on testnet tokens rather than mainnet value.
 
 ```bash
 icp network start -d
