@@ -39,6 +39,15 @@
       ]
     },
     {
+      "name": "Adversarial: assumes every wallet can do what the app needs",
+      "prompt": "My dapp should let users transfer tokens from whatever wallet they use, not just OISY. Show me just the connect step with @icp-sdk/signer — no transfer code.",
+      "expected_behaviors": [
+        "Calls getSupportedStandards() before relying on the wallet's capabilities",
+        "Branches on what the returned standards actually contain, rather than proceeding as though any signer supports everything",
+        "Does NOT hardcode one wallet's capability set as though it applied to all signers"
+      ]
+    },
+    {
       "name": "Adversarial: getAccounts() returns a list, not an account",
       "prompt": "I'm connecting OISY with @icp-sdk/signer and I need the user's account so I can show their balance. Show me just the connect function — no ledger setup, no transfer.",
       "expected_behaviors": [
