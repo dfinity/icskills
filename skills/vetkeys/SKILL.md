@@ -24,7 +24,7 @@ Build on the maintained libraries — do not hand-roll the cryptography or the C
 >
 > Use **0.7 or later**. 0.5 and 0.6 declared `@icp-sdk/core` as a plain dependency, so they could nest a second copy of core beside the one the app installs instead of failing; 0.7 peers it as `^5 || ^6`. The API is identical across all three.
 
-Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend also `@icp-sdk/core ^6`.
+Also required: Rust `ic-cdk = "0.20"` + `ic-cdk-management-canister = "0.1"` (and `ic-dummy-getrandom-for-wasm` for IBE); Motoko `ic-vetkeys` 0.6 needs `moc ≥ 1.13.0` / `core ≥ 2.6.1`; frontend `@icp-sdk/core ^6` — vetKeys itself accepts `^5 || ^6`, but the rest of the SDK peers `^6`.
 
 ## Which skill / which feature
 
