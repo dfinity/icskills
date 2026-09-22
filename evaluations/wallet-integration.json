@@ -30,12 +30,13 @@
       ]
     },
     {
-      "name": "Interaction model: frequent writes need a delegation",
-      "prompt": "My IC dapp is a turn-based game where a player makes several moves per minute, each one a canister update call. I want players to use their existing wallet. Per-action approval or session delegation with @icp-sdk/signer? One paragraph, no code.",
+      "name": "Requesting a delegation safely",
+      "prompt": "My IC dapp is a turn-based game with several moves per minute, so I'm using session delegation with @icp-sdk/signer rather than per-action approval. What do I need to get right about the delegation I request, and what does the library check for me? Short list, no code.",
       "expected_behaviors": [
-        "Recommends session delegation (ICRC-34 / requestDelegation) rather than per-action approval",
-        "Explains that per-action approval (ICRC-49) would put a wallet prompt in front of every move",
-        "Mentions either scoping the delegation to the target canister(s) or checking the wallet supports ICRC-34"
+        "Says to scope the delegation by passing targets",
+        "Says to bound its lifetime with maxTimeToLive",
+        "States that requestDelegation already validates the wallet's response and throws — the chain must terminate at the requested public key, targets must not come back broader than requested, and it must not outlive maxTimeToLive",
+        "Does NOT tell the developer to hand-roll delegation-chain verification"
       ]
     },
     {
