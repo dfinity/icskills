@@ -1,64 +1,79 @@
 {
   "skill": "wallet-integration",
-  "description": "Evaluation cases for the wallet-integration skill. Tests whether agents produce correct ICRC signer protocol code, avoid top-level await, and use the right wallet classes.",
-
+  "description": "Evaluation cases for the wallet-integration skill. Tests whether agents integrate an external signer with @icp-sdk/signer correctly: the right library and pins, reads off the SignerAgent, user-initiated popups, the right interaction model, and reconnect-after-reload.",
   "output_evals": [
     {
-      "name": "No top-level await in wallet code",
-      "prompt": "Show me just the JavaScript code to connect an ICRC wallet and make a single token transfer. I'm using Vite with default settings. Keep it minimal — no signer-side code, no deploy steps.",
+      "name": "Adversarial: reaches for the superseded oisy library",
+      "prompt": "Give me the npm install command to add OISY wallet support to my IC dapp. No integration code.",
       "expected_behaviors": [
-        "All await calls are inside async functions — no bare top-level await at module scope",
-        "Uses IcrcWallet or IcpWallet connect pattern",
-        "Shows wallet.transfer or wallet.icrc1Transfer inside an async function",
-        "Does NOT recommend changing build.target to 'esnext' or 'es2022' in Vite config"
+        "Installs @icp-sdk/signer as the client library",
+        "Pins @icp-sdk/core to ^6",
+        "Does NOT recommend @dfinity/oisy-wallet-signer"
       ]
     },
     {
-      "name": "IcpWallet vs IcrcWallet selection",
-      "prompt": "I want to send ICP tokens from my frontend using a wallet. Which class should I use? Just the class name, import path, and a one-line explanation of when to use each.",
+      "name": "Adversarial: reading a balance through SignerAgent",
+      "prompt": "I connected OISY with @icp-sdk/signer and built a SignerAgent. Show me how to read the user's ICRC-1 balance and how to send a transfer — just those two calls, no connection or setup boilerplate.",
       "expected_behaviors": [
-        "Recommends IcpWallet for ICP ledger operations",
-        "Explains that IcpWallet does not require ledgerCanisterId (defaults to ICP ledger)",
-        "Explains that IcrcWallet is for any ICRC ledger and requires ledgerCanisterId",
-        "Shows the correct import from 'oisy-wallet-signer'"
+        "Reads the balance through a plain HttpAgent, NOT through the SignerAgent",
+        "Explains that SignerAgent turns a query into a full canister call routed through the wallet, so a read would prompt the user and cost cycles",
+        "Sends the transfer through the SignerAgent"
       ]
     },
     {
-      "name": "Error handling pattern",
-      "prompt": "How do I handle errors when the user rejects a wallet transaction? Just show the try/catch pattern with the relevant error types.",
+      "name": "Adversarial: establishing the wallet popup on mount",
+      "prompt": "Is this correct?\n\n```jsx\nuseEffect(() => {\n  signer.getAccounts().then(setAccounts);\n}, []);\n```\n\nIt's a React app connecting to OISY via @icp-sdk/signer. Answer in a short paragraph plus the corrected snippet.",
       "expected_behaviors": [
-        "Shows try/catch around wallet operations",
-        "Mentions RelyingPartyResponseError with error codes (3000, 3001, 4000)",
-        "Mentions RelyingPartyDisconnectedError for popup closure"
+        "Identifies that opening the wallet on mount is not user-initiated and gets blocked by the browser",
+        "Moves the call into a click handler (or equivalent user gesture)",
+        "Does NOT suggest working around it by disabling the check, raising a timeout, or retrying"
       ]
     },
     {
-      "name": "Signer implementation",
-      "prompt": "Show me the minimal code to initialize a Signer and register all four required prompts (permissions, accounts, consent message, call canister). Just the signer-side setup, no dApp/relying-party code.",
+      "name": "Interaction model: frequent writes need a delegation",
+      "prompt": "My IC dapp is a turn-based game where a player makes several moves per minute, each one a canister update call. I want players to use their existing wallet. Per-action approval or session delegation with @icp-sdk/signer? One paragraph, no code.",
       "expected_behaviors": [
-        "Uses Signer.init() with owner identity and host",
-        "Shows signer.register() for each prompt type",
-        "Registers ICRC25_REQUEST_PERMISSIONS and ICRC27_ACCOUNTS prompts",
-        "Registers ICRC21_CALL_CONSENT_MESSAGE and ICRC49_CALL_CANISTER prompts"
+        "Recommends session delegation (ICRC-34 / requestDelegation) rather than per-action approval",
+        "Explains that per-action approval (ICRC-49) would put a wallet prompt in front of every move",
+        "Mentions either scoping the delegation to the target canister(s) or checking the wallet supports ICRC-34"
+      ]
+    },
+    {
+      "name": "Adversarial: signer 6 against a core ^5 project",
+      "prompt": "My dapp's package.json pins \"@icp-sdk/canisters\": \"^3\" and \"@icp-sdk/core\": \"^5\". Give me the npm install command to add @icp-sdk/signer so I can integrate OISY. No integration code.",
+      "expected_behaviors": [
+        "States that @icp-sdk/signer 6 peers @icp-sdk/core@^6 and so cannot be installed against the pinned core ^5",
+        "Says to move to @icp-sdk/core@^6 together with @icp-sdk/canisters@^4",
+        "Does NOT recommend --legacy-peer-deps or --force to get past the peer conflict"
+      ]
+    },
+    {
+      "name": "Connection does not survive a page reload",
+      "prompt": "After a page refresh my OISY connection is gone and the balances disappear until the user clicks connect again. How should I handle this with @icp-sdk/signer? Describe the approach, no code.",
+      "expected_behaviors": [
+        "States that the transport channel cannot survive a reload — there is no wallet session to restore",
+        "Persists the account principal and renders read-only state from it with an ordinary (anonymous) agent, without opening the wallet",
+        "Re-establishes the signer lazily on the first write, accepting that this reopens the wallet",
+        "Does NOT suggest persisting the signer, the channel, or the SignerAgent itself"
       ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
       "Connect a wallet to my ICP dapp",
-      "How do I implement ICRC wallet signing?",
       "I need to integrate Oisy wallet into my frontend",
-      "How does the ICRC signer protocol work?",
+      "How does the ICRC signer protocol work between a dapp and a wallet?",
       "Add wallet connect to my dapp",
-      "Implement the relying party side of wallet integration"
+      "Implement the relying party side of wallet integration",
+      "Should I use per-action approval or a session delegation for wallet calls?"
     ],
     "should_not_trigger": [
       "Add Internet Identity login to my app",
+      "I'm building a wallet — how do I handle incoming ICRC-49 call requests from dapps?",
+      "Log my CLI agent into oisy.com so it can act as me",
       "How do I deploy my canister?",
       "Set up stable memory in Rust",
-      "How do I make inter-canister calls?",
       "Create an ICRC-1 token ledger",
       "How do I use passkeys for authentication?"
     ]
