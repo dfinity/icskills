@@ -104,7 +104,8 @@ import { Signer } from '@icp-sdk/signer';
 import { UrlTransport } from '@icp-sdk/signer/web';
 
 const transport = new UrlTransport({
-  url: 'https://wallet.example.com/icrc-167',
+  // The path is the wallet's own; ICRC-167 does not dictate one.
+  url: 'https://wallet.example.com/sign',
   // Absolute, fragment-free, on an origin you control, and listed in that
   // origin's /.well-known/ii-auth-callbacks allow-list.
   callbackUrl: 'https://app.example.com/signer-callback'
@@ -137,7 +138,9 @@ async function runRedirectFlow(
 }
 ```
 
-**`callCanister` returns unverified wallet output.** It resolves with the CBOR `{ contentMap, certificate }` and validates only that both are present and decodable — it does not check the content map against the call you sent, and it does not verify the certificate against the IC root key. Those checks live in `SignerAgent`, which is why a `SignerAgent` call can raise `SignerAgentError`. If you use `callCanister` directly, verify the certificate before you trust the reply; if you would rather not, route the call through `SignerAgent` and let it do this for you.
+**Prefer `SignerAgent` to calling `callCanister` yourself.** `callCanister` is the raw ICRC-49 primitive: it resolves with the CBOR `{ contentMap, certificate }` and validates only that both are present and decodable — it does not check the content map against the call you sent, and it does not verify the certificate against the IC root key. `SignerAgent` does both, which is why a `SignerAgent` call can raise `SignerAgentError` and a bare `callCanister` cannot.
+
+So reach for `SignerAgent` unless you have a reason not to; the example above uses `callCanister` only because the redirect transport makes the request shape easier to see. If you do call it directly, verifying the certificate before trusting the reply is your job.
 
 ## Negotiate capabilities
 
@@ -413,7 +416,21 @@ Two failures do not arrive as the class you would expect, and they call for oppo
 
 8. **Diverging on a redirect replay.** With `UrlTransport`, issue the same requests and `memoize` steps in the same order on every load, and route anything a request depends on — a nonce above all — through `memoize`. Re-fetching a single-use value on the return load invalidates the flow.
 
-9. **A `callbackUrl` that is relative, carries a fragment, or is not allow-listed.** It must be absolute, fragment-free (the transport appends its own), on an origin you control, and declared in that origin's `/.well-known/ii-auth-callbacks`.
+9. **A `callbackUrl` that is relative, carries a fragment, or is not served correctly.** It must be absolute, fragment-free (the transport appends its own), on an origin you control, and declared in that origin's `/.well-known/ii-auth-callbacks` — matched exactly, so the full URL. Declaring it is not enough: the wallet reads that document **cross-origin**, so serve it as JSON with CORS or a correctly listed callback still fails validation.
+
+    ```json
+    { "callbacks": ["https://app.example.com/signer-callback"] }
+    ```
+
+    With `@dfinity/static-site` that is a `_headers` block:
+
+    ```
+    /.well-known/ii-auth-callbacks
+      Content-Type: application/json
+      Access-Control-Allow-Origin: *
+    ```
+
+    Validation fails closed — undeclared, unreadable, or not matching exactly, and the response never comes back. See the **internet-identity** skill, which documents the same file for redirect sign-in.
 
 10. **Top-level `await` in wallet code.** Every call here is async, and a module-load `await` fires a wallet request outside a user gesture — pitfall 1. Wrap calls in functions the UI invokes. Do not rely on the build to catch it: Vite ≤5 defaulted to `es2020` and rejected top-level `await` outright, while Vite 6+ defaults to `baseline-widely-available` and allows it.
 
