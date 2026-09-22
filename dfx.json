@@ -1,0 +1,32 @@
+{
+  "canisters": {
+    "skills": {
+      "type": "rust",
+      "candid": "canisters/skills/skills.did",
+      "package": "ic-skills-canister",
+      "webmcp": {
+        "enabled": true,
+        "name": "IC Skills",
+        "description": "Query Internet Computer skill documentation. Covers Motoko, Rust, ckBTC, Internet Identity, stable memory, HTTPS outcalls, EVM RPC, SNS, asset canisters, custom domains, and more.",
+        "expose_methods": ["list_skills", "get_skill", "search_skills"],
+        "certified_queries": ["list_skills", "get_skill", "search_skills"],
+        "descriptions": {
+          "list_skills": "List all available Internet Computer skill topics with their names, titles, descriptions, and categories",
+          "get_skill": "Get the full documentation for a specific IC skill by name (e.g. 'motoko', 'asset-canister', 'internet-identity')",
+          "search_skills": "Search Internet Computer skill documentation by keyword. Returns matching skills with their descriptions."
+        },
+        "param_descriptions": {
+          "get_skill.name": "Skill name in lowercase-hyphenated format, e.g. 'motoko', 'ckbtc', 'https-outcalls'",
+          "search_skills.query": "Keyword to match against skill names, titles, descriptions, and full content"
+        }
+      }
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}

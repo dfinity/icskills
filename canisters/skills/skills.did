@@ -1,0 +1,22 @@
+type SkillSummary = record {
+    name : text;
+    title : text;
+    description : text;
+    category : text;
+};
+
+type SkillDetail = record {
+    name : text;
+    title : text;
+    description : text;
+    category : text;
+    content : text;
+    license : opt text;
+    compatibility : opt text;
+};
+
+service : {
+    list_skills : () -> (vec SkillSummary) query;
+    get_skill : (text) -> (opt SkillDetail) query;
+    search_skills : (text) -> (vec SkillSummary) query;
+};
