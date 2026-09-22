@@ -254,6 +254,16 @@
         "Says an already-open page should prompt the user, for example a banner or dialog whose button runs the redirect",
         "Keeps the automatic redirect for the check a page runs on load, rather than calling the whole redirect approach wrong"
       ]
+    },
+    {
+      "name": "Adversarial: @icp-sdk/auth major must pair with the core major",
+      "prompt": "My dapp's package.json already pins \"@icp-sdk/core\": \"^5\". Give me the npm install command to add Internet Identity sign-in. No integration code.",
+      "expected_behaviors": [
+        "Does NOT give a bare unpinned `npm install @icp-sdk/auth` as the answer",
+        "States that the current @icp-sdk/auth major (10.x) peers @icp-sdk/core@^6 and therefore cannot install against a core ^5 pin",
+        "Offers a concrete resolution: either move core to ^6 alongside @icp-sdk/auth@^10, or stay on @icp-sdk/auth@^9 which peers core ^5",
+        "Does NOT recommend --legacy-peer-deps or --force to get past the peer conflict"
+      ]
     }
   ],
   "trigger_evals": {
