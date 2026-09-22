@@ -171,10 +171,10 @@ async function connect(signer: Signer) {
   ]);
 
   const accounts = await signer.getAccounts();
-  return {
-    account: accounts[0].owner,          // a Principal, already decoded
-    subaccount: accounts[0].subaccount   // Uint8Array | undefined
-  };
+  // { owner: Principal, subaccount?: Uint8Array } — already an IcrcAccount.
+  // Keep both halves: a wallet account with a subaccount is a different
+  // account, and dropping it silently reads and spends the wrong one.
+  return accounts[0];
 }
 ```
 
@@ -186,18 +186,19 @@ async function connect(signer: Signer) {
 
 ```typescript
 import { SignerAgent } from '@icp-sdk/signer/agent';
-import { IcrcLedgerCanister } from '@icp-sdk/canisters/ledger/icrc';
+import { IcrcLedgerCanister, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 import { HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
 
 const ICP_LEDGER = Principal.fromText('ryjl3-tyaaa-aaaaa-aaaba-cai');
 
 // Two clients against the same ledger: one for reads, one for writes.
-async function connectLedger(signer: Signer, account: Principal) {
+async function connectLedger(signer: Signer, account: IcrcAccount) {
   // One HttpAgent serves both. It answers reads directly, and SignerAgent
   // borrows it for the root key and status instead of building its own.
   const agent = await HttpAgent.create({ host: 'https://icp-api.io' });
-  const signerAgent = await SignerAgent.create({ signer, account, agent });
+  // SignerAgent routes calls as a principal; it has no subaccount field.
+  const signerAgent = await SignerAgent.create({ signer, account: account.owner, agent });
 
   return {
     read: IcrcLedgerCanister.create({ agent, canisterId: ICP_LEDGER }),
@@ -211,19 +212,26 @@ async function connectLedger(signer: Signer, account: Principal) {
 
 ```typescript
 async function showBalanceThenTransfer(
-  signer: Signer, account: Principal, to: Principal, amount: bigint
+  signer: Signer, account: IcrcAccount, to: Principal, amount: bigint
 ) {
-  const { read, write, signerAgent } = await connectLedger(signer, account);
+  const { read, write } = await connectLedger(signer, account);
 
-  const balance = await read.balance({ owner: account });                 // silent
-  const block = await write.transfer({ to: { owner: to, subaccount: [] }, amount }); // prompts
+  // Pass the account whole: balance() takes { owner, subaccount? }.
+  const balance = await read.balance(account);                            // silent
 
-  // Switches the account for later writes without rebuilding the agent.
-  signerAgent.replaceAccount(account);
+  const block = await write.transfer({                                    // prompts
+    to: { owner: to, subaccount: [] },
+    // The subaccount the tokens leave from. Omit it and the ledger spends
+    // the default subaccount, whatever the wallet handed you.
+    from_subaccount: account.subaccount,
+    amount
+  });
 
   return { balance, block };
 }
 ```
+
+`signerAgent.replaceAccount(principal)` switches which principal later writes are signed for, without rebuilding the agent.
 
 ## Path B — session delegation
 
@@ -301,9 +309,10 @@ Treat "disconnect" as clearing your own state — there is no wallet-side logout
 import { Signer, SignerError } from '@icp-sdk/signer';
 import { PostMessageTransportError } from '@icp-sdk/signer/web';
 import { Principal } from '@icp-sdk/core/principal';
+import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 
 async function safeTransfer(
-  signer: Signer, account: Principal, to: Principal, amount: bigint
+  signer: Signer, account: IcrcAccount, to: Principal, amount: bigint
 ) {
   try {
     await showBalanceThenTransfer(signer, account, to, amount);
@@ -372,7 +381,9 @@ Transport-level failures arrive as `PostMessageTransportError`, `UrlTransportErr
 
 11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5`, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
 
-12. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
+12. **Dropping the account's subaccount.** `getAccounts()` returns `{ owner, subaccount? }`, and an account with a subaccount is a *different* account. `SignerAgent` has no subaccount field — it routes calls as a principal — so the subaccount has to travel in the ledger call arguments instead: pass the account whole to `balance({ owner, subaccount })`, and set `from_subaccount` on a transfer. Omit it and you read one balance while spending from another, with no error.
+
+13. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
 
 ## Testing against a real wallet
 
@@ -394,11 +405,9 @@ Set `host: 'https://icp-api.io'` on the agent even when serving from `localhost`
 
 ## Expected Behavior
 
-- `getSupportedStandards()` resolves without a prompt and lists at least ICRC-25 and the transport's own standard.
 - The first `getAccounts()` opens the wallet, the user approves, and it resolves with one or more `{ owner: Principal, subaccount?: Uint8Array }`.
 - A ledger `transfer` through `SignerAgent` prompts once and resolves with a `bigint` block index.
 - Cancelling any prompt rejects with `SignerError` and `code === 3001`.
-- `requestDelegation` resolves with a `DelegationChain`, or throws if the wallet returned one broader or longer-lived than requested.
 - After a reload, read-only state renders with no popup; the first write reopens one.
 
 ## Additional References
