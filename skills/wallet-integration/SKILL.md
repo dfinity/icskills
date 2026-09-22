@@ -61,13 +61,13 @@ The transport URL must be a **secure context** — HTTPS, `localhost`, or `127.0
 
 ## Pick a transport
 
-The transport is the only part that knows *how* the wallet is reached. The `Signer` API above it is identical either way.
+The transport is the only part that knows *how* the wallet is reached; the `Signer` API above it is identical either way.
 
-| Transport | Standard | Mechanism | Use when |
-|-----------|----------|-----------|----------|
-| `PostMessageTransport` | ICRC-29 | Opens a popup, handshakes with `icrc29_status`, then `postMessage` | Default for web wallets like OISY |
-| `UrlTransport` | ICRC-167 | Navigates the top-level window; wallet returns to your `callbackUrl` | Mobile, or anywhere popups are blocked |
-| `BrowserExtensionTransport` | ICRC-94 | Extensions announce themselves on `window` events | Extension wallets; discovering unknown signers |
+| Transport | Mechanism | Use when |
+|-----------|-----------|----------|
+| `PostMessageTransport` | Popup, handshaken with `icrc29_status`, then `postMessage` | Default for web wallets like OISY |
+| `UrlTransport` | Navigates the top-level window; wallet returns to your `callbackUrl` | Mobile, or anywhere popups are blocked |
+| `BrowserExtensionTransport` | Extensions announce themselves on `window` events | Extension wallets; discovering unknown signers |
 
 ```typescript
 import { Signer } from '@icp-sdk/signer';
@@ -163,15 +163,19 @@ Permissions default to `ask_on_use`: the wallet prompts the first time each meth
 | `ask_on_use` | Prompts on first use (the default) |
 
 ```typescript
-// Optional: ask once, up front, instead of per method.
-await signer.requestPermissions([
-  { method: 'icrc27_accounts' },
-  { method: 'icrc49_call_canister' }
-]);
+async function connect(signer: Signer) {
+  // Optional: ask once, up front, instead of per method.
+  await signer.requestPermissions([
+    { method: 'icrc27_accounts' },
+    { method: 'icrc49_call_canister' }
+  ]);
 
-const accounts = await signer.getAccounts();
-const account = accounts[0].owner;            // a Principal, already decoded
-const subaccount = accounts[0].subaccount;    // Uint8Array | undefined
+  const accounts = await signer.getAccounts();
+  return {
+    account: accounts[0].owner,          // a Principal, already decoded
+    subaccount: accounts[0].subaccount   // Uint8Array | undefined
+  };
+}
 ```
 
 `getPermissions()` reads the current state without prompting. Do not cache it across sessions — a wallet may expire grants, after which they silently revert to `ask_on_use`.
@@ -188,28 +192,38 @@ import { Principal } from '@icp-sdk/core/principal';
 
 const ICP_LEDGER = Principal.fromText('ryjl3-tyaaa-aaaaa-aaaba-cai');
 
-async function transfer(signer: Signer, account: Principal, to: Principal, amount: bigint) {
-  // Reuse one HttpAgent for root key + status so SignerAgent does not build its own.
+// Two clients against the same ledger: one for reads, one for writes.
+async function connectLedger(signer: Signer, account: Principal) {
+  // One HttpAgent serves both. It answers reads directly, and SignerAgent
+  // borrows it for the root key and status instead of building its own.
   const agent = await HttpAgent.create({ host: 'https://icp-api.io' });
   const signerAgent = await SignerAgent.create({ signer, account, agent });
 
-  const ledger = IcrcLedgerCanister.create({ agent: signerAgent, canisterId: ICP_LEDGER });
-  return ledger.transfer({ to: { owner: to, subaccount: [] }, amount }); // → block index
+  return {
+    read: IcrcLedgerCanister.create({ agent, canisterId: ICP_LEDGER }),
+    write: IcrcLedgerCanister.create({ agent: signerAgent, canisterId: ICP_LEDGER }),
+    signerAgent
+  };
 }
 ```
 
-**Read with a plain agent, write with the signer agent.** `SignerAgent.query()` upgrades every query into a full canister call routed through the wallet — so a balance check becomes a user prompt and costs cycles. Build two clients against the same ledger:
+**Read with the plain agent, write with the signer agent.** `SignerAgent.query()` upgrades every query into a full canister call routed through the wallet, so a balance check would become a user prompt and cost cycles:
 
 ```typescript
-// Reads: anonymous agent, no prompt, no cycles.
-const readLedger = IcrcLedgerCanister.create({ agent, canisterId: ICP_LEDGER });
-const balance = await readLedger.balance({ owner: account });
+async function showBalanceThenTransfer(
+  signer: Signer, account: Principal, to: Principal, amount: bigint
+) {
+  const { read, write, signerAgent } = await connectLedger(signer, account);
 
-// Writes: signer agent, one prompt per call.
-const writeLedger = IcrcLedgerCanister.create({ agent: signerAgent, canisterId: ICP_LEDGER });
+  const balance = await read.balance({ owner: account });                 // silent
+  const block = await write.transfer({ to: { owner: to, subaccount: [] }, amount }); // prompts
+
+  // Switches the account for later writes without rebuilding the agent.
+  signerAgent.replaceAccount(account);
+
+  return { balance, block };
+}
 ```
-
-`signerAgent.replaceAccount(principal)` switches the account for later calls without rebuilding the agent.
 
 ## Path B — session delegation
 
@@ -243,14 +257,16 @@ async function startSession(signer: Signer, backend: Principal) {
 `autoCloseTransportChannel` defaults to `true`: the channel closes ~200 ms after each response, so the popup does not linger. For a multi-step flow that awaits your own async work between requests, turn it off or the channel closes underneath you.
 
 ```typescript
-signer.autoCloseTransportChannel = false;
-try {
-  const accounts = await signer.getAccounts();
-  await recordSomethingOnYourServer(accounts);   // channel stays open
-  await transfer(/* ... */);
-} finally {
-  signer.autoCloseTransportChannel = true;
-  await signer.closeChannel();
+async function multiStepFlow(signer: Signer) {
+  signer.autoCloseTransportChannel = false;
+  try {
+    const accounts = await signer.getAccounts();
+    await saveSelectionToYourBackend(accounts);  // your own async work; channel stays open
+    return await signer.requestPermissions([{ method: 'icrc49_call_canister' }]);
+  } finally {
+    signer.autoCloseTransportChannel = true;
+    await signer.closeChannel();
+  }
 }
 ```
 
@@ -260,11 +276,15 @@ try {
 const SESSION_KEY = 'wallet-principal';
 
 // On connect: remember who, not the channel.
-sessionStorage.setItem(SESSION_KEY, account.toText());
+function rememberAccount(account: Principal) {
+  sessionStorage.setItem(SESSION_KEY, account.toText());
+}
 
-// On reload: balances and history render immediately, with no popup.
-const stored = sessionStorage.getItem(SESSION_KEY);
-const account = stored ? Principal.fromText(stored) : null;
+// On reload: read-only state renders from this immediately, with no popup.
+function restoreAccount(): Principal | null {
+  const stored = sessionStorage.getItem(SESSION_KEY);
+  return stored ? Principal.fromText(stored) : null;
+}
 
 // On the first write after a reload: this reopens the popup briefly.
 async function ensureSignerAgent(signer: Signer, account: Principal, agent: HttpAgent) {
@@ -280,25 +300,30 @@ Treat "disconnect" as clearing your own state — there is no wallet-side logout
 ```typescript
 import { Signer, SignerError } from '@icp-sdk/signer';
 import { PostMessageTransportError } from '@icp-sdk/signer/web';
+import { Principal } from '@icp-sdk/core/principal';
 
-try {
-  await transfer(/* ... */);
-} catch (err) {
-  if (err instanceof SignerError) {
-    switch (err.code) {
-      case 3001: return;                       // user cancelled — not a failure
-      case 3000: showPermissionHelp(); return; // permission denied
-      case 2000: showUnsupported(); return;    // wallet does not support the method
-      case 4001: promptReconnect(); return;    // channel closed
-      default: throw err;
+async function safeTransfer(
+  signer: Signer, account: Principal, to: Principal, amount: bigint
+) {
+  try {
+    await showBalanceThenTransfer(signer, account, to, amount);
+  } catch (err) {
+    if (err instanceof SignerError) {
+      switch (err.code) {
+        case 3001: return;                       // user cancelled — not a failure
+        case 3000: showPermissionHelp(); return; // permission denied
+        case 2000: showUnsupported(); return;    // wallet does not support the method
+        case 4001: promptReconnect(); return;    // channel closed
+        default: throw err;
+      }
     }
+    if (err instanceof PostMessageTransportError) {
+      // Popup blocked, or the ICRC-29 handshake timed out.
+      promptReconnect();
+      return;
+    }
+    throw err;
   }
-  if (err instanceof PostMessageTransportError) {
-    // Popup blocked, or the ICRC-29 handshake timed out.
-    promptReconnect();
-    return;
-  }
-  throw err;
 }
 ```
 
@@ -371,7 +396,6 @@ Set `host: 'https://icp-api.io'` on the agent even when serving from `localhost`
 
 - `getSupportedStandards()` resolves without a prompt and lists at least ICRC-25 and the transport's own standard.
 - The first `getAccounts()` opens the wallet, the user approves, and it resolves with one or more `{ owner: Principal, subaccount?: Uint8Array }`.
-- With `autoCloseTransportChannel` at its default, the popup closes shortly after each response.
 - A ledger `transfer` through `SignerAgent` prompts once and resolves with a `bigint` block index.
 - Cancelling any prompt rejects with `SignerError` and `code === 3001`.
 - `requestDelegation` resolves with a `DelegationChain`, or throws if the wallet returned one broader or longer-lived than requested.
