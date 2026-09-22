@@ -171,8 +171,11 @@ import type { PermissionScope, Signer } from '@icp-sdk/signer';
 // The two scopes this skill uses:
 //   [{ method: 'icrc27_accounts' }, { method: 'icrc49_call_canister' }]
 async function connect(signer: Signer, scopes?: PermissionScope[]) {
-  // Omit `scopes` to leave every method on ask_on_use. Supply them to trade
-  // several later prompts for one up front. Ask only for what your path uses:
+  // Omitting `scopes` sets nothing: it leaves whatever states the signer
+  // already holds for your origin, which a previous session may have left
+  // `granted` or `denied`. Do not count on being prompted — getPermissions()
+  // is the only way to know. Supply scopes to trade several later prompts for
+  // one up front, and ask only for what your path uses:
   // a scope the signer does not support is dropped before the prompt is drawn,
   // so it costs nothing, but a supported one you never exercise is shown to
   // the user for no reason.
