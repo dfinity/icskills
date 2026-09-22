@@ -348,7 +348,13 @@ async function safeTransfer(
     // ICRC-25 numbers errors by range and a signer may return a code this
     // switch has never seen, so fall back on the range rather than rethrowing.
     switch (Math.floor(err.code / 1000)) {
-      case 3: return;                          // 3xxx user action — nothing broke
+      case 3:
+        // 3xxx is "user action", so nothing broke — but 3001 is the only code
+        // where silence is right, because there you know they cancelled on
+        // purpose. For an unnamed 3xxx say the action did not go through, or
+        // the UI sits unchanged after the user pressed the button.
+        showActionNotCompleted();
+        return;
       case 2: showUnsupported(); return;       // 2xxx not supported
       case 4: promptReconnect(); return;       // 4xxx transport channel
       default: throw err;                      // 1xxx generic, and anything else
