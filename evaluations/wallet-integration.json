@@ -53,7 +53,7 @@
       "prompt": "After a page refresh my OISY connection is gone and the balances disappear until the user clicks connect again. How should I handle this with @icp-sdk/signer? Describe the approach, no code.",
       "expected_behaviors": [
         "States that the transport channel cannot survive a reload — there is no wallet session to restore",
-        "Persists the account principal and renders read-only state from it with an ordinary (anonymous) agent, without opening the wallet",
+        "Persists the account and renders read-only state from it with an ordinary (anonymous) agent, without opening the wallet",
         "Re-establishes the signer lazily on the first write, accepting that this reopens the wallet",
         "Does NOT suggest persisting the signer, the channel, or the SignerAgent itself"
       ]

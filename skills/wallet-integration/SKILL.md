@@ -281,23 +281,33 @@ async function multiStepFlow(signer: Signer) {
 **A connection does not survive a page reload.** There is no persistent session to restore — the channel is a live `postMessage` link to a popup that is gone. The workable pattern is to persist only the principal, render read-only state from it with an anonymous agent, and re-establish the signer lazily on the first write:
 
 ```typescript
-const SESSION_KEY = 'wallet-principal';
+import { decodeIcrcAccount, encodeIcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 
-// On connect: remember who, not the channel.
-function rememberAccount(account: Principal) {
-  sessionStorage.setItem(SESSION_KEY, account.toText());
+const SESSION_KEY = 'wallet-account';
+
+// On connect: remember the account, not the channel. The ICRC-1 textual
+// encoding round-trips owner and subaccount as one string, so the
+// subaccount survives the reload too (see pitfall 12).
+function rememberAccount(account: IcrcAccount) {
+  sessionStorage.setItem(SESSION_KEY, encodeIcrcAccount(account));
 }
 
 // On reload: read-only state renders from this immediately, with no popup.
-function restoreAccount(): Principal | null {
+function restoreAccount(): IcrcAccount | null {
   const stored = sessionStorage.getItem(SESSION_KEY);
-  return stored ? Principal.fromText(stored) : null;
+  if (stored === null) return null;
+  try {
+    return decodeIcrcAccount(stored);
+  } catch {
+    sessionStorage.removeItem(SESSION_KEY);  // stale or malformed
+    return null;
+  }
 }
 
 // On the first write after a reload: this reopens the popup briefly.
-async function ensureSignerAgent(signer: Signer, account: Principal, agent: HttpAgent) {
+async function ensureSignerAgent(signer: Signer, account: IcrcAccount, agent: HttpAgent) {
   await signer.getAccounts();  // re-establishes the channel
-  return SignerAgent.create({ signer, account, agent });
+  return SignerAgent.create({ signer, account: account.owner, agent });
 }
 ```
 
