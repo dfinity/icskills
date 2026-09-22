@@ -57,6 +57,16 @@
         "Re-establishes the signer lazily on the first write, accepting that this reopens the wallet",
         "Does NOT suggest persisting the signer, the channel, or the SignerAgent itself"
       ]
+    },
+    {
+      "name": "Adversarial: a blocked wallet popup is not the error class you expect",
+      "prompt": "My OISY connect button fails in Safari, but my `catch` never enters the `err instanceof PostMessageTransportError` branch. I'm on @icp-sdk/signer. What's going on and how should the catch block look? Short answer, catch block only.",
+      "expected_behaviors": [
+        "States that Signer wraps the transport error into a SignerError with code 4000, so an instanceof check on the thrown error cannot match",
+        "Says the original transport error is available as err.cause",
+        "Handles code 4000 as the reconnect case, not only 4001",
+        "Does NOT claim signer methods throw PostMessageTransportError directly"
+      ]
     }
   ],
   "trigger_evals": {

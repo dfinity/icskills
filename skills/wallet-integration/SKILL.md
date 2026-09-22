@@ -154,7 +154,7 @@ async function capabilities(signer: Signer) {
 
 ## Permissions and accounts
 
-Permissions default to `ask_on_use`: the wallet prompts the first time each method is used. `requestPermissions` is **optional** — it trades several later prompts for one up front.
+Most signers start every scope at `ask_on_use`, prompting the first time each method is used — but ICRC-25 leaves the initial state to signer policy, so `getPermissions()` is the only authority. `requestPermissions` is **optional**: it trades several later prompts for one up front.
 
 | State | Behaviour |
 |-------|-----------|
@@ -169,9 +169,10 @@ import type { PermissionScope } from '@icp-sdk/signer';
 // Path B: [{ method: 'icrc27_accounts' }, { method: 'icrc34_delegation' }]
 async function connect(signer: Signer, scopes?: PermissionScope[]) {
   // Omit `scopes` to leave every method on ask_on_use. Supply them to trade
-  // several later prompts for one up front, and ask only for what your path
-  // uses — a signer ignores scopes it does not support, so over-asking does
-  // not fail, it just shows the user a permission you never exercise.
+  // several later prompts for one up front. Ask only for what your path uses:
+  // a scope the signer does not support is dropped before the prompt is drawn,
+  // so it costs nothing, but a supported one you never exercise is shown to
+  // the user for no reason.
   if (scopes !== undefined) {
     await signer.requestPermissions(scopes);
   }
@@ -311,7 +312,8 @@ function restoreAccount(): IcrcAccount | null {
   }
 }
 
-// On the first write after a reload: this reopens the popup briefly.
+// On the first write after a reload. This reopens the popup, so it must run
+// from the click that starts that write — pitfall 1 applies here too.
 async function ensureSignerAgent(signer: Signer, account: IcrcAccount, agent: HttpAgent) {
   const offered = await signer.getAccounts();  // re-establishes the channel
   // The user may have switched accounts while the page was gone, so the stored
@@ -347,14 +349,14 @@ async function safeTransfer(
         case 3001: return;                       // user cancelled — not a failure
         case 3000: showPermissionHelp(); return; // permission denied
         case 2000: showUnsupported(); return;    // wallet does not support the method
-        case 4001: promptReconnect(); return;    // channel closed
+        case 4000:                               // every transport failure lands here
+        case 4001:                               // only if the signer itself returns it
+          // The transport error is the `cause`, never the error you caught.
+          if (err.cause instanceof PostMessageTransportError) showPopupBlockedHelp();
+          else promptReconnect();
+          return;
         default: throw err;
       }
-    }
-    if (err instanceof PostMessageTransportError) {
-      // Popup blocked, or the ICRC-29 handshake timed out.
-      promptReconnect();
-      return;
     }
     // Anything else — including SignerAgentError, where the wallet responded
     // but the response failed validation — is not a connectivity fault.
@@ -371,12 +373,12 @@ These are the ICRC-25 codes — the only ones portable across wallets:
 | `2000` | Not supported | Negotiating capabilities first |
 | `3000` | Permission not granted | Explaining what to re-grant |
 | `3001` | **Action aborted — the user cancelled** | Returning quietly; this is normal |
-| `4000` | Network error | Retrying |
-| `4001` | Transport channel closed | Reconnecting |
+| `4000` | Network error | Reconnecting — the library also reports every transport failure here |
+| `4001` | Transport channel closed | Reconnecting (signer-reported only; see below) |
 
 Two other error classes are **not** `SignerError`, and they call for opposite reactions:
 
-- **`PostMessageTransportError` / `UrlTransportError` / `BrowserExtensionTransportError`** — the channel never carried a response. Reconnecting is the right reaction.
+- **Transport failures arrive as `SignerError` with code `4000`.** `Signer.openChannel()` catches whatever the transport threw — `PostMessageTransportError`, `UrlTransportError`, `BrowserExtensionTransportError` — and rethrows it as a `SignerError` with the original as `cause`. So a blocked popup is *not* `instanceof PostMessageTransportError`; test `err.cause` for that. The library also never emits `4001`: "channel closed before a response" is `4000` too, and `4001` reaches you only if the signer itself returns it.
 - **`SignerAgentError`** — the wallet *did* respond, and the response failed validation: the returned content map did not match the call you sent (canister, method, argument, sender, nonce), the certificate did not verify against the IC root key, or the reply was absent from the certified tree. `SignerAgent` runs those checks for you, so this is a wallet returning something it should not have. Do not treat it as a connectivity fault and retry — surface it.
 
 ## Pitfalls
@@ -407,9 +409,9 @@ Two other error classes are **not** `SignerError`, and they call for opposite re
 
 9. **A `callbackUrl` that is relative, carries a fragment, or is not allow-listed.** It must be absolute, fragment-free (the transport appends its own), on an origin you control, and declared in that origin's `/.well-known/ii-auth-callbacks`.
 
-10. **Top-level `await` in wallet code.** Every call here is async. Vite's default `es2020` target rejects top-level `await`; wrap calls in functions rather than raising `build.target`.
+10. **Top-level `await` in wallet code.** Every call here is async, and a module-load `await` fires a wallet request outside a user gesture — pitfall 1. Wrap calls in functions the UI invokes. Do not rely on the build to catch it: Vite ≤5 defaulted to `es2020` and rejected top-level `await` outright, while Vite 6+ defaults to `baseline-widely-available` and allows it.
 
-11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5`, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
+11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5` or older, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
 
 12. **Treating an account as just a principal.** `getAccounts()` returns `{ owner, subaccount? }` — an `IcrcAccount`. The subaccount is usually absent, because signers commonly offer only the default one, so code that assumes a bare principal works until it meets a signer that does not. Carry the account whole and let the library helpers do the rest: **compare** with `encodeIcrcAccount()` and never `owner` alone (that encoding normalizes the default subaccount, so the same principal with a *different* one is correctly a different account), **persist** with `encodeIcrcAccount()` / `decodeIcrcAccount()`, and **send** with `from_subaccount` for the sender plus `toCandidAccount()` for the recipient. `SignerAgent` is the exception — its `account` is a `Principal`, which is why the subaccount travels in the ledger call arguments instead.
 
