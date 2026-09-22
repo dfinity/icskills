@@ -163,12 +163,16 @@ Permissions default to `ask_on_use`: the wallet prompts the first time each meth
 | `ask_on_use` | Prompts on first use (the default) |
 
 ```typescript
-async function connect(signer: Signer) {
-  // Optional: ask once, up front, instead of per method.
-  await signer.requestPermissions([
-    { method: 'icrc27_accounts' },
-    { method: 'icrc49_call_canister' }
-  ]);
+import type { PermissionScope } from '@icp-sdk/signer';
+
+// Path A: [{ method: 'icrc27_accounts' }, { method: 'icrc49_call_canister' }]
+// Path B: [{ method: 'icrc27_accounts' }, { method: 'icrc34_delegation' }]
+async function connect(signer: Signer, scopes: PermissionScope[]) {
+  // Optional: ask once, up front, instead of per method. Ask only for what
+  // your path uses — a signer ignores scopes it does not support, so
+  // over-asking does not fail, it just shows the user a permission you
+  // never exercise.
+  await signer.requestPermissions(scopes);
 
   const accounts = await signer.getAccounts();
   // { owner: Principal, subaccount?: Uint8Array } — already an IcrcAccount.
@@ -306,7 +310,14 @@ function restoreAccount(): IcrcAccount | null {
 
 // On the first write after a reload: this reopens the popup briefly.
 async function ensureSignerAgent(signer: Signer, account: IcrcAccount, agent: HttpAgent) {
-  await signer.getAccounts();  // re-establishes the channel
+  const offered = await signer.getAccounts();  // re-establishes the channel
+  // The user may have switched accounts in the wallet while the page was gone,
+  // so the stored one is a guess until the wallet confirms it.
+  const text = account.owner.toText();
+  if (!offered.some(({ owner }) => owner.toText() === text)) {
+    sessionStorage.removeItem(SESSION_KEY);
+    throw new Error('the wallet no longer offers the stored account; reconnect');
+  }
   return SignerAgent.create({ signer, account: account.owner, agent });
 }
 ```
