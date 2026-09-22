@@ -82,6 +82,7 @@ const signer = new Signer({
 ### Extension (ICRC-94)
 
 ```typescript
+import { Signer } from '@icp-sdk/signer';
 import { BrowserExtensionTransport } from '@icp-sdk/signer/extension';
 
 async function pickExtensionSigner() {
@@ -102,10 +103,10 @@ async function pickExtensionSigner() {
 2. **`memoize()` is the only place a flow may await anything that is not a signer request.** Its result is journaled, so a value stays stable across the redirect.
 
 ```typescript
+import { DelegationIdentity, ECDSAKeyIdentity, Ed25519KeyIdentity } from '@icp-sdk/core/identity';
+import type { Principal } from '@icp-sdk/core/principal';
 import { Signer } from '@icp-sdk/signer';
 import { UrlTransport } from '@icp-sdk/signer/web';
-import { DelegationIdentity, Ed25519KeyIdentity } from '@icp-sdk/core/identity';
-import type { Principal } from '@icp-sdk/core/principal';
 
 const transport = new UrlTransport({
   url: 'https://id.ai/icrc-167',
@@ -140,6 +141,8 @@ async function runRedirectFlow(backend: Principal) {
 Skip this only if you hardcode one wallet and know what it supports. For generic integration it is the step that keeps you honest — ICRC-34 and ICRC-49 are independent, and a signer may offer either, both, or neither.
 
 ```typescript
+import { Signer } from '@icp-sdk/signer';
+
 async function capabilities(signer: Signer) {
   const standards = await signer.getSupportedStandards(); // [{ name: 'ICRC-27', url }, ...]
   const names = new Set(standards.map(({ name }) => name));
@@ -163,7 +166,9 @@ Most signers start every scope at `ask_on_use`, prompting the first time each me
 | `ask_on_use` | Prompts on first use (the default) |
 
 ```typescript
-import type { PermissionScope } from '@icp-sdk/signer';
+import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { Principal } from '@icp-sdk/core/principal';
+import type { PermissionScope, Signer } from '@icp-sdk/signer';
 
 // Path A: [{ method: 'icrc27_accounts' }, { method: 'icrc49_call_canister' }]
 // Path B: [{ method: 'icrc27_accounts' }, { method: 'icrc34_delegation' }]
@@ -193,10 +198,11 @@ async function connect(signer: Signer, scopes?: PermissionScope[]) {
 `SignerAgent` implements `Agent`, so it drops into anything that takes one: a ledger client from `@icp-sdk/canisters`, or an actor from `@icp-sdk/bindgen` for your own canister. Each call becomes a wallet prompt.
 
 ```typescript
-import { SignerAgent } from '@icp-sdk/signer/agent';
 import { IcrcLedgerCanister, toCandidAccount, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 import { HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
+import { Signer } from '@icp-sdk/signer';
+import { SignerAgent } from '@icp-sdk/signer/agent';
 
 const ICP_LEDGER = Principal.fromText('ryjl3-tyaaa-aaaaa-aaaba-cai');
 
@@ -219,6 +225,9 @@ async function connectLedger(signer: Signer, account: IcrcAccount) {
 **Read with the plain agent, write with the signer agent.** `SignerAgent.query()` upgrades every query into a full canister call routed through the wallet, so a balance check would become a user prompt and cost cycles:
 
 ```typescript
+import { type IcrcAccount, toCandidAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { Signer } from '@icp-sdk/signer';
+
 async function showBalanceThenTransfer(
   signer: Signer, account: IcrcAccount, to: IcrcAccount, amount: bigint
 ) {
@@ -248,6 +257,8 @@ The wallet delegates to a key your app generates. Afterwards you hold an ordinar
 ```typescript
 import { HttpAgent } from '@icp-sdk/core/agent';
 import { DelegationIdentity, ECDSAKeyIdentity } from '@icp-sdk/core/identity';
+import { Principal } from '@icp-sdk/core/principal';
+import { Signer } from '@icp-sdk/signer';
 
 async function startSession(signer: Signer, backend: Principal) {
   // Non-extractable keys cannot be exfiltrated; prefer ECDSA when you do not
@@ -273,6 +284,8 @@ async function startSession(signer: Signer, backend: Principal) {
 `autoCloseTransportChannel` defaults to `true`: the channel closes ~200 ms after each response, so the popup does not linger. For a multi-step flow that awaits your own async work between requests, turn it off or the channel closes underneath you.
 
 ```typescript
+import { Signer } from '@icp-sdk/signer';
+
 async function multiStepFlow(signer: Signer) {
   signer.autoCloseTransportChannel = false;
   try {
@@ -289,7 +302,10 @@ async function multiStepFlow(signer: Signer) {
 **A connection does not survive a page reload.** There is no persistent session to restore — the channel is a live `postMessage` link to a popup that is gone. The workable pattern is to persist the account, render read-only state from it with an anonymous agent, and re-establish the signer lazily on the first write:
 
 ```typescript
-import { decodeIcrcAccount, encodeIcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { type IcrcAccount, decodeIcrcAccount, encodeIcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { HttpAgent } from '@icp-sdk/core/agent';
+import { Signer } from '@icp-sdk/signer';
+import { SignerAgent } from '@icp-sdk/signer/agent';
 
 const SESSION_KEY = 'wallet-account';
 
