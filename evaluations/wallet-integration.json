@@ -39,6 +39,15 @@
       ]
     },
     {
+      "name": "Adversarial: getAccounts() returns a list, not an account",
+      "prompt": "I'm connecting OISY with @icp-sdk/signer and I need the user's account so I can show their balance. Show me just the connect function — no ledger setup, no transfer.",
+      "expected_behaviors": [
+        "Does NOT index getAccounts() as accounts[0] without handling the list being empty",
+        "States or handles that the list can be empty because the user may decline to share any account",
+        "Treats more than one account as possible rather than silently picking the first"
+      ]
+    },
+    {
       "name": "Connection does not survive a page reload",
       "prompt": "After a page refresh my OISY connection is gone and the balances disappear until the user clicks connect again. How should I handle this with @icp-sdk/signer? Describe the approach, no code.",
       "expected_behaviors": [
@@ -56,6 +65,15 @@
         "Says the original transport error is available as err.cause",
         "Handles code 4000, not only 4001 (either as reconnect, or split by err.cause into popup-blocked vs reconnect)",
         "Does NOT claim signer methods throw PostMessageTransportError directly"
+      ]
+    },
+    {
+      "name": "Adversarial: an ICRC-25 code the table does not name",
+      "prompt": "My wallet returned a SignerError with code 3002, which isn't one of the codes listed in ICRC-25. I'm using @icp-sdk/signer. How should my catch block deal with codes it doesn't recognise? Short answer.",
+      "expected_behaviors": [
+        "Explains that ICRC-25 assigns meaning by range, not only by the named codes, so 3002 inherits the 3xxx meaning",
+        "Handles 3002 as a user-action outcome rather than as a failure to rethrow",
+        "Recommends falling back on the range after the named codes, instead of a bare default that rethrows"
       ]
     }
   ],

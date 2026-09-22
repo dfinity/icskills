@@ -121,6 +121,9 @@ async function runRedirectFlow(
     Array.from(await fetchNonceFromYourBackend())
   );
 
+  // callCanister is the raw ICRC-49 primitive: it checks only that the reply
+  // carries a contentMap and a certificate. Verifying them is the caller's
+  // job — see below.
   return signer.callCanister({
     canisterId,
     sender: account.owner,
@@ -130,6 +133,8 @@ async function runRedirectFlow(
   });
 }
 ```
+
+**`callCanister` returns unverified wallet output.** It resolves with the CBOR `{ contentMap, certificate }` and validates only that both are present and decodable — it does not check the content map against the call you sent, and it does not verify the certificate against the IC root key. Those checks live in `SignerAgent`, which is why a `SignerAgent` call can raise `SignerAgentError`. If you use `callCanister` directly, verify the certificate before you trust the reply; if you would rather not, route the call through `SignerAgent` and let it do this for you.
 
 ## Negotiate capabilities
 
@@ -158,11 +163,9 @@ Most signers start every scope at `ask_on_use`, prompting the first time each me
 |-------|-----------|
 | `granted` | Proceeds without prompting |
 | `denied` | Rejected immediately with error `3000` |
-| `ask_on_use` | Prompts on first use (the default) |
+| `ask_on_use` | Prompts on first use (the usual initial state) |
 
 ```typescript
-import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
-import { Principal } from '@icp-sdk/core/principal';
 import type { PermissionScope, Signer } from '@icp-sdk/signer';
 
 // The two scopes this skill uses:
@@ -195,7 +198,7 @@ async function connect(signer: Signer, scopes?: PermissionScope[]) {
 `SignerAgent` implements `Agent`, so it drops into anything that takes one: a ledger client from `@icp-sdk/canisters`, or an actor from `@icp-sdk/bindgen` for your own canister. Each call becomes a wallet prompt.
 
 ```typescript
-import { IcrcLedgerCanister, toCandidAccount, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { IcrcLedgerCanister, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 import { HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
 import { Signer } from '@icp-sdk/signer';
@@ -320,7 +323,6 @@ Treat "disconnect" as clearing your own state — there is no wallet-side logout
 ```typescript
 import { Signer, SignerError } from '@icp-sdk/signer';
 import { PostMessageTransportError } from '@icp-sdk/signer/web';
-import { Principal } from '@icp-sdk/core/principal';
 import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
 
 async function safeTransfer(
