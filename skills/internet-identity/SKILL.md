@@ -73,7 +73,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
     npm error peer @icp-sdk/core@"^6" from @icp-sdk/auth@10.0.0
     ```
 
-    Do not clear it with `--legacy-peer-deps` — that installs two copies of core rather than fixing the pair. Pin `@icp-sdk/auth@^10` with `@icp-sdk/core@^6`, or stay on `@icp-sdk/auth@^9` if something else holds you on core 5.
+    Do not clear it with `--legacy-peer-deps` — that skips the peer check and installs the mismatched pair anyway. Pin `@icp-sdk/auth@^10` with `@icp-sdk/core@^6`, or stay on `@icp-sdk/auth@^9` if something else holds you on core 5.
 
 ## Using II during local development
 
