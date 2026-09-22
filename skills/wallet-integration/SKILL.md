@@ -116,7 +116,7 @@ async function runRedirectFlow(
 
   // Non-request async work goes through memoize() so its result survives the
   // redirect. It persists via JSON, so hand it something serializable — a
-  // Uint8Array is not (see pitfall 6).
+  // Uint8Array is not (see pitfall 7).
   const nonceBytes = await transport.memoize(async () =>
     Array.from(await fetchNonceFromYourBackend())
   );
@@ -177,12 +177,14 @@ async function connect(signer: Signer, scopes?: PermissionScope[]) {
     await signer.requestPermissions(scopes);
   }
 
-  const accounts = await signer.getAccounts();
-  // { owner: Principal, subaccount?: Uint8Array } — already an IcrcAccount.
-  // Usually there is no subaccount: signers commonly offer only the default
-  // one. Return the element whole anyway — it costs nothing, and a signer
-  // that does offer subaccounts breaks code that assumed otherwise.
-  return accounts[0];
+  // ICRC-27 returns the accounts the user chose to share, as a list: it can be
+  // empty (they declined) and it can hold several. Hand it back whole and let
+  // the user pick rather than indexing blindly — see pitfall 4.
+  //
+  // Each element is { owner: Principal, subaccount?: Uint8Array } — already an
+  // IcrcAccount. Usually there is no subaccount, since signers commonly offer
+  // only the default one, but keep both halves anyway: it costs nothing.
+  return signer.getAccounts();
 }
 ```
 
@@ -278,7 +280,7 @@ const SESSION_KEY = 'wallet-account';
 
 // On connect: remember the account, not the channel. The ICRC-1 textual
 // encoding round-trips owner and subaccount as one string, so the
-// subaccount survives the reload too (see pitfall 11).
+// subaccount survives the reload too (see pitfall 12).
 function rememberAccount(account: IcrcAccount) {
   sessionStorage.setItem(SESSION_KEY, encodeIcrcAccount(account));
 }
@@ -385,25 +387,27 @@ Two failures do not arrive as the class you would expect, and they call for oppo
 
 2. **Reading through `SignerAgent`.** `query()` is upgraded to an update call routed through the wallet, so every read costs the user an approval interaction. Public data — a ledger balance, token metadata — needs no wallet: read it with a plain `HttpAgent`, anonymous by default. Only writes go through `SignerAgent`.
 
-3. **Expecting a connection to survive a reload.** No channel outlives the page. Persist the account — both halves, per pitfall 11 — for read-only rendering, and reconnect on first write. See above.
+3. **Expecting a connection to survive a reload.** No channel outlives the page. Persist the account — both halves, per pitfall 12 — for read-only rendering, and reconnect on first write. See above.
 
-4. **Assuming a wallet's capabilities.** Call `getSupportedStandards()`. A signer may list accounts (ICRC-27) without executing calls (ICRC-49), or speak a transport you have not built for.
+4. **Indexing `getAccounts()` blindly.** It returns a *list* of the accounts the user chose to share. ICRC-27 lets the signer prompt for that selection, so the list can be **empty** — the user declined, which is not an error — and it can hold **several**, where `[0]` silently picks for them. `accounts[0]` on an empty list is `undefined`, so the crash lands later at `.owner` rather than at the call. Check the length, and offer a picker when there is more than one.
 
-5. **Coding against one wallet's non-standard error codes.** ICRC-25 owns `1xxx`–`4xxx` and names `1000`/`2000`/`3000`/`3001`/`4000`/`4001` inside them. A code outside those ranges is a vendor extension and does not port — earlier revisions of this skill documented a `503 BUSY` that exists only in `@dfinity/oisy-wallet-signer` and in no standard. Branch on the named codes, fall back on the range, and treat anything outside the ranges as generic.
+5. **Assuming a wallet's capabilities.** Call `getSupportedStandards()`. A signer may list accounts (ICRC-27) without executing calls (ICRC-49), or speak a transport you have not built for.
 
-6. **Journaling something non-serializable through `memoize()`.** It persists via JSON, so a `Uint8Array` round-trips as `{"0":1,"1":2,…}` and a `CryptoKey` as `{}` — silently, with the flow failing on return rather than at the call. Convert to a plain array (or hex) before memoizing and back afterwards.
+6. **Coding against one wallet's non-standard error codes.** ICRC-25 owns `1xxx`–`4xxx` and names `1000`/`2000`/`3000`/`3001`/`4000`/`4001` inside them. A code outside those ranges is a vendor extension and does not port — earlier revisions of this skill documented a `503 BUSY` that exists only in `@dfinity/oisy-wallet-signer` and in no standard. Branch on the named codes, fall back on the range, and treat anything outside the ranges as generic.
 
-7. **Diverging on a redirect replay.** With `UrlTransport`, issue the same requests and `memoize` steps in the same order on every load, and route anything a request depends on — a nonce above all — through `memoize`. Re-fetching a single-use value on the return load invalidates the flow.
+7. **Journaling something non-serializable through `memoize()`.** It persists via JSON, so a `Uint8Array` round-trips as `{"0":1,"1":2,…}` and a `CryptoKey` as `{}` — silently, with the flow failing on return rather than at the call. Convert to a plain array (or hex) before memoizing and back afterwards.
 
-8. **A `callbackUrl` that is relative, carries a fragment, or is not allow-listed.** It must be absolute, fragment-free (the transport appends its own), on an origin you control, and declared in that origin's `/.well-known/ii-auth-callbacks`.
+8. **Diverging on a redirect replay.** With `UrlTransport`, issue the same requests and `memoize` steps in the same order on every load, and route anything a request depends on — a nonce above all — through `memoize`. Re-fetching a single-use value on the return load invalidates the flow.
 
-9. **Top-level `await` in wallet code.** Every call here is async, and a module-load `await` fires a wallet request outside a user gesture — pitfall 1. Wrap calls in functions the UI invokes. Do not rely on the build to catch it: Vite ≤5 defaulted to `es2020` and rejected top-level `await` outright, while Vite 6+ defaults to `baseline-widely-available` and allows it.
+9. **A `callbackUrl` that is relative, carries a fragment, or is not allow-listed.** It must be absolute, fragment-free (the transport appends its own), on an origin you control, and declared in that origin's `/.well-known/ii-auth-callbacks`.
 
-10. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5` or older, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
+10. **Top-level `await` in wallet code.** Every call here is async, and a module-load `await` fires a wallet request outside a user gesture — pitfall 1. Wrap calls in functions the UI invokes. Do not rely on the build to catch it: Vite ≤5 defaulted to `es2020` and rejected top-level `await` outright, while Vite 6+ defaults to `baseline-widely-available` and allows it.
 
-11. **Treating an account as just a principal.** `getAccounts()` returns `{ owner, subaccount? }` — an `IcrcAccount`. The subaccount is usually absent, because signers commonly offer only the default one, so code that assumes a bare principal works until it meets a signer that does not. Carry the account whole and let the library helpers do the rest: **compare** with `encodeIcrcAccount()` and never `owner` alone (that encoding normalizes the default subaccount, so the same principal with a *different* one is correctly a different account), **persist** with `encodeIcrcAccount()` / `decodeIcrcAccount()`, and **send** with `from_subaccount` for the sender plus `toCandidAccount()` for the recipient. `SignerAgent` is the exception — its `account` is a `Principal`, which is why the subaccount travels in the ledger call arguments instead.
+11. **`@icp-sdk/canisters@^3` with `@icp-sdk/signer@^6`.** They cannot coexist — canisters 3 peers `@icp-sdk/core@^5` or older, signer 6 peers `^6`, so `npm install` fails with `ERESOLVE`. Move to `@icp-sdk/canisters@^4` and `@dfinity/utils@^5`. Do not reach for `--legacy-peer-deps`: it skips the peer check and installs the mismatched pair anyway, so the incompatibility surfaces at runtime instead of at install time.
 
-12. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
+12. **Treating an account as just a principal.** `getAccounts()` returns `{ owner, subaccount? }` — an `IcrcAccount`. The subaccount is usually absent, because signers commonly offer only the default one, so code that assumes a bare principal works until it meets a signer that does not. Carry the account whole and let the library helpers do the rest: **compare** with `encodeIcrcAccount()` and never `owner` alone (that encoding normalizes the default subaccount, so the same principal with a *different* one is correctly a different account), **persist** with `encodeIcrcAccount()` / `decodeIcrcAccount()`, and **send** with `from_subaccount` for the sender plus `toCandidAccount()` for the recipient. `SignerAgent` is the exception — its `account` is a `Principal`, which is why the subaccount travels in the ledger call arguments instead.
+
+13. **Firing a call immediately after connecting.** Let the user initiate. An unprompted approval dialog straight after connect reads as an attack, and wallets are within their rights to reject it.
 
 ## Testing against a real wallet
 
