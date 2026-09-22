@@ -167,12 +167,14 @@ import type { PermissionScope } from '@icp-sdk/signer';
 
 // Path A: [{ method: 'icrc27_accounts' }, { method: 'icrc49_call_canister' }]
 // Path B: [{ method: 'icrc27_accounts' }, { method: 'icrc34_delegation' }]
-async function connect(signer: Signer, scopes: PermissionScope[]) {
-  // Optional: ask once, up front, instead of per method. Ask only for what
-  // your path uses — a signer ignores scopes it does not support, so
-  // over-asking does not fail, it just shows the user a permission you
-  // never exercise.
-  await signer.requestPermissions(scopes);
+async function connect(signer: Signer, scopes?: PermissionScope[]) {
+  // Omit `scopes` to leave every method on ask_on_use. Supply them to trade
+  // several later prompts for one up front, and ask only for what your path
+  // uses — a signer ignores scopes it does not support, so over-asking does
+  // not fail, it just shows the user a permission you never exercise.
+  if (scopes !== undefined) {
+    await signer.requestPermissions(scopes);
+  }
 
   const accounts = await signer.getAccounts();
   // { owner: Principal, subaccount?: Uint8Array } — already an IcrcAccount.
@@ -354,6 +356,8 @@ async function safeTransfer(
       promptReconnect();
       return;
     }
+    // Anything else — including SignerAgentError, where the wallet responded
+    // but the response failed validation — is not a connectivity fault.
     throw err;
   }
 }
@@ -370,7 +374,10 @@ These are the ICRC-25 codes — the only ones portable across wallets:
 | `4000` | Network error | Retrying |
 | `4001` | Transport channel closed | Reconnecting |
 
-Transport-level failures arrive as `PostMessageTransportError`, `UrlTransportError`, `BrowserExtensionTransportError`, or `SignerAgentError` — not as `SignerError`, because no wallet response was involved.
+Two other error classes are **not** `SignerError`, and they call for opposite reactions:
+
+- **`PostMessageTransportError` / `UrlTransportError` / `BrowserExtensionTransportError`** — the channel never carried a response. Reconnecting is the right reaction.
+- **`SignerAgentError`** — the wallet *did* respond, and the response failed validation: the returned content map did not match the call you sent (canister, method, argument, sender, nonce), the certificate did not verify against the IC root key, or the reply was absent from the certified tree. `SignerAgent` runs those checks for you, so this is a wallet returning something it should not have. Do not treat it as a connectivity fault and retry — surface it.
 
 ## Pitfalls
 
