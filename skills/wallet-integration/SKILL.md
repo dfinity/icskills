@@ -278,7 +278,7 @@ async function multiStepFlow(signer: Signer) {
 }
 ```
 
-**A connection does not survive a page reload.** There is no persistent session to restore — the channel is a live `postMessage` link to a popup that is gone. The workable pattern is to persist only the principal, render read-only state from it with an anonymous agent, and re-establish the signer lazily on the first write:
+**A connection does not survive a page reload.** There is no persistent session to restore — the channel is a live `postMessage` link to a popup that is gone. The workable pattern is to persist the account, render read-only state from it with an anonymous agent, and re-establish the signer lazily on the first write:
 
 ```typescript
 import { decodeIcrcAccount, encodeIcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
@@ -373,7 +373,7 @@ Transport-level failures arrive as `PostMessageTransportError`, `UrlTransportErr
 
 2. **Reading through `SignerAgent`.** `query()` is upgraded to an update call routed through the wallet, so every read prompts the user and costs cycles. Reads go through a plain `HttpAgent`; only writes go through `SignerAgent`.
 
-3. **Expecting a connection to survive a reload.** No channel outlives the page. Persist the principal for read-only rendering and reconnect on first write — see above.
+3. **Expecting a connection to survive a reload.** No channel outlives the page. Persist the account — both halves, per pitfall 12 — for read-only rendering, and reconnect on first write. See above.
 
 4. **Assuming a wallet's capabilities.** Call `getSupportedStandards()`. A wallet that executes canister calls (ICRC-49) may not issue delegations (ICRC-34), and vice versa.
 
