@@ -456,7 +456,7 @@ Set `host: 'https://icp-api.io'` on the agent even when serving from `localhost`
 ## Expected Behavior
 
 - The first `getAccounts()` opens the wallet and resolves with the accounts the user chose to share, as `{ owner: Principal, subaccount?: Uint8Array }` — possibly none of them.
-- A ledger `transfer` through `SignerAgent` prompts once and resolves with a `bigint` block index.
+- A ledger `transfer` through `SignerAgent` shows the user the call to approve and resolves with a `bigint` block index.
 - Cancelling the **canister-call approval** rejects with `SignerError` and `code === 3001`. The other two refusals look different: declining to share accounts resolves `getAccounts()` with `[]`, and denying a permission gives code `3000`.
 - After a reload, read-only state renders with no popup; the first write reopens one.
 
