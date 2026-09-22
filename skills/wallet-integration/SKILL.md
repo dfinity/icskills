@@ -77,12 +77,16 @@ const signer = new Signer({
 import { Signer } from '@icp-sdk/signer';
 import { BrowserExtensionTransport } from '@icp-sdk/signer/extension';
 
-async function pickExtensionSigner() {
-  // Each provider carries { uuid, name, icon, rdns } — enough to render a picker.
-  const providers = await BrowserExtensionTransport.discover();
-  if (providers.length === 0) return null;
+// Discovery order is whichever extension announced first, not a user
+// preference, so return the list rather than choosing. Each provider carries
+// { uuid, name, icon, rdns } — enough to render a picker.
+function discoverExtensionSigners() {
+  return BrowserExtensionTransport.discover();
+}
 
-  const transport = await BrowserExtensionTransport.findTransport({ uuid: providers[0].uuid });
+// Build the signer only from the uuid the user picked.
+async function connectExtensionSigner(uuid: string) {
+  const transport = await BrowserExtensionTransport.findTransport({ uuid });
   return new Signer({ transport });
 }
 ```
@@ -440,9 +444,9 @@ Set `host: 'https://icp-api.io'` on the agent even when serving from `localhost`
 
 ## Expected Behavior
 
-- The first `getAccounts()` opens the wallet, the user approves, and it resolves with one or more `{ owner: Principal, subaccount?: Uint8Array }`.
+- The first `getAccounts()` opens the wallet and resolves with the accounts the user chose to share, as `{ owner: Principal, subaccount?: Uint8Array }` — possibly none of them.
 - A ledger `transfer` through `SignerAgent` prompts once and resolves with a `bigint` block index.
-- Cancelling any prompt rejects with `SignerError` and `code === 3001`.
+- Cancelling the **canister-call approval** rejects with `SignerError` and `code === 3001`. The other two refusals look different: declining to share accounts resolves `getAccounts()` with `[]`, and denying a permission gives code `3000`.
 - After a reload, read-only state renders with no popup; the first write reopens one.
 
 ## Additional References
