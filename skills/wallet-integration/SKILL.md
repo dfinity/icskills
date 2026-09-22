@@ -16,7 +16,7 @@ Connecting an **external wallet** to your dapp so the user approves actions in t
 
 This skill covers **integrating a signer**. Implementing one is out of scope — consent screens, prompt registration and account custody are the wallet's job.
 
-Examples use [OISY](https://oisy.com) (`https://oisy.com/sign`), but nothing here is OISY-specific: any ICRC-25 signer works by swapping the transport URL, and [`BrowserExtensionTransport`](#extension-icrc-94) discovers extension signers you never hardcoded.
+Examples use [OISY](https://oisy.com) (`https://oisy.com/sign`), but nothing here is OISY-specific. For another web signer the transport URL is usually the only change, and [`BrowserExtensionTransport`](#extension-icrc-94) discovers extension signers you never hardcoded. What a given signer actually supports is a separate question from which transport reaches it — negotiate it rather than assuming (see [Negotiate capabilities](#negotiate-capabilities) and pitfall 5).
 
 | Standard | What it gives you | API |
 |----------|-------------------|-----|
