@@ -1,6 +1,6 @@
 {
   "skill": "wallet-integration",
-  "description": "Evaluation cases for the wallet-integration skill. Tests whether agents integrate an external signer with @icp-sdk/signer correctly: the right library and pins, reads off the SignerAgent, user-initiated popups, the right interaction model, and reconnect-after-reload.",
+  "description": "Evaluation cases for the wallet-integration skill. Tests whether agents integrate an external signer with @icp-sdk/signer correctly: the right library and pins, reads off the SignerAgent, user-initiated popups, the error class transport failures actually arrive as, and reconnect-after-reload.",
   "output_evals": [
     {
       "name": "Adversarial: reaches for the superseded oisy library",
@@ -16,7 +16,7 @@
       "prompt": "I connected OISY with @icp-sdk/signer and built a SignerAgent. Show me how to read the user's ICRC-1 balance and how to send a transfer — just those two calls, no connection or setup boilerplate.",
       "expected_behaviors": [
         "Reads the balance through a plain HttpAgent, NOT through the SignerAgent",
-        "Explains that SignerAgent turns a query into a full canister call routed through the wallet, so a read would prompt the user and cost cycles",
+        "Explains that SignerAgent turns a query into a full canister call routed through the wallet, so a read would cost the user an approval interaction",
         "Sends the transfer through the SignerAgent"
       ]
     },
@@ -27,16 +27,6 @@
         "Identifies that opening the wallet on mount is not user-initiated and gets blocked by the browser",
         "Moves the call into a click handler (or equivalent user gesture)",
         "Does NOT suggest working around it by disabling the check, raising a timeout, or retrying"
-      ]
-    },
-    {
-      "name": "Requesting a delegation safely",
-      "prompt": "My IC dapp is a turn-based game with several moves per minute, so I'm using session delegation with @icp-sdk/signer rather than per-action approval. What do I need to get right about the delegation I request, and what does the library check for me? Short list, no code.",
-      "expected_behaviors": [
-        "Says to scope the delegation by passing targets",
-        "Says to bound its lifetime with maxTimeToLive",
-        "States that requestDelegation already validates the wallet's response and throws — the chain must terminate at the requested public key, targets must not come back broader than requested, and it must not outlive maxTimeToLive",
-        "Does NOT tell the developer to hand-roll delegation-chain verification"
       ]
     },
     {
@@ -64,7 +54,7 @@
       "expected_behaviors": [
         "States that Signer wraps the transport error into a SignerError with code 4000, so an instanceof check on the thrown error cannot match",
         "Says the original transport error is available as err.cause",
-        "Handles code 4000 as the reconnect case, not only 4001",
+        "Handles code 4000, not only 4001 (either as reconnect, or split by err.cause into popup-blocked vs reconnect)",
         "Does NOT claim signer methods throw PostMessageTransportError directly"
       ]
     }
