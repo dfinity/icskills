@@ -80,7 +80,7 @@
       "name": "Adversarial: redirect flow loses a value across the navigation",
       "prompt": "I'm using UrlTransport from @icp-sdk/signer. I fetch a nonce (a Uint8Array) and make a signer request with it. After the wallet redirects back, sometimes the nonce has been re-fetched and is a different value, and when I do journal it, it comes back as {\"0\":12,\"1\":43,...} instead of bytes. What is going on in each case? Short answer, no full example.",
       "expected_behaviors": [
-        "Identifies that any non-request async work must go through transport.memoize() so its result is journaled and replayed instead of re-run",
+        "Identifies that a value which must come back identical — a nonce — has to go through transport.memoize() so it is journaled and replayed instead of re-fetched",
         "Notes that memoize persists via JSON, so a Uint8Array or other non-JSON value has to be converted before journaling"
       ]
     }

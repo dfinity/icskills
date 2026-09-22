@@ -23,7 +23,7 @@ Examples use [OISY](https://oisy.com) (`https://oisy.com/sign`), but nothing her
 | ICRC-25 | Capability discovery + permission lifecycle | `getSupportedStandards`, `requestPermissions`, `getPermissions` |
 | ICRC-27 | The user's accounts | `getAccounts` |
 | ICRC-29 | Popup transport over `postMessage` | `PostMessageTransport` |
-| ICRC-49 | Execute a canister call | `callCanister`, `SignerAgent` |
+| ICRC-49 | Execute a canister call | `SignerAgent` (or `callCanister`, the raw primitive) |
 | ICRC-94 | Browser-extension discovery | `BrowserExtensionTransport.discover` |
 | ICRC-167 | Top-level redirect transport | `UrlTransport` (**new in signer 6**) |
 
@@ -95,52 +95,47 @@ async function connectExtensionSigner(uuid: string) {
 `UrlTransport` unloads your page on every request, so it keeps a call-order journal in `sessionStorage` and replays it when the wallet returns. Two rules make or break it:
 
 1. **Issue the same requests, in the same order, on every load.** Branch only on values recovered from earlier results. A divergence guard rejects a replay that does not match.
-2. **`memoize()` is the only place a flow may await anything that is not a signer request.** Its result is journaled, so a value stays stable across the redirect.
+2. **Put anything that must come back *the same value* through `memoize()`** — a nonce above all. Its result is journaled and replayed instead of re-run. Deterministic async work needs no `memoize`: building an `HttpAgent` yields an equivalent agent on every load, so it cannot drift from the journal.
+
+`SignerAgent` works over this transport, so a redirect flow is the same code as a popup flow:
 
 ```typescript
-import type { IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { IcrcLedgerCanister, toCandidAccount, type IcrcAccount } from '@icp-sdk/canisters/ledger/icrc';
+import { HttpAgent } from '@icp-sdk/core/agent';
 import type { Principal } from '@icp-sdk/core/principal';
 import { Signer } from '@icp-sdk/signer';
+import { SignerAgent } from '@icp-sdk/signer/agent';
 import { UrlTransport } from '@icp-sdk/signer/web';
 
 const transport = new UrlTransport({
   // The path is the wallet's own; ICRC-167 does not dictate one.
   url: 'https://wallet.example.com/sign',
-  // Absolute, fragment-free, on an origin you control, and listed in that
-  // origin's /.well-known/ii-auth-callbacks allow-list.
+  // Absolute, fragment-free, on an origin you control, and declared in that
+  // origin's /.well-known/ii-auth-callbacks (see pitfall 9).
   callbackUrl: 'https://app.example.com/signer-callback'
 });
 
 // Run this on the load of the callback route: a fresh arrival starts the flow,
 // the wallet's return replays it. No separate resume or cleanup call.
-async function runRedirectFlow(
-  account: IcrcAccount, canisterId: Principal, arg: Uint8Array
+async function transferOverRedirect(
+  account: IcrcAccount, to: IcrcAccount, amount: bigint, ledgerId: Principal
 ) {
   const signer = new Signer({ transport });
 
-  // Non-request async work goes through memoize() so its result survives the
-  // redirect. It persists via JSON, so hand it something serializable — a
-  // Uint8Array is not (see pitfall 7).
-  const nonceBytes = await transport.memoize(async () =>
-    Array.from(await fetchNonceFromYourBackend())
-  );
+  // Deterministic, so no memoize needed — the same agent is built on each load.
+  const agent = await HttpAgent.create({ host: 'https://icp-api.io' });
+  const signerAgent = await SignerAgent.create({ signer, account: account.owner, agent });
 
-  // callCanister is the raw ICRC-49 primitive: it checks only that the reply
-  // carries a contentMap and a certificate. Verifying them is the caller's
-  // job — see below.
-  return signer.callCanister({
-    canisterId,
-    sender: account.owner,
-    method: 'icrc1_transfer',
-    arg,
-    nonce: Uint8Array.from(nonceBytes)
+  const ledger = IcrcLedgerCanister.create({ agent: signerAgent, canisterId: ledgerId });
+  return ledger.transfer({
+    to: toCandidAccount(to),
+    from_subaccount: account.subaccount,
+    amount
   });
 }
 ```
 
-**Prefer `SignerAgent` to calling `callCanister` yourself.** `callCanister` is the raw ICRC-49 primitive: it resolves with the CBOR `{ contentMap, certificate }` and validates only that both are present and decodable — it does not check the content map against the call you sent, and it does not verify the certificate against the IC root key. `SignerAgent` does both, which is why a `SignerAgent` call can raise `SignerAgentError` and a bare `callCanister` cannot.
-
-So reach for `SignerAgent` unless you have a reason not to; the example above uses `callCanister` only because the redirect transport makes the request shape easier to see. If you do call it directly, verifying the certificate before trusting the reply is your job.
+Going through `SignerAgent` rather than `signer.callCanister` is what gets you the content-map and certificate checks; `callCanister` is the raw ICRC-49 primitive and validates only that the reply carries both fields. Prefer the agent unless you have a specific reason to drive the primitive yourself, in which case verifying the certificate before trusting the reply is your job.
 
 ## Negotiate capabilities
 
