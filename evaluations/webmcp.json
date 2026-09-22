@@ -1,0 +1,70 @@
+{
+  "skill": "webmcp",
+  "description": "Evaluates agent ability to expose IC canister methods as AI-accessible tools via WebMCP",
+  "output_evals": [
+    {
+      "name": "Add WebMCP to an existing canister",
+      "prompt": "I have a Rust canister with a .did file. How do I make it discoverable by AI agents?",
+      "expected_behaviors": [
+        "Adds a webmcp section to dfx.json with name, description, expose_methods",
+        "Runs ic-webmcp-codegen to generate webmcp.json and webmcp.js",
+        "Configures CORS headers via .ic-assets.json5 for /.well-known/webmcp.json",
+        "Includes the <script type='module' src='/webmcp.js'></script> tag or manual ICWebMCP initialization",
+        "Does NOT reference esm.sh or any external CDN for @dfinity/webmcp"
+      ]
+    },
+    {
+      "name": "Add auth-required tools",
+      "prompt": "My canister has a transfer method that should require login before AI agents can call it. How do I set this up with WebMCP?",
+      "expected_behaviors": [
+        "Adds the method to require_auth in dfx.json webmcp config",
+        "Configures onAuthRequired callback in ICWebMCP constructor",
+        "Uses @icp-sdk/auth AuthClient or Internet Identity for the login flow",
+        "Does NOT import from deprecated @dfinity/auth-client",
+        "Creates a scoped delegation via createAgentDelegation with non-empty targets",
+        "Does NOT create an unrestricted delegation with empty targets array"
+      ]
+    },
+    {
+      "name": "Use polyfill for non-Chrome environments",
+      "prompt": "I want my IC canister tools to work with Claude and OpenAI, not just Chrome. How?",
+      "expected_behaviors": [
+        "Calls installPolyfill() before ICWebMCP.registerAll()",
+        "Uses getOpenAITools() or getAnthropicTools() to export in framework-specific format",
+        "Uses dispatchToolCall() to route tool call responses back to the canister",
+        "Does NOT assume navigator.modelContext is always available natively"
+      ]
+    },
+    {
+      "name": "Generate manifest from .did file",
+      "prompt": "Generate a WebMCP manifest from my ledger.did file for the ICP ledger canister",
+      "expected_behaviors": [
+        "Uses ic-webmcp-codegen did subcommand with --did flag",
+        "Sets --canister-id to the correct ICP ledger principal",
+        "Uses --expose to select specific methods",
+        "Uses --require-auth for methods that modify state",
+        "Generates valid JSON with schema_version 1.0"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "should_trigger": [
+      "How do I expose my canister to AI agents?",
+      "WebMCP integration for Internet Computer",
+      "Make my dapp work with navigator.modelContext",
+      "Generate a tool manifest from a .did file",
+      "How do AI agents call IC canisters?",
+      "Add OpenAI function calling to my IC canister",
+      "Anthropic tool use with Internet Computer",
+      "LangChain tools for IC canisters"
+    ],
+    "should_not_trigger": [
+      "How do I deploy a canister?",
+      "Write a Motoko counter canister",
+      "How does Internet Identity work?",
+      "What is certified data?",
+      "How do I use ckBTC?",
+      "Set up a custom domain for my canister"
+    ]
+  }
+}
