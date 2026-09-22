@@ -25,7 +25,6 @@ Examples use [OISY](https://oisy.com) (`https://oisy.com/sign`), but nothing her
 | ICRC-29 | Popup transport over `postMessage` | `PostMessageTransport` |
 | ICRC-49 | Execute a canister call | `callCanister`, `SignerAgent` |
 | ICRC-94 | Browser-extension discovery | `BrowserExtensionTransport.discover` |
-| ICRC-95 | Identity derivation origin | `derivationOrigin` option |
 | ICRC-167 | Top-level redirect transport | `UrlTransport` (**new in signer 6**) |
 
 ## What the model is
