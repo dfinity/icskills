@@ -42,9 +42,10 @@ const canisterEnv = safeGetCanisterEnv();
 // API endpoint: if the page's hostname ends in a known gateway domain (ic0.app,
 // icp0.io, localhost, 127.0.0.1), it uses that domain with the page's protocol
 // and port — so the local gateway and the Vite dev-server /api proxy keep
-// working — and anywhere else, including custom domains and icp.net, it falls
-// back to https://icp-api.io. Hardcoding
-// host: window.location.origin breaks frontends served from a custom domain:
+// working (GitHub Codespaces and Gitpod hostnames are reused as-is) — and
+// anywhere else, including custom domains and icp.net, it falls back to
+// https://icp-api.io. Hardcoding host: window.location.origin breaks
+// frontends served from a custom domain:
 // the custom domain is only the HTTP gateway and does not serve /api/v2 (see
 // the custom-domains skill).
 const agentOptions = {
@@ -59,7 +60,18 @@ export const backend = createActor(
 // Repeat for each canister: createOther(canisterEnv?.["PUBLIC_CANISTER_ID:other"], { agentOptions })
 ```
 
-Set `host` explicitly only when the default cannot know the target (SKILL.md Pitfall 23 has the full decision table):
+Choose `host` and `rootKey` by where the code runs and which network it calls:
+
+| Code runs in | Calls | `host` | `rootKey` |
+|---|---|---|---|
+| Browser page served by the local network | that local network | leave unset → resolves to `http://localhost:<port>` | `IC_ROOT_KEY` from the `ic_env` cookie |
+| Browser page on `<canister-id>.icp.net` (the default mainnet URL) or a custom domain | mainnet | leave unset → resolves to `https://icp-api.io`, because neither is a known gateway domain; this is what makes custom domains work, since a custom domain serves only the HTTP gateway, not `/api/v2` | `IC_ROOT_KEY` from the `ic_env` cookie |
+| Browser page on a legacy `<canister-id>.icp0.io` or `ic0.app` URL | mainnet | leave unset → resolves to `https://icp0.io` / `https://ic0.app` | `IC_ROOT_KEY` from the `ic_env` cookie |
+| Browser page | mainnet, but the page is served by a local network (e.g. mainnet ledger calls from a local dev server) | `"https://icp-api.io"` | omit — defaults to the mainnet key; do not pass the page's local `IC_ROOT_KEY` |
+| Node script or test | a local network | `api_url` from `icp network status --json` | `root_key` from the same output, hex-decoded to bytes |
+| Node script or test | mainnet | leave unset → resolves to `https://icp-api.io` | omit — defaults to the mainnet key |
+
+Set `host` explicitly only when the default cannot know the target:
 
 - **Outside the browser** (Node scripts, tests): there is no page origin and no `ic_env` cookie, so the agent defaults to `https://icp-api.io` and the mainnet root key. For a local network, read both from `icp network status --json`:
   ```js

@@ -232,20 +232,16 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
 22. **Hand-wiring canister IDs with setter methods or deploy scripts.** Controller-only setters (`setBridge(principal)`) called by a post-deploy script — or sibling IDs hardcoded in `settings.environment_variables` or init args — are unnecessary: `icp deploy` injects every canister's ID into every canister's settings as `PUBLIC_CANISTER_ID:<canister-name>`, readable by canister code at runtime with the correct per-environment value (see Canister Environment Variables). Setter wiring is also more fragile: a `--mode reinstall` silently wipes the stored pointer, while the automatic variables are re-stamped on every deploy.
 
-23. **Setting (or omitting) `host` on the agent in the wrong situation.** `host` is the API endpoint canister calls go to, not the URL the frontend is served from. When `host` is omitted, `HttpAgent` applies a two-branch rule: (1) if the page's hostname ends in a known gateway domain (`ic0.app`, `icp0.io`, `localhost`, `127.0.0.1`), it uses that gateway domain with the page's protocol and port (`http://frontend.local.localhost:8000` → `http://localhost:8000`); (2) for any other hostname — custom domains, `icp.net` — and for code running outside a browser, it falls back to `https://icp-api.io`. A custom domain is never used as the endpoint. Pick `host` and `rootKey` by where the code runs and which network it calls:
-
-    | Code runs in | Calls | `host` | `rootKey` |
-    |---|---|---|---|
-    | Browser page served by the local network | that local network | leave unset → resolves to `http://localhost:<port>` | `IC_ROOT_KEY` from the `ic_env` cookie |
-    | Browser page on `<canister-id>.icp0.io` or `ic0.app` | mainnet | leave unset → resolves to `https://icp0.io` / `https://ic0.app` | `IC_ROOT_KEY` from the `ic_env` cookie |
-    | Browser page on a custom domain | mainnet | leave unset → resolves to `https://icp-api.io` | `IC_ROOT_KEY` from the `ic_env` cookie |
-    | Browser page | mainnet, but the page is served by a local network (e.g. mainnet ledger calls from a local dev server) | `"https://icp-api.io"` | omit — defaults to the mainnet key; do not pass the page's local `IC_ROOT_KEY` |
-    | Node script or test | a local network | `api_url` from `icp network status --json` | `root_key` from the same output, hex-decoded to bytes |
-    | Node script or test | mainnet | leave unset → resolves to `https://icp-api.io` | omit — defaults to the mainnet key |
-
-    In every browser row that uses the cookie, pass `rootKey` yourself: the generated `createActor` does not read the `ic_env` cookie.
-
-    Never set `host: window.location.origin`: a custom domain serves only the HTTP gateway, not `/api/v2`, so every canister call from it fails. A Vite dev server on `localhost` resolves to its own port and needs the `/api` proxy. See `references/binding-generation.md` for the code.
+23. **Setting `host` on the agent where the default works, or omitting it where it cannot.** `host` is the API endpoint canister calls go to, not the URL the page is served from. In browser code that calls the network serving the page, leave `host` unset: the agent reuses the page's gateway domain on `localhost`, `127.0.0.1`, `icp0.io` and `ic0.app`, and for every other hostname — `icp.net` (the default mainnet domain) and custom domains — it falls back to `https://icp-api.io`, which is why custom domains work even though they serve only the HTTP gateway, not `/api/v2`. Never set `host: window.location.origin`. Set `host` explicitly only in Node scripts and tests, which have no page and so default to `https://icp-api.io` (mainnet): use `api_url` from `icp network status --json`, with `rootKey` from its `root_key`, hex-decoded to bytes; and in a page that calls a different network than the one serving it (`https://icp-api.io` for mainnet, without the page's local `IC_ROOT_KEY`). Browser code calling the network that serves the page:
+    ```js
+    import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
+    const canisterEnv = safeGetCanisterEnv();
+    const backend = createActor(canisterEnv?.["PUBLIC_CANISTER_ID:backend"], {
+      // No host. Pass rootKey yourself: createActor does not read the ic_env cookie.
+      agentOptions: { rootKey: canisterEnv?.IC_ROOT_KEY },
+    });
+    ```
+    The full decision table (every browser and Node case) and the Node snippet are in `references/binding-generation.md`.
 
 ## How It Works
 

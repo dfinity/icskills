@@ -299,7 +299,7 @@
       "expected_behaviors": [
         "Omits host from agentOptions (or explicitly says to leave it unset), relying on the agent's default host resolution",
         "Sets rootKey from the ic_env cookie (canisterEnv?.IC_ROOT_KEY via safeGetCanisterEnv)",
-        "Explains that the default host resolution uses the page origin on known gateway hosts (ic0.app/icp0.io/localhost) and falls back to https://icp-api.io elsewhere, so custom domains work even though they do not serve /api/v2",
+        "Explains that with host unset, a page on a custom domain sends its calls to https://icp-api.io (a custom domain serves only the HTTP gateway, not /api/v2)",
         "Does NOT set host to window.location.origin (conditionally or unconditionally)"
       ]
     },
