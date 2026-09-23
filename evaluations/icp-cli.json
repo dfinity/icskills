@@ -177,12 +177,13 @@
       ]
     },
     {
-      "name": "Adversarial: createActor with old @dfinity/agent pattern",
-      "prompt": "I migrated my project from dfx to icp-cli. My frontend builds fine but all canister calls return empty data or access denied. Here's my actor setup:\n\nimport { HttpAgent } from '@icp-sdk/core';\nimport { createActor } from './bindings/backend';\nconst agent = new HttpAgent({ identity, host });\nconst backend = createActor(canisterId, { agent });",
+      "name": "Adversarial: porting @dfinity/agent actor setup to bindgen",
+      "prompt": "I'm migrating my frontend from dfx to icp-cli. What's wrong with this actor setup? Just the fixes and a corrected snippet, no Vite or deploy setup:\n\nimport { HttpAgent } from '@icp-sdk/core';\nimport { createActor } from './bindings/backend';\nconst agent = new HttpAgent({ identity, host });\nconst backend = createActor(canisterId, { agent });",
       "expected_behaviors": [
-        "Identifies that passing { agent } to @icp-sdk/bindgen's createActor silently creates an anonymous identity",
-        "Explains the correct pattern uses { agentOptions } instead of { agent }",
-        "Does NOT suggest the issue is a wrong canister ID or missing cycles"
+        "Sets rootKey from safeGetCanisterEnv() (IC_ROOT_KEY from the ic_env cookie), noting the agent otherwise defaults to the mainnet root key",
+        "Replaces the deprecated `new HttpAgent(...)` constructor — with `{ agentOptions }` or `HttpAgent.create()` from '@icp-sdk/core/agent'",
+        "Removes the hardcoded host (the agent's default host resolution picks the right endpoint)",
+        "Does NOT claim that passing { agent } to createActor is ignored or silently results in an anonymous identity"
       ]
     },
     {

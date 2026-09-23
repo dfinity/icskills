@@ -28,7 +28,7 @@ Each `icpBindgen()` instance generates a `<canister-name>.ts` file (named after 
 
 ## Creating actors from bindings
 
-Connect the generated bindings with the `ic_env` cookie. **Important:** pass `{ agentOptions }`, NOT `{ agent }`. The old `@dfinity/agent` pattern passed a pre-built `HttpAgent` object — the `@icp-sdk/bindgen` pattern passes options instead and creates the agent internally. Passing `{ agent }` silently falls back to an anonymous identity with no error — calls simply return empty data or access denied.
+Connect the generated bindings with the `ic_env` cookie. Pass `{ agentOptions }` and let the binding build the agent (it calls `HttpAgent.createSync(agentOptions)`); add `identity` to `agentOptions` for authenticated calls. A pre-built `{ agent }` also works and is used as-is — build it with `HttpAgent.create()`, not the deprecated `new HttpAgent()` — but if you pass both, `agentOptions` is ignored with a console warning. Either way, set `rootKey` from the cookie: without it the agent defaults to the mainnet root key, and every call against a local network fails verification.
 
 ```js
 // src/actor.js
@@ -49,7 +49,7 @@ const agentOptions = {
   rootKey: canisterEnv?.IC_ROOT_KEY,
 };
 
-// CORRECT: pass { agentOptions }, not { agent }
+// Let the binding build the agent from agentOptions
 export const backend = createActor(
   canisterEnv?.["PUBLIC_CANISTER_ID:backend"],
   { agentOptions }
