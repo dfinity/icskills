@@ -277,16 +277,6 @@
       ]
     },
     {
-      "name": "Adversarial: getIdentity inside a subscribe listener",
-      "prompt": "With @icp-sdk/auth 10 I rebuild my backend actor in `authClient.subscribe(async () => { actor = createActor(await authClient.getIdentity()); })`. Right after signIn() the listener throws SessionNotHeldError. Why, and what should the listener look like instead? Just the explanation and the corrected listener.",
-      "expected_behaviors": [
-        "Explains that a subscribe listener runs as soon as the sign-in record changes, before the client has installed the new identity",
-        "The corrected listener reads only getStatus() or isAuthenticated(), not getIdentity()",
-        "Gets the identity from the value signIn() resolves to, or calls getIdentity() at the time a canister call is made",
-        "Does NOT suggest catching and ignoring SessionNotHeldError, or adding a setTimeout/retry delay before getIdentity()"
-      ]
-    },
-    {
       "name": "Adversarial: logout timer from the delegation expiration",
       "prompt": "After upgrading to @icp-sdk/auth 10 my users are logged out after a few minutes. I schedule `setTimeout(logout, expirationMs - Date.now())` from `identity.getDelegation().delegations[0].delegation.expiration`. What should I do instead? Just the fix.",
       "expected_behaviors": [

@@ -77,9 +77,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
 18. **Signing in against a local II without `agentOptions`.** The client mints its delegations by calling the II canister, through an agent that verifies responses against the mainnet root key by default. With a local II (`ii: true`), the popup opens at `http://id.ai.localhost:8000/authorize` and the ceremony completes, but the mint then fails with `TrustError: Certificate verification error` (`"Invalid signature"`). Pass `agentOptions: { rootKey }` with the root key from the `ic_env` cookie, and leave `host` unset. With mainnet II (the default), leave `agentOptions` unset. A local II from an older network launcher lacks the minting methods entirely: run `icp network update` and restart the network. See "Fallback: deploy II locally".
 
-19. **Calling `getIdentity()` inside a `subscribe()` listener.** A listener runs as soon as the record of the sign-in changes — during your own `signIn()`, and when another tab signs in — before this client has installed the identity that goes with it. `getIdentity()` then throws `SessionNotHeldError` ("A sign-in exists for this domain, but this origin holds no credential for it"). In the listener, read `getStatus()` or `isAuthenticated()` only. Take the identity from what `signIn()` resolves to, or call `getIdentity()` when you make a call.
-
-20. **Scheduling a logout from the delegation's expiration.** In 9.x and later the delegation `getIdentity()` signs with is short-lived and replaced by the client as it ages, so a timer set from `identity.getDelegation()`'s expiration signs the user out after minutes, not at the end of the session. The session's end arrives as an `expired` status: subscribe, and leave the signed-in view when `isAuthenticated()` turns false.
+19. **Scheduling a logout from the delegation's expiration.** In 9.x and later the delegation `getIdentity()` signs with is short-lived and replaced by the client as it ages, so a timer set from `identity.getDelegation()`'s expiration signs the user out after minutes, not at the end of the session. The session's end arrives as an `expired` status: subscribe, and leave the signed-in view when `isAuthenticated()` turns false.
 
 ## Using II during local development
 
@@ -186,8 +184,7 @@ async function init() {
 
   // Re-render when who is signed in here changes, including in another tab:
   // getStatus() is 'signed-in' | 'signed-in-elsewhere' | 'expired' |
-  // 'signed-out', and the last three each want a different screen. Read only
-  // the status here: a listener runs before a sign-in installs its identity.
+  // 'signed-out', and the last three each want a different screen.
   authClient.subscribe(() => render(authClient.getStatus()));
 }
 
