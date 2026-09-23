@@ -80,9 +80,29 @@
         "Does NOT use the legacy ic0.app or icp0.io gateway domains",
         "Does NOT use icp-api.io (that is the API endpoint, not the browser gateway)"
       ]
+    },
+    {
+      "name": "Adversarial: do not share raw.icp.net links (unverified, phishable login)",
+      "prompt": "My static-site preview on mainnet has access protection enabled. A teammate says to share https://<canister-id>.raw.icp.net with testers because it's the 'direct' URL. Is that fine, or should I send a different link? Just the key points.",
+      "expected_behaviors": [
+        "Says not to share the raw.icp.net URL and to share https://<canister-id>.icp.net (a verifying gateway) instead",
+        "Explains the raw host forwards responses without verifying the certificate, so visitors get no certification guarantee",
+        "Notes that with access protection the redirect and login page arrive unverified over raw, so a fake login form could harvest tokens",
+        "Does NOT claim the canister can be configured to block or disable raw access (there is no allow_raw_access setting on certified-assets)"
+      ]
+    },
+    {
+      "name": "Third-party verification of a static-site state hash",
+      "prompt": "I want to independently verify that the static-site canister <canister-id> on mainnet serves exactly the build from its public repo. Give me the steps as commands, briefly, no deploy steps.",
+      "expected_behaviors": [
+        "Reproduces the build from source to get the served directory (e.g. dist/)",
+        "Queries the canister's version and builds the verifier from the matching certified-assets tag with cargo install --git https://github.com/dfinity/certified-assets --tag <v> --locked state-hash-cli",
+        "Computes the local hash with state-hash ./dist",
+        "Reads the canister hash with icp canister call <canister-id> state_hash '()' -n ic (by principal with -n, not -e) and compares the two",
+        "Does NOT treat the hash printed by icp deploy (or handed over by the operator) as independent verification"
+      ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly.",
     "should_trigger": [
