@@ -57,6 +57,20 @@ export const backend = createActor(
 // Repeat for each canister: createOther(canisterEnv?.["PUBLIC_CANISTER_ID:other"], { agentOptions })
 ```
 
+Set `host` explicitly only when the default cannot know the target:
+
+- **Outside the browser** (Node scripts, tests): there is no page origin and no `ic_env` cookie, so the agent defaults to `https://icp-api.io` and the mainnet root key. For a local network, read both from `icp network status --json`:
+  ```js
+  import { execFileSync } from "node:child_process";
+  const { api_url, root_key } = JSON.parse(
+    execFileSync("icp", ["network", "status", "--json"], { encoding: "utf8" })
+  );
+  const backend = createActor(canisterId, {
+    agentOptions: { host: api_url, rootKey: Uint8Array.from(Buffer.from(root_key, "hex")) },
+  });
+  ```
+- **A page calling a different network than the one serving it** (e.g. mainnet canisters from a local dev server): set `host: "https://icp-api.io"` and do not pass the local `IC_ROOT_KEY` (see the `wallet-integration` skill).
+
 ## Non-Vite frontends
 
 Use the `@icp-sdk/bindgen` CLI to generate bindings manually:
