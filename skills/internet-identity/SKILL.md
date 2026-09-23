@@ -75,6 +75,12 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
     Do not clear it with `--legacy-peer-deps` — that skips the peer check and installs the mismatched pair anyway. Pin `@icp-sdk/auth@^10` with `@icp-sdk/core@^6`, or stay on `@icp-sdk/auth@^9` if something else holds you on core 5.
 
+18. **Signing in against a local II without `agentOptions`.** The client mints its delegations by calling the II canister, through an agent that defaults to `https://icp-api.io`. With a local II (`ii: true`), the popup opens at `http://id.ai.localhost:8000/authorize` and the ceremony completes, but the mint goes to mainnet II, which rejects the local session. Pass `agentOptions: { host, rootKey }` with the same values as your backend actor. With mainnet II (the default), leave `agentOptions` unset. A local II from an older network launcher lacks the minting methods entirely: run `icp network update` and restart the network. See "Fallback: deploy II locally".
+
+19. **Calling `getIdentity()` inside a `subscribe()` listener.** A listener runs as soon as the record of the sign-in changes — during your own `signIn()`, and when another tab signs in — before this client has installed the identity that goes with it. `getIdentity()` then throws `SessionNotHeldError` ("A sign-in exists for this domain, but this origin holds no credential for it"). In the listener, read `getStatus()` or `isAuthenticated()` only. Take the identity from what `signIn()` resolves to, or call `getIdentity()` when you make a call.
+
+20. **Scheduling a logout from the delegation's expiration.** In 9.x and later the delegation `getIdentity()` signs with is short-lived and replaced by the client as it ages, so a timer set from `identity.getDelegation()`'s expiration signs the user out after minutes, not at the end of the session. The session's end arrives as an `expired` status: subscribe, and leave the signed-in view when `isAuthenticated()` turns false.
+
 ## Using II during local development
 
 **Default: use mainnet II from your local network.** Starting with `icp-cli >= 0.2.4`, the local network (pocket-ic, launched by `icp-cli-network-launcher`) is configured to trust the mainnet subnet's BLS signatures. Delegations signed by `https://id.ai` are accepted by your local replica, so both the sign-in flow *and* authenticated calls to a locally-deployed backend just work — no extra config in `icp.yaml`, no local II canister to manage, and the UI is the real one your users will see.
@@ -93,6 +99,20 @@ networks:
 ```
 
 This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, so the client is constructed with `identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' }` — the canister id is the same locally, since system canisters keep their mainnet ids on the local network. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **static-site** skills.
+
+The client mints its delegations by calling that canister itself, and the agent it makes those calls with defaults to `https://icp-api.io` — mainnet. Point it at the local network with `agentOptions`, using the same host and root key as your backend actor, or the ceremony completes and the mint then goes to mainnet II, which rejects the local session:
+
+```javascript
+const authClient = new AuthClient({
+  identityProvider: {
+    authorizeUrl: "http://id.ai.localhost:8000/authorize",
+    canisterId: "rdmx6-jaaaa-aaaaa-aaadq-cai",
+  },
+  agentOptions: { host: window.location.origin, rootKey: canisterEnv?.IC_ROOT_KEY },
+});
+```
+
+The local II must also be recent enough to mint: `@icp-sdk/auth` 9.x and later call its `app_prepare_delegation` / `app_get_delegation` methods, which the II bundled with older network launchers does not have. Run `icp network update` to fetch the latest launcher, then restart the local network.
 
 ### Frontend: Vanilla JavaScript/TypeScript Sign-In Flow
 
@@ -166,7 +186,8 @@ async function init() {
 
   // Re-render when who is signed in here changes, including in another tab:
   // getStatus() is 'signed-in' | 'signed-in-elsewhere' | 'expired' |
-  // 'signed-out', and the last three each want a different screen.
+  // 'signed-out', and the last three each want a different screen. Read only
+  // the status here: a listener runs before a sign-in installs its identity.
   authClient.subscribe(() => render(authClient.getStatus()));
 }
 

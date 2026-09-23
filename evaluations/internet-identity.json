@@ -264,6 +264,36 @@
         "Offers a concrete resolution: either move core to ^6 alongside @icp-sdk/auth@^10, or stay on @icp-sdk/auth@^9 which peers core ^5",
         "Does NOT recommend --legacy-peer-deps or --force to get past the peer conflict"
       ]
+    },
+    {
+      "name": "Adversarial: local II sign-in without agentOptions",
+      "prompt": "I run Internet Identity on my local network (`ii: true` in icp.yaml) and use @icp-sdk/auth 10 with `new AuthClient({ identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' } })`. The II popup opens and I finish the ceremony, but signIn() still fails. What am I missing? Just the fix and a short explanation, no full app.",
+      "expected_behaviors": [
+        "Adds agentOptions to the AuthClient constructor with the local host (e.g. window.location.origin) and the root key from the ic_env cookie (IC_ROOT_KEY)",
+        "Explains that the client mints its delegations by calling the II canister and that the agent for those calls defaults to mainnet (icp-api.io)",
+        "Mentions that an outdated local II may lack the minting methods, fixed by running `icp network update` and restarting the network",
+        "Does NOT suggest fetchRootKey() or shouldFetchRootKey, and does NOT suggest switching to mainnet II as the fix"
+      ]
+    },
+    {
+      "name": "Adversarial: getIdentity inside a subscribe listener",
+      "prompt": "With @icp-sdk/auth 10 I rebuild my backend actor in `authClient.subscribe(async () => { actor = createActor(await authClient.getIdentity()); })`. Right after signIn() the listener throws SessionNotHeldError. Why, and what should the listener look like instead? Just the explanation and the corrected listener.",
+      "expected_behaviors": [
+        "Explains that a subscribe listener runs as soon as the sign-in record changes, before the client has installed the new identity",
+        "The corrected listener reads only getStatus() or isAuthenticated(), not getIdentity()",
+        "Gets the identity from the value signIn() resolves to, or calls getIdentity() at the time a canister call is made",
+        "Does NOT suggest catching and ignoring SessionNotHeldError, or adding a setTimeout/retry delay before getIdentity()"
+      ]
+    },
+    {
+      "name": "Adversarial: logout timer from the delegation expiration",
+      "prompt": "After upgrading to @icp-sdk/auth 10 my users are logged out after a few minutes. I schedule `setTimeout(logout, expirationMs - Date.now())` from `identity.getDelegation().delegations[0].delegation.expiration`. What should I do instead? Just the fix.",
+      "expected_behaviors": [
+        "Explains that in 9.x and later the delegation getIdentity() signs with is short-lived and replaced by the client as it ages, so its expiration is not the end of the session",
+        "Removes the timer",
+        "Reacts to the session ending through authClient.subscribe(), checking isAuthenticated() or an 'expired' status from getStatus()",
+        "Does NOT suggest re-scheduling the timer whenever the delegation is refreshed"
+      ]
     }
   ],
   "trigger_evals": {
