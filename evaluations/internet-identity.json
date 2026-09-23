@@ -269,10 +269,11 @@
       "name": "Adversarial: local II sign-in without agentOptions",
       "prompt": "I run Internet Identity on my local network (`ii: true` in icp.yaml) and use @icp-sdk/auth 10 with `new AuthClient({ identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' } })`. The II popup opens and I finish the ceremony, but signIn() still fails. What am I missing? Just the fix and a short explanation, no full app.",
       "expected_behaviors": [
-        "Adds agentOptions to the AuthClient constructor with the local host (e.g. window.location.origin) and the root key from the ic_env cookie (IC_ROOT_KEY)",
-        "Explains that the client mints its delegations by calling the II canister and that the agent for those calls defaults to mainnet (icp-api.io)",
+        "Adds agentOptions to the AuthClient constructor with the root key from the ic_env cookie (IC_ROOT_KEY)",
+        "Explains that the client mints its delegations by calling the II canister and that, without the local root key, it verifies the local replica's response against the mainnet root key and fails",
         "Mentions that an outdated local II may lack the minting methods, fixed by running `icp network update` and restarting the network",
-        "Does NOT suggest fetchRootKey() or shouldFetchRootKey, and does NOT suggest switching to mainnet II as the fix"
+        "Does NOT set host (e.g. window.location.origin) in agentOptions, and does NOT suggest fetchRootKey() or shouldFetchRootKey",
+        "Fixes the local II setup rather than replacing it: switching to mainnet II is NOT presented as the fix (mentioning it as the default alternative is fine)"
       ]
     },
     {

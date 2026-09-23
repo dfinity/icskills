@@ -75,7 +75,7 @@ Internet Identity (II) is the Internet Computer's native authentication system. 
 
     Do not clear it with `--legacy-peer-deps` — that skips the peer check and installs the mismatched pair anyway. Pin `@icp-sdk/auth@^10` with `@icp-sdk/core@^6`, or stay on `@icp-sdk/auth@^9` if something else holds you on core 5.
 
-18. **Signing in against a local II without `agentOptions`.** The client mints its delegations by calling the II canister, through an agent that defaults to `https://icp-api.io`. With a local II (`ii: true`), the popup opens at `http://id.ai.localhost:8000/authorize` and the ceremony completes, but the mint goes to mainnet II, which rejects the local session. Pass `agentOptions: { host, rootKey }` with the same values as your backend actor. With mainnet II (the default), leave `agentOptions` unset. A local II from an older network launcher lacks the minting methods entirely: run `icp network update` and restart the network. See "Fallback: deploy II locally".
+18. **Signing in against a local II without `agentOptions`.** The client mints its delegations by calling the II canister, through an agent that verifies responses against the mainnet root key by default. With a local II (`ii: true`), the popup opens at `http://id.ai.localhost:8000/authorize` and the ceremony completes, but the mint then fails with `TrustError: Certificate verification error` (`"Invalid signature"`). Pass `agentOptions: { rootKey }` with the root key from the `ic_env` cookie, and leave `host` unset. With mainnet II (the default), leave `agentOptions` unset. A local II from an older network launcher lacks the minting methods entirely: run `icp network update` and restart the network. See "Fallback: deploy II locally".
 
 19. **Calling `getIdentity()` inside a `subscribe()` listener.** A listener runs as soon as the record of the sign-in changes — during your own `signIn()`, and when another tab signs in — before this client has installed the identity that goes with it. `getIdentity()` then throws `SessionNotHeldError` ("A sign-in exists for this domain, but this origin holds no credential for it"). In the listener, read `getStatus()` or `isAuthenticated()` only. Take the identity from what `signIn()` resolves to, or call `getIdentity()` when you make a call.
 
@@ -100,7 +100,7 @@ networks:
 
 This deploys the II canisters automatically when the local network is started. The II frontend will be available at `http://id.ai.localhost:8000`, so the client is constructed with `identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' }` — the canister id is the same locally, since system canisters keep their mainnet ids on the local network. No canister entry is needed in your project — II is not part of your project's canisters. For the full `icp.yaml` canister configuration, see the **icp-cli** and **static-site** skills.
 
-The client mints its delegations by calling that canister itself, and the agent it makes those calls with defaults to `https://icp-api.io` — mainnet. Point it at the local network with `agentOptions`, using the same host and root key as your backend actor, or the ceremony completes and the mint then goes to mainnet II, which rejects the local session:
+The client mints its delegations by calling that canister itself, through an agent that verifies responses against the mainnet root key unless told otherwise. Pass the local root key from the `ic_env` cookie via `agentOptions`, or the ceremony completes and the mint then fails with `TrustError: Certificate verification error` (`"Invalid signature"`). Do not set `host`: the agent's default already resolves to the page origin on `localhost` (see the **icp-cli** skill's binding-generation reference).
 
 ```javascript
 const authClient = new AuthClient({
@@ -108,7 +108,7 @@ const authClient = new AuthClient({
     authorizeUrl: "http://id.ai.localhost:8000/authorize",
     canisterId: "rdmx6-jaaaa-aaaaa-aaadq-cai",
   },
-  agentOptions: { host: window.location.origin, rootKey: canisterEnv?.IC_ROOT_KEY },
+  agentOptions: { rootKey: canisterEnv?.IC_ROOT_KEY },
 });
 ```
 
