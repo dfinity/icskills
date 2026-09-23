@@ -37,11 +37,13 @@ import { createActor } from "./bindings/backend";
 // For additional canisters: import { createActor as createOther } from "./bindings/other";
 
 const canisterEnv = safeGetCanisterEnv();
-// Do NOT set host. The agent's default host resolution already picks the right
-// API endpoint everywhere: on known gateway origins (ic0.app, icp0.io,
-// localhost, 127.0.0.1) it uses the page origin — so the local gateway and the
-// Vite dev-server /api proxy keep working — and anywhere else, including custom
-// domains and icp.net, it falls back to https://icp-api.io. Hardcoding
+// Do NOT set host when calling the network that serves this page (for the
+// exceptions, see below). The agent's default host resolution picks the right
+// API endpoint: if the page's hostname ends in a known gateway domain (ic0.app,
+// icp0.io, localhost, 127.0.0.1), it uses that domain with the page's protocol
+// and port — so the local gateway and the Vite dev-server /api proxy keep
+// working — and anywhere else, including custom domains and icp.net, it falls
+// back to https://icp-api.io. Hardcoding
 // host: window.location.origin breaks frontends served from a custom domain:
 // the custom domain is only the HTTP gateway and does not serve /api/v2 (see
 // the custom-domains skill).
@@ -57,7 +59,7 @@ export const backend = createActor(
 // Repeat for each canister: createOther(canisterEnv?.["PUBLIC_CANISTER_ID:other"], { agentOptions })
 ```
 
-Set `host` explicitly only when the default cannot know the target:
+Set `host` explicitly only when the default cannot know the target (SKILL.md Pitfall 23 has the full decision table):
 
 - **Outside the browser** (Node scripts, tests): there is no page origin and no `ic_env` cookie, so the agent defaults to `https://icp-api.io` and the mainnet root key. For a local network, read both from `icp network status --json`:
   ```js
