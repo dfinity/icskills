@@ -80,9 +80,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 ## static-site
 
 - **Upstream:** https://github.com/dfinity/certified-assets
-- **Tag:** v0.3.3
-- **Commit:** ac2a8e71802b40abb56078ca759b4c0f94f5fe35
-- **Last synced:** 2026-08-03
+- **Tag:** v0.4.0
+- **Commit:** 4987b0857bda9793b38355096e836e4ddffa8cde
+- **Last synced:** 2026-09-23
 - **Upstream files:** `docs/` — the certified-assets user documentation is the source of truth for the static-site recipe. The sync check diffs **all files** in `docs/` recursively (`scripts/sync-upstream-check.sh` uses the Git Trees API with `?recursive=1`), so nested `docs/<subdir>/` files are covered. Files today (all top-level): `overview.md`, `routing.md`, `redirects.md`, `headers.md`, `site-files.md`, `access-protection.md`, `how-it-works.md`, `verifying-contents.md`.
 - **Relationship:** the icskills `static-site` SKILL.md is **derived, not 1:1** — it is an agent-focused condensation of the upstream docs plus icskills-only material (legacy asset-canister reference, migration guide, cross-skill links). Treat the upstream diff as an **advisory review trigger**: when `docs/` changes, review whether the SKILL.md or its references need updating; do not mechanically overwrite.
 - **icskills-owned sections (entirely icskills-authored, never overwrite from upstream):**
