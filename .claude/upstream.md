@@ -97,8 +97,8 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 ## mops-cli
 
 - **Upstream:** https://github.com/caffeinelabs/mops
-- **Tag:** cli-v3.2.0
-- **Commit:** 20b9a435096e4e61a7980532a5211716d743770b
-- **Last synced:** 2026-09-08
+- **Tag:** cli-v3.3.0
+- **Commit:** e2affb5ece0627ffc59bb1c8dcb655423fa69f56
+- **Last synced:** 2026-09-23
 - **Upstream file:** `.agents/skills/mops-cli/SKILL.md`
 - **icskills-owned sections:** none — body is 1:1 with upstream; only frontmatter differs

@@ -222,6 +222,25 @@
         "Attributes the stricter behavior to moc 1.15.0+ \u2014 older moc pins get the warning-only, pre-1.15.0 check",
         "Does NOT claim the stricter check is disabled or that `moc --stable-baseline` is buggy"
       ]
+    },
+    {
+      "name": "Adversarial: `latest` resolves to stable, prereleases need --prerelease",
+      "prompt": "GitHub lists a moc 2.0.0-beta.0 release, but `mops toolchain use moc latest` pinned 1.15.1. Is that a mops bug? How do I pin the beta non-interactively? Brief answer.",
+      "expected_behaviors": [
+        "Says this is expected, not a bug: `latest` (like the picker and `--versions`) considers stable releases only and excludes prereleases by default",
+        "Pins the beta non-interactively, either with the explicit version `mops toolchain use moc 2.0.0-beta.0` or with `--prerelease` (e.g. `mops toolchain use moc latest --prerelease`)",
+        "Names `--prerelease` as the opt-in for including prereleases (e.g. `mops toolchain info moc --versions --prerelease` to list them)",
+        "Does NOT use `mops toolchain use moc` without a version (interactive picker)"
+      ]
+    },
+    {
+      "name": "Adversarial: mops.lock missing a transitive dependency after a merge",
+      "prompt": "After merging a branch, `mops install --locked` fails in CI because mops.lock lists a package whose dependency is no longer in the lock. How do I fix the lockfile? Just the command and why.",
+      "expected_behaviors": [
+        "Runs a plain `mops install` (without --locked) locally, which regenerates a lock that lost a transitive dependency, then commits the updated mops.lock",
+        "Explains `--locked` never writes the lock, so it cannot repair it",
+        "Does NOT suggest hand-editing mops.lock or disabling the lockfile (there is no opt-out flag or --lock flag)"
+      ]
     }
   ],
   "trigger_evals": {
