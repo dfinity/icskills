@@ -40,7 +40,7 @@
         "Creates an HttpAgent with the identity",
         "Creates an actor using Actor.createActor with the agent",
         "All await calls are inside async functions — no bare top-level await",
-        "Uses rootKey from ic_env cookie (safeGetCanisterEnv) or host: window.location.origin — does NOT use shouldFetchRootKey or hardcoded host branching"
+        "Uses rootKey from ic_env cookie (safeGetCanisterEnv) and leaves host unset — does NOT set host: window.location.origin, use shouldFetchRootKey, or branch on a hardcoded host"
       ]
     },
     {

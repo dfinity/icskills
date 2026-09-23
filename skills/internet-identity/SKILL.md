@@ -162,10 +162,10 @@ async function signOut() {
 
 // Create an authenticated agent and actor.
 // Uses rootKey from the ic_env cookie — no shouldFetchRootKey or environment branching needed.
+// No host: the default resolves correctly locally, on mainnet and on custom domains.
 async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   const agent = await HttpAgent.create({
     identity,
-    host: window.location.origin,
     rootKey: canisterEnv?.IC_ROOT_KEY,
   });
 
