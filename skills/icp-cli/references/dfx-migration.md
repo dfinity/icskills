@@ -50,8 +50,8 @@ createActor(canisterId, { agent });
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 const canisterEnv = safeGetCanisterEnv();
 createActor(canisterEnv?.["PUBLIC_CANISTER_ID:backend"], {
-  // No host: the agent's default resolves to the known gateway domain the page
-  // is served from (ic0.app, icp0.io, localhost, 127.0.0.1) and to https://icp-api.io
+  // No host: the agent's default resolves to the page origin on known gateway
+  // hosts (ic0.app, icp0.io, localhost, 127.0.0.1) and to https://icp-api.io
   // everywhere else — including custom domains, which serve only the HTTP
   // gateway, not /api/v2. Do not set host: window.location.origin.
   agentOptions: { rootKey: canisterEnv?.IC_ROOT_KEY }

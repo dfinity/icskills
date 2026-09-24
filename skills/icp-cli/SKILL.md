@@ -114,7 +114,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
 12. **Expecting `dfx generate` for TypeScript bindings.** icp-cli does not have a `dfx generate` equivalent. Use `@icp-sdk/bindgen` (>= 0.4.0) with `@icp-sdk/core` pinned to `^6` (the rest of the SDK peers `^6`, so a different major fails to install with `ERESOLVE`) to generate TypeScript bindings from `.did` files at build time. Use `outDir: "./src/bindings"` so imports are clean (e.g., `./bindings/backend`). The `.did` file must exist on disk — either commit it to the repo, or generate it with `icp build` first (recipes auto-generate it when `candid` is not specified). See `references/binding-generation.md` for the full Vite plugin setup.
 
-13. **Porting the `@dfinity/agent` actor setup as-is.** With `@icp-sdk/bindgen`, call `createActor(canisterId, { agentOptions })` and let the binding build the agent. A pre-built `{ agent }` also works and is used as-is, but build it with `await HttpAgent.create()` from `@icp-sdk/core/agent` (it returns a Promise) — `new HttpAgent()` is deprecated. Either way, set `rootKey` from the `ic_env` cookie (without it the agent defaults to the mainnet root key and calls against a local network fail verification) and set `host` only where Pitfall 23 says to. See `references/binding-generation.md` for the correct pattern and why.
+13. **Porting the `@dfinity/agent` actor setup as-is.** With `@icp-sdk/bindgen`, call `createActor(canisterId, { agentOptions })` and let the binding build the agent. A pre-built `{ agent }` also works and is used as-is, but build it with `await HttpAgent.create()` from `@icp-sdk/core/agent` (it returns a Promise) — `new HttpAgent()` is deprecated. Either way, set `rootKey` from the `ic_env` cookie (without it the agent defaults to the mainnet root key and calls against a local network fail verification). See `references/binding-generation.md` for the correct pattern and why.
 
 14. **Mixing canister-level fields across config styles.** When using a recipe, the only valid canister-level fields are `name`, `recipe`, `sync`, `settings`, and `init_args`. Fields like `candid`, `build`, or `wasm` are **not** valid at canister level alongside a recipe — recipe-specific options go inside `recipe.configuration`. When using bare `build` (no recipe), valid canister-level fields are `name`, `build`, `sync`, `settings`, and `init_args`. The field `init_arg_file` does not exist — use `init_args.path` instead (e.g., `init_args: { path: ./args.bin, format: bin }`). For the authoritative field reference, consult the [icp-cli configuration reference](https://cli.internetcomputer.org/1.2/reference/configuration.md).
     ```yaml
@@ -231,17 +231,6 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
     Omitting `package` when the names **differ** causes `cargo build` to fail with a package-not-found error — set it to the exact `[package] name`. On recipe versions before `v3.3.0`, `package` was required in all cases.
 
 22. **Hand-wiring canister IDs with setter methods or deploy scripts.** Controller-only setters (`setBridge(principal)`) called by a post-deploy script — or sibling IDs hardcoded in `settings.environment_variables` or init args — are unnecessary: `icp deploy` injects every canister's ID into every canister's settings as `PUBLIC_CANISTER_ID:<canister-name>`, readable by canister code at runtime with the correct per-environment value (see Canister Environment Variables). Setter wiring is also more fragile: a `--mode reinstall` silently wipes the stored pointer, while the automatic variables are re-stamped on every deploy.
-
-23. **Setting `host` on the agent where the default works, or omitting it where it cannot.** `host` is the API endpoint canister calls go to, not the URL the page is served from. In browser code that calls the network serving the page, leave `host` unset: the agent reuses the page's gateway domain on `localhost`, `127.0.0.1`, `icp0.io` and `ic0.app`, and for every other hostname — `icp.net` (the default mainnet domain) and custom domains — it falls back to `https://icp-api.io`, which is why custom domains work even though they serve only the HTTP gateway, not `/api/v2`. Never set `host: window.location.origin`. Set `host` explicitly only in Node scripts and tests, which have no page and so default to `https://icp-api.io` (mainnet): use `api_url` from `icp network status --json`, with `rootKey` from its `root_key`, hex-decoded to bytes; and in a page that calls a different network than the one serving it (`https://icp-api.io` for mainnet, without the page's local `IC_ROOT_KEY`). Browser code calling the network that serves the page:
-    ```js
-    import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
-    const canisterEnv = safeGetCanisterEnv();
-    const backend = createActor(canisterEnv?.["PUBLIC_CANISTER_ID:backend"], {
-      // No host. Pass rootKey yourself: createActor does not read the ic_env cookie.
-      agentOptions: { rootKey: canisterEnv?.IC_ROOT_KEY },
-    });
-    ```
-    The full decision table (every browser and Node case) and the Node snippet are in `references/binding-generation.md`.
 
 ## How It Works
 
