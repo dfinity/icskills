@@ -28,7 +28,7 @@ Each `icpBindgen()` instance generates a `<canister-name>.ts` file (named after 
 
 ## Creating actors from bindings
 
-Connect the generated bindings with the `ic_env` cookie. Pass `{ agentOptions }` and let the binding build the agent (it calls `HttpAgent.createSync(agentOptions)`); add `identity` to `agentOptions` for authenticated calls. A pre-built `{ agent }` also works and is used as-is — build it with `await HttpAgent.create(...)` (it returns a Promise; passing it un-awaited fails at the first call with `agent.query is not a function` or `agent.update is not a function`), not the deprecated `new HttpAgent()` — but if you pass both, `agentOptions` is ignored with a console warning. Either way, set `rootKey` from the cookie: without it the agent defaults to the mainnet root key, and every call against a local network fails verification.
+Connect the generated bindings with the `ic_env` cookie. Pass `{ agentOptions }` and let the binding build the agent (for identity, pre-built agents and exceptions, see "Agent options" below).
 
 ```js
 // src/actor.js
@@ -37,9 +37,8 @@ import { createActor } from "./bindings/backend";
 // For additional canisters: import { createActor as createOther } from "./bindings/other";
 
 const canisterEnv = safeGetCanisterEnv();
-// Do NOT set host (for the exceptions, see below the code). The agent's default
-// host resolution already picks the right API endpoint for the network that
-// serves the page: on known gateway origins (ic0.app, icp0.io,
+// Do NOT set host. The agent's default host resolution already picks the right
+// API endpoint everywhere: on known gateway origins (ic0.app, icp0.io,
 // localhost, 127.0.0.1) it uses the page origin — so the local gateway and the
 // Vite dev-server /api proxy keep working — and anywhere else, including custom
 // domains and icp.net, it falls back to https://icp-api.io. Hardcoding
@@ -57,20 +56,6 @@ export const backend = createActor(
 );
 // Repeat for each canister: createOther(canisterEnv?.["PUBLIC_CANISTER_ID:other"], { agentOptions })
 ```
-
-Set `host` explicitly only when the default cannot know the target:
-
-- **Outside the browser** (Node scripts, tests): there is no page origin and no `ic_env` cookie, so the agent defaults to `https://icp-api.io` and the mainnet root key. For a local network, read both from `icp network status --json`:
-  ```js
-  import { execFileSync } from "node:child_process";
-  const { api_url, root_key } = JSON.parse(
-    execFileSync("icp", ["network", "status", "--json"], { encoding: "utf8" })
-  );
-  const backend = createActor(canisterId, {
-    agentOptions: { host: api_url, rootKey: Uint8Array.from(Buffer.from(root_key, "hex")) },
-  });
-  ```
-- **A page calling a different network than the one serving it** (e.g. mainnet canisters from a local dev server): set `host: "https://icp-api.io"` and do not pass the local `IC_ROOT_KEY` (see the `wallet-integration` skill).
 
 ## Non-Vite frontends
 
@@ -92,6 +77,28 @@ if (result.length > 0) { name = result[0]; }
 const result = await backend.getNickname();
 if (result !== null) { name = result; }
 ```
+
+## Agent options
+
+The example above is for browser code calling the network that serves the page.
+
+- **Identity:** add `identity` to `agentOptions` for authenticated calls.
+- **`rootKey`:** when calling the network that serves the page, set it from the cookie. Without it, the agent defaults to the mainnet root key, and every call against a local network fails verification. A page calling a different network must not pass it (see below).
+- **A pre-built `{ agent }`** also works and is used as-is. Build it with `await HttpAgent.create(...)`, not the deprecated `new HttpAgent()`: `create` returns a Promise, and passing it un-awaited fails at the first call with `agent.query is not a function` or `agent.update is not a function`. If you pass both `agent` and `agentOptions`, `agentOptions` is ignored with a console warning. `{ agentOptions }` makes the binding call `HttpAgent.createSync(agentOptions)`.
+
+Set `host` explicitly only when the default cannot know the target:
+
+- **Outside the browser** (Node scripts, tests): there is no page origin and no `ic_env` cookie, so the agent defaults to `https://icp-api.io` and the mainnet root key. For a local network, read both from `icp network status --json`:
+  ```js
+  import { execFileSync } from "node:child_process";
+  const { api_url, root_key } = JSON.parse(
+    execFileSync("icp", ["network", "status", "--json"], { encoding: "utf8" })
+  );
+  const backend = createActor(canisterId, {
+    agentOptions: { host: api_url, rootKey: Uint8Array.from(Buffer.from(root_key, "hex")) },
+  });
+  ```
+- **A page calling a different network than the one serving it** (e.g. mainnet canisters from a local dev server): set `host: "https://icp-api.io"` and do not pass the local `IC_ROOT_KEY` (see the `wallet-integration` skill).
 
 ## Requirements
 
