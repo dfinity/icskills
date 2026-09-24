@@ -1,0 +1,46 @@
+{
+  "skill": "certified-variables",
+  "description": "Evaluation cases for the certified-variables skill. Tests whether agents fetch certificates with query calls, verify witnesses with the current @dfinity/certificate-verification and @icp-sdk/core APIs, and write CertTree-backed Motoko actors that compile.",
+  "output_evals": [
+    {
+      "name": "Adversarial: certified getter traps when called from icp-cli",
+      "prompt": "My Rust canister has a `#[query] fn get(key: String)` that calls `ic_cdk::api::data_certificate().expect(\"data_certificate only available in query calls\")`. Running `icp canister call backend get '(\"greeting\")'` traps with that message. Why, and what is the fix? Just the cause and the corrected command.",
+      "expected_behaviors": [
+        "Explains that `icp canister call` sends an update call by default, even for a query method, and that data_certificate() returns None outside a query call",
+        "Gives the corrected command with the `--query` flag (e.g. `icp canister call --query backend get '(\"greeting\")'`)",
+        "Does NOT tell the user to move certified_data_set into the query or to change the method to an update"
+      ]
+    },
+    {
+      "name": "Frontend witness verification with certificate-verification 4",
+      "prompt": "Write a TypeScript function that verifies a certified key-value response `{ value: string | null; certificate: Uint8Array; witness: Uint8Array }` from my canister (keys are inserted as UTF-8 bytes) using @dfinity/certificate-verification 4 and @icp-sdk/core 6, and returns the verified value or null. Just the function.",
+      "expected_behaviors": [
+        "Calls verifyCertification with Uint8Array certificate, witness and rootKey (no ArrayBuffer conversions) and a maxCertificateTimeOffsetMs",
+        "Checks the status of the lookup_path result (LookupPathStatus.Found / Absent) instead of treating lookup_path's return value as the raw bytes",
+        "Returns null only for Absent and treats Unknown (or Error) as a failure, not as an absent key",
+        "Compares the canister-returned value with the value proven by the witness"
+      ]
+    },
+    {
+      "name": "Adversarial: certified queries fail after a Rust canister upgrade",
+      "prompt": "My Rust canister keeps an ic_certification RbTree in a thread_local and certifies its root hash in every update. After an upgrade, clients report 'Tree root hash did not match the certified data'. Someone says certified data is cleared on upgrade. Is that the cause, and what is the fix? Short answer, no code beyond the post_upgrade hook.",
+      "expected_behaviors": [
+        "States that certified data is NOT cleared on upgrade (it survives; only install/reinstall start it empty)",
+        "Identifies the real cause: the thread_local RbTree is wiped on upgrade, so the kept hash no longer matches the tree",
+        "Fix: rebuild the tree (from stable storage) in #[post_upgrade] and call certified_data_set with the new root hash"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I make my canister's query responses verifiable on the client?",
+      "verifyCertification throws 'Tree root hash did not match the certified data in the certificate'",
+      "Certify the responses of my Rust canister's http_request so the HTTP gateway accepts them"
+    ],
+    "should_not_trigger": [
+      "Deploy my React frontend to the IC with the static-site recipe",
+      "How do I keep a StableBTreeMap across canister upgrades?"
+    ]
+  }
+}
