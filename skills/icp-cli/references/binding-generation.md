@@ -84,7 +84,7 @@ The example above is for browser code calling the network that serves the page.
 
 - **Identity:** add `identity` to `agentOptions` for authenticated calls.
 - **`rootKey`:** when calling the network that serves the page, set it from the cookie. Without it, the agent defaults to the mainnet root key, and every call against a local network fails verification. A page calling a different network must not pass it (see below).
-- **A pre-built `{ agent }`** also works and is used as-is. Build it with `await HttpAgent.create(...)`, not the deprecated `new HttpAgent()`: `create` returns a Promise, and passing it un-awaited fails at the first call with `agent.query is not a function` or `agent.update is not a function`. If you pass both `agent` and `agentOptions`, `agentOptions` is ignored with a console warning. `{ agentOptions }` makes the binding call `HttpAgent.createSync(agentOptions)`.
+- **A pre-built `{ agent }`** also works and is used as-is. Build it with `await HttpAgent.create({ identity, rootKey })` (plus `host` where the rules below require it), not the deprecated `new HttpAgent()`. `agentOptions` is ignored when you pass `agent` (passing both logs a console warning), so these options go into `create`. `create` returns a Promise, and passing it un-awaited fails at the first call with `agent.query is not a function` or `agent.update is not a function`. `{ agentOptions }` makes the binding call `HttpAgent.createSync(agentOptions)`.
 
 Set `host` explicitly only when the default cannot know the target:
 
