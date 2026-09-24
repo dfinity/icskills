@@ -183,6 +183,7 @@
         "Sets rootKey from safeGetCanisterEnv() (IC_ROOT_KEY from the ic_env cookie), noting the agent otherwise defaults to the mainnet root key",
         "Replaces the deprecated `new HttpAgent(...)` constructor — with `{ agentOptions }` or `HttpAgent.create()` from '@icp-sdk/core/agent'",
         "Removes the hardcoded host (the agent's default host resolution picks the right endpoint)",
+        "Keeps `identity` in the corrected setup (in `agentOptions` or in `HttpAgent.create`), so calls stay authenticated",
         "Does NOT claim that passing { agent } to createActor is ignored or silently results in an anonymous identity"
       ]
     },
