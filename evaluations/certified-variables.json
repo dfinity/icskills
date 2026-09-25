@@ -1,6 +1,6 @@
 {
   "skill": "certified-variables",
-  "description": "Evaluation cases for the certified-variables skill. Tests whether agents fetch certificates with query calls, verify witnesses with the current @dfinity/certificate-verification and @icp-sdk/core APIs, know that certified data survives upgrades while heap trees do not, know what the HTTP gateway does and does not verify, and write CertTree-backed Motoko actors that compile.",
+  "description": "Evaluation cases for the certified-variables skill. Tests whether agents fetch certificates with query calls, verify witnesses with the current @dfinity/certificate-verification and @icp-sdk/core APIs, know that certified data survives upgrades while heap trees do not, know what the HTTP gateway does and does not verify, certify http_request responses (including fallbacks) so the gateway accepts them, and write CertTree-backed Motoko actors that compile.",
   "output_evals": [
     {
       "name": "Adversarial: certified getter traps when called from icp-cli",
@@ -46,6 +46,16 @@
         "Declares the store as `CertTree.newStore()` and the ops object with `transient` (e.g. `transient let ct = CertTree.Ops(certStore)`), not as a plain stable `let`",
         "Calls ct.setCertifiedData() at init (in the actor body)",
         "Says no postupgrade hook is needed: the CertTree.Store persists and the certified data survives upgrades"
+      ]
+    },
+    {
+      "name": "Adversarial: ic-http-certification header and fallback errors",
+      "prompt": "My Rust canister serves `/hello` from `http_request` using ic-http-certification 4. First, `HttpCertification::response_only(&cel, &response, None)` returned `CertificateExpressionHeaderMissing`. After fixing that, `/hello` works through `https://<id>.icp.net`, but every other path returns `backend_response_verification` instead of a 404. Explain both errors and the fix for each. Short answer, no full canister code.",
+      "expected_behaviors": [
+        "Explains that the `IC-CertificateExpression` header (carrying the CEL expression) must be in the response before it is certified",
+        "Explains that the 404 for other paths is uncertified, so the gateway rejects it",
+        "Fixes it by certifying a response for those paths under a wildcard path (e.g. `HttpCertificationPath::wildcard(\"/\")`) and serving it with its witness",
+        "Does NOT suggest using the raw domain (`<id>.raw.icp.net`) as the fix"
       ]
     }
   ],
