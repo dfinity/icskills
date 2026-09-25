@@ -92,3 +92,14 @@ ic_cdk::export_candid!();
 ```
 
 `response_only_certification` certifies the response regardless of request details; use `DefaultCelBuilder::full_certification()` with `HttpCertification::full` when request headers or query parameters must be bound too. For many or dynamic responses (JSON APIs, fallbacks, skipping certification, upgrading to update calls), follow the [ic-http-certification docs](https://docs.rs/ic-http-certification) and the [http-certification examples](https://github.com/dfinity/response-verification/tree/main/examples/http-certification). Their project setup uses dfx, but the canister code applies unchanged. For static files served from your own Rust canister, `ic-asset-certification` builds on this crate.
+
+## Checking it
+
+```bash
+# Local: the gateway URL comes from `icp network status --json` (gateway_url)
+curl -s -D - http://CANISTER_ID.localhost:8000/hello
+# Mainnet
+curl -s -D - https://CANISTER_ID.icp.net/hello
+```
+
+Expected: `200`, with `IC-Certificate` and `IC-CertificateExpression` headers. A response that fails verification comes back as JSON with `"error_type": "backend_response_verification"`. The `raw` host (`CANISTER_ID.raw.icp.net`, locally `CANISTER_ID.raw.localhost`) skips verification, so it serves even a broken certification: do not test there.
