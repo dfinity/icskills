@@ -286,7 +286,7 @@ Canisters that serve HTTP from their own `http_request` must certify each respon
 
 ## Client Verification (TypeScript)
 
-`@icp-sdk/core` ships every primitive (`Certificate.create`, `Cbor`, `reconstruct`, `lookup_path`); `@dfinity/certificate-verification` wraps them for the witness case: it verifies the certificate signature, checks `/time`, decodes the witness, and checks that its root hash equals the certificate's `certified_data`. Candid `blob` fields arrive as `Uint8Array` in `@icp-sdk/bindgen` bindings, matching the parameters below. Take the root key from "Root Key".
+`@icp-sdk/core` ships every primitive (`Certificate.create`, `Cbor`, `reconstruct`, `lookup_path`); `@dfinity/certificate-verification` wraps them for the witness case: it verifies the certificate signature, checks `/time`, decodes the witness, and checks that its root hash equals the certificate's `certified_data`. Candid `blob` fields arrive as `Uint8Array` in `@icp-sdk/bindgen` bindings. The helpers take the getters' responses as returned: a Motoko `?Blob` value or certificate is `Uint8Array | null`, and the witness helper decodes a `Uint8Array` value as UTF-8. Take the root key from "Root Key".
 
 ### With a witness
 
@@ -301,10 +301,16 @@ export async function getVerifiedValue(
   rootKey: Uint8Array,
   canisterId: string,
   key: string,
-  // certificate is a blob (Rust) or ?blob (Motoko); null means the getter did not run as a query call
-  response: { value: string | null; certificate: Uint8Array | null; witness: Uint8Array },
+  // value is opt text (Rust) or ?blob (Motoko); certificate is a blob (Rust) or ?blob (Motoko)
+  response: {
+    value: string | Uint8Array | null;
+    certificate: Uint8Array | null;
+    witness: Uint8Array;
+  },
 ): Promise<string | null> {
   if (!response.certificate) throw new Error("no certificate: call the getter as a query");
+  const value =
+    response.value instanceof Uint8Array ? new TextDecoder().decode(response.value) : response.value;
   // Steps 1-5; throws CertificateTimeError or CertificateVerificationError on failure.
   const tree = await verifyCertification({
     canisterId: Principal.fromText(canisterId),
@@ -319,11 +325,11 @@ export async function getVerifiedValue(
   switch (result.status) {
     case LookupPathStatus.Found: {
       const verified = new TextDecoder().decode(result.value);
-      if (response.value !== verified) throw new Error("value does not match witness");
+      if (value !== verified) throw new Error("value does not match witness");
       return verified;
     }
     case LookupPathStatus.Absent:
-      if (response.value !== null) throw new Error("witness proves the key is absent");
+      if (value !== null) throw new Error("witness proves the key is absent");
       return null;
     default:
       // Unknown/Error: the witness does not cover this key, so it proves nothing

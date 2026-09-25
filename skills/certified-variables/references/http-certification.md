@@ -105,8 +105,9 @@ ic_cdk::export_candid!();
 ## Checking it
 
 ```bash
-# Local: the gateway URL comes from `icp network status --json` (gateway_url)
-curl -s -D - http://CANISTER_ID.localhost:8000/hello
+# Local: take the gateway URL from the running network (its port is not always 8000)
+GATEWAY=$(icp network status --json | jq -r .gateway_url)
+curl -s -D - "${GATEWAY}hello?canisterId=CANISTER_ID"
 # Mainnet
 curl -s -D - https://CANISTER_ID.icp.net/hello
 ```
