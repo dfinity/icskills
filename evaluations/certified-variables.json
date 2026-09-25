@@ -57,6 +57,16 @@
         "Fixes it by certifying a response for those paths under a wildcard path (e.g. `HttpCertificationPath::wildcard(\"/\")`) and serving it with its witness",
         "Does NOT suggest using the raw domain (`<id>.raw.icp.net`) as the fix"
       ]
+    },
+    {
+      "name": "Adversarial: certify the initial value of a Motoko certified variable",
+      "prompt": "Write a minimal Motoko persistent actor that certifies a single Text value with mo:core/CertifiedData (hash it with the mops sha2 package): a setter and a query getter returning { value; certificate }. Just the actor, no deploy steps.",
+      "expected_behaviors": [
+        "Certifies the initial value at install (a CertifiedData.set call in the actor body or init), not only inside the setter",
+        "Uses the same hashing/certification step after every change in the setter",
+        "The getter is a query that returns CertifiedData.getCertificate() as the certificate",
+        "Hashes the value to 32 bytes (e.g. SHA-256) before calling CertifiedData.set"
+      ]
     }
   ],
   "trigger_evals": {

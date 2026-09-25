@@ -301,8 +301,10 @@ export async function getVerifiedValue(
   rootKey: Uint8Array,
   canisterId: string,
   key: string,
-  response: { value: string | null; certificate: Uint8Array; witness: Uint8Array },
+  // certificate is a blob (Rust) or ?blob (Motoko); null means the getter did not run as a query call
+  response: { value: string | null; certificate: Uint8Array | null; witness: Uint8Array },
 ): Promise<string | null> {
+  if (!response.certificate) throw new Error("no certificate: call the getter as a query");
   // Steps 1-5; throws CertificateTimeError or CertificateVerificationError on failure.
   const tree = await verifyCertification({
     canisterId: Principal.fromText(canisterId),
@@ -341,8 +343,10 @@ import { Principal } from "@icp-sdk/core/principal";
 export async function verifySingleValue(
   rootKey: Uint8Array,
   canisterId: string,
-  response: { value: string; certificate: Uint8Array },
+  // certificate is ?blob in the Motoko getter; null means it did not run as a query call
+  response: { value: string; certificate: Uint8Array | null },
 ): Promise<string> {
+  if (!response.certificate) throw new Error("no certificate: call the getter as a query");
   const principal = Principal.fromText(canisterId);
   const cert = await Certificate.create({
     certificate: response.certificate,

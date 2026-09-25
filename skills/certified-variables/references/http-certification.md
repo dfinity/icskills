@@ -1,6 +1,6 @@
 # HTTP Certification for Custom `http_request` Canisters
 
-For canisters serving HTTP responses directly from `http_request`, responses must be certified so the HTTP gateway can verify them. A complete, minimal canister serving one certified response at `/hello` and a certified 404 for every other path. Every path the gateway can request needs a certified response; an uncertified 404 or error is rejected with `backend_response_verification`:
+For canisters serving HTTP responses directly from `http_request`, responses must be certified so the HTTP gateway can verify them. Below is a complete, minimal canister that serves one certified response at `/hello` and a certified 404 for every other path. Every path the gateway can request needs a certified response; an uncertified 404 or error is rejected with `backend_response_verification`:
 
 **Cargo.toml dependencies:**
 
