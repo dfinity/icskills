@@ -1,6 +1,6 @@
 # HTTP Certification for Custom `http_request` Canisters
 
-For canisters serving HTTP responses directly from `http_request`, responses must be certified so the HTTP gateway can verify them. A complete, minimal canister serving one certified response at `/hello`:
+For canisters serving HTTP responses directly from `http_request`, responses must be certified so the HTTP gateway can verify them. A complete, minimal canister serving one certified response at `/hello` and a certified 404 for every other path. Every path the gateway can request needs a certified response; an uncertified 404 or error is rejected with `backend_response_verification`:
 
 **Cargo.toml dependencies:**
 
@@ -24,10 +24,13 @@ use std::cell::RefCell;
 
 const PATH: &str = "/hello";
 
+// A certified response: the tree path it is certified under, the response, and its certification.
+type Certified = (HttpCertificationPath<'static>, HttpResponse<'static>, HttpCertification);
+
 thread_local! {
     static TREE: RefCell<HttpCertificationTree> = RefCell::new(HttpCertificationTree::default());
-    // The certified response and its certification, kept to serve and to build the witness.
-    static CERTIFIED: RefCell<Option<(HttpResponse<'static>, HttpCertification)>> = RefCell::new(None);
+    // [0] = the response for PATH, [1] = the 404 served for every other path.
+    static CERTIFIED: RefCell<Vec<Certified>> = RefCell::new(Vec::new());
 }
 
 fn certify() {
@@ -36,25 +39,32 @@ fn certify() {
             "Content-Type",
         ]))
         .build();
-    // The IC-CertificateExpression header must be part of the response that gets certified.
-    let response = HttpResponse::ok(
-        b"hello".to_vec(),
-        vec![
-            ("Content-Type".into(), "text/plain".into()),
-            (CERTIFICATE_EXPRESSION_HEADER_NAME.into(), cel.to_string()),
-        ],
-    )
-    .build();
-    let certification = HttpCertification::response_only(&cel, &response, None).unwrap();
+    // The IC-CertificateExpression header must be part of every response that gets certified.
+    let headers = vec![
+        ("Content-Type".to_string(), "text/plain".to_string()),
+        (CERTIFICATE_EXPRESSION_HEADER_NAME.to_string(), cel.to_string()),
+    ];
+    let responses = vec![
+        (HttpCertificationPath::exact(PATH), HttpResponse::ok(b"hello".to_vec(), headers.clone()).build()),
+        // A wildcard path covers every URL without a more specific entry, so the 404 is certified too.
+        (HttpCertificationPath::wildcard("/"), HttpResponse::not_found(b"not found".to_vec(), headers).build()),
+    ];
+
+    let certified: Vec<Certified> = responses
+        .into_iter()
+        .map(|(path, response)| {
+            let certification = HttpCertification::response_only(&cel, &response, None).unwrap();
+            (path, response, certification)
+        })
+        .collect();
 
     TREE.with_borrow_mut(|tree| {
-        tree.insert(&HttpCertificationTreeEntry::new(
-            HttpCertificationPath::exact(PATH),
-            &certification,
-        ));
+        for (path, _, certification) in &certified {
+            tree.insert(&HttpCertificationTreeEntry::new(path, certification));
+        }
         ic_cdk::api::certified_data_set(tree.root_hash());
     });
-    CERTIFIED.with_borrow_mut(|c| *c = Some((response, certification)));
+    CERTIFIED.with_borrow_mut(|c| *c = certified);
 }
 
 #[init]
@@ -70,13 +80,12 @@ fn post_upgrade() {
 
 #[query]
 fn http_request(req: HttpRequest) -> HttpResponse<'static> {
-    if req.get_path().ok().as_deref() != Some(PATH) {
-        return HttpResponse::not_found(b"not found".to_vec(), vec![]).build();
-    }
-    let (mut response, certification) = CERTIFIED.with_borrow(|c| c.clone().unwrap());
-    let path = HttpCertificationPath::exact(PATH);
+    let request_path = req.get_path().unwrap_or_default();
+    let index = if request_path == PATH { 0 } else { 1 };
+    let (path, mut response, certification) = CERTIFIED.with_borrow(|c| c[index].clone());
+    // The witness proves this entry is the one that applies to the requested path.
     let witness = TREE.with_borrow(|tree| {
-        tree.witness(&HttpCertificationTreeEntry::new(&path, &certification), PATH)
+        tree.witness(&HttpCertificationTreeEntry::new(&path, &certification), &request_path)
             .unwrap()
     });
     add_v2_certificate_header(
@@ -102,4 +111,4 @@ curl -s -D - http://CANISTER_ID.localhost:8000/hello
 curl -s -D - https://CANISTER_ID.icp.net/hello
 ```
 
-Expected: `200`, with `IC-Certificate` and `IC-CertificateExpression` headers. A response that fails verification comes back as JSON with `"error_type": "backend_response_verification"`. The `raw` host (`CANISTER_ID.raw.icp.net`, locally `CANISTER_ID.raw.localhost`) skips verification, so it serves even a broken certification: do not test there.
+Expected: `200` for `/hello` and a certified `404` for any other path, both with `IC-Certificate` and `IC-CertificateExpression` headers. A response that fails verification comes back as JSON with `"error_type": "backend_response_verification"`. The `raw` host (`CANISTER_ID.raw.icp.net`, locally `CANISTER_ID.raw.localhost`) skips verification, so it serves even a broken certification: do not test there.

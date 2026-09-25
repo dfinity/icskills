@@ -55,7 +55,7 @@ Never call `fetchRootKey()` in shipped code: it trusts whatever key the replica 
 
 1. **Certifying more than 32 bytes.** `certified_data_set` / `CertifiedData.set` accept at most 32 bytes. Build a Merkle tree over the data and certify its root hash; the tree provides per-key proofs.
 
-2. **Setting certified data outside an update call, or not after every change.** Setting it in a query traps. Forgetting to set it after a mutation leaves a stale hash, and every query then fails verification. Batch writes need only one `certified_data_set` after the last insert.
+2. **Setting certified data outside an update call, or not at install and after every change.** Setting it in a query traps. Certified data starts empty on install, so certify the initial state in `init` (Rust) or the actor body (Motoko), or queries fail verification until the first write. Forgetting to set it after a mutation leaves a stale hash with the same result. Batch writes need only one `certified_data_set` after the last insert.
 
 3. **Expecting a certificate from a call that is not a query call.** `data_certificate()` / `CertifiedData.getCertificate()` return `None`/`null` in update calls, and a query method invoked as an update call counts as one. **`icp canister call` sends an update call unless you pass `--query`**: without it, the Rust example below traps on its `expect`, and the Motoko examples return `certificate = null`. Frontend code calling a `query` method through an actor sends a query call automatically.
 
@@ -200,12 +200,18 @@ persistent actor {
   // Simple certified single-value example:
   var certifiedValue : Text = "";
 
+  // Certify the hash of the current value (max 32 bytes; update calls and init only)
+  func certify() {
+    CertifiedData.set(Sha256.fromBlob(#sha256, Text.encodeUtf8(certifiedValue)));
+  };
+
+  // Certify the initial value at install: certified data starts empty, not as sha256("")
+  certify();
+
   // Set a certified value (update call only)
   public func setCertifiedValue(value : Text) : async () {
     certifiedValue := value;
-    // Hash the value and set as certified data (max 32 bytes)
-    let hash = Sha256.fromBlob(#sha256, Text.encodeUtf8(value));
-    CertifiedData.set(hash);
+    certify();
   };
 
   // Get the certified value with its certificate (query call)
@@ -275,7 +281,7 @@ persistent actor {
 
 ### Custom `http_request` canisters
 
-Canisters that serve HTTP from their own `http_request` must certify each response with `ic-http-certification` so the HTTP gateway can verify it. Read `references/http-certification.md` before writing one: it has a complete, minimal canister (certify in `init`/`post_upgrade`, attach the witness in `http_request`) and the header rules from pitfall 9.
+Canisters that serve HTTP from their own `http_request` must certify each response with `ic-http-certification` so the HTTP gateway can verify it. Read `references/http-certification.md` before writing one: it has a complete, minimal canister (certify in `init`/`post_upgrade`, attach the witness in `http_request`, and a certified 404 for every other path) and the header rules from pitfall 9. Every path the gateway can request needs a certified response: an uncertified error or 404 is rejected with `backend_response_verification`.
 
 ## Client Verification (TypeScript)
 

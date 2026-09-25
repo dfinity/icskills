@@ -1,6 +1,6 @@
 {
   "skill": "certified-variables",
-  "description": "Evaluation cases for the certified-variables skill. Tests whether agents fetch certificates with query calls, verify witnesses with the current @dfinity/certificate-verification and @icp-sdk/core APIs, and write CertTree-backed Motoko actors that compile.",
+  "description": "Evaluation cases for the certified-variables skill. Tests whether agents fetch certificates with query calls, verify witnesses with the current @dfinity/certificate-verification and @icp-sdk/core APIs, know that certified data survives upgrades while heap trees do not, know what the HTTP gateway does and does not verify, and write CertTree-backed Motoko actors that compile.",
   "output_evals": [
     {
       "name": "Adversarial: certified getter traps when called from icp-cli",
@@ -37,6 +37,15 @@
         "States that the HTTP gateway verifies only HTTP responses (the frontend assets), not the Candid API query call the actor makes",
         "Explains that a query response is answered by a single replica (only a node signature), so it is not consensus-verified",
         "Recommends either certifying the balance (certified data + witness, verified with @dfinity/certificate-verification) or calling it as an update call"
+      ]
+    },
+    {
+      "name": "Adversarial: CertTree declarations in a persistent Motoko actor",
+      "prompt": "Show just the declarations for a Motoko persistent actor that keeps a certified map with the mops ic-certification package's CertTree: the store, the ops object, and the init-time certification call. No methods. Do I also need a postupgrade hook to re-set the certified data?",
+      "expected_behaviors": [
+        "Declares the store as `CertTree.newStore()` and the ops object with `transient` (e.g. `transient let ct = CertTree.Ops(certStore)`), not as a plain stable `let`",
+        "Calls ct.setCertifiedData() at init (in the actor body)",
+        "Says no postupgrade hook is needed: the CertTree.Store persists and the certified data survives upgrades"
       ]
     }
   ],
