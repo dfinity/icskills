@@ -55,7 +55,7 @@ Never call `fetchRootKey()` in shipped code: it trusts whatever key the replica 
 
 1. **Certifying more than 32 bytes.** `certified_data_set` / `CertifiedData.set` accept at most 32 bytes. Build a Merkle tree over the data and certify its root hash; the tree provides per-key proofs.
 
-2. **Setting certified data outside an update call, or not at install and after every change.** Setting it in a query traps. Certified data starts empty on install, so certify the initial state in `init` (Rust) or the actor body (Motoko), or queries fail verification until the first write. Forgetting to set it after a mutation leaves a stale hash with the same result. Batch writes need only one `certified_data_set` after the last insert.
+2. **Setting certified data in a query, or not at install and after every change.** `certified_data_set` works in every replicated context (init, `post_upgrade`, update calls, reply/reject callbacks, timers, heartbeat) but traps in a query call. Certified data starts empty on install, so certify the initial state in `init` (Rust) or the actor body (Motoko), or queries fail verification until the first write. Forgetting to set it after a mutation leaves a stale hash with the same result. Batch writes need only one `certified_data_set` after the last insert.
 
 3. **Expecting a certificate from a call that is not a query call.** `data_certificate()` / `CertifiedData.getCertificate()` return `None`/`null` in update calls, and a query method invoked as an update call counts as one. **`icp canister call` sends an update call unless you pass `--query`**: without it, the Rust example below traps on its `expect`, and the Motoko examples return `certificate = null`. Frontend code calling a `query` method through an actor sends a query call automatically.
 
@@ -121,8 +121,9 @@ fn init() {
 
 #[post_upgrade]
 fn post_upgrade() {
-    // The heap TREE is empty after an upgrade, while the old certified hash is kept.
-    // Rebuild TREE from stable storage here, then re-set the hash to match it.
+    // This example keeps TREE on the heap only: it is empty after an upgrade, while the
+    // old certified hash is kept. A real canister reinserts its entries from stable storage
+    // here first; this one re-certifies the empty tree so the hash matches it again.
     update_certified_data();
 }
 
@@ -200,7 +201,7 @@ persistent actor {
   // Simple certified single-value example:
   var certifiedValue : Text = "";
 
-  // Certify the hash of the current value (max 32 bytes; update calls and init only)
+  // Certify the hash of the current value (max 32 bytes; traps in a query call)
   func certify() {
     CertifiedData.set(Sha256.fromBlob(#sha256, Text.encodeUtf8(certifiedValue)));
   };
