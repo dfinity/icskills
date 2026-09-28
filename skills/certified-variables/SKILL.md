@@ -23,7 +23,7 @@ Decide this first. Certification only helps if something checks it.
 | Update call through an actor (`agent.update`) | consensus; the agent checks the response certificate | none |
 | Candid **query** call through an actor | only the answering node's signature | **certified data + `@dfinity/certificate-verification`** (this skill) |
 
-The gateway never touches Candid API calls (`/api/...`), even when the page itself came from a verifying host. Certify a query when a client acts on its result: balances, permissions, prices, anything security-relevant. The alternative is to call the method as an update and accept consensus latency. Ledgers implementing ICRC-3 already certify their tip: `icrc3_get_tip_certificate` returns `opt { certificate; hash_tree }`, which verifies like any witness below (labels `last_block_index`, `last_block_hash`).
+The gateway never touches Candid API calls (`/api/...`), even when the page itself came from a verifying host. Certify a query when a client acts on its result: balances, permissions, prices, anything security-relevant. The alternative is to call the method as an update and accept consensus latency. Ledgers implementing ICRC-3 already certify their tip: `icrc3_get_tip_certificate` returns `opt { certificate; hash_tree }`, which verifies with `verifyCertification` like any witness below (labels `last_block_index`, a LEB128 number, and `last_block_hash`, so decode them instead of the helper's UTF-8 compare).
 
 Static frontends served by the certified-assets canister (`@dfinity/static-site` recipe) are certified automatically: load the `static-site` skill for those.
 
@@ -286,7 +286,7 @@ Canisters that serve HTTP from their own `http_request` must certify each respon
 
 ## Client Verification (TypeScript)
 
-`@icp-sdk/core` ships every primitive (`Certificate.create`, `Cbor`, `reconstruct`, `lookup_path`); `@dfinity/certificate-verification` wraps them for the witness case: it verifies the certificate signature, checks `/time`, decodes the witness, and checks that its root hash equals the certificate's `certified_data`. Candid `blob` fields arrive as `Uint8Array` in `@icp-sdk/bindgen` bindings. The helpers take the getters' responses as returned: a Motoko `?Blob` value or certificate is `Uint8Array | null`, and the witness helper decodes a `Uint8Array` value as UTF-8. Take the root key from "Root Key".
+`@icp-sdk/core` ships every primitive (`Certificate.create`, `Cbor`, `reconstruct`, `lookup_path`); `@dfinity/certificate-verification` wraps them for the witness case: it verifies the certificate signature, checks `/time`, decodes the witness, and checks that its root hash equals the certificate's `certified_data`. Candid `blob` fields arrive as `Uint8Array` in `@icp-sdk/bindgen` bindings. bindgen turns `opt` record fields into optional properties that are `undefined` when empty. The helpers take the getters' responses as returned: a Motoko `?Blob` value or certificate is `Uint8Array | undefined`, and the witness helper decodes a `Uint8Array` value as UTF-8. Take the root key from "Root Key".
 
 ### With a witness
 
@@ -303,15 +303,17 @@ export async function getVerifiedValue(
   key: string,
   // value is opt text (Rust) or ?blob (Motoko); certificate is a blob (Rust) or ?blob (Motoko)
   response: {
-    value: string | Uint8Array | null;
-    certificate: Uint8Array | null;
+    value?: string | Uint8Array | null;
+    certificate?: Uint8Array | null;
     witness: Uint8Array;
   },
 ): Promise<string | null> {
   if (!response.certificate) throw new Error("no certificate: call the getter as a query");
   const value =
-    response.value instanceof Uint8Array ? new TextDecoder().decode(response.value) : response.value;
-  // Steps 1-5; throws CertificateTimeError or CertificateVerificationError on failure.
+    response.value instanceof Uint8Array
+      ? new TextDecoder().decode(response.value)
+      : (response.value ?? null);
+  // Checks signature, time and root hash; throws CertificateTimeError or CertificateVerificationError.
   const tree = await verifyCertification({
     canisterId: Principal.fromText(canisterId),
     encodedCertificate: response.certificate,
@@ -320,7 +322,7 @@ export async function getVerifiedValue(
     maxCertificateTimeOffsetMs: MAX_CERT_TIME_OFFSET_MS,
   });
 
-  // Step 6: the path must match how the canister inserted the key (here: UTF-8 bytes).
+  // The path must match how the canister inserted the key (here: UTF-8 bytes).
   const result = lookup_path([new TextEncoder().encode(key)], tree);
   switch (result.status) {
     case LookupPathStatus.Found: {
@@ -349,8 +351,8 @@ import { Principal } from "@icp-sdk/core/principal";
 export async function verifySingleValue(
   rootKey: Uint8Array,
   canisterId: string,
-  // certificate is ?blob in the Motoko getter; null means it did not run as a query call
-  response: { value: string; certificate: Uint8Array | null },
+  // certificate is ?blob in the Motoko getter; empty means it did not run as a query call
+  response: { value: string; certificate?: Uint8Array | null },
 ): Promise<string> {
   if (!response.certificate) throw new Error("no certificate: call the getter as a query");
   const principal = Principal.fromText(canisterId);
@@ -373,7 +375,7 @@ export async function verifySingleValue(
 }
 ```
 
-A runnable end-to-end version (Motoko backend plus a browser frontend performing these checks) is [dfinity/examples `motoko/cert-var`](https://github.com/dfinity/examples/tree/master/motoko/cert-var).
+A runnable single-value example with a browser frontend that verifies with `Certificate.create` is [dfinity/examples `motoko/cert-var`](https://github.com/dfinity/examples/tree/master/motoko/cert-var). It certifies the raw 4-byte `Nat32` instead of a hash.
 
 ## Checking It Works
 
