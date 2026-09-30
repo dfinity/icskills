@@ -81,6 +81,15 @@
         "Explains the legacy inline `(with migration = ...)` syntax is not used with the chain",
         "Routes all migrations, including one-shot changes, through a timestamped file in the chain rather than inline"
       ]
+    },
+    {
+      "name": "Adversarial: undeployed migration from an earlier session is still pending",
+      "prompt": "My Motoko canister uses the mops enhanced migration chain. Yesterday I wrote `src/backend/migrations/20260929_101500.mo` adding a `priority : Nat` field to `Task`, but I never deployed it. Today I also need a `tags : [Text]` field on `Task`. Where does that change go? Just the decision and the reason, no code.",
+      "expected_behaviors": [
+        "Edits the existing `20260929_101500.mo` to add `tags` alongside `priority`, instead of creating a second migration file",
+        "Explains the file is still pending because it was never applied (deployed), so it is not frozen even though it was written in an earlier session",
+        "Notes that at most one pending migration is allowed (`check-limit = 1`), so a second file would be rejected"
+      ]
     }
   ],
   "trigger_evals": {
