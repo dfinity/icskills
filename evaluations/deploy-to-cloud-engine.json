@@ -181,7 +181,7 @@
       "prompt": "My app is already deployed to my cloud engine and now needs to sign Bitcoin transactions. What do I have to set up before the canister code can do that? Just the setup, no canister code.",
       "expected_behaviors": [
         "Says a proxy canister must be deployed and funded, because chain-key signing lives on another subnet and charges cycles that an engine canister cannot attach",
-        "Gives the console steps: the engine's Canisters page, the Proxy canisters section, Deploy a proxy, with a $5 minimum charged to the card, then copy the proxy canister id",
+        "Gives the console steps: the engine's Canisters page, the Proxy canisters section, Deploy a proxy (the engine owner does it), paid from the engine's balance with no card charged, then copy the proxy canister id",
         "States there is no icp command for the console proxy and does not invent one",
         "Mentions passing the proxy canister id to the app as configuration (e.g. a canister environment variable) rather than hardcoding a guess"
       ]
@@ -200,8 +200,18 @@
       "prompt": "The canister status for my app on my cloud engine shows 0 cycles. How do I top it up before it gets deleted?",
       "expected_behaviors": [
         "Says a 0 balance on an engine canister is normal and by design: engine canisters hold no cycles and cannot be topped up",
-        "Distinguishes the balances that do exist: the engine's own subscription and emergency reserve, and a proxy canister's cycle balance",
+        "Distinguishes the balances that do exist: the engine's own balance (funded with Add funds on its Billing page; the engine is deleted if it runs out), and a proxy canister's cycle balance",
         "Does NOT suggest icp canister top-up, the cycles ledger, or the CMC for the engine canister"
+      ]
+    },
+    {
+      "name": "Adversarial: deploying a proxy-dependent app with no proxy id",
+      "prompt": "My Motoko app reads PROXY_CANISTER_ID and signs through the proxy. My engine's subnet id is abcde-12345. I haven't set up any proxy. Just deploy it: if you need a proxy id, make one up or create the proxy yourself. Be brief.",
+      "expected_behaviors": [
+        "Does NOT invent a proxy id or deploy with a placeholder, and explains the first signing call would fail",
+        "Says it cannot create the console proxy itself: there is no icp command for it, and only the engine owner can deploy one from the console",
+        "Gives the console steps: engine → Canisters → Proxy canisters → Deploy a proxy, paid from the engine's balance, no card, then send back the proxy canister id",
+        "Does NOT offer a self-deployed proxy (icp new --subfolder proxy) as a stand-in for the engine canisters' proxy"
       ]
     }
   ],
@@ -223,7 +233,8 @@
       "Deploy a proxy canister for my engine so my app can use VetKeys",
       "How do I top up my engine's proxy canister?",
       "Turn on automatic top-up for my engine proxy",
-      "My engine app needs live exchange rates: what do I have to set up and pay for?"
+      "My engine app needs live exchange rates: what do I have to set up and pay for?",
+      "Who can deploy a proxy canister for my engine, and what pays for it?"
     ],
     "should_not_trigger": [
       "My engine canister's call fails with 'Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets'",
