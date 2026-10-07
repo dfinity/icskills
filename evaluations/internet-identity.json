@@ -89,7 +89,7 @@
       "expected_behaviors": [
         "Requests verified_email (not just email) for access-gating use cases",
         "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
-        "Explains that verified_email is only present when the source OpenID provider (e.g. Google) marked the email as verified and II surfaced that signal — that is what makes verified_email trustworthy for authorisation",
+        "Explains that verified_email is only present when II established the user controls the address: either an OpenID provider (e.g. Google) marked it verified, or the user linked and verified that email with II directly. That is what makes verified_email trustworthy for authorisation",
         "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — either via an explicit `msg_caller_info_signer()` check (Rust) or via the `mo:identity-attributes` mixin with `trusted_attribute_signers` and `frontend_origins` configured (Motoko) — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
         "Does NOT recommend reading the email field as a substitute for verified_email"
       ]
@@ -260,14 +260,14 @@
       "prompt": "My dapp's package.json already pins \"@icp-sdk/core\": \"^5\". Give me the npm install command to add Internet Identity sign-in. No integration code.",
       "expected_behaviors": [
         "Does NOT give a bare unpinned `npm install @icp-sdk/auth` as the answer",
-        "States that the current @icp-sdk/auth major (10.x) peers @icp-sdk/core@^6 and therefore cannot install against a core ^5 pin",
-        "Offers a concrete resolution: either move core to ^6 alongside @icp-sdk/auth@^10, or stay on @icp-sdk/auth@^9 which peers core ^5",
+        "States that the current @icp-sdk/auth major (11.x) peers @icp-sdk/core@^6 and therefore cannot install against a core ^5 pin",
+        "Offers a concrete resolution: either move core to ^6 alongside @icp-sdk/auth@^11, or stay on @icp-sdk/auth@^9 which peers core ^5",
         "Does NOT recommend --legacy-peer-deps or --force to get past the peer conflict"
       ]
     },
     {
       "name": "Adversarial: local II sign-in without agentOptions",
-      "prompt": "I run Internet Identity on my local network (`ii: true` in icp.yaml) and use @icp-sdk/auth 10 with `new AuthClient({ identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' } })`. The II popup opens and I finish the ceremony, but signIn() still fails. What am I missing? Just the fix and a short explanation, no full app.",
+      "prompt": "I run Internet Identity on my local network (`ii: true` in icp.yaml) and use @icp-sdk/auth 11 with `new AuthClient({ identityProvider: { authorizeUrl: 'http://id.ai.localhost:8000/authorize', canisterId: 'rdmx6-jaaaa-aaaaa-aaadq-cai' } })`. The II popup opens and I finish the ceremony, but signIn() still fails. What am I missing? Just the fix and a short explanation, no full app.",
       "expected_behaviors": [
         "Adds agentOptions to the AuthClient constructor with the root key from the ic_env cookie (IC_ROOT_KEY)",
         "Explains that the client mints its delegations by calling the II canister and that, without the local root key, it verifies the local replica's response against the mainnet root key and fails",
@@ -285,6 +285,37 @@
         "Reacts to the session ending through authClient.subscribe(), checking isAuthenticated() or an 'expired' status from getStatus()",
         "Does NOT suggest re-scheduling the timer whenever the delegation is refreshed"
       ]
+    },
+    {
+      "name": "Checking an organization's SSO domain as the user types",
+      "prompt": "My sign-in page has a text field where users type their company domain for SSO, and a Continue button. Show me just the JavaScript that checks the typed domain as they type and signs in on Continue, using @icp-sdk/auth 11. No backend code, no styling.",
+      "expected_behaviors": [
+        "Builds a new AuthClient({ ssoDomain }) for the typed value and reads getSsoStatus(), re-rendering from subscribe()",
+        "Handles the states checking, available, invalid, and unavailable (with an optional retryAfter)",
+        "Calls dispose() on the superseded client when the input changes",
+        "Does NOT fetch /.well-known/ii-openid-configuration from the browser and does NOT use isValidSsoDomain",
+        "Does NOT wrap the constructor in try/catch to detect a malformed domain (it reports invalid instead)",
+        "Calls signIn() synchronously in the Continue click handler without awaiting the domain check first"
+      ]
+    },
+    {
+      "name": "Adversarial: awaiting the SSO check before signIn",
+      "prompt": "With @icp-sdk/auth 11, my Continue handler does `const status = await waitUntilChecked(client); if (status.state === 'available') await client.signIn();` for an ssoDomain client, and Safari never opens the popup. What is wrong? Just the fix and a short explanation.",
+      "expected_behaviors": [
+        "Explains that signIn() must be called synchronously in the click handler, because Safari blocks a popup opened after an await",
+        "Calls signIn() directly in the handler without awaiting the SSO check",
+        "States that signIn() proceeds in checking, available, and unavailable (II shows its own loading and error screens) and rejects only for an invalid domain"
+      ]
+    },
+    {
+      "name": "Adversarial: verified_email under an SSO scope",
+      "prompt": "My app signs users in with new AuthClient({ ssoDomain: 'acme.com' }). Which attribute key should I request to gate admin access on the user's email? Just the requestAttributes call and one sentence of explanation.",
+      "expected_behaviors": [
+        "States that there is no verified_email under sso: because an organization's SSO cannot produce one",
+        "Requests sso:acme.com:email (for example via scopedKeys({ ssoDomain: 'acme.com', keys: ['email'] }))",
+        "Says to trust that email only for SSO domains the backend explicitly trusts (e.g. trusted_sso_domains in mo:identity-attributes)",
+        "Does NOT request sso:acme.com:verified_email"
+      ]
     }
   ],
   "trigger_evals": {
@@ -296,7 +327,9 @@
       "Set up sign-in with Internet Identity",
       "How does delegation work with II?",
       "Add auth to my canister frontend",
-      "How do I get my app's name and logo to show on the Internet Identity sign-in screen?"
+      "How do I get my app's name and logo to show on the Internet Identity sign-in screen?",
+      "Let users sign in with their company's SSO in my ICP app",
+      "Check whether the domain a user typed supports Internet Identity SSO"
     ],
     "should_not_trigger": [
       "Connect a wallet to my dapp",
