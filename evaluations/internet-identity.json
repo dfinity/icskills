@@ -311,7 +311,7 @@
       "name": "Adversarial: verified_email under an SSO scope",
       "prompt": "My app signs users in with new AuthClient({ ssoDomain: 'acme.com' }). Which attribute key should I request to gate admin access on the user's email? Just the requestAttributes call and one sentence of explanation.",
       "expected_behaviors": [
-        "States that there is no verified_email under sso: because an organization's SSO cannot produce one",
+        "States that there is no verified_email under sso: (an organization's SSO asserts the email itself, so II cannot vouch for it)",
         "Requests sso:acme.com:email (for example via scopedKeys({ ssoDomain: 'acme.com', keys: ['email'] }))",
         "Says to trust that email only for SSO domains the backend explicitly trusts (e.g. trusted_sso_domains in mo:identity-attributes)",
         "Does NOT request sso:acme.com:verified_email"
