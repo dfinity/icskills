@@ -14,7 +14,7 @@ metadata:
 
 Internet Identity (II) is the Internet Computer's native authentication system. Users sign in to II-powered apps with passkeys, with an OpenID account (Google, Apple, Microsoft), or through their organization's own SSO; no usernames or passwords. Each user gets a unique principal per app origin, preventing cross-app tracking.
 
-The full guides are at https://docs.internetcomputer.org/guides/authentication/ (Getting started, App metadata, Identity attributes, One-click sign-in, Enterprise SSO, Shared sessions across subdomains). Reference material for this skill lives in `references/`:
+Reference material for this skill lives in `references/`:
 
 - `references/shared-sessions.md`: sharing one sign-in across sibling subdomains, end to end.
 - `references/app-metadata.md`: every validation rule for `/.well-known/ii-app-metadata`.

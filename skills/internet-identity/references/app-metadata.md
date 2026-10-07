@@ -43,5 +43,3 @@ The document and the logo are both read cross-origin, so both need CORS headers.
 `.well-known/` is uploaded automatically, but the document has no file extension, so its media type must be set with the bare `Content-Type:` line.
 
 Missing, unreachable, or invalid metadata never blocks sign-in. Publishing it verifies nothing about the app: II keeps showing the origin next to whatever the document provides, because the origin is the part users can check.
-
-The normative rules, including a JSON Schema to validate the document against in CI, are in the **App metadata** section of the Internet Identity specification: https://docs.internetcomputer.org/references/internet-identity-spec/#app-metadata (the schema expresses every rule above except isolate balancing).
