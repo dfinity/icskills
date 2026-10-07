@@ -293,6 +293,7 @@
         "Builds a new AuthClient({ ssoDomain }) for the typed value and reads getSsoStatus(), re-rendering from subscribe()",
         "Handles the states checking, available, invalid, and unavailable (with an optional retryAfter)",
         "Calls dispose() on the superseded client when the input changes",
+        "Debounces the input, building a client once typing pauses rather than on every keystroke",
         "Does NOT fetch /.well-known/ii-openid-configuration from the browser and does NOT use isValidSsoDomain",
         "Does NOT wrap the constructor in try/catch to detect a malformed domain (it reports invalid instead)",
         "Calls signIn() synchronously in the Continue click handler without awaiting the domain check first",

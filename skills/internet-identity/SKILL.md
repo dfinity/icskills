@@ -195,12 +195,20 @@ Checking while the user types:
 
 ```javascript
 let client;
+let timer;
 
 input.addEventListener("input", () => {
-  client?.dispose();                                   // also stops the old client's check
-  client = new AuthClient({ ssoDomain: input.value }); // never throws for the domain
-  client.subscribe(() => render(client.getSsoStatus()));
-  render(client.getSsoStatus());
+  client?.dispose();  // also stops the old client's check
+  client = undefined; // Continue never signs in to the old domain
+  showSpinner();
+
+  clearTimeout(timer); // debounce: one client per pause, not per keystroke
+  timer = setTimeout(() => {
+    const next = new AuthClient({ ssoDomain: input.value }); // never throws for the domain
+    next.subscribe(() => render(next.getSsoStatus()));
+    render(next.getSsoStatus());
+    client = next;
+  }, 300);
 });
 
 function render(sso) {
@@ -218,7 +226,7 @@ continueButton.addEventListener("click", () => {
 });
 ```
 
-- A superseded client is disposed before it can publish, so stale results never render. The check reaches II only after a short delay, so a debounce is optional.
+- A superseded client is disposed before it can publish, so stale results never render. Debounce the input as above: building a client per keystroke churns clients and checks.
 - `refreshSsoStatus()` re-runs the check for a "Try again" button. While `retryAfter` is in the future, II answers `unavailable` again at once with no new fetch, so disable the button and show a countdown ("Try again in 2 min"). It does nothing on an `invalid` client: the user fixes the input, which builds a new client. A client never re-checks by itself.
 - `signIn()` proceeds in `checking`, `available`, and `unavailable`: II resolves the domain itself and shows its own loading and error screens. Of the four states, only `invalid` makes it reject; a closed popup or failed authentication rejects in any state.
 - The check warms II's cache, so `signIn()` on the same client starts fast.
