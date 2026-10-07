@@ -44,7 +44,7 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 
 2. **Passing `identityProvider` as a string, or half of it.** It is an object, `{ authorizeUrl, canisterId }`, both required together; a string or `URL` throws a `TypeError`. Omit the option entirely to get mainnet II, which is what most apps want.
 
-3. **Top-level `await` in frontend code.** Vite targets `es2020` by default, which has no top-level await. Wrap the setup in an `async function init()` (or a framework lifecycle hook). Do NOT change `build.target` to `esnext` to make it compile.
+3. **Top-level `await` in frontend code.** Vite 6 and earlier target `es2020`-era browsers by default, which have no top-level await, so the build fails; Vite 7 allows it. Wrap the setup in an `async function init()` (or a framework lifecycle hook). Code written that way builds on every version. Do NOT change `build.target` to `esnext` to make it compile.
 
 4. **Treating `maxTimeToLive` as the lifetime of the signing key.** It bounds the **session** at II, and `maxTimeToIdle` ends a session nobody uses; the delegation your calls are signed with is short-lived and replaced by the client. Leave both unset unless the app has its own policy: II applies seven days idle and thirty days in total.
 
@@ -154,7 +154,7 @@ async function createAuthenticatedActor(identity, canisterId, idlFactory) {
   return Actor.createActor(idlFactory, { agent, canisterId });
 }
 
-// Wrapped in a function: Vite's default es2020 target has no top-level await.
+// Wrapped in a function: Vite 6 and earlier reject top-level await by default.
 async function init() {
   // isAuthenticated() is sync; getIdentity() is async.
   if (authClient.isAuthenticated()) {
@@ -336,7 +336,7 @@ persistent actor {
     };
   });
 
-  public query func getProfile(caller : Principal) : async ?Profile {
+  public shared query ({ caller }) func getProfile() : async ?Profile {
     profiles.get(caller)
   };
 };
@@ -347,7 +347,7 @@ canisters:
   - name: backend
     settings:
       environment_variables:
-        # Required. List your local II principal too if tests run against a local II.
+        # Required. A local II (`ii: true`) has the same principal.
         trusted_attribute_signers: "rdmx6-jaaaa-aaaaa-aaadq-cai"
         # Required, comma-separated.
         frontend_origins: "https://your-app.icp.net"

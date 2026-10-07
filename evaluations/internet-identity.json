@@ -318,6 +318,16 @@
         "Says to trust that email only for SSO domains the backend explicitly trusts (e.g. trusted_sso_domains in mo:identity-attributes)",
         "Does NOT request sso:acme.com:verified_email"
       ]
+    },
+    {
+      "name": "Adversarial: switching an existing client to another SSO domain",
+      "prompt": "With @icp-sdk/auth 11 I keep one AuthClient for the page and want it to follow the SSO domain the user types, so I tried `client.ssoDomain = input.value` and `client.signIn({ ssoDomain: input.value })`. Neither works. What should I do instead? Just the code and a short explanation.",
+      "expected_behaviors": [
+        "States that ssoDomain is constructor-only: there is no setter and signIn() takes no ssoDomain",
+        "Builds a new AuthClient({ ssoDomain }) for each new domain",
+        "Calls dispose() on the superseded client",
+        "Does NOT assign to a client property or pass ssoDomain to signIn()"
+      ]
     }
   ],
   "trigger_evals": {
