@@ -342,8 +342,8 @@ persistent actor {
     };
   });
 
-  public query func getProfile(caller : Principal) : async ?Profile {
-    profiles.get(caller)
+  public query func getProfile(userId : Principal) : async ?Profile {
+    profiles.get(userId)
   };
 };
 ```

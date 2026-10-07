@@ -38,8 +38,8 @@ identity_attributes::endpoints!(|caller: Principal, attributes: IdentityAttribut
 });
 
 #[query]
-fn get_profile(caller: Principal) -> Option<IdentityAttributes> {
-    PROFILES.with_borrow(|profiles| profiles.get(&caller).cloned())
+fn get_profile(user_id: Principal) -> Option<IdentityAttributes> {
+    PROFILES.with_borrow(|profiles| profiles.get(&user_id).cloned())
 }
 
 ic_cdk::export_candid!();
