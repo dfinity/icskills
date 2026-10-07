@@ -383,8 +383,6 @@ II derives a principal per **origin**, so `https://<canister-id>.icp.net` and `h
      Access-Control-Allow-Origin: *
    ```
 
-   Do **not** use `.ic-assets.json5`: it is the legacy asset canister's config, which the static-site recipe neither reads nor uploads. See the **static-site** skill.
-
 Sharing one sign-in across sibling subdomains builds on this: [Shared sessions across subdomains](https://docs.internetcomputer.org/guides/authentication/shared-sessions/).
 
 ## App metadata on the sign-in screen
