@@ -168,7 +168,7 @@ async function init() {
 init();
 ```
 
-**Lifecycle.** One client for the page, or one per component: both read and write the same sign-in. A client a view owns is disposed with it: `dispose()` releases its listeners, subscription, and scheduled refresh, and is **not** a sign-out. The client is browser-only; under a server-rendering framework, render whatever owns it on the client.
+**Lifecycle.** One client for the page, or one per component: both read and write the same sign-in. A client a view owns is disposed with it: `dispose()` releases its listeners, subscription, and scheduled refresh, and is **not** a sign-out.
 
 ## One-click sign-in
 
