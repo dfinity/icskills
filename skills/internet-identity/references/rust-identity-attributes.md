@@ -29,6 +29,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 thread_local! {
+    // On the heap to keep the example short: an upgrade clears it.
     static PROFILES: RefCell<BTreeMap<Principal, IdentityAttributes>> =
         const { RefCell::new(BTreeMap::new()) };
 }
