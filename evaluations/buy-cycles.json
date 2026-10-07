@@ -1,0 +1,81 @@
+{
+  "skill": "buy-cycles",
+  "description": "Evaluation cases for the buy-cycles skill. Tests whether agents drive a card purchase of cycles for the CLI's own identity through the on-chain gateway: quote before create, own-account destination, verbatim URL hand-off to the human, polling until delivered, handling tooManyOpenOrders / quoteChanged / buyerNotAllowed / paid / needsReview, and continuing the deploy as the same identity.",
+  "output_evals": [
+    {
+      "name": "Core purchase flow",
+      "prompt": "My icp deploy to mainnet failed because my identity has no cycles and I have no ICP, just a credit card. Give me just the commands to buy about $10 of cycles for my current icp identity and then deploy. Do not run anything.",
+      "expected_behaviors": [
+        "Uses `icp cycles buy --usd 10 -n ic` (or, as a fallback for older CLIs, `icp canister call saz2a-riaaa-aaaay-aadha-cai create_order …`), not `icp cycles mint` and not an exchange",
+        "Says the payment URL must be shown to the user to open on any device and that the agent does not pay",
+        "Uses the same identity for the purchase and for `icp deploy -e ic`",
+        "Does not suggest sending the cycles to a canister as the destination of the purchase"
+      ]
+    },
+    {
+      "name": "Fallback destination and pin",
+      "prompt": "The installed icp CLI has no `cycles buy` subcommand. Show me just the `icp canister call` for create_order against the CyclePay gateway for $10, with the destination and the minCycles argument filled in correctly. No explanation of the rest of the flow.",
+      "expected_behaviors": [
+        "Targets canister saz2a-riaaa-aaaay-aadha-cai with `-n ic`",
+        "Passes `variant { custom = 1000 : nat }` (USD cents)",
+        "Destination is `variant { cyclesLedgerAccount = record { owner = principal \"<caller>\"; subaccount = null } }` with the caller's own principal and a null subaccount",
+        "Passes an `opt` minCycles derived from a prior quote_previews call rather than null or an invented number"
+      ]
+    },
+    {
+      "name": "URL parsing pitfall",
+      "prompt": "I'm writing a bash one-liner to pull the Stripe checkout URL out of the Candid text that `icp canister call … create_order` prints. What should I be careful about? Just the gotcha and a correct extraction, no full script.",
+      "expected_behaviors": [
+        "Warns that stripping underscores (used by Candid as digit separators) corrupts the URL (cs_test_… → cstesta…)",
+        "Extracts the quoted string after `stripeSessionUrl = opt` unchanged",
+        "Mentions preferring `--json` output from `icp cycles buy` when available"
+      ]
+    },
+    {
+      "name": "tooManyOpenOrders handling",
+      "prompt": "create_order on the cycles gateway returned `err = variant { notAdmitted = variant { tooManyOpenOrders = … } }`. What should I do next? One short answer.",
+      "expected_behaviors": [
+        "Explains the cap is one open order per principal",
+        "Says to find/resume the existing `created` order or cancel it with cancel_order, not to retry create_order in a loop"
+      ]
+    },
+    {
+      "name": "paid and needsReview states",
+      "prompt": "I bought cycles through the gateway; the order has said `paid` for two minutes, and a colleague's order says `needsReview`. Should I create new orders? Short answer.",
+      "expected_behaviors": [
+        "Says no for `paid`: the card was charged and the gateway is retrying the ledger transfer",
+        "Says `needsReview` needs a gateway operator; report the order id and the charge, do not retry",
+        "Does not suggest creating a replacement order in either case"
+      ]
+    },
+    {
+      "name": "Simulation allow-list",
+      "prompt": "The gateway refused my purchase with `notAdmitted(buyerNotAllowed)`. What does that mean and can I fix it myself? Two sentences.",
+      "expected_behaviors": [
+        "Explains the gateway is in simulation mode and sells only to allow-listed principals",
+        "Says the buyer cannot fix it; a gateway controller must allow-list the principal, which the agent should name"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "I have no ICP, how do I pay for cycles with a credit card?",
+      "icp deploy says insufficient cycles and I don't have a wallet. Can I just buy some?",
+      "Buy $20 of cycles for my icp identity with Stripe",
+      "What does icp cycles buy do?",
+      "Fund my CLI identity with cycles using a card so the agent can deploy",
+      "How do I get cycles without an exchange account?",
+      "The cycles gateway returned quoteChanged, what now?"
+    ],
+    "should_not_trigger": [
+      "Convert 2 ICP to cycles with icp cycles mint",
+      "Top up my canister from my existing cycles balance",
+      "How do I check my canister's cycle balance?",
+      "Add Stripe payments to my own dapp's frontend",
+      "Sign in to the NNS dapp from the terminal with Internet Identity",
+      "Set a freezing threshold on my canister",
+      "Transfer cycles between two of my identities"
+    ]
+  }
+}
