@@ -14,13 +14,15 @@ metadata:
 
 Internet Identity (II) is the Internet Computer's native authentication system. Users sign in to II-powered apps with passkeys, with an OpenID account (Google, Apple, Microsoft), or through their organization's own SSO; no usernames or passwords. Each user gets a unique principal per app origin, preventing cross-app tracking.
 
-The full guides are at https://docs.internetcomputer.org/guides/authentication/ (Getting started, App metadata, Identity attributes, One-click sign-in, Enterprise SSO, Shared sessions across subdomains). Reference material for this skill lives in `references/`:
+The full guides, which this skill condenses:
 
-- `references/shared-sessions.md`: sharing one sign-in across sibling subdomains, end to end.
-- `references/app-metadata.md`: every validation rule for `/.well-known/ii-app-metadata`.
-- `references/enterprise-sso.md`: the organization's side of SSO (OIDC client, discovery file, limits, caching).
-- `references/rust-identity-attributes.md`: the Rust backend for identity attributes.
-- `references/older-api.md`: how `@icp-sdk/auth` 10.x and older differ.
+- [Getting started](https://docs.internetcomputer.org/guides/authentication/internet-identity/)
+- [App metadata](https://docs.internetcomputer.org/guides/authentication/app-metadata/): every validation rule for `/.well-known/ii-app-metadata`.
+- [Identity attributes](https://docs.internetcomputer.org/guides/authentication/identity-attributes/): keys, scoped keys, and the Motoko and Rust backends.
+- [One-click sign-in](https://docs.internetcomputer.org/guides/authentication/one-click-sign-in/)
+- [Enterprise SSO](https://docs.internetcomputer.org/guides/authentication/enterprise-sso/): the organization's side (OIDC client, discovery file, limits, caching).
+- [Shared sessions across subdomains](https://docs.internetcomputer.org/guides/authentication/shared-sessions/): one sign-in across sibling subdomains, end to end.
+- [`@icp-sdk/auth` upgrade guides](https://js.icp.build/auth/latest/): how older majors differ.
 
 ## Prerequisites
 
@@ -64,11 +66,11 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 
 13. **Treating `email` as verified.** `email` is the raw address from the user's II-linked account; II does not check it, so treat it as user input. `verified_email` is present only when II established that the user controls the address: either an OpenID provider (e.g. Google) marked it verified, or the user linked and verified that email with II directly. Gate access on `verified_email` only. There is **no `verified_email` under `sso:`**: an organization's SSO cannot produce one; its `sso:<domain>:email` is asserted by that organization's own provider, so trust it only for domains you list.
 
-14. **Sharing a cookie domain without a shared `derivationOrigin`.** Subdomains only share a sign-in when they share a principal. Without one derivation origin authorized for all of them, the shared record names an account the reading origin can never hold, and `/reauth` bounces the user forever. See `references/shared-sessions.md`.
+14. **Sharing a cookie domain without a shared `derivationOrigin`.** Subdomains only share a sign-in when they share a principal. Without one derivation origin authorized for all of them, the shared record names an account the reading origin can never hold, and `/reauth` bounces the user forever. See [Shared sessions across subdomains](https://docs.internetcomputer.org/guides/authentication/shared-sessions/).
 
 15. **A silent re-issue without `hint`, on the default transport, or to an undeclared callback.** `prompt: 'none'` without `hint` fails with `InteractionRequiredError` (`reason` `account_selection_required`) when II holds more than one session. It runs on page load with no user gesture, so it needs `transport: 'redirect'` on a route of its own, declared in the origin's `/.well-known/ii-auth-callbacks`, or the redirect never comes back.
 
-16. **Serving `/.well-known/ii-app-metadata` on the wrong origin, without CORS, or with one bad field.** II reads it from the derivation origin (when set) or the request origin, the document and the logo both need CORS, and one invalid field invalidates the whole document. See `references/app-metadata.md`.
+16. **Serving `/.well-known/ii-app-metadata` on the wrong origin, without CORS, or with one bad field.** II reads it from the derivation origin (when set) or the request origin, the document and the logo both need CORS, and one invalid field invalidates the whole document. See [App metadata](https://docs.internetcomputer.org/guides/authentication/app-metadata/).
 
 17. **Installing majors that do not pair.** auth 11 peers `@icp-sdk/core@^6`; pinning core to `^5` out of habit gives:
 
@@ -221,11 +223,11 @@ continueButton.addEventListener("click", () => client?.signIn());
 - `signIn()` proceeds in `checking`, `available`, and `unavailable`: II resolves the domain itself and shows its own loading and error screens. It rejects only in `invalid`.
 - The check warms II's cache, so `signIn()` on the same client starts fast.
 
-How the organization sets up its side (OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file, caching): `references/enterprise-sso.md`.
+How the organization sets up its side (OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file, caching): [Enterprise SSO](https://docs.internetcomputer.org/guides/authentication/enterprise-sso/).
 
 ## Identity attributes
 
-When the backend needs more than the principal (e.g. a verified email), II returns a signed attribute bundle alongside the delegation. The backend exposes two methods: `_internet_identity_sign_in_start` mints a nonce, `_internet_identity_sign_in_finish` verifies the bundle. Motoko gets both from the `mo:identity-attributes` mixin; Rust implements them by hand (`references/rust-identity-attributes.md`). The frontend is the same against either.
+When the backend needs more than the principal (e.g. a verified email), II returns a signed attribute bundle alongside the delegation. The backend exposes two methods: `_internet_identity_sign_in_start` mints a nonce, `_internet_identity_sign_in_finish` verifies the bundle. Motoko gets both from the `mo:identity-attributes` mixin; Rust implements them by hand ([Identity attributes](https://docs.internetcomputer.org/guides/authentication/identity-attributes/), Rust tab). The frontend is the same against either.
 
 ### Keys
 
@@ -378,11 +380,11 @@ II derives a principal per **origin**, so `https://<canister-id>.icp.net` and `h
 
    Do **not** use `.ic-assets.json5`: it is the legacy asset canister's config, which the static-site recipe neither reads nor uploads. See the **static-site** skill.
 
-Sharing one sign-in across sibling subdomains builds on this: `references/shared-sessions.md`.
+Sharing one sign-in across sibling subdomains builds on this: [Shared sessions across subdomains](https://docs.internetcomputer.org/guides/authentication/shared-sessions/).
 
 ## App metadata on the sign-in screen
 
-Serve `/.well-known/ii-app-metadata` (`{ "name", "description", "logo" }`, all optional) on the derivation origin, with CORS on the document and the logo, and II shows your app's name, tagline, and logo next to the origin. `name` at most 40 and `description` at most 120 code points; `logo` a relative URL to a same-origin raster image (no SVG). One invalid field invalidates the whole document. Full rules: `references/app-metadata.md`.
+Serve `/.well-known/ii-app-metadata` (`{ "name", "description", "logo" }`, all optional) on the derivation origin, with CORS on the document and the logo, and II shows your app's name, tagline, and logo next to the origin. `name` at most 40 and `description` at most 120 code points; `logo` a relative URL to a same-origin raster image (no SVG). One invalid field invalidates the whole document. Full rules: [App metadata](https://docs.internetcomputer.org/guides/authentication/app-metadata/).
 
 ## Backend: Access Control
 
