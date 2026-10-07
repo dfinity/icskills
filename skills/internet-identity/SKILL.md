@@ -19,7 +19,7 @@ Reference material for this skill lives in `references/`:
 - `references/shared-sessions.md`: sharing one sign-in across sibling subdomains, end to end.
 - `references/app-metadata.md`: every validation rule for `/.well-known/ii-app-metadata`.
 - `references/enterprise-sso.md`: the organization's side of SSO (OIDC client, discovery file, limits, caching).
-- `references/rust-identity-attributes.md`: the Rust backend for identity attributes.
+- `references/rust-identity-attributes.md`: the Rust backend for identity attributes, with the `identity-attributes` crate.
 - `references/older-api.md`: how `@icp-sdk/auth` 10.x and older differ.
 
 ## Prerequisites
@@ -58,7 +58,7 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 
 10. **Generating the attribute nonce on the frontend.** The nonce passed to `requestAttributes` MUST come from the backend (`_internet_identity_sign_in_start`), or the canister cannot check that the bundle's `implicit:nonce` is one it issued, and replay protection is gone.
 
-11. **Reading attribute data without verifying the signer.** The IC verifies the signature, not who signed: any canister can produce a valid bundle. The trusted signer is `rdmx6-jaaaa-aaaaa-aaadq-cai`. Motoko: use the `mo:identity-attributes` mixin with `trusted_attribute_signers` and `frontend_origins` configured. Rust: check `msg_caller_info_signer()` before reading `msg_caller_info_data()`, or an attacker canister can forge `email = "admin@you.com"`.
+11. **Reading attribute data without verifying the signer.** The IC verifies the signature, not who signed: any canister can produce a valid bundle. The trusted signer is `rdmx6-jaaaa-aaaaa-aaadq-cai`. Use the `identity-attributes` library (the `mo:identity-attributes` mixin in Motoko, `identity_attributes::endpoints!` in Rust) with `trusted_attribute_signers` and `frontend_origins` configured. Hand-written Rust must check `msg_caller_info_signer()` before reading `msg_caller_info_data()`, or an attacker canister can forge `email = "admin@you.com"`.
 
 12. **Substituting `{tid}` in the Microsoft scoped-key prefix.** The `microsoft` provider URL is the literal `https://login.microsoftonline.com/{tid}/v2.0`; keys look like `openid:https://login.microsoftonline.com/{tid}/v2.0:email` exactly. Filling in a tenant ID misses every lookup.
 
@@ -235,7 +235,7 @@ How the organization sets up its side (OIDC client, the `ii-openid-configuration
 
 ## Identity attributes
 
-When the backend needs more than the principal (e.g. a verified email), II returns a signed attribute bundle alongside the delegation. The backend exposes two methods: `_internet_identity_sign_in_start` mints a nonce, `_internet_identity_sign_in_finish` verifies the bundle. Motoko gets both from the `mo:identity-attributes` mixin; Rust implements them by hand (`references/rust-identity-attributes.md`). The frontend is the same against either.
+When the backend needs more than the principal (e.g. a verified email), II returns a signed attribute bundle alongside the delegation. The backend exposes two methods: `_internet_identity_sign_in_start` mints a nonce, `_internet_identity_sign_in_finish` verifies the bundle. The `identity-attributes` library adds both: the `mo:identity-attributes` mixin in Motoko, and the `identity_attributes::endpoints!` macro in Rust (`references/rust-identity-attributes.md`). Both return the same Candid types, so the frontend is the same against either.
 
 ### Keys
 
@@ -342,7 +342,7 @@ persistent actor {
     };
   });
 
-  public shared query ({ caller }) func getProfile() : async ?Profile {
+  public query func getProfile(caller : Principal) : async ?Profile {
     profiles.get(caller)
   };
 };
