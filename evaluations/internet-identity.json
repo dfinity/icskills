@@ -295,7 +295,8 @@
         "Calls dispose() on the superseded client when the input changes",
         "Does NOT fetch /.well-known/ii-openid-configuration from the browser and does NOT use isValidSsoDomain",
         "Does NOT wrap the constructor in try/catch to detect a malformed domain (it reports invalid instead)",
-        "Calls signIn() synchronously in the Continue click handler without awaiting the domain check first"
+        "Calls signIn() synchronously in the Continue click handler without awaiting the domain check first",
+        "Handles a rejection of the promise signIn() returns (for example with .catch or a then rejection handler), without awaiting the domain check before calling signIn()"
       ]
     },
     {
@@ -304,7 +305,8 @@
       "expected_behaviors": [
         "Explains that signIn() must be called synchronously in the click handler, because Safari blocks a popup opened after an await",
         "Calls signIn() directly in the handler without awaiting the SSO check",
-        "States that signIn() proceeds in checking, available, and unavailable (II shows its own loading and error screens) and rejects only for an invalid domain"
+        "Handles a rejection of the promise signIn() returns, so a closed popup or failed authentication is not an unhandled rejection",
+        "States that signIn() proceeds in checking, available, and unavailable (II shows its own loading and error screens) and, of the SSO states, rejects only for an invalid domain"
       ]
     },
     {

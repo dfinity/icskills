@@ -88,7 +88,7 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 
 20. **Checking an SSO domain from the browser.** Do not `fetch('https://<domain>/.well-known/ii-openid-configuration')` and do not look for `isValidSsoDomain` (removed in 11.x). Build the client with `ssoDomain` and read `getSsoStatus()`: II checks the domain against the same rules it signs in with, and the organization needs no CORS header.
 
-21. **Awaiting the SSO check before `signIn()`, or wrapping the constructor in `try`/`catch` for the domain.** `signIn()` must be called synchronously in the click handler, or Safari blocks the popup. It proceeds in `checking`, `available`, and `unavailable` (II's own screens show progress and errors) and rejects only in `invalid`. The constructor never throws for a malformed domain: it reports `invalid`.
+21. **Awaiting the SSO check before `signIn()`, or wrapping the constructor in `try`/`catch` for the domain.** `signIn()` must be called synchronously in the click handler, or Safari blocks the popup. It proceeds in `checking`, `available`, and `unavailable` (II's own screens show progress and errors); the SSO status makes it reject only in `invalid`. In every state it still rejects when the user closes the popup or authentication fails, so attach a rejection handler. The constructor never throws for a malformed domain: it reports `invalid`.
 
 22. **Changing `ssoDomain` or `openIdProvider` on an existing client.** Both are constructor-only, like every other option; there is no setter and no per-`signIn()` override. For a new domain, build a new client and `dispose()` the superseded one.
 
@@ -215,12 +215,14 @@ function render(sso) {
 }
 
 // Synchronous in the click handler: never await the check first.
-continueButton.addEventListener("click", () => client?.signIn());
+continueButton.addEventListener("click", () => {
+  client?.signIn().then(showApp, showSignInError);
+});
 ```
 
 - A superseded client is disposed before it can publish, so stale results never render. The check reaches II only after a short delay, so a debounce is optional.
 - `refreshSsoStatus()` re-runs the check for a "Try again" button. While `retryAfter` is in the future, II answers `unavailable` again at once with no new fetch, so disable the button and show a countdown ("Try again in 2 min"). It does nothing on an `invalid` client: the user fixes the input, which builds a new client. A client never re-checks by itself.
-- `signIn()` proceeds in `checking`, `available`, and `unavailable`: II resolves the domain itself and shows its own loading and error screens. It rejects only in `invalid`.
+- `signIn()` proceeds in `checking`, `available`, and `unavailable`: II resolves the domain itself and shows its own loading and error screens. Of the four states, only `invalid` makes it reject; a closed popup or failed authentication rejects in any state.
 - The check warms II's cache, so `signIn()` on the same client starts fast.
 
 How the organization sets up its side (OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file, caching): [Enterprise SSO](https://docs.internetcomputer.org/guides/authentication/enterprise-sso/).
@@ -258,13 +260,15 @@ Pass `keys` to narrow, e.g. `scopedKeys({ openIdProvider: 'google', keys: ['name
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AttributesIdentity } from "@icp-sdk/core/identity";
 import { HttpAgent, Actor } from "@icp-sdk/core/agent";
+import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 import { Principal } from "@icp-sdk/core/principal";
 
 const II_PRINCIPAL = "rdmx6-jaaaa-aaaaa-aaadq-cai";
+const rootKey = safeGetCanisterEnv()?.IC_ROOT_KEY;
 
 async function signInWithAttributes(authClient, canisterId, idl) {
   // Anonymous handle, used only to mint the nonce.
-  const anonymousActor = Actor.createActor(idl, { agent: await HttpAgent.create(), canisterId });
+  const anonymousActor = Actor.createActor(idl, { agent: await HttpAgent.create({ rootKey }), canisterId });
 
   // In parallel, one interaction for the user. `nonce` is a function the client
   // calls when it needs the value, so the request is in flight while II opens.
@@ -284,6 +288,7 @@ async function signInWithAttributes(authClient, canisterId, idl) {
       attributes,
       signer: { canisterId: Principal.fromText(II_PRINCIPAL) },
     }),
+    rootKey,
   });
   const verifiedActor = Actor.createActor(idl, { agent: verifiedAgent, canisterId });
 
@@ -295,7 +300,7 @@ async function signInWithAttributes(authClient, canisterId, idl) {
 }
 ```
 
-For one-click sign-in, build the client with `openIdProvider` or `ssoDomain` and request `scopedKeys({ openIdProvider: "google", keys: ["name", "verified_email"] })` or `scopedKeys({ ssoDomain: "acme.com" })` instead; the rest is unchanged.
+For one-click sign-in, build the client with `openIdProvider` or `ssoDomain`, add `scopedKeys` to the `@icp-sdk/auth/client` import, and request `scopedKeys({ openIdProvider: "google", keys: ["name", "verified_email"] })` or `scopedKeys({ ssoDomain: "acme.com" })` instead; the rest is unchanged.
 
 Every bundle carries three implicit fields the backend MUST verify: `implicit:nonce` (one it issued and has not consumed), `implicit:origin` (a trusted frontend origin), `implicit:issued_at_timestamp_ns` (fresh, typically within five minutes).
 
