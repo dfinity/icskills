@@ -5,7 +5,7 @@ The `identity-attributes` crate is the Rust side of the `mo:identity-attributes`
 ```toml
 [dependencies]
 candid = "0.10"
-ic-cdk = "0.20"
+ic-cdk = "0.20.1"
 identity-attributes = "0.1"
 ```
 
@@ -19,12 +19,12 @@ canisters:
         trusted_sso_domains: "acme.com"                           # optional, comma-separated; omit to reject all sso: keys
 ```
 
-`endpoints!` adds `_internet_identity_sign_in_start` and `_internet_identity_sign_in_finish`, and calls your closure with the caller and their verified attributes only for a bundle that passes every check:
+`#[identity_attributes]` marks the function that receives the caller and their verified attributes, called only for a bundle that passes every check, and adds `_internet_identity_sign_in_start` and `_internet_identity_sign_in_finish`. The function cannot be `async` or generic:
 
 ```rust
 use candid::Principal;
 use ic_cdk::query;
-use identity_attributes::IdentityAttributes;
+use identity_attributes::{identity_attributes, IdentityAttributes};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -34,9 +34,10 @@ thread_local! {
         const { RefCell::new(BTreeMap::new()) };
 }
 
-identity_attributes::endpoints!(|caller: Principal, attributes: IdentityAttributes| {
+#[identity_attributes]
+fn consume_attributes(caller: Principal, attributes: IdentityAttributes) {
     PROFILES.with_borrow_mut(|profiles| profiles.insert(caller, attributes));
-});
+}
 
 #[query]
 fn get_profile(user_id: Principal) -> Option<IdentityAttributes> {
@@ -70,4 +71,4 @@ The result is Candid `variant { ok; err : Error }`, so the frontend checks `"err
 
 Nonces are kept on the heap, so an upgrade clears them and a sign-in in flight fails with `UnknownNonce` and starts again. A nonce expires after five minutes, and at most 4096 are held, the oldest evicted first.
 
-`identity_attributes::sign_in_start()` and `identity_attributes::sign_in_finish(on_verified)` are the functions behind the two methods, for a canister that defines them itself.
+`identity_attributes::sign_in_start()` and `identity_attributes::sign_in_finish(consume_attributes)` are the functions behind the two methods, for a canister that defines them itself.
