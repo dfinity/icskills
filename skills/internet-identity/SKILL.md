@@ -86,7 +86,7 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 
 20. **Checking an SSO domain from the browser.** Do not `fetch('https://<domain>/.well-known/ii-openid-configuration')` and do not look for `isValidSsoDomain` (removed in 11.x). Build the client with `ssoDomain` and read `getSsoStatus()`: II checks the domain against the same rules it signs in with, and the organization needs no CORS header.
 
-21. **Awaiting the SSO check before `signIn()`, or wrapping the constructor in `try`/`catch` for the domain.** `signIn()` must be called synchronously in the click handler, or Safari blocks the popup. It proceeds in `checking`, `available`, and `unavailable` (II's own screens show progress and errors); the SSO status makes it reject only in `invalid`. In every state it still rejects when the user closes the popup or authentication fails, so attach a rejection handler. The constructor never throws for a malformed domain: it reports `invalid`.
+21. **Awaiting the SSO check before `signIn()`, or wrapping the constructor in `try`/`catch` for the domain.** `signIn()` must be called synchronously in the click handler, or Safari blocks the popup. It proceeds in every SSO state, `invalid` included (II's own screens show progress and errors). In every state it rejects when the user closes the popup or authentication fails, so attach a rejection handler. The constructor never throws for a malformed domain: it reports `invalid`.
 
 22. **Changing `ssoDomain` or `openIdProvider` on an existing client.** Both are constructor-only, like every other option; there is no setter and no per-`signIn()` override. For a new domain, build a new client and `dispose()` the superseded one.
 
@@ -228,7 +228,8 @@ continueButton.addEventListener("click", () => {
 
 - A superseded client is disposed before it can publish, so stale results never render. Debounce the input as above: building a client per keystroke churns clients and checks.
 - `refreshSsoStatus()` re-runs the check for a "Try again" button. While `retryAfter` is in the future, II answers `unavailable` again at once with no new fetch, so disable the button and show a countdown ("Try again in 2 min"). It does nothing on an `invalid` client: the user fixes the input, which builds a new client. A client never re-checks by itself.
-- `signIn()` proceeds in `checking`, `available`, and `unavailable`: II resolves the domain itself and shows its own loading and error screens. Of the four states, only `invalid` makes it reject; a closed popup or failed authentication rejects in any state.
+- `signIn()` proceeds in every state: II resolves the domain itself and shows its own loading and error screens, for an `invalid` value too. A closed popup or failed authentication rejects in any state.
+- `invalid` follows II's own rules: at least two labels of 1 to 63 letters, digits, or hyphens, no hyphen at either end, no `--` in a label's third and fourth places (punycode `xn--` aside), at most 253 characters, and a port only on `localhost` / `127.0.0.1`.
 - The check warms II's cache, so `signIn()` on the same client starts fast.
 
 How the organization sets up its side (OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file, caching): `references/enterprise-sso.md`.

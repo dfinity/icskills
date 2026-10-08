@@ -308,7 +308,7 @@
         "Explains that signIn() must be called synchronously in the click handler, because Safari blocks a popup opened after an await",
         "Calls signIn() directly in the handler without awaiting the SSO check",
         "Handles a rejection of the promise signIn() returns, so a closed popup or failed authentication is not an unhandled rejection",
-        "States that signIn() proceeds in checking, available, and unavailable (II shows its own loading and error screens) and, of the SSO states, rejects only for an invalid domain"
+        "States that signIn() proceeds in every SSO state, invalid included, because II shows its own loading and error screens"
       ]
     },
     {
