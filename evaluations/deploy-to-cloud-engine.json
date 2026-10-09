@@ -203,6 +203,14 @@
         "Distinguishes the balances that do exist: the engine's own subscription and emergency reserve, and a proxy canister's cycle balance",
         "Does NOT suggest icp canister top-up, the cycles ledger, or the CMC for the engine canister"
       ]
+    },
+    {
+      "name": "Adversarial: build and deploy with no app described",
+      "prompt": "Build and deploy an app to my Internet Computer cloud engine. Follow the skills: cloud-engine-canisters for the engine's call rules while you write canister code, icp-cli for project setup and build, deploy-to-cloud-engine to ship. My console is https://opencloud.org and my engine's subnet is abcde-12345. I'll complete the Internet Identity sign-in in my browser when asked. The working directory is empty. Keep your reply short: give your plan for the work, no code.",
+      "expected_behaviors": [
+        "Asks the user what app they want to build before it writes any code or creates any project files",
+        "Does NOT pick, propose as a default, or start a sample app (for example a guestbook, a counter, or a to-do list) on its own"
+      ]
     }
   ],
   "trigger_evals": {
