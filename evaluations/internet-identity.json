@@ -292,7 +292,7 @@
       "prompt": "My sign-in page has a text field where users type their company domain for SSO, and a Continue button. Show me just the JavaScript that checks the typed domain as they type and signs in on Continue, using @icp-sdk/auth 11. No backend code, no styling.",
       "expected_behaviors": [
         "Builds a new AuthClient({ ssoDomain }) for the typed value and reads getSsoStatus(), re-rendering from subscribe()",
-        "Handles the states checking, available, invalid, and unavailable (with an optional retryAfter)",
+        "Handles the states checking, available, invalid (with its reason), and unavailable (with an optional retryAfter and reason)",
         "Calls dispose() on the superseded client when the input changes",
         "Debounces the input, building a client once typing pauses rather than on every keystroke",
         "Does NOT fetch /.well-known/ii-openid-configuration from the browser and does NOT use isValidSsoDomain",

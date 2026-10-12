@@ -35,7 +35,7 @@ thread_local! {
 }
 
 #[identity_attributes]
-fn consume_attributes(caller: Principal, attributes: IdentityAttributes) {
+fn on_verified(caller: Principal, attributes: IdentityAttributes) {
     PROFILES.with_borrow_mut(|profiles| profiles.insert(caller, attributes));
 }
 
@@ -71,4 +71,4 @@ The result is Candid `variant { ok; err : Error }`, so the frontend checks `"err
 
 Nonces are kept on the heap, so an upgrade clears them and a sign-in in flight fails with `UnknownNonce` and starts again. A nonce expires after five minutes, and at most 4096 are held, the oldest evicted first.
 
-`identity_attributes::sign_in_start()` and `identity_attributes::sign_in_finish(consume_attributes)` are the functions behind the two methods, for a canister that defines them itself.
+`identity_attributes::sign_in_start()` and `identity_attributes::sign_in_finish(on_verified)` are the functions behind the two methods, for a canister that defines them itself.
