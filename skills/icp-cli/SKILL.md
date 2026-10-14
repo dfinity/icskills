@@ -480,7 +480,7 @@ Two specialized skills cover `icp identity link web`. Load the right one for the
 
 ### Funding an identity for mainnet
 
-A new identity has neither ICP nor cycles. With ICP in hand, `icp cycles mint` converts it (see `cycles-management`). With only a card, load the `buy-cycles` skill: `icp cycles buy` buys cycles for the CLI identity itself, no wallet, exchange or Internet Identity sign-in needed (Pitfall 20).
+A new identity has neither ICP nor cycles. `icp deploy -e ic` then fails with `Insufficient cycles. Requested: <n> cycles, available balance: 0 cycles.` (or `insufficient liquid cycles balance` from the cycles ledger): the deploying identity's cycles-ledger balance on mainnet is empty. Check it with `icp cycles balance -n ic`, then fund it. With ICP in hand, `icp cycles mint` converts it (see `cycles-management`). With only a card, load the `buy-cycles` skill: `icp cycles buy` buys cycles for the CLI identity itself, no wallet, exchange or Internet Identity sign-in needed (Pitfall 20).
 
 ## Additional References
 

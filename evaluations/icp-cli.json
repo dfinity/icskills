@@ -334,6 +334,15 @@
         "Sets rootKey from root_key in the same `icp network status --json` output, decoded from hex to bytes",
         "Does NOT use safeGetCanisterEnv() or the ic_env cookie, which only exist in a browser"
       ]
+    },
+    {
+      "name": "Adversarial: mainnet deploy fails with Insufficient cycles (finds buy-cycles)",
+      "prompt": "I ran `icp deploy -e ic` to deploy to mainnet and it failed with: `Insufficient cycles. Requested: 500000000000 cycles, available balance: 0 cycles.` I don't hold any ICP. What is wrong and how do I fix it? Name the commands and which skill to load; no full deploy walkthrough.",
+      "expected_behaviors": [
+        "Explains that the deploying identity's cycles-ledger balance on mainnet is empty and checks it with `icp cycles balance -n ic`",
+        "Names `icp cycles buy` (with `-n ic`) as the fix for buying cycles with a card when the user has no ICP, and points to the `buy-cycles` skill for the purchase flow",
+        "Does NOT recommend dfx (dfx wallet, dfx cycles, dfx ledger), a cycles wallet canister, the NNS dapp, or a cycles faucet, and does NOT present `icp cycles mint` as the fix (it needs ICP the user does not have)"
+      ]
     }
   ],
   "trigger_evals": {
