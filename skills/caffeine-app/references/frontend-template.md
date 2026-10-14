@@ -131,6 +131,12 @@ Verbatim. The `declarations` alias and `dedupe: ["@icp-sdk/core"]` matter — th
 backend client imports from `./declarations` and from `@icp-sdk` packages, and deduping
 `@icp-sdk/core` avoids "multiple agent instances" runtime issues.
 
+The `DFX_NETWORK` check, the `DFX_`/`CANISTER_` env prefixes and the `127.0.0.1:4943`
+proxy target are dfx-era naming conventions this scaffold inherited. They do **not** mean
+`dfx` is required — you never run it (see SKILL.md § Pitfalls). They are just the variable
+names the config reads, and `/api` is only proxied if something is actually serving on
+4943; a local replica on another port needs that target changed.
+
 ```javascript
 import { fileURLToPath, URL } from "url";
 import react from "@vitejs/plugin-react";
