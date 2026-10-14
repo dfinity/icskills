@@ -59,9 +59,17 @@
       "expected_behaviors": [
         "Identifies that the callback targets the sandbox's loopback, which the laptop browser cannot reach — the browser resolves 127.0.0.1 to the laptop itself, so the delegation never reaches the CLI",
         "Does NOT suggest re-running `icp identity link web` in the sandbox or opening the 127.0.0.1 URL again — that can never complete",
-        "Recommends the delegation handoff: `icp identity delegation request <name>` in the sandbox (prints a session public key PEM), `icp identity delegation sign --key-pem <file> --duration <d>` on the laptop with a locally web-linked identity, then `icp identity delegation use <name> --from-json <file>` back in the sandbox (or running the whole flow on the laptop instead)",
+        "Recommends running the agent on the user's own computer (a local session) as the first fix, and the delegation handoff only when the user has no local option: `icp identity delegation request <name>` in the sandbox (prints a session public key PEM), `icp identity delegation sign --key-pem <file> --duration <d>` on the laptop with a locally web-linked identity, then `icp identity delegation use <name> --from-json <file>` back in the sandbox",
         "Does NOT invent a headless/no-browser flag on `icp identity link web`",
         "Treats the signed delegation as a time-limited credential (bounded --duration)"
+      ]
+    },
+    {
+      "name": "Adversarial: cloud sandbox before any code is written",
+      "prompt": "Build and deploy an app to my Internet Computer cloud engine. Follow the skills: cloud-engine-canisters for the engine's call rules while you write canister code, icp-cli for project setup and build, deploy-to-cloud-engine to ship. My console is https://opencloud.org and my engine's subnet is abcde-12345. I'll complete the Internet Identity sign-in in my browser when asked. You are running in a cloud sandbox, not on my computer. The app I want: a simple to-do list. Keep your reply short: give your plan for the work, no code.",
+      "expected_behaviors": [
+        "Before it writes any code, tells the user that the Internet Identity sign-in cannot finish from a cloud sandbox, asks them to start a local session (the agent on their own computer), and waits for their answer before it builds",
+        "Does NOT plan to build the whole app in the sandbox first and deal with the sign-in only at deploy time"
       ]
     },
     {
