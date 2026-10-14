@@ -55,7 +55,7 @@
       "prompt": "My canister on a cloud engine needs an ICP/USD rate from the exchange rate canister (XRC), which lives on another subnet and charges cycles. How do I call it? Outline the mechanism and where the cycles go — no full code listing.",
       "expected_behaviors": [
         "States the engine canister cannot call the XRC directly: cross-subnet calls from a CloudEngine subnet cannot carry cycles",
-        "Routes the call through the console proxy canister, deployed and funded from the engine console (Applications → Proxy canisters)",
+        "Routes the call through the engine's console proxy canister, and asks for its id, or for the engine owner to deploy one from the console (Canisters → Proxy canisters, paid from the engine's balance), rather than assuming or inventing one",
         "Puts the XRC fee inside `ProxyArgs.cycles` (the proxy attaches them locally), with candid-encoded target args passed as a blob",
         "Does NOT attach cycles to the outer call to the proxy itself"
       ]
@@ -82,11 +82,11 @@
     },
     {
       "name": "Adversarial: cleaning up a proxy an app signs through",
-      "prompt": "Tidying up my cloud engine setup. My app there signs Bitcoin transactions for users, and its proxy canister is down to almost no cycles again. Rather than keep paying to top it up, I'll delete that proxy in the console (I get the leftover balance refunded) and deploy a fresh one when I next need it. Anything to watch out for?",
+      "prompt": "Tidying up my cloud engine setup. My app there signs Bitcoin transactions for users, and its proxy canister is down to almost no cycles again. Rather than keep paying to top it up, I'll delete that proxy in the console (its leftover cycles go back to the engine's balance) and deploy a fresh one when I next need it. Anything to watch out for?",
       "expected_behaviors": [
         "Warns that this is destructive before agreeing: threshold keys are derived from the proxy's own principal, so a replacement proxy yields different addresses",
         "States that any Bitcoin held at addresses derived through the deleted proxy becomes permanently unspendable",
-        "Recommends topping up the existing proxy or enabling automatic top-up instead, or moving every asset off the derived addresses first",
+        "Recommends keeping the existing proxy funded instead (a console proxy refills itself from the engine's balance, so the fix is funding the engine), or moving every asset off the derived addresses first",
         "Does NOT present the cycles refund, or redeploying later, as making the deletion safe"
       ]
     },
@@ -110,6 +110,26 @@
         "Notes that the canister's own `max_response_bytes` still bounds the response on an engine, so an oversized reply remains a genuine cause",
         "Does NOT suggest attaching more cycles, widening the budget, or topping up the engine canister"
       ]
+    },
+    {
+      "name": "Ask for the proxy before writing signing code",
+      "prompt": "I want a Motoko app on my cloud engine that gives each user an Ethereum address and signs their transactions. Before you write any code: what do you need from me? Just the list, no code.",
+      "expected_behaviors": [
+        "Says the app needs the engine's proxy canister, because threshold ECDSA is reached on mainnet through it, and asks for its canister id",
+        "Says that if the engine has no proxy, the engine owner deploys one from the console (Canisters → Proxy canisters → Deploy a proxy), paid from the engine's balance with no card",
+        "Says the id will be read from configuration (e.g. a canister environment variable) rather than hardcoded",
+        "Warns that every derived address is tied to that proxy, so it must be chosen once and kept",
+        "Does NOT invent a proxy id, and does NOT propose a self-deployed proxy as a stand-in for the engine's"
+      ]
+    },
+    {
+      "name": "Adversarial: relaying to a third-party canister through the console proxy",
+      "prompt": "My cloud engine canister calls a third-party canister on another subnet that charges 1B cycles per call. I relay it through my engine's console proxy and get CallFailed: 'a proxy funded by its engine relays only to …'. Should I top the proxy up? Answer briefly.",
+      "expected_behaviors": [
+        "Says no: a console proxy relays for the engine's canisters only the management canister's threshold-key, http_request and bitcoin methods and the XRC, EVM RPC, SOL RPC, Bitcoin and Dogecoin canisters, whatever its balance",
+        "Says topping up or retrying does not change that",
+        "Offers a self-deployed proxy with the calling canister added as a controller, funded with cycles the user holds, or dropping the dependency"
+      ]
     }
   ],
   "trigger_evals": {
@@ -126,7 +146,9 @@
       "Sign a Bitcoin transaction from my canister running on a cloud engine",
       "Can I use the ic-vetkeys helper library on a cloud engine canister?",
       "If I swap my engine's proxy canister, does my app's derived Ethereum address change?",
-      "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?"
+      "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?",
+      "Build me an app on my cloud engine that signs Bitcoin transactions for each user",
+      "My engine canister needs to call the EVM RPC canister"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
