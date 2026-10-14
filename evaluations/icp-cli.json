@@ -254,6 +254,15 @@
       ]
     },
     {
+      "name": "Funding a new identity with a card (finds buy-cycles)",
+      "prompt": "I made a new icp identity for mainnet. I have no ICP and no exchange account, only a credit card. How do I get cycles onto it so that icp deploy -e ic works? Name the command and which skill to load for it; no full deploy walkthrough.",
+      "expected_behaviors": [
+        "Names `icp cycles buy` (with `-n ic`) as the way to buy cycles with a card for the identity itself",
+        "Points to the `buy-cycles` skill for the purchase flow",
+        "Does not route the user through dfx, an exchange, a wallet, or `icp cycles mint` (which needs ICP the user does not have)"
+      ]
+    },
+    {
       "name": "Candid generation for Motoko binding (mops generate candid)",
       "prompt": "I have a Motoko backend canister named 'backend' built with the @dfinity/motoko@v5.0.0 recipe. My React frontend needs TypeScript bindings via @icp-sdk/bindgen, which needs a .did file committed at a stable path. What's the simplest way to produce and keep that .did file up to date? Just the command and workflow, no deploy steps.",
       "expected_behaviors": [
