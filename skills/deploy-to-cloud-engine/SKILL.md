@@ -34,6 +34,7 @@ Record both so you do not re-ask within the session.
 
 - `icp` on `$PATH` — see the **`icp-cli`** skill to install. Verify with `icp --version` (this skill's commands are verified against 0.3.0 and 1.0.2). If the installed version differs, confirm the flag set with `icp <cmd> --help` before running — flags have changed across major versions.
 - A project that already builds. If it does not build or package yet, set that up first (see the `icp-cli` skill), then return here.
+- **No project yet, and no description of one?** Ask the user what to build before you write any code or create any files: "What app do you want to build?" Do **not** pick a sample app (a guestbook, a counter, a to-do list) on your own. A prompt that only says "build and deploy an app" is a request to ask, not a request to choose.
 - macOS: `icp` stores its data under `~/Library/Application Support/org.dfinity.icp-cli/`. If the shell cannot write there (`Operation not permitted` from macOS TCC, e.g. when commands run through a bridge), redirect the data to an unprotected path for the session — `HOME=/tmp/icp-home icp …` — and keep that same `HOME` on **every** subsequent `icp` command, or the later commands will not see the linked identity.
 
 ## Step 1 — Link the CLI to your engine identity (once per machine)
