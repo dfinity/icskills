@@ -1,0 +1,93 @@
+{
+  "skill": "buy-cycles",
+  "description": "Evaluation cases for the buy-cycles skill. Tests whether agents drive a card purchase of cycles for the CLI's own identity with `icp cycles buy` through CyclePay's gateway: mainnet with -n ic, --json and --no-open for an agent, verbatim link hand-off to the human, reading the final status rather than re-ordering, the no-resume rule after a stopped wait, the `icp canister call` fallback's argument shape, and continuing the deploy as the same identity.",
+  "output_evals": [
+    {
+      "name": "Core purchase flow",
+      "prompt": "My icp deploy to mainnet failed because my identity has no cycles and I have no ICP, just a credit card. Give me just the commands to buy about $10 of cycles for my current icp identity and then deploy. Do not run anything.",
+      "expected_behaviors": [
+        "Uses `icp cycles buy --amount 10` with `-n ic` (not `-e ic`), not `icp cycles mint` and not an exchange",
+        "Tells the user to open the payment link the command prints and pay there themselves (on any device), rather than automating or scripting the payment",
+        "Uses the same identity for the purchase and for `icp deploy -e ic`",
+        "Does not suggest sending the cycles to a canister as the destination of the purchase"
+      ]
+    },
+    {
+      "name": "Agent flags and output shape",
+      "prompt": "I'm an agent running icp cycles buy from a non-interactive shell with no browser. Which flags do I pass, and what exactly comes out on stdout? Just the command line and the shape of the output, nothing else.",
+      "expected_behaviors": [
+        "Passes `--yes` (the command refuses to create an order without confirmation off a terminal) and `--no-open`, plus `--json` or `-q`",
+        "Says `--json` prints two JSON objects on separate lines (the created order with checkout_url, then the final status), not a single object or an array",
+        "Says the first object's `checkout_url` is the link to hand to the human verbatim",
+        "Says the command exits 0 only when the final status is `delivered`"
+      ]
+    },
+    {
+      "name": "Stopped wait, no resume",
+      "prompt": "icp cycles buy printed the Stripe link, the user paid, but my shell killed the command while it was 'Waiting for payment'. Do I run icp cycles buy again? One short answer.",
+      "expected_behaviors": [
+        "Says no: the order carries on without the command and the cycles land on the identity's cycles-ledger account anyway",
+        "Says to check with `icp cycles balance -n ic` (and/or poll `order_status` on the gateway with `icp canister call`) rather than create a new order",
+        "Does not claim there is a `--resume` flag or a cancel command"
+      ]
+    },
+    {
+      "name": "Final statuses",
+      "prompt": "icp cycles buy --json ended with status \"processing\" for one order, \"needs_review\" for another and \"refunded\" for a third. For each, should I create a new order? Short answer.",
+      "expected_behaviors": [
+        "Says `processing` means the card was charged and delivery is under way: keep waiting or poll, do not re-order",
+        "Says `needs_review` means the card was charged and a CyclePay operator settles it by hand: report the order id and the charge to the user and stop",
+        "Says `refunded` means the cycles were not delivered and the money comes back, so a new order is acceptable once the user agrees"
+      ]
+    },
+    {
+      "name": "Fallback create_order shape",
+      "prompt": "The installed icp CLI has no `cycles buy` subcommand. Show me just the `icp canister call` that creates a $10 order on the CyclePay gateway for my own identity, with the argument filled in correctly. No explanation of the rest of the flow.",
+      "expected_behaviors": [
+        "Targets canister 2bwus-iiaaa-aaaac-bee3a-cai with `-n ic` and `--identity`",
+        "Passes a single Candid record with `destination = variant { Ledger }`, `beneficiary = null`, `project_id = null`, `confirm_system_canister = null`",
+        "Passes `amount_usd_cents = 1000 : nat64` (US cents, nat64)",
+        "Does not invent extra arguments such as a minimum-cycles pin or a Stripe session parameter"
+      ]
+    },
+    {
+      "name": "URL parsing pitfall",
+      "prompt": "I'm writing a bash one-liner to pull the payment link out of the Candid text that `icp canister call … create_order` prints on the CyclePay gateway. What should I be careful about? Just the gotcha and a correct extraction, no full script.",
+      "expected_behaviors": [
+        "Warns that stripping underscores (Candid's digit separators) corrupts the link, whose query string contains an order reference with underscores",
+        "Extracts the quoted string after `payment_url =` unchanged",
+        "Mentions preferring `--json` output from `icp cycles buy` when the command is available"
+      ]
+    },
+    {
+      "name": "Refused order",
+      "prompt": "icp cycles buy failed with `CyclePay refused the order: TOO_MANY_OPEN_ORDERS: …`. Was anything charged, and what should I do next? One short answer.",
+      "expected_behaviors": [
+        "Says nothing was created or charged by a refusal",
+        "Says to pay (or let expire) the order already open for this identity rather than retry create in a loop; mentions polling `order_status` or checking `icp cycles balance`"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "I have no ICP, how do I pay for cycles with a credit card?",
+      "icp deploy says insufficient cycles and I don't have a wallet. Can I just buy some?",
+      "Buy $20 of cycles for my icp identity with Stripe",
+      "What does icp cycles buy do?",
+      "Fund my CLI identity with cycles using a card so the agent can deploy",
+      "How do I get cycles without an exchange account?",
+      "icp cycles buy says CyclePay refused the order: TOO_MANY_OPEN_ORDERS, what now?",
+      "icp cycles buy printed a payment link and is waiting, what am I supposed to do with it?"
+    ],
+    "should_not_trigger": [
+      "Convert 2 ICP to cycles with icp cycles mint",
+      "Top up my canister from my existing cycles balance",
+      "How do I check my canister's cycle balance?",
+      "Add Stripe payments to my own dapp's frontend",
+      "Sign in to the NNS dapp from the terminal with Internet Identity",
+      "Set a freezing threshold on my canister",
+      "Transfer cycles between two of my identities"
+    ]
+  }
+}
