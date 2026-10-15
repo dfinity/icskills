@@ -35,11 +35,11 @@
     },
     {
       "name": "Final statuses",
-      "prompt": "Three CyclePay orders: `order_status` says `Processing` for one; `icp cycles buy --json` ended with status \"needs_review\" for another, and with status \"refunded\" and detail \"Your payment would have passed a daily limit on card purchases, which resets at 00:00 UTC. To buy cycles, start a new order.\" for a third. For each, should I create a new order? Short answer.",
+      "prompt": "Three CyclePay orders: `order_status` says `Processing` for one; `icp cycles buy --json` ended with status \"needs_review\" for another, and with status \"refunded\" and detail \"The payment of $0.50 was under the $1.00 minimum for one order. The order can still be paid until it expires, or start a new order.\" for a third. For each, should I create a new order? Short answer.",
       "expected_behaviors": [
         "Says `Processing` means the card was charged and delivery is under way: keep polling, do not re-order",
         "Says `needs_review` means the card was charged and a CyclePay operator settles it by hand: report the order id and the charge to the user and stop",
-        "For the refunded order, relays the detail to the user and says any new order waits for the next UTC day and the user's word, despite the detail's \"start a new order\""
+        "For the refunded order, does not create a new order on its own: relays the detail, says the same link stays payable until it expires (poll again only if the user pays it again), and that a new order, made only if the user asks, means the user pays only one of the two links"
       ]
     },
     {
