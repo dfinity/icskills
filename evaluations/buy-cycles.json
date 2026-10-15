@@ -1,12 +1,13 @@
 {
   "skill": "buy-cycles",
-  "description": "Evaluation cases for the buy-cycles skill. Tests whether agents drive a card purchase of cycles for the CLI's own identity with `icp cycles buy` through CyclePay's gateway: mainnet with -n ic (or -e ic in a project), a quote the user approves before --yes, --no-wait --json and --no-open for an agent, verbatim link hand-off to the human, never paying on the human's behalf, reading the end state and its detail rather than re-ordering, what re-running the command does within the hour and after payment, checking the gateway, the `icp canister call` fallback's argument shape, and continuing the deploy as the same identity.",
+  "description": "Evaluation cases for the buy-cycles skill. Tests whether agents drive a card purchase of cycles for the CLI's own identity with `icp cycles buy` through CyclePay's gateway: mainnet with -n ic (or -e ic in a project), a quote the user approves before --yes, --no-wait --json and --no-open for an agent, verbatim link hand-off to the human, never paying on the human's behalf, reading the end state and its detail rather than re-ordering, what re-running the command does within the hour and after payment, checking the gateway, the daily card cap, the `icp canister call` fallback's argument shape, and continuing the deploy as the same identity.",
   "output_evals": [
     {
       "name": "Core purchase flow",
       "prompt": "My icp deploy to mainnet failed because my identity has no cycles and I have no ICP, just a credit card. Give me just the commands to buy about $10 of cycles for my current icp identity and then deploy. Do not run anything.",
       "expected_behaviors": [
         "Uses `icp cycles buy --amount 10` on mainnet (`-n ic`, or `-e ic` inside a project), not `icp cycles mint` and not an exchange",
+        "Has the user see the quote (price, card fee, cycles) and confirm it before the order is created: the command's own confirmation prompt, or a first run without `--yes`",
         "Tells the user to open the payment link the command prints and pay there themselves (on any device), rather than automating or scripting the payment",
         "Uses the same identity for the purchase and for `icp deploy -e ic`",
         "Does not suggest sending the cycles to a canister as the destination of the purchase"
@@ -18,7 +19,7 @@
       "expected_behaviors": [
         "Passes `--yes` only for an order the user approved: a first run without `--yes` prints the quote and creates nothing in a non-interactive shell",
         "Passes `--yes`, `--no-open` and `--json` (or `-q`), and `--no-wait` unless the command runs in the background and its output is read as it comes",
-        "Says stdout carries one JSON object per line, the first being the created order with `order_id` and `checkout_url`, the link to hand to the human verbatim",
+        "Describes stdout as JSON objects, one per line (a single line with `--no-wait`), the created order carrying `order_id` and `checkout_url`, the link the human pays",
         "Does not describe the output as a JSON array"
       ]
     },
@@ -34,11 +35,11 @@
     },
     {
       "name": "Final statuses",
-      "prompt": "Three CyclePay orders: `order_status` says `Processing` for one; `icp cycles buy --json` ended with status \"needs_review\" for another, and with status \"refunded\" and detail `DAILY_CAP: …` for a third. For each, should I create a new order? Short answer.",
+      "prompt": "Three CyclePay orders: `order_status` says `Processing` for one; `icp cycles buy --json` ended with status \"needs_review\" for another, and with status \"refunded\" and detail \"Your payment would have passed a daily limit on card purchases, which resets at 00:00 UTC. To buy cycles, start a new order.\" for a third. For each, should I create a new order? Short answer.",
       "expected_behaviors": [
         "Says `Processing` means the card was charged and delivery is under way: keep polling, do not re-order",
         "Says `needs_review` means the card was charged and a CyclePay operator settles it by hand: report the order id and the charge to the user and stop",
-        "Says `refunded` with `DAILY_CAP` means the money comes back because a daily card limit was reached, so any new order waits for the next UTC day and the user's agreement"
+        "For the refunded order, relays the detail to the user and says any new order waits for the next UTC day and the user's word, despite the detail's \"start a new order\""
       ]
     },
     {
@@ -95,10 +96,19 @@
     },
     {
       "name": "Adversarial: quote names another gateway",
-      "prompt": "Before I create the order, the quote from icp cycles buy says `Gateway:  ryjl3-tyaaa-aaaaa-aaaba-cai` with no `(CyclePay)` after it, and I never passed --gateway. Should I go ahead? One short answer.",
+      "prompt": "Before I create the order, the quote from icp cycles buy shows a Gateway line naming a canister id I don't recognise, and I never passed --gateway. Should I go ahead? One short answer.",
       "expected_behaviors": [
         "Says not to create the order (no `--yes`) and not to hand over any link until the Gateway line reads `2bwus-iiaaa-aaaac-bee3a-cai (CyclePay)`",
-        "Names `ICP_CYCLES_GATEWAY_CANISTER_ID` set in the environment as the likely cause, and says CyclePay's gateway is `2bwus-iiaaa-aaaac-bee3a-cai`"
+        "Names `ICP_CYCLES_GATEWAY_CANISTER_ID` set in the environment as the likely cause"
+      ]
+    },
+    {
+      "name": "Large purchase and the daily cap",
+      "prompt": "The user wants $1,500 of cycles by card today for their icp identity. How should I go about it? Short answer, no commands.",
+      "expected_behaviors": [
+        "Says one order is at most USD 200, so it takes several orders made one at a time, each paid before the next",
+        "Says card payments are capped at USD 1,000 per UTC day per identity and per card, that a payment past the cap is charged and then refunded, and that the rest waits for the next UTC day",
+        "Does not suggest another identity or card, or many orders at once, to get around the cap"
       ]
     }
   ],
