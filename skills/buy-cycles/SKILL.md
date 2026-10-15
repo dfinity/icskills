@@ -179,10 +179,10 @@ same terms as the command (Pitfall 6).
    with `order_status` (step 4) or `icp cycles balance -n ic`. Running the same command
    again gives back the *same* order and link only while the order is unpaid and less than
    an hour old, and only for the same amount: re-run with `--amount <amount.value from
-   line 1>`, never `--cycles`, whose price moves with the rate. Once the order is paid
-   (even by a payment CyclePay refused), or is an hour old (as it is when the first run's
-   hour-long wait gives up), the same command makes a **second** payable order, and a user
-   who pays both links pays for both.
+   line 1>`, never `--cycles`, whose price moves with the rate. Once a payment of the order
+   has arrived (on newer CyclePay releases, even one it refused), or the order is an hour
+   old (as it is when the first run's hour-long wait gives up), the same command makes a
+   **second** payable order, and a user who pays both links pays for both.
 
 7. **Read the end state, and relay `detail`, before deciding anything.** Line 2 comes only
    when the order settles, and the exit status is then 0 only for `delivered`. A timeout
@@ -198,11 +198,10 @@ same terms as the command (Pitfall 6).
      why, for the user: relay it as it is. The same link may still be payable until
      `expires_at` (`detail` then says so), and step 4 has stopped: tell the user, and poll
      again only if they pay it again. If `detail` names a daily limit, no new order and no
-     second payment of the link before the next UTC day (00:00 UTC): a payment before then
-     is refused and refunded again, and counts toward CyclePay's limit of 3 automatic
-     refunds per card in 24 hours, past which refunds are made by hand. Make a new order
-     only when the user asks for one, whatever `detail` says; the first link may still be
-     payable too, so tell them to pay only the new one.
+     second payment of the link before the next UTC day (00:00 UTC): it is refused and
+     refunded again, and counts toward CyclePay's per-card limit on automatic refunds (see
+     `refund_owed`). Make a new order only when the user asks for one, whatever `detail`
+     says; the first link may still be payable too, so tell them to pay only the new one.
    - `refund_owed`: not delivered; an operator refunds it by hand (for example after
      several automatic refunds to one card within 24 hours). The money is delayed, not
      kept. Keep the order id.
