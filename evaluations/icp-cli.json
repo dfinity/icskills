@@ -343,6 +343,16 @@
         "Names `icp cycles buy` (with `-n ic`) as the fix for buying cycles with a card when the user has no ICP, and points to the `buy-cycles` skill for the purchase flow",
         "Does NOT recommend dfx (dfx wallet, dfx cycles, dfx ledger), a cycles wallet canister, the NNS dapp, or a cycles faucet, and does NOT present `icp cycles mint` as the fix (it needs ICP the user does not have)"
       ]
+    },
+    {
+      "name": "Pre-deploy cycles estimate with a short balance",
+      "prompt": "My icp.yaml has three canisters (backend, frontend, worker), none created on mainnet yet (.icp/data/mappings/ic.ids.json does not exist). `icp cycles balance -n ic` for my deploy identity prints 2.5T cycles. Should I run `icp deploy -e ic` now? Give the arithmetic and what to do, briefly; no icp.yaml, no code.",
+      "expected_behaviors": [
+        "Estimates before deploying: 3 creations x the 2T default `--cycles` (plus the 100M cycles-ledger fee each), about 6T, and states the gap against 2.5T (roughly 3.5T, or up to about 4.5T with a margin)",
+        "Says no: does NOT tell the user to run `icp deploy -e ic` as is and see whether it fails",
+        "Offers both ways to close the gap and leaves the choice to the user: `icp cycles mint --cycles <gap> -n ic` if `icp token balance -n ic` shows enough ICP, or `icp cycles buy --cycles <gap> -n ic` with a card (the buy-cycles skill)",
+        "Does NOT suggest dfx, a cycles wallet canister, the NNS dapp, or a cycles faucet"
+      ]
     }
   ],
   "trigger_evals": {
