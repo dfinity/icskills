@@ -55,7 +55,7 @@
       "prompt": "My canister on a cloud engine needs an ICP/USD rate from the exchange rate canister (XRC), which lives on another subnet and charges cycles. How do I call it? Outline the mechanism and where the cycles go — no full code listing.",
       "expected_behaviors": [
         "States the engine canister cannot call the XRC directly: cross-subnet calls from a CloudEngine subnet cannot carry cycles",
-        "Routes the call through the engine's console proxy canister, and asks for its id, or for the engine owner to deploy one from the console (Canisters → Proxy canisters, paid from the engine's balance), rather than assuming or inventing one",
+        "Routes the call through the engine's console proxy canister, and asks for its id, or for the engine owner to deploy one from the console (Integrations → Proxy canisters, paid from the engine's balance), rather than assuming or inventing one",
         "Puts the XRC fee inside `ProxyArgs.cycles` (the proxy attaches them locally), with candid-encoded target args passed as a blob",
         "Does NOT attach cycles to the outer call to the proxy itself"
       ]
@@ -116,7 +116,7 @@
       "prompt": "I want a Motoko app on my cloud engine that gives each user an Ethereum address and signs their transactions. Before you write any code: what do you need from me? Just the list, no code.",
       "expected_behaviors": [
         "Says the app needs the engine's proxy canister, because threshold ECDSA is reached on mainnet through it, and asks for its canister id",
-        "Says that if the engine has no proxy, the engine owner deploys one from the console (Canisters → Proxy canisters → Deploy a proxy), paid from the engine's balance with no card",
+        "Says that if the engine has no proxy, the engine owner deploys one from the console (Integrations → Proxy canisters → Deploy a proxy), paid from the engine's balance with no card",
         "Says the id will be read from configuration (e.g. a canister environment variable) rather than hardcoded",
         "Warns that every derived address is tied to that proxy, so it must be chosen once and kept",
         "Does NOT invent a proxy id, and does NOT propose a self-deployed proxy as a stand-in for the engine's"
