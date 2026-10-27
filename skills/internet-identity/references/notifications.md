@@ -66,10 +66,10 @@ use identity_notifications::{Memories, Notification};
 
 notifications::endpoints!();          // the endpoints II calls back on
 
-#[init]      fn init()         { open_notifications(); }
-#[post_upgrade] fn post_upgrade() { open_notifications(); }
+#[init]      fn init()         { init_notifications(); }
+#[post_upgrade] fn post_upgrade() { init_notifications(); }
 
-fn open_notifications() {
+fn init_notifications() {
     MEMORIES.with_borrow(|manager| {
         notifications::init(manager, Memories {
             entries: MemoryId::new(10),
