@@ -1,6 +1,6 @@
 ---
 name: internet-identity
-description: "Integrate Internet Identity authentication. Covers passkey, OpenID (Google, Apple, Microsoft), and organization SSO sign-in with @icp-sdk/auth, the SSO domain check (getSsoStatus), identity attributes (verified email, name) and their backend verification, sessions shared across subdomains, alternative origins, and the /.well-known/ii-app-metadata document. Use when adding sign-in, login, auth, passkeys, SSO, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows (use wallet-integration) or for an agent or CLI signing in as a user (use agent-web-identity)."
+description: "Integrate Internet Identity authentication. Covers passkey, OpenID (Google, Apple, Microsoft), and organization SSO sign-in with @icp-sdk/auth, the SSO domain check (getSsoStatus), identity attributes (verified email, name) and their backend verification, sessions shared across subdomains, alternative origins, the /.well-known/ii-app-metadata document, and web push notifications (consent, the sender list, and sending from a Motoko or Rust canister). Use when adding sign-in, login, auth, passkeys, SSO, notifications, web push, or Internet Identity to a frontend or canister. Do NOT use for wallet integration or ICRC signer flows (use wallet-integration) or for an agent or CLI signing in as a user (use agent-web-identity)."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.4, Node.js >= 22, moc >= 1.6.0"
 metadata:
@@ -20,6 +20,7 @@ Reference material for this skill lives in `references/`:
 - `references/app-metadata.md`: every validation rule for `/.well-known/ii-app-metadata`.
 - `references/enterprise-sso.md`: the organization's side of SSO (OIDC client, discovery file, limits, caching).
 - `references/rust-identity-attributes.md`: the Rust backend for identity attributes, with the `identity-attributes` crate.
+- `references/notifications.md`: notifying a signed-in user, end to end: consent, the sender list, sending, and delivery semantics.
 - `references/older-api.md`: how `@icp-sdk/auth` 10.x and older differ.
 
 ## Prerequisites
@@ -395,6 +396,28 @@ Sharing one sign-in across sibling subdomains builds on this: `references/shared
 ## App metadata on the sign-in screen
 
 Serve `/.well-known/ii-app-metadata` (`{ "name", "description", "logo" }`, all optional) on the derivation origin, with CORS on the document and the logo, and II shows your app's name, tagline, and logo next to the origin. `name` at most 40 and `description` at most 120 code points; `logo` a relative URL to a same-origin raster image (no SVG). One invalid field invalidates the whole document. Full rules: `references/app-metadata.md`.
+
+## Notifications
+
+Your canister can notify a signed-in user while the app is closed. II owns the push subscriptions, so there is no push service, no VAPID keys, and no device tokens in the app. Three pieces, all required; leaving one out produces silence rather than an error.
+
+**Consent**, in the frontend. Needs `@icp-sdk/auth` 11.1.0 or later:
+
+```javascript
+const { granted } = await authClient.requestNotificationConsent();   // opens II; signs in if needed
+const { granted } = await authClient.getNotificationConsentStatus(); // query, no screen
+await authClient.revokeNotificationConsent();
+```
+
+All three answer a **record**, not a bare boolean. `granted: false` is the user's refusal, not a failure. Ask from a click: the ceremony renders, so it cannot run under `prompt: 'none'`.
+
+**The sender list.** Serve `/.well-known/ii-notification-senders` on the derivation origin, naming the canisters allowed to notify for it: `{ "senders": ["ryjl3-tyaaa-aaaaa-aaaba-cai"] }`. At most 10, cached about an hour. Without it every send is refused, silently.
+
+**Sending**, with the `identity-notifications` library (crates.io for Rust, Mops for Motoko, which needs moc 2.0.0 or later). Hand it three `MemoryId`s in `init` and again in `post_upgrade`, then `send(recipient, { title, body, url, key, ... })`. Configuration is environment variables (`notification_sender`, `notification_origin`), not init arguments.
+
+A notification is addressed to a **principal, not a browser**: II wakes every browser that identity has registered, and removing someone from your own recipient list unsubscribes nothing.
+
+II composes what is shown: the title is `<app name> · <title you sent>` and the icon is the app's logo, both read from `/.well-known/ii-app-metadata` (see above), falling back to the origin's hostname when no document is published. Full rules, the error table, and delivery semantics: `references/notifications.md`.
 
 ## Backend: Access Control
 
