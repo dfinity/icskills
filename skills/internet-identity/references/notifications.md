@@ -128,6 +128,22 @@ canisters:
 | `expiresAt` / `expires_at` | II's default retention | Drops one no longer worth delivering. The default is also the ceiling. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
+### Choosing `urgency` and `expiresAt`
+
+Different questions: `urgency` is where this sits against the origin's **other traffic**, `expiresAt` is whether it is still worth showing when it could be. Pick both together.
+
+| Sending | `urgency` | `expiresAt` | Why |
+|---|---|---|---|
+| Security alert, new sign-in | `High` | unset | Ahead of other traffic, and still matters seen late. |
+| Direct message | `Normal` | unset | The ordinary case. |
+| "Your driver is outside" | `High` | minutes | Ahead of everything, worthless once passed. |
+| Campaign to the whole user base | `VeryLow` | long | None is urgent, and a large send must not push real notifications behind it. Give the campaign a `funnel` and its conversion rate is readable on its own. |
+| Digest, nudge, streak reminder | `Low` | hours to days | Yields to anything else, and yesterday's is pointless. |
+
+A short expiry does not make something urgent, and `High` does not make it persist. `High` on everything removes the ordering it was reached for.
+
+### `key`
+
 The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, such as the conversation, rather than from whatever a caller passed in.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
