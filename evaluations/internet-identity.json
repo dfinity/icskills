@@ -354,13 +354,13 @@
       ]
     },
     {
-      "name": "Notifications are addressed per identity, not per browser",
-      "prompt": "I removed a user from my app's chat room so they stop getting notified, but they still get notifications on their other browser. Why?",
+      "name": "Delivery is not the app's to control",
+      "prompt": "I removed a user from my app's chat room so they stop getting notified, but they still got a notification. How do I unsubscribe their browser from my app?",
       "expected_behaviors": [
-        "Explains that a notification is addressed to a principal and Internet Identity fans it out to every browser that identity has registered",
-        "States that the push subscriptions live in Internet Identity against the anchor, not in the app, so the app's own recipient list does not control them",
-        "Says only the user can remove a browser's subscription, from Internet Identity, or that the app can stop sending to that principal",
-        "Does NOT suggest the app should call a browser unsubscribe API or clear a service worker registration"
+        "Says the app addresses a user and does not control where or how the notification reaches them: that is Internet Identity's and the user's to manage",
+        "Says the app's own recipient list governs only what the app sends from now on",
+        "Does NOT suggest the app call a browser unsubscribe API, clear a service worker registration, or manipulate a push subscription",
+        "Does NOT invent an Internet Identity method for removing a device or subscription on the app's behalf"
       ]
     }
   ],

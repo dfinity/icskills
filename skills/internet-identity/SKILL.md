@@ -411,13 +411,13 @@ await authClient.revokeNotificationConsent();
 
 All three answer a **record**, not a bare boolean. `granted: false` is the user's refusal, not a failure. Ask from a click: the ceremony renders, so it cannot run under `prompt: 'none'`.
 
-**The sender list.** Serve `/.well-known/ii-notification-senders` on the derivation origin, naming the canisters allowed to notify for it: `{ "senders": ["ryjl3-tyaaa-aaaaa-aaaba-cai"] }`. At most 10, cached about an hour. Without it every send is refused, silently.
+**The sender list.** Serve `/.well-known/ii-notification-senders` on the derivation origin, naming the canisters allowed to notify for it: `{ "senders": ["ryjl3-tyaaa-aaaaa-aaaba-cai"] }`. At most 10, and cached, so a change is not instant. Without it every send is refused, silently.
 
-**Sending**, with the `identity-notifications` library (crates.io for Rust, Mops for Motoko, which needs moc 2.0.0 or later). Hand it three `MemoryId`s in `init` and again in `post_upgrade`, then `send(recipient, { title, body, url, key, ... })`. Configuration is environment variables (`notification_sender`, `notification_origin`), not init arguments.
+**Sending**, with the `identity-notifications` library (crates.io for Rust, Mops for Motoko, which needs moc 2.0.0 or later), then `send(recipient, { title, body, url, key, ... })`. Rust wires `endpoints!()` and three `MemoryId`s into `init`, and calls `init` again from `post_upgrade`; Motoko's mixin needs neither and nothing on upgrade. Configuration is environment variables (`notification_sender`, `notification_origin`), not init arguments.
 
-A notification is addressed to a **principal, not a browser**: II wakes every browser that identity has registered, and removing someone from your own recipient list unsubscribes nothing.
+`key` is what a notification is *about*: sending again under the same key updates it rather than adding another, and it is what `dismiss` names, so derive it from something the caller cannot choose. `urgency` schedules against the origin's other traffic and is not a rendering hint.
 
-II composes what is shown: the title is `<app name> · <title you sent>` and the icon is the app's logo, both read from `/.well-known/ii-app-metadata` (see above), falling back to the origin's hostname when no document is published. Full rules, the error table, and delivery semantics: `references/notifications.md`.
+The app addresses a user and nothing finer: where a notification reaches them is II's and the user's to manage. II composes what is shown, so publishing `/.well-known/ii-app-metadata` (see above) is what names the app on its notifications too. `send` neither traps nor awaits, so nothing comes back to branch on; `metrics()` is where a notification's fate shows up. Full rules: `references/notifications.md`.
 
 ## Backend: Access Control
 

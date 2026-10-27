@@ -47,12 +47,14 @@ Serve from the **derivation origin**, the same origin as `/.well-known/ii-app-me
 ```
 
 - At most **10** canisters. A longer list is rejected whole, never truncated.
-- II fetches on demand and caches about an hour fresh, plus about an hour stale. A canister added is not accepted instantly; one removed keeps working for up to two hours.
+- II caches what it reads, so a canister added is not accepted instantly and one removed keeps working for a while afterwards.
 - Without this document naming the sending canister, every send is refused. This is the most common cause of "nothing arrives and nothing errors".
 
 ## 3. Sending
 
-Library: `identity-notifications`, same surface in both languages. Rust is on crates.io, Motoko on Mops (requires moc 2.0.0 or later).
+Library: `identity-notifications`, same `send` in both languages, different wiring. Rust is on crates.io, Motoko on Mops (requires moc 2.0.0 or later).
+
+**Rust** needs `endpoints!()` plus three stable `MemoryId`s handed to `init`, and `init` called again from `post_upgrade`. **Motoko** needs neither: the mixin brings the endpoints and keeps its own state, and there is nothing to do on upgrade. Do not tell a Motoko user to pass memory ids; there are none.
 
 ```toml
 identity-notifications = "0.1"
@@ -116,32 +118,31 @@ canisters:
         notification_capacity_mb: "1024"   # optional
 ```
 
-`key` names the notification: a second send under the same key **replaces** the first rather than stacking beside it. `dismiss(recipient, key)` takes one back when it no longer needs attention. `metrics()` reports the pipeline hour by hour.
+## The optional fields
 
-## What the user sees
-
-II composes the shown notification, so the app's name cannot come from the app's own payload:
-
-| Shown | Comes from | Fallback |
+| Field | Default | What it is for |
 |---|---|---|
-| Title | `name` from `/.well-known/ii-app-metadata`, then ` · `, then the `title` sent | The origin's **hostname** when there is no metadata document |
-| Icon | `logo` from the same document | None; platforms that show no icon show none |
-| Body | the `body` sent | |
+| `url` | none | Where acting on it takes the user. Must be the sending origin or one of its alternative origins; II refuses anything else. |
+| `key` | none | What the notification is *about*. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
+| `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
+| `expiresAt` / `expires_at` | II's default retention | Drops one no longer worth delivering. The default is also the ceiling. |
+| `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
-Publishing app metadata is therefore what brands every notification, not only the sign-in screen. Rules for that document: `references/app-metadata.md`.
+**Derive `key` from something the caller cannot choose**, such as the conversation it belongs to. A key an untrusted caller controls lets them update or dismiss a notification that was not theirs.
 
-## Delivery semantics
+`metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
-These surprise people, and none of them is a bug.
+## What the app does and does not own
 
-- **A notification is addressed to a principal, not to a browser.** II fans it out to every browser that identity has registered. A user on a laptop and a phone is woken on both.
-- **Removing a recipient from the app's own list unsubscribes nothing.** The subscriptions live in II, against the anchor, shared across every consented app. Only the user can remove one, from II.
-- **A browser unused for 60 days counts as gone** and is not woken.
-- **`NoSuchRecipient`** means every browser of that recipient is past 60 days, or II holds no account for that principal at this origin. A CLI identity that never signed in to the app gets this.
+- **The app addresses a user, nothing finer.** Where and how a notification reaches them is II's and the user's to manage, and an app that reasons about it is coupling itself to something it cannot see.
+- **II composes what is shown**, so the app's name is not in the app's own payload. Publishing `/.well-known/ii-app-metadata` is what names the app on its notifications as well as on the sign-in screen: `references/app-metadata.md`.
+- **Sending cannot fail the call it is made from.** `send` neither traps nor awaits, so a recipient who cannot be notified costs the endpoint nothing and returns nothing to branch on. What became of a notification is in `metrics()`.
 - **iOS needs II added to the Home Screen** for web push. The consent ceremony walks the user through it; the app does nothing.
 
 ## Upgrades
 
-Call `init` again from `post_upgrade`. The outbox, the content a channel may still pull, the hourly metrics and the learned batch limit live in the stable memories handed over, so an upgrade neither serialises nor restores any of it. Timers do not survive an upgrade, so that second `init` is what arms a flush for anything still waiting.
+**Motoko: nothing to do.** The mixin keeps its own state and re-arms itself.
 
-Renumbering the three `MemoryId`s on an existing canister abandons the old memories rather than migrating them, which wipes the outbox and the metrics.
+**Rust: call `init` again from `post_upgrade`.** The library's state lives in the stable memories handed over, so an upgrade neither serialises nor restores any of it, and no timer survives an upgrade, so that second `init` is what arms a flush for anything still waiting.
+
+Renumbering those `MemoryId`s on a canister already running abandons the old memories rather than migrating them, which discards whatever was waiting.
