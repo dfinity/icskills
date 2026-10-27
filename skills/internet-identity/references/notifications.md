@@ -125,22 +125,24 @@ canisters:
 | `url` | none | Where acting on it takes the user. Must be the sending origin or one of its alternative origins; II refuses anything else. |
 | `key` | none | What the notification is *about*. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
 | `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
-| `expiresAt` / `expires_at` | II's default retention | Drops one no longer worth delivering. The default is also the ceiling. |
+| `expiresAt` / `expires_at` | II's default retention | Expires one no longer worth delivering. **Only brings expiry forward**: the default is already the ceiling. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
 ### Choosing `urgency` and `expiresAt`
 
 Different questions: `urgency` is where this sits against the origin's **other traffic**, `expiresAt` is whether it is still worth showing when it could be. Pick both together.
 
+**`expiresAt` only brings expiry forward.** Unset is II's default retention, which is also the ceiling, so nothing makes a notification last longer. Set it to stop delivering something that has gone stale, never to make one persist.
+
 | Sending | `urgency` | `expiresAt` | Why |
 |---|---|---|---|
-| Security alert, new sign-in | `High` | unset | Ahead of other traffic, and still matters seen late. |
+| Security alert, new sign-in | `High` | unset | Ahead of other traffic, and worth seeing late, so take the full retention. |
 | Direct message | `Normal` | unset | The ordinary case. |
 | "Your driver is outside" | `High` | minutes | Ahead of everything, worthless once passed. |
-| Campaign to the whole user base | `VeryLow` | long | None is urgent, and a large send must not push real notifications behind it. Give the campaign a `funnel` and its conversion rate is readable on its own. |
-| Digest, nudge, streak reminder | `Low` | hours to days | Yields to anything else, and yesterday's is pointless. |
+| Campaign to the whole user base | `VeryLow` | unset | None is urgent, and a large send must not push real notifications behind it. Give the campaign a `funnel` and its conversion rate is readable on its own. |
+| Digest, nudge, streak reminder | `Low` | hours | Yields to anything else, and yesterday's is pointless. |
 
-A short expiry does not make something urgent, and `High` does not make it persist. `High` on everything removes the ordering it was reached for.
+A short expiry does not make something urgent, and `High` does not make it last longer. `High` on everything removes the ordering it was reached for.
 
 ### `key`
 
