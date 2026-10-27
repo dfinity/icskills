@@ -128,7 +128,7 @@ canisters:
 | `expiresAt` / `expires_at` | II's default retention | Drops one no longer worth delivering. The default is also the ceiling. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
-**Derive `key` from something the caller cannot choose**, such as the conversation it belongs to. A key an untrusted caller controls lets them update or dismiss a notification that was not theirs.
+The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, such as the conversation, rather than from whatever a caller passed in.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
