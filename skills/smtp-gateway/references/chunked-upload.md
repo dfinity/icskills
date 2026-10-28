@@ -78,310 +78,19 @@ smtp_upload_status : (SmtpUploadId) -> (SmtpUploadStatusResponse) query;
 smtp_upload_abort : (SmtpUploadId) -> (SmtpResponse);
 ```
 
-## Rust implementation
+## Implementation
 
-This module sits next to the Rust example in `SKILL.md` and reuses its `check_caller` (gateway principal or controller, else 530) and `check_envelope`. Every chunked method runs the caller check first. Add `sha2 = "0.11"` to `[dependencies]`.
+The reference implementation is the mock canister in the protocol repository, which CI builds and tests: [`examples/mock-canister/src/lib.rs`](https://github.com/dfinity/ic-smtp-gateway-protocol/blob/4e376c5c15300d1d14b4dbc51986a322a4a0c3e8/examples/mock-canister/src/lib.rs) in `dfinity/ic-smtp-gateway-protocol`, pinned to commit `4e376c5`. Its `smtp_capabilities` and `smtp_upload_*` methods implement every obligation above. To adapt it:
 
-`ic_cdk::export_candid!()` resolves method signature types at the **crate root**. Methods in a submodule whose types are not imported in `lib.rs` fail with `cannot find type SmtpUploadChunk in this scope`. Add this to the top of `lib.rs`:
-
-```rust
-// export_candid!() resolves method signature types at the crate root, so the
-// types of the methods in `chunked` must be in scope here too.
-use ic_smtp_gateway_protocol::{
-    SmtpCapabilities, SmtpUploadChunk, SmtpUploadChunkResponse, SmtpUploadCommit, SmtpUploadId,
-    SmtpUploadStatusResponse,
-};
-
-mod chunked;
-```
-
-`src/chunked.rs`:
-
-```rust
-// Chunked upload: the optional methods for messages over the ~2 MiB ingress
-// limit. Sits next to the `smtp_request` example and reuses its
-// `check_envelope`.
-use std::{cell::RefCell, collections::HashMap};
-
-use candid::Principal;
-use ic_cdk::{
-    api::{msg_caller, time},
-    query, update,
-};
-use ic_smtp_gateway_protocol::{
-    body_sha256, Envelope, Header, SmtpCapabilities, SmtpOk, SmtpRequestError, SmtpResponse,
-    SmtpUploadChunk, SmtpUploadChunkOk, SmtpUploadChunkResponse, SmtpUploadCommit, SmtpUploadId,
-    SmtpUploadStatus, SmtpUploadStatusResponse, SHA256_LEN, SMTP_UPLOAD_PROTOCOL_VERSION,
-};
-use sha2::{Digest, Sha256};
-
-use crate::{check_caller, check_envelope};
-
-const MAX_MESSAGE_SIZE: u64 = 20 * 1024 * 1024; // advertise only what you enforce
-const MAX_CHUNKS: u32 = 4096;
-const MAX_OPEN_UPLOADS: usize = 16;
-const MAX_BUFFERED_BYTES: u64 = 128 * 1024 * 1024;
-const TTL_NS: u64 = 10 * 60 * 1_000_000_000; // must exceed the gateway's 90 s delivery window
-
-struct Upload {
-    envelope: Envelope,
-    headers: Option<Vec<Header>>,
-    total_chunks: u32,
-    chunk_size: u64,
-    body_size: u64,
-    buf: Vec<u8>,                           // pre-sized; chunk i lands at i * chunk_size
-    digests: Vec<Option<[u8; SHA256_LEN]>>, // computed HERE, never copied from the caller
-    received: u32,
-    created_ns: u64,
-}
-
-// Keyed by (caller, message_id) so another principal cannot touch the
-// gateway's uploads.
-type Key = (Principal, String);
-
-thread_local! {
-    static UPLOADS: RefCell<HashMap<Key, Upload>> = RefCell::default();
-    static VERDICTS: RefCell<HashMap<Key, (SmtpResponse, u64)>> = RefCell::default();
-}
-
-fn e(code: u64, message: &str) -> SmtpRequestError {
-    SmtpRequestError {
-        code,
-        message: message.to_string(),
-    }
-}
-
-/// Header block (re-serialized as `Name:value` + CRLF) plus body.
-fn message_size(headers: &[Header], body_size: u64) -> u64 {
-    headers
-        .iter()
-        .map(|h| (h.name.len() + h.value.len() + 3) as u64)
-        .fold(2, u64::saturating_add)
-        .saturating_add(body_size)
-}
-
-fn sweep(now: u64) {
-    UPLOADS.with_borrow_mut(|u| u.retain(|_, up| now.saturating_sub(up.created_ns) < TTL_NS));
-    VERDICTS.with_borrow_mut(|v| v.retain(|_, (_, at)| now.saturating_sub(*at) < TTL_NS));
-}
-
-fn reserved_bytes() -> u64 {
-    UPLOADS.with_borrow(|u| u.values().map(|up| up.body_size).sum())
-}
-
-/// Hand the reassembled message to the same code path `smtp_request` uses.
-fn deliver(_env: Envelope, _headers: Vec<Header>, _body: Vec<u8>) -> SmtpResponse {
-    SmtpResponse::Ok(SmtpOk {})
-}
-
-#[query]
-fn smtp_capabilities() -> SmtpCapabilities {
-    SmtpCapabilities {
-        upload_protocol_version: Some(SMTP_UPLOAD_PROTOCOL_VERSION),
-        max_message_size: Some(MAX_MESSAGE_SIZE),
-    }
-}
-
-/// Every rejection is a returned verdict: a trap reads as "temporary" and
-/// the sender retries a malformed chunk forever.
-fn validate_chunk(c: &SmtpUploadChunk) -> Result<[u8; SHA256_LEN], SmtpRequestError> {
-    if let Err(SmtpResponse::Err(rejected)) = check_caller() {
-        return Err(rejected);
-    }
-    if c.version != SMTP_UPLOAD_PROTOCOL_VERSION {
-        return Err(e(504, "unsupported upload protocol version"));
-    }
-    // Verify BEFORE storing: a corrupt transfer costs one chunk, not the upload.
-    let digest: [u8; SHA256_LEN] = Sha256::digest(&c.payload).into();
-    if c.payload_sha256.as_slice() != digest.as_slice() {
-        return Err(e(554, "chunk digest mismatch"));
-    }
-    // Layout must be self-consistent BEFORE any offset arithmetic or
-    // allocation: chunk_size = 1, total_chunks = 4e9 would otherwise allocate.
-    if c.chunk_size == 0
-        || c.total_chunks == 0
-        || c.total_chunks > MAX_CHUNKS
-        || c.body_size.div_ceil(c.chunk_size) != u64::from(c.total_chunks)
-        || c.index >= c.total_chunks
-    {
-        return Err(e(554, "malformed chunk layout"));
-    }
-    let expected_len = u64::from(c.index)
-        .checked_mul(c.chunk_size)
-        .and_then(|offset| c.body_size.checked_sub(offset))
-        .map(|left| left.min(c.chunk_size));
-    if expected_len != Some(c.payload.len() as u64) {
-        return Err(e(554, "chunk payload has the wrong length"));
-    }
-    if c.index == 0 && c.headers.is_none() {
-        return Err(e(554, "the first chunk must carry the headers"));
-    }
-    let headers = c.headers.as_deref().unwrap_or_default();
-    if message_size(headers, c.body_size) > MAX_MESSAGE_SIZE {
-        return Err(e(552, "message exceeds the advertised maximum size"));
-    }
-    if let Err(SmtpResponse::Err(rejected)) = check_envelope(&c.envelope) {
-        return Err(rejected);
-    }
-    Ok(digest)
-}
-
-#[update]
-fn smtp_upload_chunk(c: SmtpUploadChunk) -> SmtpUploadChunkResponse {
-    let digest = match validate_chunk(&c) {
-        Ok(d) => d,
-        Err(err) => return SmtpUploadChunkResponse::Err(err),
-    };
-    let key = (msg_caller(), c.message_id.clone());
-    let now = time();
-
-    // Already committed: report complete rather than reopening the upload.
-    if VERDICTS.with_borrow(|v| v.contains_key(&key)) {
-        return SmtpUploadChunkResponse::Ok(SmtpUploadChunkOk {
-            chunks_received: c.total_chunks,
-        });
-    }
-
-    if !UPLOADS.with_borrow(|u| u.contains_key(&key)) {
-        sweep(now);
-        if UPLOADS.with_borrow(|u| u.len()) >= MAX_OPEN_UPLOADS
-            || reserved_bytes().saturating_add(c.body_size) > MAX_BUFFERED_BYTES
-        {
-            return SmtpUploadChunkResponse::Err(e(452, "too many uploads in progress"));
-        }
-        // body_size <= MAX_MESSAGE_SIZE was checked, so this fits a wasm32 usize.
-        UPLOADS.with_borrow_mut(|u| {
-            u.insert(
-                key.clone(),
-                Upload {
-                    envelope: c.envelope.clone(),
-                    headers: None,
-                    total_chunks: c.total_chunks,
-                    chunk_size: c.chunk_size,
-                    body_size: c.body_size,
-                    buf: vec![0; c.body_size as usize],
-                    digests: vec![None; c.total_chunks as usize],
-                    received: 0,
-                    created_ns: now,
-                },
-            )
-        });
-    }
-
-    UPLOADS.with_borrow_mut(|u| {
-        let up = u.get_mut(&key).expect("present");
-        // Same message_id, different message: transient, worth a retry.
-        if (up.total_chunks, up.chunk_size, up.body_size)
-            != (c.total_chunks, c.chunk_size, c.body_size)
-            || up.envelope != c.envelope
-        {
-            return SmtpUploadChunkResponse::Err(e(450, "chunk does not match the upload"));
-        }
-        let slot = c.index as usize;
-        // Idempotent in (message_id, index): an identical resend changes nothing.
-        if let Some(prev) = up.digests[slot] {
-            if prev != digest || (c.index == 0 && up.headers != c.headers) {
-                return SmtpUploadChunkResponse::Err(e(450, "chunk does not match the upload"));
-            }
-            return SmtpUploadChunkResponse::Ok(SmtpUploadChunkOk {
-                chunks_received: up.received,
-            });
-        }
-        let offset = slot * up.chunk_size as usize;
-        up.buf[offset..offset + c.payload.len()].copy_from_slice(&c.payload);
-        if c.index == 0 {
-            up.headers = c.headers;
-        }
-        up.digests[slot] = Some(digest);
-        up.received += 1;
-        SmtpUploadChunkResponse::Ok(SmtpUploadChunkOk {
-            chunks_received: up.received,
-        })
-    })
-}
-
-#[update]
-fn smtp_upload_commit(commit: SmtpUploadCommit) -> SmtpResponse {
-    if let Err(rejected) = check_caller() {
-        return rejected;
-    }
-    if commit.version != SMTP_UPLOAD_PROTOCOL_VERSION {
-        return SmtpResponse::Err(e(504, "unsupported upload protocol version"));
-    }
-    let key = (msg_caller(), commit.message_id.clone());
-
-    // Idempotent: a repeated commit returns the retained verdict.
-    if let Some((verdict, _)) = VERDICTS.with_borrow(|v| v.get(&key).cloned()) {
-        return verdict;
-    }
-
-    let complete = UPLOADS.with_borrow(|u| match u.get(&key) {
-        None => Err(e(450, "unknown upload")),
-        // Incomplete is transient and must NOT discard the upload.
-        Some(up)
-            if up.received != commit.total_chunks || up.total_chunks != commit.total_chunks =>
-        {
-            Err(e(450, "upload is incomplete"))
-        }
-        Some(_) => Ok(()),
-    });
-    if let Err(err) = complete {
-        return SmtpResponse::Err(err);
-    }
-
-    let up = UPLOADS
-        .with_borrow_mut(|u| u.remove(&key))
-        .expect("present");
-    // Derive the chain from the digests of the bytes WE stored.
-    let digests: Vec<[u8; SHA256_LEN]> = up.digests.iter().map(|d| d.expect("complete")).collect();
-    let verdict = if body_sha256(&digests).as_slice() != commit.body_sha256.as_slice() {
-        SmtpResponse::Err(e(554, "body digest mismatch"))
-    } else {
-        deliver(up.envelope, up.headers.unwrap_or_default(), up.buf)
-    };
-    VERDICTS.with_borrow_mut(|v| v.insert(key, (verdict.clone(), time())));
-    verdict
-}
-
-#[query]
-fn smtp_upload_status(id: SmtpUploadId) -> SmtpUploadStatusResponse {
-    if let Err(SmtpResponse::Err(rejected)) = check_caller() {
-        return SmtpUploadStatusResponse::Err(rejected);
-    }
-    let key = (msg_caller(), id.message_id);
-    if let Some((verdict, _)) = VERDICTS.with_borrow(|v| v.get(&key).cloned()) {
-        return SmtpUploadStatusResponse::Ok(SmtpUploadStatus {
-            known: true,
-            committed: true,
-            result: Some(verdict),
-        });
-    }
-    SmtpUploadStatusResponse::Ok(SmtpUploadStatus {
-        known: UPLOADS.with_borrow(|u| u.contains_key(&key)),
-        committed: false,
-        result: None,
-    })
-}
-
-#[update]
-fn smtp_upload_abort(id: SmtpUploadId) -> SmtpResponse {
-    if let Err(rejected) = check_caller() {
-        return rejected;
-    }
-    UPLOADS.with_borrow_mut(|u| u.remove(&(msg_caller(), id.message_id)));
-    SmtpResponse::Ok(SmtpOk {}) // idempotent: aborting a missing upload is fine
-}
-```
-
-Notes:
-
-- State is keyed by `(caller, message_id)` rather than by `message_id` alone, so that another principal cannot collide with, or probe, the gateway's uploads.
-- Uploads live on the heap. An upgrade in the middle of an upload loses it: the commit then gets 450 and the sending server retries the whole message. That is acceptable. A production canister handling many large messages should buffer chunks in stable memory (`stable-memory` skill).
-- `deliver` is a stub: route the reassembled message into the same storage and logic as `smtp_request`.
+- Take the types and `body_sha256()` from the `ic-smtp-gateway-protocol` crate, and add `sha2 = "0.11"` for the per-chunk digests.
+- `InitArg` and the `mock_*` methods are test scaffolding. Replace them with your own configuration and with the `check_caller` and `check_envelope` from `SKILL.md`. The mock's single `authorized` principal makes caller restriction mandatory, but restriction is optional (`SKILL.md` Pitfall 7).
+- Keep upload state keyed by `(caller, message_id)`, as the mock does, so that another principal cannot collide with or probe the gateway's uploads.
+- The mock keeps uploads on the heap. An upgrade in the middle of an upload loses it: the commit then gets 450 and the sending server retries the whole message. Buffer chunks in stable memory (`stable-memory` skill) if you handle many large messages.
+- `ic_cdk::export_candid!()` resolves method types at the crate root. If the chunked methods live in a submodule, import `SmtpCapabilities`, `SmtpUploadChunk`, `SmtpUploadChunkResponse`, `SmtpUploadCommit`, `SmtpUploadId` and `SmtpUploadStatusResponse` in `lib.rs`, or the build fails with `cannot find type SmtpUploadChunk in this scope`.
 
 ## Test it locally
 
-The body `hello world` split into `"hello "` and `"world"` (`chunk_size = 6`, `body_size = 11`) has these digests, written as Candid blob literals:
+The body `hello world` split into `"hello "` and `"world"` (`chunk_size = 6`, `body_size = 11`) has these digests, written as Candid blob literals. Every number carries its Candid type, so the commands also work against a canister without embedded Candid metadata:
 
 ```bash
 D0='\5e\32\35\a8\34\6e\5a\45\85\f8\c5\85\62\f5\05\2b\8f\e2\6a\3b\b1\22\e1\e9\6c\76\78\49\64\df\c4\61'      # SHA256("hello ")
@@ -389,27 +98,27 @@ D1='\48\6e\a4\62\24\d1\bb\4f\b6\80\f3\4f\7c\9a\d9\6a\8f\24\ec\88\be\73\ea\8e\5a\
 BODY='\66\18\9e\d7\99\1e\1e\0f\ce\06\53\99\c5\ca\05\fc\15\c2\81\86\5a\7a\29\91\bd\d6\67\c1\46\6a\91\a4'  # SHA256(D0 || D1)
 ENV='envelope = record { from = record { user = "alice"; domain = "example.com" }; to = vec { record { user = "support"; domain = "example.icp0.io" } } }'
 
-# Expected: opt (1 : nat32) and opt (20_971_520 : nat64)
+# Expected: the upload_protocol_version and max_message_size you advertise
 icp canister call backend smtp_capabilities '()'
 
 # Chunk 1 first: order is not guaranteed. Expected: Ok, chunks_received = 1
-icp canister call backend smtp_upload_chunk "(record { version = 1; message_id = \"m1\"; $ENV; index = 1; total_chunks = 2; chunk_size = 6; body_size = 11; payload_sha256 = blob \"$D1\"; payload = blob \"world\" })"
+icp canister call backend smtp_upload_chunk "(record { version = 1 : nat32; message_id = \"m1\"; $ENV; index = 1 : nat32; total_chunks = 2 : nat32; chunk_size = 6 : nat64; body_size = 11 : nat64; payload_sha256 = blob \"$D1\"; payload = blob \"world\" })"
 
 # Commit too early. Expected: Err 450 "upload is incomplete" (the upload is kept)
-icp canister call backend smtp_upload_commit "(record { version = 1; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 })"
+icp canister call backend smtp_upload_commit "(record { version = 1 : nat32; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 : nat32 })"
 
 # Chunk 0 carries the headers. Expected: Ok, chunks_received = 2
-icp canister call backend smtp_upload_chunk "(record { version = 1; message_id = \"m1\"; $ENV; index = 0; total_chunks = 2; chunk_size = 6; body_size = 11; payload_sha256 = blob \"$D0\"; payload = blob \"hello \"; headers = opt vec { record { name = \"Subject\"; value = \" Big\\r\\n\" } } })"
+icp canister call backend smtp_upload_chunk "(record { version = 1 : nat32; message_id = \"m1\"; $ENV; index = 0 : nat32; total_chunks = 2 : nat32; chunk_size = 6 : nat64; body_size = 11 : nat64; payload_sha256 = blob \"$D0\"; payload = blob \"hello \"; headers = opt vec { record { name = \"Subject\"; value = \" Big\\r\\n\" } } })"
 
 # Commit, then commit again. Expected: Ok both times (idempotent)
-icp canister call backend smtp_upload_commit "(record { version = 1; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 })"
-icp canister call backend smtp_upload_commit "(record { version = 1; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 })"
+icp canister call backend smtp_upload_commit "(record { version = 1 : nat32; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 : nat32 })"
+icp canister call backend smtp_upload_commit "(record { version = 1 : nat32; message_id = \"m1\"; body_sha256 = blob \"$BODY\"; total_chunks = 2 : nat32 })"
 
 # Expected: known = true; committed = true; result = opt variant { Ok = record {} }
 icp canister call backend smtp_upload_status '(record { message_id = "m1" })'
 
 # Allocation attack. Expected: Err 554 "malformed chunk layout", not a trap
-icp canister call backend smtp_upload_chunk "(record { version = 1; message_id = \"m3\"; $ENV; index = 0; total_chunks = 4000000000; chunk_size = 1; body_size = 4000000000; payload_sha256 = blob \"$D0\"; payload = blob \"hello \" })"
+icp canister call backend smtp_upload_chunk "(record { version = 1 : nat32; message_id = \"m3\"; $ENV; index = 0 : nat32; total_chunks = 4000000000 : nat32; chunk_size = 1 : nat64; body_size = 4000000000 : nat64; payload_sha256 = blob \"$D0\"; payload = blob \"hello \" })"
 ```
 
 In zsh, print these variables with `print -r` rather than `echo`: zsh's `echo` interprets the backslashes and corrupts the digests.
