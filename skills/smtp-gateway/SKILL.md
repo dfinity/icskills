@@ -14,7 +14,7 @@ metadata:
 
 An SMTP gateway is an off-chain mail server that accepts email addressed to a canister and delivers it by calling the canister's `smtp_request` method, the way the HTTP gateway calls `http_request`. DFINITY operates the gateways that mail for `<canister-id>.icp0.io` reaches, alongside its HTTP gateways; others can run their own, since the gateway is part of `ic-gateway`. The limits and sender checks in this skill are those of DFINITY's gateways. A canister opts in by implementing two methods. There is nothing to register for `<canister-id>.icp0.io` addresses. Mail flows **in** only: a canister cannot send email through the gateway, and it never receives bounce messages either, because the gateway rejects the null sender (`MAIL FROM:<>`).
 
-The protocol's normative spec is `candid/smtp_gateway.did` in `dfinity/ic-smtp-gateway-protocol`; the gateway that implements it is the `smtp` module of `dfinity/ic-bn-lib`. This skill describes both, and says where the current gateway differs from the spec. The code below handles both.
+The protocol is specified in `candid/smtp_gateway.did` in `dfinity/ic-smtp-gateway-protocol`, and the gateway that implements it is the `smtp` module of `dfinity/ic-bn-lib`.
 
 ## Addressing
 
@@ -81,7 +81,7 @@ Codes to use. Permanent: **550** no such mailbox (reserved, never for anything e
 
 3. **Using 550 for anything except "unknown mailbox".** From `smtp_request_validate`, 550 becomes `550 5.1.2 Mailbox does not exist.` and your text is dropped. Use another 5xx code (552, 554) for policy rejections so that your message reaches the sender.
 
-4. **Skipping `smtp_request_validate`.** The `.did` describes it as an optimization, but the gateway calls it on every `RCPT TO` and treats a missing method as a permanent "does not support SMTP protocol" rejection of every recipient. Implement both methods. (`smtp_capabilities` is genuinely optional: a missing method just means no chunked upload.)
+4. **Skipping `smtp_request_validate`.** The gateway calls it on every `RCPT TO` and treats a missing method as a permanent "does not support SMTP protocol" rejection of every recipient. Implement both methods. (`smtp_capabilities` is genuinely optional: a missing method just means no chunked upload.)
 
 5. **Requiring `message` or `message_id` in `smtp_request_validate`.** It receives only `envelope`, with exactly one recipient. Requiring the other fields rejects every recipient.
 
@@ -91,7 +91,7 @@ Codes to use. Permanent: **550** no such mailbox (reserved, never for anything e
 
 8. **Trusting the sender's address.** DFINITY's gateways reject mail that fails SPF for the envelope sender's domain, and mail whose DKIM signatures all fail. They do accept senders without an SPF record and unsigned mail, they do not check that the signing domain matches `From` (no DMARC), and no result reaches the canister (`gateway_flags` is always `null`). So `From`, and `envelope.from` for domains without SPF, is still whatever the client claimed. If the sender's identity matters, verify DKIM inside the canister, as Internet Identity does: relaxed canonicalization; the public key fetched with DNS-over-HTTPS outcalls (`https-outcalls` skill) and accepted only when several resolvers agree; the signing domain `d=` aligned with `From`; duplicate `From`, `Subject` or `DKIM-Signature` headers rejected, since a duplicate header can smuggle content past the signature.
 
-9. **Expecting clean, decoded header values.** The `.did` says values are RFC 2047-decoded. The current gateway sends the raw text after the colon: the leading space, the trailing `\r\n` or `\n`, folded continuation lines and `=?UTF-8?B?...?=` encoded words are all left in. Trim before comparing, decode encoded words yourself if you display them, and match header names case-insensitively. Order and duplicates are preserved.
+9. **Expecting clean, decoded header values.** Each value is the raw text after the colon: the leading space, the trailing `\r\n` or `\n`, folded continuation lines and `=?UTF-8?B?...?=` encoded words are all left in. Trim before comparing, decode encoded words yourself if you display them, and match header names case-insensitively. Order and duplicates are preserved.
 
 10. **Expecting a parsed body.** `body` holds the raw bytes after the header block, with CRLF line endings, and no MIME processing. Mail from a normal client is usually `multipart/alternative` with base64 or quoted-printable parts: you receive the boundaries and encoded parts, not plain text.
 
