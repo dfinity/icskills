@@ -1,0 +1,146 @@
+{
+  "skill": "smtp-gateway",
+  "description": "Evaluation cases for the smtp-gateway skill. Tests whether agents implement the SMTP gateway Candid interface correctly and know how the real gateway behaves: reply-code classes (5xx bounces, anything else retries), traps read as temporary, smtp_request_validate being required and envelope-only, raw undecoded header values, per-transaction message_id, no sender authentication, the .well-known/ic-smtp-canister-id handoff, and the chunked-upload digest rules.",
+  "output_evals": [
+    {
+      "name": "Trap instead of Err",
+      "prompt": "My IC canister's smtp_request handler calls .unwrap() on req.message, and senders report their mail to it is 'delayed' for days before bouncing. Why, and what is the fix? Just the explanation and the corrected few lines of Rust, no full canister.",
+      "expected_behaviors": [
+        "Explains that a trap is reported by the SMTP gateway as a temporary failure, so the sending server keeps retrying",
+        "Fixes it by returning SmtpResponse::Err with a 5xx code (e.g. 501) when the field is missing",
+        "Notes that every SmtpRequest field is opt, so presence must be checked rather than assumed",
+        "Does NOT keep any unwrap/expect/panic on the request path"
+      ]
+    },
+    {
+      "name": "Reply code classes",
+      "prompt": "Which code should my canister's smtp_request return in SmtpRequestError to (a) reject an unknown recipient, (b) reject a message that is too large, (c) say storage is temporarily full? Codes only, with a one-line reason each.",
+      "expected_behaviors": [
+        "Uses 550 for the unknown recipient",
+        "Uses a 5xx code such as 552 for the too-large message, because only 500-599 bounces",
+        "Uses a 4xx code such as 452 for temporarily full storage, because non-5xx codes are retried",
+        "Does NOT use a 4xx code for the unknown recipient or the too-large message"
+      ]
+    },
+    {
+      "name": "smtp_request_validate is required and envelope-only",
+      "prompt": "Do I need to implement smtp_request_validate for my canister to receive email through the IC SMTP gateway, and what does the request contain when it is called? Short answer, no code.",
+      "expected_behaviors": [
+        "Says yes: the gateway calls it on every RCPT TO and treats a missing method as a permanent 'does not support SMTP protocol' rejection",
+        "States that it receives only the envelope, with exactly one recipient, and that message and message_id are null",
+        "States that it must be a query method",
+        "Does NOT describe it as optional or as a pure optimization"
+      ]
+    },
+    {
+      "name": "Sender authenticity",
+      "prompt": "Can my canister trust the From header or the envelope sender of mail delivered via smtp_request to know who sent it? Brief answer, no code.",
+      "expected_behaviors": [
+        "Says no: the gateway passes no SPF or DKIM result to the canister (gateway_flags is null) and does not check that the DKIM signing domain matches From",
+        "Notes that unsigned mail and senders without an SPF record are accepted, so From can still be forged",
+        "Recommends verifying the DKIM signature inside the canister, with the signing domain aligned to From, if sender identity matters",
+        "Does NOT claim that restricting callers to the gateway principal makes the From header trustworthy"
+      ]
+    },
+    {
+      "name": "Restricting callers to the gateway",
+      "prompt": "How can my canister make sure that calls to smtp_request really come from the IC SMTP gateway and not from someone calling it directly? Short answer with the few lines of Rust for the check.",
+      "expected_behaviors": [
+        "Compares the caller with the gateway principal ttvgm-eefjs-h2pqz-huxqk-ld2c3-rcwbm-a2tik-35hex-pm2jn-l6glo-oae",
+        "Rejects other callers by returning SmtpResponse::Err with code 530",
+        "Explains that trapping on an unauthorized caller would be read as a temporary failure",
+        "Does NOT claim the gateway's principal is unknown or that the methods cannot be restricted"
+      ]
+    },
+    {
+      "name": "Raw header values",
+      "prompt": "In smtp_request I look for the subject with `h.name == \"Subject\" && h.value == expected` and it never matches, although the subject is right. Why? Just the fix.",
+      "expected_behaviors": [
+        "Explains that header values arrive raw: leading space and trailing line ending (CRLF or LF) included",
+        "Trims the value before comparing",
+        "Matches the header name case-insensitively",
+        "Does NOT claim the gateway already trims or RFC 2047-decodes header values"
+      ]
+    },
+    {
+      "name": "message_id is not a dedup key",
+      "prompt": "Should I use message_id from SmtpRequest to deduplicate emails when the sending mail server retries a delivery? Short answer.",
+      "expected_behaviors": [
+        "Says no: message_id is generated per SMTP transaction, so a retry arrives with a new one",
+        "States that delivery is at-least-once",
+        "Suggests deduplicating on the RFC 5322 Message-ID header or making processing idempotent"
+      ]
+    },
+    {
+      "name": "Canister email address",
+      "prompt": "What email address do I give users so that mail reaches the 'support' mailbox of my canister rdmx6-jaaaa-aaaaa-aaadq-cai, and is any DNS setup needed? Just the address and a one-line note.",
+      "expected_behaviors": [
+        "Gives support@rdmx6-jaaaa-aaaaa-aaadq-cai.icp0.io",
+        "States that no DNS setup or registration is needed for the icp0.io address",
+        "Does NOT invent a registration API or extra DNS records for it"
+      ]
+    },
+    {
+      "name": "Handing mail to a backend canister",
+      "prompt": "My frontend canister (static-site recipe) serves my site, but a separate backend canister should receive the email addressed to the frontend canister. How do I route the mail to the backend? Just the mechanism, no full code.",
+      "expected_behaviors": [
+        "Serves /.well-known/ic-smtp-canister-id from the frontend canister with the backend's canister ID as the body",
+        "Mentions that the static-site recipe uploads .well-known/ without extra configuration",
+        "Notes the gateway caches the lookup (10 minutes) and falls back to the addressed canister on failure",
+        "Does NOT propose forwarding each email with inter-canister calls as the mechanism"
+      ]
+    },
+    {
+      "name": "Chunked upload commit digest",
+      "prompt": "For the SMTP gateway's chunked upload, how must my canister compute and check body_sha256 in smtp_upload_commit? One paragraph, no code.",
+      "expected_behaviors": [
+        "Describes body_sha256 as SHA-256 over the concatenated per-chunk SHA-256 digests in index order, not over the body",
+        "Says the canister must derive it from the payloads it stored, not from the caller-supplied payload_sha256 values",
+        "Returns a 5xx code (554) on mismatch",
+        "Mentions that commit must be idempotent by retaining the verdict"
+      ]
+    },
+    {
+      "name": "Adversarial: awaiting in smtp_request",
+      "prompt": "I want my canister's smtp_request handler to make an HTTPS outcall to check something before it returns Ok. Any problem with that? Short answer.",
+      "expected_behaviors": [
+        "Warns that the gateway holds the SMTP session open and gives up after a delivery timeout (90 s), which is treated as temporary and retried",
+        "Warns that a retry after a slow success leads to duplicate delivery",
+        "Recommends accepting synchronously and doing the slow work afterwards, for example from a timer",
+        "Does NOT recommend awaiting the outcall inside smtp_request"
+      ]
+    },
+    {
+      "name": "Adversarial: sending email",
+      "prompt": "How do I send an email from my canister through the IC SMTP gateway? Short answer.",
+      "expected_behaviors": [
+        "States that the SMTP gateway is inbound only and cannot send email",
+        "Suggests calling an email provider's API with HTTPS outcalls instead",
+        "Does NOT invent an outbound method such as smtp_send"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "How do I receive email in my IC canister?",
+      "Implement smtp_request for my Rust canister",
+      "Emails to my canister bounce with 'does not support SMTP protocol'",
+      "What should smtp_request_validate return for an unknown mailbox?",
+      "Can users email my canister at its icp0.io address?",
+      "Mail sent to my canister keeps getting delayed and retried",
+      "How does the SMTP gateway chunked upload work?",
+      "Parse incoming email in a Motoko canister"
+    ],
+    "should_not_trigger": [
+      "Send a transactional email from my canister through SendGrid",
+      "How do I serve HTTP requests from my canister with http_request?",
+      "Set up a custom domain for my frontend canister",
+      "Make an HTTPS outcall to an external weather API",
+      "Add Internet Identity login to my app",
+      "Transfer ICP tokens between accounts",
+      "Store a large map in stable memory in Rust",
+      "Deploy a Motoko canister locally"
+    ]
+  }
+}
