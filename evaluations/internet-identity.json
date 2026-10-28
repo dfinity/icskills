@@ -330,6 +330,38 @@
         "Calls dispose() on the superseded client",
         "Does NOT assign to a client property or pass ssoDomain to signIn()"
       ]
+    },
+    {
+      "name": "Notification consent returns a record, not a boolean",
+      "prompt": "Add a 'Notify me' button to my ICP app that asks Internet Identity for permission to send notifications, and show the user whether it was allowed. Just the handler, no backend.",
+      "expected_behaviors": [
+        "Destructures the result: `const { granted } = await authClient.requestNotificationConsent()` — does NOT assign the call directly to a boolean",
+        "Treats `granted: false` as the user's answer and renders it, rather than throwing or logging an error",
+        "Asks from a click handler, not on page load or at module scope",
+        "Does NOT invent a browser Notification.requestPermission() or Push API call — permission is asked through Internet Identity",
+        "Does not claim VAPID keys, a push service, or a service worker are needed in the app"
+      ]
+    },
+    {
+      "name": "The sender list is required before any send works",
+      "prompt": "My canister calls the identity-notifications send function and it returns fine, but no notification ever arrives. The user definitely allowed notifications. What's wrong?",
+      "expected_behaviors": [
+        "Names `/.well-known/ii-notification-senders` on the app's origin as the thing most likely missing",
+        "Shows the document shape: an object with a `senders` array of canister id strings",
+        "Explains that Internet Identity refuses a send from a canister the origin has not named, which is why nothing errors at the send site",
+        "Mentions the cache (roughly an hour) so a just-added canister is not accepted instantly",
+        "Does NOT suggest the problem is a missing service worker or a browser permission prompt"
+      ]
+    },
+    {
+      "name": "Delivery is not the app's to control",
+      "prompt": "I removed a user from my app's chat room so they stop getting notified, but they still got a notification. How do I unsubscribe their browser from my app?",
+      "expected_behaviors": [
+        "Says the app addresses a user and does not control where or how the notification reaches them: that is Internet Identity's and the user's to manage",
+        "Says the app's own recipient list governs only what the app sends from now on",
+        "Does NOT suggest the app call a browser unsubscribe API, clear a service worker registration, or manipulate a push subscription",
+        "Does NOT invent an Internet Identity method for removing a device or subscription on the app's behalf"
+      ]
     }
   ],
   "trigger_evals": {
@@ -343,7 +375,9 @@
       "Add auth to my canister frontend",
       "How do I get my app's name and logo to show on the Internet Identity sign-in screen?",
       "Let users sign in with their company's SSO in my ICP app",
-      "Check whether the domain a user typed supports Internet Identity SSO"
+      "Check whether the domain a user typed supports Internet Identity SSO",
+      "Send a web push notification to a user from my ICP canister",
+      "Ask the user for permission to notify them with Internet Identity"
     ],
     "should_not_trigger": [
       "Connect a wallet to my dapp",
