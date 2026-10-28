@@ -141,7 +141,7 @@ use ic_smtp_gateway_protocol::{
     Envelope, Header, SmtpOk, SmtpRequest, SmtpRequestError, SmtpResponse,
 };
 
-/// The principal the DFINITY-operated SMTP gateway calls from.
+/// Principal of DFINITY's SMTP gateways; gateways run by others have their own.
 const SMTP_GATEWAY: &str = "ttvgm-eefjs-h2pqz-huxqk-ld2c3-rcwbm-a2tik-35hex-pm2jn-l6glo-oae";
 
 /// Local parts this canister accepts mail for.
@@ -176,7 +176,7 @@ fn err(code: u64, message: &str) -> SmtpResponse {
     })
 }
 
-/// Optional: accept mail only through the DFINITY-operated gateway (plus
+/// Optional: accept mail only through DFINITY's gateways (plus
 /// controllers, for testing). Drop this check to accept any gateway. Return
 /// 530 rather than trapping, which would read as a temporary failure.
 fn check_caller() -> Result<(), SmtpResponse> {
@@ -326,7 +326,7 @@ persistent actor Inbox {
   // Configuration is `transient`: a plain `let` in a persistent actor is
   // stable and would keep its first-install value across upgrades.
 
-  // The principal the DFINITY-operated SMTP gateway calls from.
+  // Principal of DFINITY's SMTP gateways; gateways run by others have their own.
   transient let smtpGateway = Principal.fromText("ttvgm-eefjs-h2pqz-huxqk-ld2c3-rcwbm-a2tik-35hex-pm2jn-l6glo-oae");
 
   // Local parts this canister accepts mail for.
@@ -346,7 +346,7 @@ persistent actor Inbox {
     #Err({ code; message });
   };
 
-  // Optional: accept mail only through the DFINITY-operated gateway (plus
+  // Optional: accept mail only through DFINITY's gateways (plus
   // controllers, for testing). Drop this check to accept any gateway. Return
   // 530 rather than trapping, which would read as a temporary failure.
   func checkCaller(caller : Principal) : ?SmtpResponse {
@@ -438,7 +438,7 @@ persistent actor Inbox {
 
 ## Chunked Upload (Optional)
 
-A message whose encoded `SmtpRequest` exceeds 2 MiB cannot be delivered with one ingress call. The gateway then uploads it with `smtp_upload_chunk` and finalizes it with `smtp_upload_commit`, but **only** when `smtp_capabilities` returns both `upload_protocol_version >= 1` and `max_message_size > 0`. Otherwise the sender gets a permanent `550 5.5.0 ... does not support chunked upload` error, and your canister is unaffected. DFINITY's gateways accept at most 1,996,800 bytes per message (header block and body) and rejects larger mail with `552 5.3.4`, so nearly everything it accepts fits one `smtp_request`: implement chunked upload only if you need it. The obligations are strict: verify each chunk's SHA-256 before storing it, bound the layout before allocating, derive the commit digest from the bytes you stored, and keep the commit verdict so a repeated commit or a status query returns it. Read `references/chunked-upload.md` for the checklist, the gateway's behavior, and where to find the reference implementation.
+A message whose encoded `SmtpRequest` exceeds 2 MiB cannot be delivered with one ingress call. The gateway then uploads it with `smtp_upload_chunk` and finalizes it with `smtp_upload_commit`, but **only** when `smtp_capabilities` returns both `upload_protocol_version >= 1` and `max_message_size > 0`. Otherwise the sender gets a permanent `550 5.5.0 ... does not support chunked upload` error, and your canister is unaffected. DFINITY's gateways accept at most 1,996,800 bytes per message (header block and body) and rejects larger mail with `552 5.3.4`, so nearly everything it accepts fits one `smtp_request`: implement chunked upload only if you need it. The obligations are strict: verify each chunk's SHA-256 before storing it, bound the layout before allocating, derive the commit digest from the bytes you stored (SHA-256 over the concatenated per-chunk SHA-256 digests in index order, not over the body: the crate's `body_sha256()`; a mismatch is 554), and keep the commit verdict so a repeated commit or a status query returns it. Read `references/chunked-upload.md` for the checklist, the gateway's behavior, and where to find the reference implementation.
 
 ## Deploy & Test
 
