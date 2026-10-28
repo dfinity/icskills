@@ -14,7 +14,7 @@ metadata:
 
 An SMTP gateway is an off-chain mail server that accepts email addressed to a canister and delivers it by calling the canister's `smtp_request` method, the way the HTTP gateway calls `http_request`. DFINITY operates the gateways that mail for `<canister-id>.icp0.io` reaches, alongside its HTTP gateways; others can run their own, since the gateway is part of `ic-gateway`. The limits and sender checks in this skill are those of DFINITY's gateways. A canister opts in by implementing two methods. There is nothing to register for `<canister-id>.icp0.io` addresses. Mail flows **in** only: a canister cannot send email through the gateway, and it never receives bounce messages either, because the gateway rejects the null sender (`MAIL FROM:<>`).
 
-The protocol is a proof of concept under active development. Its normative spec is `candid/smtp_gateway.did` in `dfinity/ic-smtp-gateway-protocol`; the gateway that implements it is the `smtp` module of `dfinity/ic-bn-lib`. This skill describes both, and says where the current gateway differs from the spec. The code below handles both.
+The protocol's normative spec is `candid/smtp_gateway.did` in `dfinity/ic-smtp-gateway-protocol`; the gateway that implements it is the `smtp` module of `dfinity/ic-bn-lib`. This skill describes both, and says where the current gateway differs from the spec. The code below handles both.
 
 ## Addressing
 
