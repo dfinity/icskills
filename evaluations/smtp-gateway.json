@@ -43,13 +43,14 @@
       ]
     },
     {
-      "name": "Restricting callers to the gateway",
-      "prompt": "How can my canister make sure that calls to smtp_request really come from the IC SMTP gateway and not from someone calling it directly? Short answer with the few lines of Rust for the check.",
+      "name": "Restricting callers to DFINITY's gateways",
+      "prompt": "I want my canister to accept mail only when it is delivered through the SMTP gateways operated by DFINITY, not when someone calls smtp_request directly or through another gateway. How do I check that? Short answer with the few lines of Rust for the check.",
       "expected_behaviors": [
-        "Compares the caller with the gateway principal ttvgm-eefjs-h2pqz-huxqk-ld2c3-rcwbm-a2tik-35hex-pm2jn-l6glo-oae",
+        "Compares the caller with DFINITY's gateway principal ttvgm-eefjs-h2pqz-huxqk-ld2c3-rcwbm-a2tik-35hex-pm2jn-l6glo-oae",
         "Rejects other callers by returning SmtpResponse::Err with code 530",
         "Explains that trapping on an unauthorized caller would be read as a temporary failure",
-        "Does NOT claim the gateway's principal is unknown or that the methods cannot be restricted"
+        "Notes that other operators can run SMTP gateways with their own principals, so restricting callers is a choice: to accept those, ask the operator for its principal or don't restrict",
+        "Does NOT present DFINITY's principal as the only possible gateway"
       ]
     },
     {
