@@ -36,9 +36,10 @@
       "prompt": "Show me just the mops.toml for a Caffeine app's Motoko backend. Just the file, no commentary.",
       "expected_behaviors": [
         "Declares exactly one canister: [canisters.backend] with main = \"src/backend/main.mo\"",
-        "[toolchain] pins moc and lintoko versions",
-        "[moc].args include \"--default-persistent-actors\" and \"--actor-idl=src/backend/system-idl\"",
-        "Includes [canisters.backend.check-stable] with path = \".old/src/backend/dist/backend.most\"",
+        "[toolchain] pins moc (a 2.x version for a new project) and lintoko",
+        "[moc].args do NOT include the moc 1.x flags \"--default-persistent-actors\" or \"--generate-view-queries\", and do NOT include \"--actor-idl=src/backend/system-idl\"",
+        "Includes [canisters.backend.check-stable] with path = \".old/src/backend/dist/backend.most\" and no skipIfMissing",
+        "Includes [canisters.backend.migrations] with chain = \"src/backend/migrations\"",
         "[dependencies] includes core (mo:core), not mo:base"
       ]
     },
@@ -149,8 +150,9 @@
       "name": "First check fails on missing backend.most baseline",
       "prompt": "On a brand-new Caffeine app, `caffeine check` fails with 'Deployed file not found: .old/src/backend/dist/backend.most'. How do I fix it? Brief.",
       "expected_behaviors": [
-        "Explains the stable-signature check has no prior-build baseline on a never-built project",
-        "Fix: set skipIfMissing = true under [canisters.backend.check-stable] in mops.toml"
+        "Explains the stable-signature check has no deployed baseline on a never-deployed project",
+        "Fix: create .old/src/backend/dist/backend.most containing an empty actor (// Version: 1.0.0 then actor {};)",
+        "Does NOT recommend skipIfMissing = true (deprecated by mops and rejected by caffeine preview)"
       ]
     },
     {
