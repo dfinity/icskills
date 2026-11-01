@@ -1,0 +1,109 @@
+{
+  "skill": "canister-calls",
+  "description": "Evaluation cases for the canister-calls skill. Tests whether agents can discover canister interfaces via Candid, generate typed bindings, handle Candid ↔ JS/TS type mapping correctly (variant as object, opt as T | null, nat as BigInt), initialize clients with the correct agentOptions pattern, and use ic-cdk 0.19+ Call API for Rust inter-canister calls.",
+
+  "output_evals": [
+    {
+      "name": "Discover unknown canister API",
+      "prompt": "I found this canister on mainnet: rdmx6-jaaaa-aaaaa-aaadq-cai. I want to call it from my Rust canister but I have no idea what methods it exposes. How do I figure out its API?",
+      "expected_behaviors": [
+        "Suggests fetching the Candid interface via `icp canister metadata <ID> candid:service -e ic`",
+        "Explains how to read the returned .did file (method names, types, query vs update)",
+        "Does NOT hallucinate method names for this canister",
+        "Mentions generating typed Rust bindings from the .did (ic-cdk-bindgen or manual)"
+      ]
+    },
+    {
+      "name": "Variant type handling in TypeScript",
+      "prompt": "My canister method returns `variant { Ok : nat64; Err : text }`. After calling it from TypeScript I check `if (result === 'Ok')` but it never matches. What's wrong?",
+      "expected_behaviors": [
+        "Explains that Candid variants are objects in JS/TS, not strings",
+        "Shows the correct check: `if ('Ok' in result)` or `'Ok' in result`",
+        "Shows how to access the value: `result.Ok` (not `result`)",
+        "Mentions that nat64 is BigInt in JS/TS"
+      ]
+    },
+    {
+      "name": "opt T handling in TypeScript",
+      "prompt": "My canister returns `opt text` for a query method. I'm checking `if (result.length > 0)` to see if a value is present, but TypeScript is complaining. What's the right pattern?",
+      "expected_behaviors": [
+        "Explains that @icp-sdk/bindgen wraps opt T as T | null, not [] | [T]",
+        "Shows the correct check: `if (result !== null)`",
+        "Explains that [] | [T] is the raw Candid encoding used by @dfinity/agent"
+      ]
+    },
+    {
+      "name": "Generate JS/TS bindings and initialize actor",
+      "prompt": "I have a .did file for my backend canister at `./backend/backend.did`. I'm using Vite. Show me how to generate TypeScript bindings and create an authenticated actor after Internet Identity login.",
+      "expected_behaviors": [
+        "Shows the Vite plugin approach: `icpBindgen({ didFile, outDir })` in vite.config.js",
+        "Uses `createActor(canisterId, { agentOptions })` — NOT `{ agent }`",
+        "Passes `identity` from `authClient.getIdentity()` inside `agentOptions`",
+        "Uses `rootKey: canisterEnv?.IC_ROOT_KEY` from `safeGetCanisterEnv()`"
+      ]
+    },
+    {
+      "name": "Rust inter-canister call (ic-cdk >= 0.19)",
+      "prompt": "I want to call another canister's `greet(name: text) -> (text)` method from my Rust canister. Show me the code.",
+      "expected_behaviors": [
+        "Uses `Call::unbounded_wait` or `Call::bounded_wait` from `ic_cdk::call`",
+        "Uses `.with_arg()` and `.candid_tuple()` for encoding/decoding",
+        "Does NOT use `ic_cdk::call()` or `Call::new()` — these do not exist in ic-cdk >= 0.19"
+      ]
+    },
+    {
+      "name": "Motoko dynamic actor reference",
+      "prompt": "I want to call a method on a canister from my Motoko canister. I have the canister ID and the method signature. Show me how.",
+      "expected_behaviors": [
+        "Uses `actor (\"<canister-id>\") : actor { ... }` syntax",
+        "Shows the method typed with `shared` or `shared query` keyword",
+        "Calls the method with `await`"
+      ]
+    },
+    {
+      "name": "Adversarial: { agent } instead of { agentOptions }",
+      "prompt": "I generated TypeScript bindings with @icp-sdk/bindgen. I'm passing my authenticated HttpAgent like this: `createActor(canisterId, { agent: myAgent })`. The calls work but always come back as if I'm anonymous. Why?",
+      "expected_behaviors": [
+        "Identifies that `{ agent }` is the wrong parameter — @icp-sdk/bindgen uses `{ agentOptions }`",
+        "Explains that passing `{ agent }` silently falls back to anonymous identity",
+        "Shows the correct pattern: `createActor(canisterId, { agentOptions: { identity, host, rootKey } })`"
+      ]
+    },
+    {
+      "name": "Adversarial: ic_cdk::call() removed",
+      "prompt": "I'm trying to call another canister from my Rust canister using `ic_cdk::call(canister_id, \"method\", (arg,)).await` but it doesn't compile. How do I fix this?",
+      "expected_behaviors": [
+        "Explains that `ic_cdk::call()` was removed in ic-cdk 0.19",
+        "Shows the replacement: `Call::unbounded_wait(canister_id, \"method\").with_arg(arg).await`",
+        "Imports `use ic_cdk::call::Call`"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "I have a .did file, how do I generate TypeScript bindings?",
+      "How do I generate bindings for a canister and call it from JavaScript?",
+      "Candid opt type is showing as array in TypeScript",
+      "How do I handle a variant return type in TypeScript?",
+      "nat64 type from Candid in JavaScript",
+      "Generate TypeScript bindings for a canister on mainnet",
+      "How do I create an actor from generated bindings in JavaScript?",
+      "My TypeScript canister call always returns anonymous even though I'm logged in",
+      "How do I use @icp-sdk/bindgen to call a canister from my frontend?"
+    ],
+    "should_not_trigger": [
+      "Send ICP tokens from my canister to another principal",
+      "I want to accept BTC deposits in my dapp using ckBTC",
+      "Read an ERC-20 balance from my IC canister",
+      "Make an HTTP request to an external API from my canister",
+      "How do I deploy my canister to mainnet?",
+      "Add access control to my canister methods",
+      "How does stable memory work for canister upgrades?",
+      "Set up Internet Identity login for my frontend",
+      "Configure my icp.yaml for a Rust canister",
+      "How do I handle inter-canister call failures?"
+    ]
+  }
+}
