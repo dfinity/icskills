@@ -50,6 +50,7 @@ case "$REPO" in
 migrating-motoko-actors:migrating-motoko-actors
 troubleshooting-motoko-migrations:troubleshooting-motoko-migrations
 reviewing-motoko:reviewing-motoko
+migrating-to-moc-2:migrating-to-moc-2
 caffeine-app:caffeine-app"
     ;;
   caffeinelabs/mops)

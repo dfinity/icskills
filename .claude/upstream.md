@@ -77,6 +77,19 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 ---
 
+## migrating-to-moc-2
+
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
+- **Commit:** none yet. The skill exists upstream (added 2026-10-07) but has never been synced here; the first sync creates `skills/migrating-to-moc-2/`.
+- **Upstream version:** 0.1.0 (skill frontmatter `version:`)
+- **Last synced:** never
+- **Upstream file:** `skills/migrating-to-moc-2/SKILL.md`
+- **icskills-owned sections (do not overwrite from upstream):**
+  - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description`, `license: Apache-2.0`, string `compatibility`, `metadata.title`/`category`). The skill moves a project to moc 2, so its `compatibility` names the moc 2 toolchain (`moc >= 2.0.0, mops >= 3.0.0`).
+
+---
+
 ## caffeine-app
 
 - **Upstream:** https://github.com/caffeinelabs/skills
