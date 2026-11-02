@@ -1,6 +1,6 @@
 {
   "skill": "deploy-to-cloud-engine",
-  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents drive the correct cloud-engine deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters and an app icon (`__META_BASE_URL` + `__META_ICON_PATH` on the main canister), and avoid the documented pitfalls.",
+  "description": "Evaluation cases for the deploy-to-cloud-engine skill. Tests whether agents pick the right deploy route (the ICP MCP connector from a sandbox that has it, the icp CLI otherwise), drive the ICP MCP route correctly (engine-operator `proxy`, the connector's per-origin principal added as an engine member), drive the correct CLI deploy flow (link the CLI identity against the console origin, target the engine's subnet with icp deploy), use the default console origin https://opencloud.org unless the user names another, ask for the subnet id instead of guessing, set the `__META_*` environment variables so the console shows a named app with labelled canisters and an app icon (`__META_BASE_URL` + `__META_ICON_PATH` on the main canister), and avoid the documented pitfalls.",
   "output_evals": [
     {
       "name": "Deploy a built project to a cloud engine",
@@ -68,7 +68,7 @@
       "name": "Adversarial: cloud sandbox before any code is written",
       "prompt": "Build and deploy an app to my Internet Computer cloud engine. Follow the skills: cloud-engine-canisters for the engine's call rules while you write canister code, icp-cli for project setup and build, deploy-to-cloud-engine to ship. My console is https://opencloud.org and my engine's subnet is abcde-12345. I'll complete the Internet Identity sign-in in my browser when asked. You are running in a cloud sandbox, not on my computer. The app I want: a simple to-do list. Keep your reply short: give your plan for the work, no code.",
       "expected_behaviors": [
-        "Before it writes any code, tells the user that the Internet Identity sign-in cannot finish from a cloud sandbox, asks them to start a local session (the agent on their own computer), and waits for their answer before it builds",
+        "Before it writes any code, tells the user that the Internet Identity sign-in cannot finish from a cloud sandbox, asks them to start a local session (the agent on their own computer) or, as the alternative, to add the ICP MCP connector, and waits for their answer before it builds",
         "Does NOT plan to build the whole app in the sandbox first and deal with the sign-in only at deploy time"
       ]
     },
@@ -220,7 +220,7 @@
         "Says it cannot create the console proxy itself: there is no icp command for it, and only the engine owner can deploy one from the console",
         "Gives the console steps: engine → Integrations → Proxy canisters → Deploy a proxy, paid from the engine's balance, no card, then send back the proxy canister id",
         "Does NOT offer a self-deployed proxy (icp new --subfolder proxy) as a stand-in for the engine canisters' proxy"
-       ]
+      ]
     },
     {
       "name": "Adversarial: build and deploy with no app described",
@@ -228,6 +228,35 @@
       "expected_behaviors": [
         "Asks the user what app they want to build before it writes any code or creates any project files",
         "Does NOT pick, propose as a default, or start a sample app (for example a guestbook, a counter, or a to-do list) on its own"
+      ]
+    },
+    {
+      "name": "Route choice: sandboxed chat with the ICP MCP connector",
+      "prompt": "I'm talking to you in the Claude app on my phone, and you have the ICP MCP connector tools (open_app, get_app_principal, canister_update_call and the rest). I already have a built, gzipped Motoko backend wasm (backend.wasm.gz, 150 KB, no init args). Deploy it to my OpenCloud cloud engine; the engine id is eng-7f3a. Keep it short: just your plan as numbered steps, no Candid encoding details.",
+      "expected_behaviors": [
+        "Uses the ICP MCP route: does NOT ask the user to move to a local session, and does NOT plan to run `icp identity link web`, an icp identity delegation handoff, or `icp deploy`",
+        "Reaches the engine through its engine-operator canister (found from the engine's record, opened via its platform domain) and creates and installs the canister by calling the operator's `proxy` method, not the management canister (aaaaa-aa) directly",
+        "Gets the connector's principal for the engine (get_app_principal) and has the engine owner add it as an engine member, for example with the console's invite link, because it differs from the user's console principal",
+        "Creates the canister with create_canister listing the engine-operator as a controller, then installs the wasm with install_code"
+      ]
+    },
+    {
+      "name": "Route choice: local session prefers the CLI even with the connector",
+      "prompt": "You're Claude Code running in a terminal on my laptop, and I also have the ICP MCP connector enabled. My ICP project builds: a static-site frontend (asset canister) and a Motoko backend. Which way should you deploy it to my OpenCloud cloud engine, the CLI or the MCP connector, and why? Just the decision, a one-paragraph reason and the commands; no project setup.",
+      "expected_behaviors": [
+        "Chooses the icp CLI route, not the ICP MCP connector",
+        "Gives the reason that the CLI sign-in works in a local session (the CLI and the browser are on the same machine), and/or that the connector cannot upload the asset canister's files",
+        "Links the CLI with `icp identity link web <name> --auth https://opencloud.org` and deploys with `icp deploy -e ic --subnet <subnet-id>`",
+        "Does NOT invent a subnet id: asks for it or leaves a clear placeholder for the user's subnet id"
+      ]
+    },
+    {
+      "name": "Adversarial: ICP MCP proxy call rejected for the engine owner",
+      "prompt": "From ChatGPT with the Internet Computer (ICP) plugin, my agent called `proxy` on my engine's engine-operator canister to create a canister and got `UnauthorizedUser`. I'm the engine owner and I'm signed in to opencloud.org as myself. Why, and how do I fix it? Just the fix.",
+      "expected_behaviors": [
+        "Explains that the connector signs at the engine as the principal Internet Identity derives for the engine's own origin (its platform domain), which differs from the user's opencloud.org console principal, so the engine does not know it even though the user owns the engine",
+        "Fix: read that principal with get_app_principal (for the engine's app) and have the owner add it as an engine member, e.g. a developer, via the console's team invite (the link /console/engines/<engine-id>/team?modal=invite-member&principal=<principal>&role=developer)",
+        "Does NOT suggest calling the management canister directly, or linking the icp CLI, as the fix"
       ]
     }
   ],
@@ -250,7 +279,9 @@
       "How do I top up my engine's proxy canister?",
       "Turn on automatic top-up for my engine proxy",
       "My engine app needs live exchange rates: what do I have to set up and pay for?",
-      "Who can deploy a proxy canister for my engine, and what pays for it?"
+      "Who can deploy a proxy canister for my engine, and what pays for it?",
+      "Deploy my canister to my cloud engine from ChatGPT with the Internet Computer (ICP) plugin",
+      "I'm in the Claude mobile app with the ICP MCP connector: put this wasm on my OpenCloud engine"
     ],
     "should_not_trigger": [
       "My engine canister's call fails with 'Unbounded-wait calls and calls with cycles are not allowed to CloudEngine subnets'",
@@ -262,7 +293,8 @@
       "How does stable memory work in Rust canisters?",
       "Implement an ICRC-1 token transfer",
       "Generate TypeScript bindings for my canister",
-      "Add access control to my Motoko canister"
+      "Add access control to my Motoko canister",
+      "Publish an ic-architecture manifest so ICP MCP can call my app's canisters"
     ]
   }
 }
