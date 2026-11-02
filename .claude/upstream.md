@@ -77,6 +77,21 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 ---
 
+## caffeine-app
+
+- **Upstream:** https://github.com/caffeinelabs/skills
+- **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
+- **Commit:** none yet. The skill's source moved from the private `caffeinelabs/app` repo (`cli/skills/caffeine-app/`) to `caffeinelabs/skills-internal`, which publishes it here (caffeinelabs/skills-internal#368). Until the first sync, the copy in this repo is the one maintained by hand from `caffeinelabs/app`, last in #430.
+- **Upstream version:** 0.1.0 (skill frontmatter `version:`)
+- **Last synced:** never from this upstream
+- **Upstream files:**
+  - `skills/caffeine-app/SKILL.md`
+  - `skills/caffeine-app/references/frontend-template.md → references/frontend-template.md`
+- **icskills-owned sections (do not overwrite from upstream):**
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` and `caffeineai-subscription:`. We keep our schema: owned `description`, `license: Apache-2.0`, string `compatibility` (`@caffeineai/cli (the \`caffeine\` command), Node.js >= 20, pnpm, network access + a caffeine.ai account`), and `metadata.title`/`category` (`Integration`).
+
+---
+
 ## static-site
 
 - **Upstream:** https://github.com/dfinity/certified-assets

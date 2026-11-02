@@ -33,7 +33,7 @@ jobs:
       - name: Get current pinned commit SHA
         id: current
         run: |
-          # All three Motoko skills tracked from this repo share one pinned commit; read writing-motoko's.
+          # All skills tracked from this repo share one pinned commit; read writing-motoko's.
           SHA=$(awk '/^## writing-motoko$/{f=1; next} /^## /{f=0} f && /\*\*Commit:\*\*/{print; exit}' .claude/upstream.md | sed 's/.*\*\*Commit:\*\* //')
           echo "sha=$SHA" >> $GITHUB_OUTPUT
 
