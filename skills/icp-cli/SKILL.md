@@ -11,7 +11,7 @@ metadata:
 
 ## What This Is
 
-The `icp` command-line tool builds and deploys applications on the Internet Computer. It replaces the legacy `dfx` tool with YAML configuration, a recipe system for reusable build templates, and an environment model that separates deployment targets from network connections. Never use `dfx` — always use `icp`.
+The `icp` command-line tool builds and deploys applications on the Internet Computer. It replaces the legacy `dfx` tool with YAML configuration, a recipe system for reusable build templates, and an environment model that separates deployment targets from network connections. Never use `dfx` — always use `icp`. One documented exception: `icp` has no `sns`/`nns` subcommand, so SNS launch steps still go through the `dfx sns` extension — see `sns-launch`.
 
 Before generating any `icp` command not explicitly documented here, run `icp --help` or `icp <subcommand> --help` to verify the command and its flags exist. Do not infer flags from `dfx` equivalents — the CLIs are not flag-compatible.
 
@@ -40,7 +40,7 @@ npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
 ## Common Pitfalls
 
-1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. All commands have `icp` equivalents — see `references/dfx-migration.md` for the full command mapping. Never generate `dfx` commands or reference `dfx` documentation. Configuration uses `icp.yaml`, not `dfx.json` — and the structure differs: canisters are an array of objects, not a keyed object.
+1. **Using `dfx` instead of `icp`.** The `dfx` tool is legacy. Every build, deploy, canister, identity, and cycles command has an `icp` equivalent — see `references/dfx-migration.md` for the full mapping. Do not generate `dfx` commands or reference `dfx` documentation for those. The exception is SNS governance: there is no `icp sns`/`icp nns`, so the launch steps in `sns-launch` legitimately use `dfx sns`. Configuration uses `icp.yaml`, not `dfx.json` — and the structure differs: canisters are an array of objects, not a keyed object.
 
 2. **Using `--network ic` to deploy to mainnet.** icp-cli uses environments, not direct network targeting. The correct flag is `-e ic` (short for `--environment ic`).
    ```bash
