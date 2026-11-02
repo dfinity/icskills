@@ -133,7 +133,7 @@ Each step is one `canister_update_call` with `canister_id` the engine-operator, 
    (record { settings = opt record { controllers = opt vec { principal "<engine-operator-id>" } } })
    ```
 
-   List the engine-operator as a controller. You (`P`) are added as a controller automatically, but without the operator `proxy` can never reach the canister again: no install, no settings, and no `deleteCanisters` for the owner either. `result` decodes to `(record { canister_id : principal })`.
+   List the engine-operator as a controller. You (`P`) are added as a controller automatically, but without the operator `proxy` can never reach the canister again: no install, no settings, and no `deleteCanisters` for the owner either. If the code reads an environment variable when it initializes (such as `PROXY_CANISTER_ID`), add `environment_variables` to these `settings` now: it must be in place before step 2 (see M6). `result` decodes to `(record { canister_id : principal })`.
 2. **Install.** `method = "install_code"`, and `args` encodes:
 
    ```candid
@@ -147,14 +147,19 @@ Each step is one `canister_update_call` with `canister_id` the engine-operator, 
    ```
 
    `arg` is the binary-Candid init argument; `DIDL\00\00` passes none. `result` decodes to `()`.
-3. **Replace the code later.** The same call with `mode = variant { upgrade = null }` keeps the state; `variant { reinstall }` wipes it. A Motoko canister built with enhanced orthogonal persistence rejects `upgrade = null`: use `variant { upgrade = opt record { wasm_memory_persistence = opt variant { keep } } }`, which other canisters ignore.
+3. **Replace the code later.** The same call with `mode = variant { upgrade = null }` keeps the stable memory; `variant { reinstall }` wipes all state. A canister built with enhanced orthogonal persistence (current Motoko) rejects `upgrade = null`: upgrade it with `variant { upgrade = opt record { wasm_memory_persistence = opt variant { keep } } }`. Use `keep` **only** for such a build: the IC rejects it when the new module lacks the `enhanced-orthogonal-persistence` custom section (a Rust canister, or classical-persistence Motoko), so those keep `upgrade = null`. (The operator's guide says other canisters ignore `keep`; the IC interface spec says otherwise, and the spec wins.)
 4. **A module over about 2 MB** (the single-message limit) goes up with `upload_chunk`, then installs with `install_chunked_code`.
 
 The operator relays only `create_canister`, `canister_status`, `update_settings`, `install_code`, `upload_chunk`, `clear_chunk_store`, `install_chunked_code`, `start_canister` and `stop_canister`, and only on canisters that list you as a controller. Any other method, the operator itself, and protected canisters come back as `Err` `CallFailed` with a `reason`, as does any `proxy` call on a canister while an `update_settings` on it is in flight: retry once it completes. `cycles` is ignored, since the engine charges nothing. `Err` `UnauthorizedUser` means the call was not signed by a member: check that you passed `derivation_origin`, then go back to M3.
 
 ### M6. Name the app, and pass configuration
 
-Step 2's `__META_*` variables, and `PROXY_CANISTER_ID` from Step 5, are canister environment variables. With no `icp.yaml` to carry them, set them with `update_settings` through `proxy`, with `args` encoding:
+Step 2's `__META_*` variables, and `PROXY_CANISTER_ID` from Step 5, are canister environment variables. With no `icp.yaml` to carry them, you set them yourself, and **when** matters:
+
+- **A variable the code reads at init or upgrade** (`PROXY_CANISTER_ID`, a key name, any configuration) must be set **before** the `install_code` that reads it. Otherwise init sees it missing, and traps or bakes in a fallback that a later upgrade does not undo. Put it in `create_canister`'s `settings` (M5, step 1), or set it with `update_settings` between steps 1 and 2. Before an upgrade or reinstall that should see a new value, set that value first.
+- **Display-only metadata** (`__META_*`) is read by the console, not by your code, so it can follow at any time. `__META_BASE_URL` needs the canister id, so it comes after step 1 anyway.
+
+Either way it is `update_settings` through `proxy`, with `args` encoding:
 
 ```candid
 (record {
