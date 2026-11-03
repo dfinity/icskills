@@ -12,6 +12,7 @@
 /skills/static-site/             @dfinity/sdk
 /skills/certified-variables/     @dfinity/sdk
 /skills/ckbtc/                   @gregorydemay
+/skills/cksol/                   @gregorydemay
 /skills/evm-rpc/                 @gregorydemay
 /skills/icrc-ledger/             @gregorydemay
 /skills/cycles-management/       @gregorydemay
