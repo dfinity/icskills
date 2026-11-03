@@ -44,12 +44,14 @@ fi
 # Local files live at skills/<local-name>/ in this repo.
 case "$REPO" in
   caffeinelabs/skills)
-    # No releases/tags; tracked by commit. The four Motoko skills share one pinned commit.
+    # No releases/tags; tracked by commit. The skills tracked here share one pinned commit.
     SKILLS_BASE_PATH="skills"
     SKILLS="writing-motoko:writing-motoko
 migrating-motoko-actors:migrating-motoko-actors
 troubleshooting-motoko-migrations:troubleshooting-motoko-migrations
-reviewing-motoko:reviewing-motoko"
+reviewing-motoko:reviewing-motoko
+migrating-to-moc-2:migrating-to-moc-2
+caffeine-app:caffeine-app"
     ;;
   caffeinelabs/mops)
     SKILLS_BASE_PATH=".agents/skills"
