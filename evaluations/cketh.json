@@ -1,0 +1,60 @@
+{
+  "skill": "cketh",
+  "description": "Evaluation cases for the cketh skill. Tests token discovery via the minter, the deposit-address flow (deposit_erc20 / deposit_eth), helper-contract argument encoding, and the two-ledger approval needed for ckERC20 withdrawals.",
+  "output_evals": [
+    {
+      "name": "Discover supported ckERC20 tokens at runtime",
+      "prompt": "In TypeScript, how do I get the list of ckERC20 tokens (symbol, ERC-20 contract, ledger canister id) that can currently be deposited on mainnet? Just the function, no UI, no deploy steps.",
+      "expected_behaviors": [
+        "Calls get_minter_info on the ckETH minter sv3dd-oaaaa-aaaar-qacoa-cai",
+        "Reads supported_ckerc20_tokens (ckerc20_token_symbol, erc20_contract_address, ledger_canister_id) rather than hardcoding a token list",
+        "Does NOT treat the orchestrator or a static table as the authoritative list of depositable tokens"
+      ]
+    },
+    {
+      "name": "USDT from a centralized exchange uses deposit_erc20",
+      "prompt": "My users hold USDT on Binance and want ckUSDT in my ICP app. Binance can only send a plain transfer to an address. Which ckETH minter call gives them the address to send to, and what are its arguments? Just the call and a short explanation, no full app.",
+      "expected_behaviors": [
+        "Uses the deposit_erc20 endpoint on the ckETH minter with erc20_contract_address set to the USDT contract and mode = Unsponsored { subaccount }",
+        "Explains the address is credited to the caller's principal plus subaccount (there is no owner argument), so it must be called with the user's identity or by the custodial canister",
+        "Mentions the 24 hour scanning window / re-calling deposit_erc20 to re-arm, or the per-token minimum_deposit_amount",
+        "States that only Ethereum L1 transfers are credited (not Arbitrum/Base/BSC)"
+      ]
+    },
+    {
+      "name": "Helper contract arguments for depositErc20",
+      "prompt": "I'm calling depositErc20 on the ckETH helper contract from viem. How exactly do I encode the principal and subaccount arguments, and what must happen before this call? Short answer with a code snippet, no backend code.",
+      "expected_behaviors": [
+        "Encodes the principal as bytes32: length byte followed by principal bytes, zero-padded (e.g. encodePrincipalToEthAddress from @icp-sdk/canisters/cketh)",
+        "Encodes the subaccount as 32 bytes (zeros for the default account)",
+        "Requires an ERC-20 approve of the helper contract address before depositErc20",
+        "Reads the helper address from get_minter_info deposit_with_subaccount_helper_contract_address instead of the legacy smart_contract_address"
+      ]
+    },
+    {
+      "name": "ckUSDC withdrawal needs ckETH approval",
+      "prompt": "List the canister calls, in order, to withdraw 100 ckUSDC to an Ethereum address from a user's own account. Just the ordered list of calls with canister ids, no code.",
+      "expected_behaviors": [
+        "Approves the ckETH minter as spender on the ckETH ledger (ss2fx-dyaaa-aaaar-qacoq-cai) for the gas fee, sized from eip_1559_transaction_price with the ckUSDC ledger id",
+        "Approves the ckETH minter as spender on the ckUSDC ledger (xevnm-gaaaa-aaaar-qafnq-cai) for the amount (100_000_000 with 6 decimals)",
+        "Calls withdraw_erc20 on the minter (not withdraw_eth) with ckerc20_ledger_id, recipient and amount",
+        "Notes the user must hold ckETH to pay gas"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do I let users deposit USDC from Ethereum into my ICP app as ckUSDC?",
+      "Withdraw ckETH back to a MetaMask address from my canister",
+      "Which ERC-20 tokens are supported as ckERC20 and how do I find their ledger canisters?",
+      "Give each user an Ethereum deposit address for ckUSDT"
+    ],
+    "should_not_trigger": [
+      "How do I transfer ckUSDC between two ICP principals?",
+      "Call an Ethereum smart contract's view function from my Rust canister",
+      "Deposit BTC and mint ckBTC",
+      "Convert SOL to ckSOL"
+    ]
+  }
+}
