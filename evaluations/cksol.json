@@ -1,0 +1,47 @@
+{
+  "skill": "cksol",
+  "description": "Evaluation cases for the cksol skill. Tests the deployed deposit_sol flow (cycles from a canister, explicit owner), withdrawal via withdraw_sol with an ICRC-2 approval, and avoidance of stale API names.",
+  "output_evals": [
+    {
+      "name": "deposit_sol must be called by a canister with cycles and explicit owner",
+      "prompt": "Write just the Rust update function for my backend canister that tells the ckSOL minter that the caller sent SOL to their deposit address, so ckSOL is minted to the caller's own principal. No Cargo.toml, no frontend.",
+      "expected_behaviors": [
+        "Calls deposit_sol on the ckSOL minter lh22c-kyaaa-aaaar-qb5nq-cai",
+        "Attaches cycles to the call (e.g. .with_cycles(...)) of at least deposit_sol_required_cycles",
+        "Sets owner = Some(caller) explicitly instead of None (None would credit the canister itself)",
+        "Returns or handles the deposit id / DepositSolError (e.g. ValueTooSmall, InsufficientCycles)"
+      ]
+    },
+    {
+      "name": "No transaction signature needed",
+      "prompt": "After a user sends SOL to their ckSOL deposit address, do I need to pass the Solana transaction signature to the minter? Answer in two or three sentences.",
+      "expected_behaviors": [
+        "Says no: the minter reads the balance of the deposit address",
+        "Names deposit_sol (not process_deposit) as the call that triggers the sweep",
+        "Mentions tracking with deposit_sol_status"
+      ]
+    },
+    {
+      "name": "Withdraw ckSOL to a Solana address",
+      "prompt": "List the calls, in order, to withdraw 0.5 ckSOL from my own account to a Solana address, with argument values. Just the list, no code.",
+      "expected_behaviors": [
+        "icrc2_approve on the ckSOL ledger ls5lp-lqaaa-aaaar-qb5oa-cai with the minter lh22c-kyaaa-aaaar-qb5nq-cai as spender for at least 500_000_000",
+        "withdraw_sol on the minter with address and amount = 500_000_000 lamports",
+        "Mentions withdraw_sol_status with the returned block_index, and that the recipient receives amount minus withdrawal_fee"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
+    "should_trigger": [
+      "How do users deposit SOL into my ICP app as ckSOL?",
+      "Withdraw ckSOL to a Phantom wallet address",
+      "My deposit_sol call returns InsufficientCycles"
+    ],
+    "should_not_trigger": [
+      "Read a Solana account balance from my canister with the SOL RPC canister",
+      "Transfer ckSOL between two ICP accounts",
+      "Deposit ETH as ckETH"
+    ]
+  }
+}
