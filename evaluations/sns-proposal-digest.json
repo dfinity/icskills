@@ -1,0 +1,61 @@
+{
+  "skill": "sns-proposal-digest",
+  "description": "Evaluation cases for the sns-proposal-digest skill. Tests whether an agent, asked to summarize IC governance, reads the keyless NNS + SNS APIs, filters to open/votable proposals, keys on proposal_id (not the row id), and produces a deduped per-proposal digest without attempting to vote or submit.",
+
+  "output_evals": [
+    {
+      "name": "Open NNS proposals, keyless",
+      "prompt": "What NNS proposals are open for a vote right now? Give me a short digest.",
+      "expected_behaviors": [
+        "Reads the public NNS proposals API (ic-api.internetcomputer.org/api/v3/proposals), keyless",
+        "Narrows to live votes with include_status=OPEN (or an equivalent status filter)",
+        "Summarizes each as proposal_id, topic, one-line intent, status, and voting deadline",
+        "Does not attempt to vote or submit anything - it is a read-only digest"
+      ]
+    },
+    {
+      "name": "Sweep SNS DAO proposals",
+      "prompt": "Include SNS DAO governance too, not just NNS.",
+      "expected_behaviors": [
+        "Enumerates launched SNS DAOs from the SNS API (sns-api.internetcomputer.org/api/v1/snses)",
+        "Pulls each watched DAO's open proposals via its governance canister / the SNS aggregator",
+        "Groups the digest by source (NNS and each SNS)"
+      ]
+    },
+    {
+      "name": "Key on proposal_id, not the row id",
+      "prompt": "Which field identifies the proposal - the id field in the response?",
+      "expected_behaviors": [
+        "States proposal_id is the governance proposal number to report and dedup on",
+        "Explains the row id is an internal record id, not the proposal number",
+        "Uses proposal_id for the seen-set so each proposal is reported once"
+      ]
+    },
+    {
+      "name": "Signal-only digest",
+      "prompt": "I don't want to be spammed - only tell me about genuinely new things.",
+      "expected_behaviors": [
+        "Keeps a seen-set and emits only proposals that are new or newly open since the last run",
+        "Sends nothing when there is nothing new or open",
+        "Flags a proposal closing soon (short deadline) for priority"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries that should load this skill vs. ones that should not.",
+    "should_trigger": [
+      "Summarize the open NNS proposals",
+      "What SNS DAO proposals are up for a vote?",
+      "Give me a governance digest for the IC",
+      "What's up for a vote on the NNS this week?",
+      "Track SNS proposals for a DAO I follow"
+    ],
+    "should_not_trigger": [
+      "How do I vote on an NNS proposal?",
+      "How do I create and submit an SNS proposal?",
+      "Launch an SNS for my dapp",
+      "How does NNS neuron staking work?"
+    ]
+  }
+}
