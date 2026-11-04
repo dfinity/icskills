@@ -4,9 +4,10 @@ Version 2 is selected per call by the `pricing_version` field of `http_request`.
 the replica default and is deprecated. `flexible_http_request` has no such field and is always
 priced with version 2.
 
-**Rust only for now.** `ic-cdk-management-canister` 0.2.0's `HttpRequest` builder always selects
-version 2. The Motoko `ic` package (4.x) prices with version 1 and has no version 2 path, which
-needs a `moc` carrying the new cost primitive.
+**Both languages, on current dependencies.** `ic-cdk-management-canister` 0.2.0's `HttpRequest`
+builder always selects version 2, and so does the `Call.httpRequest` builder in the Motoko `ic`
+package from 6.0.0, which needs `moc` 2.1.0 for the `costHttpRequestV2` primitive it calls. An
+older `ic` (4.x or 5.x) prices with version 1.
 
 ## What it charges
 
