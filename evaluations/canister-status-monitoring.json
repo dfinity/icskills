@@ -1,0 +1,61 @@
+{
+  "skill": "canister-status-monitoring",
+  "description": "Evaluation cases for the canister-status-monitoring skill. Tests whether an agent, asked to watch an IC canister's control plane, correctly reads the keyless dashboard API, detects controller/module-hash changes, handles unindexed (404) and invalid-id (422) responses, and knows the live running state is controller-gated.",
+
+  "output_evals": [
+    {
+      "name": "Detect a controller change from public metadata",
+      "prompt": "Keep an eye on canister rdmx6-jaaaa-aaaaa-aaadq-cai and tell me if its controllers ever change. What do you poll and does it need a key?",
+      "expected_behaviors": [
+        "Reads the public IC dashboard API (ic-api.internetcomputer.org/api/v3/canisters/<id>) for the controller set",
+        "States this is keyless - no identity required for control-plane metadata",
+        "Compares the current controllers against the last-seen set and alerts on any add/remove",
+        "Frames an unexpected controller change as a takeover signal worth immediate attention"
+      ]
+    },
+    {
+      "name": "Detect an upgrade via module_hash",
+      "prompt": "How do I tell if this canister was upgraded without an announcement?",
+      "expected_behaviors": [
+        "Tracks module_hash from the dashboard API and alerts when it changes",
+        "Identifies the latest upgrade as upgrades[0] (the API lists newest first)",
+        "Treats a module_hash change as an unreviewed upgrade to surface"
+      ]
+    },
+    {
+      "name": "Unindexed vs invalid id",
+      "prompt": "The dashboard API returns 404 for one canister id and 422 for another. What do those mean for monitoring?",
+      "expected_behaviors": [
+        "404 means the canister is not indexed (or was deleted/de-indexed) - recorded as a state, not a hard error",
+        "422 means a malformed/invalid canister id - a bad input, not a change to alert on",
+        "Does not report either as a controller/upgrade change"
+      ]
+    },
+    {
+      "name": "Live running state is controller-gated",
+      "prompt": "Can you also report whether the canister is Running or Stopped?",
+      "expected_behaviors": [
+        "Explains the live running state comes from the management canister canister_status, callable only by a controller",
+        "States there is no public endpoint for it",
+        "Says it needs a controller identity (dfx canister status or an ic-agent call signed by a controller) and otherwise reports control-plane facts only"
+      ]
+    }
+  ],
+
+  "trigger_evals": {
+    "description": "Queries that should load this skill vs. ones that should not.",
+    "should_trigger": [
+      "Monitor my canister's controllers for changes",
+      "Alert me if my canister gets upgraded",
+      "Watch a canister's module hash",
+      "Did someone take over my canister's control?",
+      "Track canister status over time"
+    ],
+    "should_not_trigger": [
+      "How do I deploy a canister to mainnet?",
+      "Write a Candid interface for my canister",
+      "How do I top up my canister with cycles?",
+      "Set up Internet Identity for my dapp"
+    ]
+  }
+}
