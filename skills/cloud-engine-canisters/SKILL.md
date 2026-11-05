@@ -313,7 +313,7 @@ That is the whole model, and it is why none of the usual inference code applies 
 
 - **No API key in the canister, in its init args, or in an environment variable.** The key lives on the operator. A canister that carries its own provider key spends someone's credit from code anyone can read, and bypasses the switch: when the owner turns a provider off, the operator refuses the call at once, and a canister with its own key would keep going.
 - **No direct HTTPS outcall to the provider.** Rule 3 still holds for every other outcall; for inference the operator makes it, non-replicated, on your behalf.
-- **No cycles, no timeout clause.** The operator is on your own subnet, so a plain `await` is allowed (Rule 2's same-subnet exemption), and the call is free like everything on an engine.
+- **No cycles, and a plain `await` is allowed.** The operator is on your own subnet, so Rule 2's same-subnet exemption applies, and the call is free like everything on an engine. A bounded-wait call is fine too, and it keeps the canister's upgrades unblocked if the operator ever hangs: give it a timeout above the outcall's 30 second deadline (`(with timeout = 60)` in Motoko, `Call::bounded_wait` with its 300 second default in Rust). A shorter timeout answers `SYS_UNKNOWN` while the operator may still finish the call and spend the credit.
 - **The provider's answer comes back as it is**, status included. A 401 is the provider refusing the engine's key, a 402 an account with no credit left. Neither is yours to fix in code: tell the user, the owner handles both in the console.
 
 ### Finding the operator
@@ -371,7 +371,7 @@ let operator : Operator = actor (Principal.toText(operatorId));  // from configu
 
 // One chat completion. Keep the reply bounded: see "The deadline" below.
 let request = "{\"model\":\"router\",\"max_tokens\":350,\"messages\":[{\"role\":\"user\",\"content\":\"What is a canister?\"}]}";
-let res = await operator.inference_request({   // same engine: a plain await is allowed
+let res = await operator.inference_request({   // same engine: plain, or (with timeout = 60)
   provider = ?"caffeine";
   method = null;
   path = ?"/chat/completions";
@@ -393,7 +393,7 @@ switch (res) {
 };
 ```
 
-Rust is the same call through `Call::unbounded_wait(operator, "inference_request")` (same subnet), with the types above as `CandidType` structs: `#[serde(rename = "ok")]` / `"err"` on the result variant, `Option<Nat>` for `status`, and `serde_json` for the body:
+Rust is the same call through `Call::unbounded_wait(operator, "inference_request")`, or `Call::bounded_wait` with its 300 second default (same subnet, both allowed), with the types above as `CandidType` structs: `#[serde(rename = "ok")]` / `"err"` on the result variant, `Option<Nat>` for `status`, and `serde_json` for the body:
 
 ```rust
 let body = serde_json::json!({
