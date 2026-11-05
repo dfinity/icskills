@@ -235,7 +235,7 @@
       "prompt": "I'm talking to you in the Claude app on my phone, and you have the ICP MCP connector tools (open_app, get_app_principal, canister_update_call and the rest). I already have a built, gzipped Motoko backend wasm (backend.wasm.gz, 150 KB, no init args). Deploy it to my OpenCloud cloud engine; the engine id is eng-7f3a. Keep it short: just your plan as numbered steps, no Candid encoding details.",
       "expected_behaviors": [
         "Uses the ICP MCP route: does NOT ask the user to move to a local session, and does NOT plan to run `icp identity link web`, an icp identity delegation handoff, or `icp deploy`",
-        "Reaches the engine through its engine-operator canister (found from the engine's record, opened via its platform domain) and creates and installs the canister by calling the operator's `proxy` method, not the management canister (aaaaa-aa) directly",
+        "Reaches the engine through its engine-operator canister (found from the engine's record, opened at `https://<engine_operator_id>.icp.net` rather than the platform domain) and creates and installs the canister by calling the operator's `proxy` method, not the management canister (aaaaa-aa) directly",
         "Gets the connector's principal for the engine (get_app_principal) and has the engine owner add it as an engine member, for example with the console's invite link, because it differs from the user's console principal",
         "Creates the canister with create_canister listing the engine-operator as a controller, then installs the wasm with install_code"
       ]
