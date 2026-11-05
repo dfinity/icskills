@@ -285,8 +285,10 @@ So a bogus value surfaces as a funding problem rather than a validation one:
   whole `max_response_bytes` charge immediately:
   `"http_request request sent with <X> cycles, but <Y> cycles are required."` [CanisterReject]
 
-Let one wrapper own both. `HttpRequest::send()` pairs version 2 with `cost_http_request_v2`;
-Motoko's `Call.httpRequest` pairs version 1 with `cost_http_request`.
+Let one builder own both. `HttpRequest::send()` pairs version 2 with `cost_http_request_v2`, and
+so does Motoko's `Call.httpRequest` on `ic` 6.x; on `ic` 4.x or 5.x it pairs version 1 with
+`cost_http_request` instead. Either way the pairing is the builder's, not yours: both overwrite
+`pricing_version` even when you start from arguments you assembled.
 
 ## Migrating
 

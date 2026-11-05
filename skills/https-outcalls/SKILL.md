@@ -22,7 +22,7 @@ Two other modes avoid that agreement step: **non-replicated** (`is_replicated = 
 |---|---|---|
 | Package | `ic-cdk` **0.20.3+** with `ic-cdk-management-canister` **0.2+** | `ic` **6.x** (mops), which requires `core` **2.5.0+** and `moc` **2.1.0+** |
 | Entry point | `HttpRequest::new(url)` builder, `.send()` | `Call.httpRequest(url)` builder, `.send()` |
-| Pricing version 1 (legacy) | only by pinning `ic-cdk-management-canister` **0.1**, or calling `aaaaa-aa` directly with `ic_cdk::api::cost_http_request` | only by pinning `ic` **4.x**, or calling `aaaaa-aa` directly with `Prim.costHttpRequest` |
+| Pricing version 1 (legacy) | only by pinning `ic-cdk-management-canister` **0.1**, or calling `aaaaa-aa` directly with `ic_cdk::api::cost_http_request` | only by pinning `ic` **4.x** or **5.x**, or calling `aaaaa-aa` directly with `Prim.costHttpRequest` |
 | Pricing version 2 (pay-as-you-go) | **yes**, the builder always selects it | **yes**, the builder always selects it |
 | `flexible_http_request` | **yes**, `FlexibleHttpRequest::new(url)` | **yes**, `Call.flexibleHttpRequest(url)` |
 | `subnet_self_node_count` | `ic_cdk::api::subnet_self_node_count()` | `Prim.subnetSelfNodeCount()` (via `import Prim "mo:⛔"`) |
