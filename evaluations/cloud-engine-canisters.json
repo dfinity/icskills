@@ -143,11 +143,12 @@
     },
     {
       "name": "Adversarial: inference outcall timed out through the operator",
-      "prompt": "My engine canister calls the operator's inference_request with a chat completion for Caffeine and gets err = Internal(\"the outcall to caffeine failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
+      "prompt": "My engine canister calls the operator's inference_request with a chat completion for Caffeine (the request sets no max_tokens) and gets err = Internal(\"the outcall to caffeine failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
       "expected_behaviors": [
-        "Identifies the HTTPS outcall's 30 second deadline, and that the completion ran past it because its length was unbounded, not a network problem (the /models probe proves the path works)",
-        "Fixes it by bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false",
-        "Does NOT propose a timeout clause, cycles, retries without a bound, or moving the outcall into the canister itself"
+        "Identifies the HTTPS outcall's 30 second deadline, and that a completion still generating when it passes fails this way; treats the missing `max_tokens` as the first thing to fix, not as a proven cause",
+        "Recommends bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false; notes that a bounded completion can still time out on a slow model",
+        "Reads the /models result as proof that the path to the provider works, not as the cause of the completion's timeout",
+        "Does NOT propose cycles, retries without a bound, or moving the outcall into the canister itself"
       ]
     },
     {
