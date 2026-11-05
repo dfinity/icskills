@@ -432,7 +432,12 @@ and the provider may have generated and billed the whole reply anyway. So bound 
 
 ### Who may call your canister
 
-The operator checks that the caller is a canister on the engine, nothing more, so **your** canister decides who spends the engine's inference credit. A public `chat` method is a public faucet: anyone who finds the canister id can drain the account. Either restrict the method (controllers, a signed-in principal, an allow-list), or bound what one call can cost (message count, characters, `max_tokens`) and accept the exposure for a demo. Say which you chose.
+The operator checks that the caller is a canister on the engine, nothing more, so **your** canister decides who spends the engine's inference credit. A public `chat` method is a public faucet: anyone who finds the canister id can drain the account. Note that a sign-in is not an authorization: any caller can make a keypair and call as a non-anonymous principal, so "signed in" alone caps nothing. Pick one of these, and say which:
+
+- **Restrict the method** to callers you name: the canister's controllers (`is_controller`), or an allow-list of principals the owner maintains.
+- **Meter an open service.** If anyone who signs in may call it, bound the spend yourself: a quota per principal (calls or tokens per day) and an aggregate cap for the canister, both kept in stable state, besides the per-call bounds (message count, characters, `max_tokens`). Stop serving when a cap is reached and let the owner raise it.
+
+A demo that accepts the exposure should at least keep the per-call bounds and say so to the user.
 
 ## Common Pitfalls
 

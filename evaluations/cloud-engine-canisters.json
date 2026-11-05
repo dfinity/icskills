@@ -130,6 +130,43 @@
         "Says topping up or retrying does not change that",
         "Offers a self-deployed proxy with the calling canister added as a controller, funded with cycles the user holds, or dropping the dependency"
       ]
+    },
+    {
+      "name": "Adversarial: inference with a provider key in the engine canister",
+      "prompt": "My Rust canister runs on a cloud engine and I want it to call Caffeine inference. I planned to put the Caffeine API key in an init argument and make an HTTPS outcall to https://inference.caffeine.ai/v1/chat/completions from the canister. Is that the right design on an engine? Answer briefly, no full code listing.",
+      "expected_behaviors": [
+        "Says no: on a cloud engine inference goes through the engine-operator canister's `inference_request`, which adds the provider's key and makes the outcall itself",
+        "Says the canister never holds or receives a provider key, in an init argument, an environment variable or source, and never calls the provider's host directly",
+        "Mentions that the engine's owner turns the provider on in the console, and that the call is a plain same-subnet call with no cycles and no timeout clause",
+        "Does NOT suggest routing the inference outcall through the console proxy canister"
+      ]
+    },
+    {
+      "name": "Adversarial: inference outcall timed out through the operator",
+      "prompt": "My engine canister calls the operator's inference_request with a chat completion for Caffeine and gets err = Internal(\"the outcall to caffeine failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
+      "expected_behaviors": [
+        "Identifies the HTTPS outcall's 30 second deadline, and that the completion ran past it because its length was unbounded, not a network problem (the /models probe proves the path works)",
+        "Fixes it by bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false",
+        "Does NOT propose a timeout clause, cycles, retries without a bound, or moving the outcall into the canister itself"
+      ]
+    },
+    {
+      "name": "Adversarial: BadRequest from inference_request read as a code bug",
+      "prompt": "Every inference_request from my Motoko canister on a cloud engine comes back err = #BadRequest(...). The path is \"/chat/completions\" and the provider is \"caffeine\". listInferenceProviders shows caffeine with enabled = false and ready = false. Is my call wrong? Answer briefly.",
+      "expected_behaviors": [
+        "Says the call is fine: `BadRequest` means the provider is off or not ready on this engine (the owner has not turned it on in the console, or the operator holds no key yet)",
+        "Tells the agent to ask the engine's owner to turn Caffeine on in the console (engine → Integrations), and that nothing in code fixes it",
+        "Does NOT suggest adding a provider key to the canister, calling the provider directly, or changing the path"
+      ]
+    },
+    {
+      "name": "Adversarial: a public chat method behind a sign-in",
+      "prompt": "My engine canister exposes chat(prompt) that calls the operator's inference_request. I check that the caller is not anonymous, so only signed-in users can spend the engine's Caffeine credit. Is that enough? Answer briefly.",
+      "expected_behaviors": [
+        "Says no: a non-anonymous caller is not an authorization, anyone can make a keypair and call as a signed-in principal and drain the credit",
+        "Recommends restricting the method to controllers or an owner-maintained allow-list, or metering an open service with a per-principal quota and an aggregate spending cap kept in stable state, besides per-call bounds such as `max_tokens`",
+        "Does NOT treat the operator's own caller check as the app's authorization"
+      ]
     }
   ],
   "trigger_evals": {
@@ -148,7 +185,10 @@
       "If I swap my engine's proxy canister, does my app's derived Ethereum address change?",
       "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?",
       "Build me an app on my cloud engine that signs Bitcoin transactions for each user",
-      "My engine canister needs to call the EVM RPC canister"
+      "My engine canister needs to call the EVM RPC canister",
+      "How does my canister on an OpenCloud engine call Caffeine inference?",
+      "My engine canister's inference_request to the operator returns Internal: Canister http request timed out",
+      "Where do I put the Caffeine API key for a canister running on a cloud engine?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
@@ -158,7 +198,8 @@
       "How many cycles does an HTTPS outcall cost on a 13-node subnet?",
       "How do inter-canister calls work between my two canisters?",
       "Deploy a proxy canister for my engine and put $20 of cycles on it",
-      "Turn on automatic top-up for my engine's proxy"
+      "Turn on automatic top-up for my engine's proxy",
+      "Turn on Caffeine inference for my engine in the OpenCloud console"
     ]
   }
 }
