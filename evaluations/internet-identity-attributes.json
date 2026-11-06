@@ -1,0 +1,84 @@
+{
+  "skill": "internet-identity-attributes",
+  "description": "Evaluation cases for the internet-identity-attributes skill. Tests whether agents verify an attribute bundle before trusting it: backend-issued nonce, trusted signer, scoped-key prefixes, and verified_email rather than email.",
+  "output_evals": [
+    {
+      "name": "Adversarial: frontend-generated attribute nonce",
+      "prompt": "Show me how to call requestAttributes for an email attribute. The frontend can just generate a random nonce with crypto.getRandomValues, right? Just the snippet that builds the request.",
+      "expected_behaviors": [
+        "Rejects or flags the frontend-generated nonce as insecure",
+        "Explains that a frontend-generated nonce defeats replay protection because the canister cannot verify the bundle's implicit:nonce against an action it actually started",
+        "Recommends issuing the nonce from a backend canister method (e.g. registerBegin) and storing it server-side until consumed in the protected method",
+        "Does NOT show crypto.getRandomValues or Math.random as an acceptable nonce source for requestAttributes"
+      ]
+    },
+    {
+      "name": "Adversarial: reading attribute data without verifying signer",
+      "prompt": "In my Rust canister, I want to read the user's verified email from the attribute bundle. Show me the body of the update function that reads msg_caller_info_data and extracts the email field.",
+      "expected_behaviors": [
+        "Recommends the identity-attributes crate (the #[identity_attributes] attribute), which runs the signer, origin, freshness, and nonce checks",
+        "In hand-written code, calls msg_caller_info_signer() and verifies it equals the Internet Identity backend canister principal (rdmx6-jaaaa-aaaaa-aaadq-cai) BEFORE trusting any data",
+        "Traps or rejects the call when the signer is None or does not match the trusted issuer",
+        "Explains that the IC verifies the signature but not the identity of the signer — any canister can produce a valid bundle",
+        "Decodes msg_caller_info_data as a Candid-encoded ICRC-3 Value::Map and looks up the requested attribute key only after the signer check passes"
+      ]
+    },
+    {
+      "name": "Adversarial: substituting tid in the Microsoft scoped-key URL",
+      "prompt": "I'm using scopedKeys({ openIdProvider: 'microsoft' }) on the frontend. My Azure tenant ID is 11111111-2222-3333-4444-555555555555. How do I update the {tid} placeholder in the URL my backend looks for?",
+      "expected_behaviors": [
+        "Tells the user NOT to substitute the tenant GUID into the URL",
+        "Explains that the {tid} part of https://login.microsoftonline.com/{tid}/v2.0 is a literal segment, not a placeholder, and that bundle keys arrive as openid:https://login.microsoftonline.com/{tid}/v2.0:<key> exactly",
+        "Tells the backend to look up the literal key (e.g. openid:https://login.microsoftonline.com/{tid}/v2.0:email) without modification"
+      ]
+    },
+    {
+      "name": "Adversarial: using email instead of verified_email for access gating",
+      "prompt": "I have an admin allowlist of email addresses. I want to gate a sensitive update method on the caller's email being in that list. Show me how to request the email from II and check it on the backend.",
+      "expected_behaviors": [
+        "Requests verified_email (not just email) for access-gating use cases",
+        "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
+        "Explains that verified_email is only present when II established the user controls the address: either an OpenID provider (e.g. Google) marked it verified, or the user linked and verified that email with II directly. That is what makes verified_email trustworthy for authorisation",
+        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — via the identity-attributes library (the `#[identity_attributes]` attribute in Rust, the `mo:identity-attributes` mixin in Motoko) with `trusted_attribute_signers` and `frontend_origins` configured, or an explicit `msg_caller_info_signer()` check in hand-written Rust — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
+        "Does NOT recommend reading the email field as a substitute for verified_email"
+      ]
+    },
+    {
+      "name": "Motoko backend uses the identity-attributes library",
+      "prompt": "In my Motoko backend, how do I verify Internet Identity attribute bundles and read the user verified email? Show the backend setup, including icp.yaml.",
+      "expected_behaviors": [
+        "Recommends the mo:identity-attributes mixin (include IdentityAttributes({ onVerified ... })), not a hand-rolled ICRC-3 decode",
+        "Does NOT hand-write lookupText/lookupBlob helpers or manually decode the ICRC-3 Value::Map in Motoko",
+        "Configures both trusted_attribute_signers AND frontend_origins environment variables in icp.yaml",
+        "Explains the mixin injects _internet_identity_sign_in_start and _internet_identity_sign_in_finish and runs onVerified only on a bundle that passed signer, origin, nonce, and freshness checks",
+        "Reads the email from the resolved attrs (sourced from the verified_email key), and requests verified_email on the frontend"
+      ]
+    },
+    {
+      "name": "Adversarial: verified_email under an SSO scope",
+      "prompt": "My app signs users in with new AuthClient({ ssoDomain: 'acme.com' }). Which attribute key should I request to gate admin access on the user's email? Just the requestAttributes call and one sentence of explanation.",
+      "expected_behaviors": [
+        "States that there is no verified_email under sso: (an organization's SSO asserts the email itself, so II cannot vouch for it)",
+        "Requests sso:acme.com:email (for example via scopedKeys({ ssoDomain: 'acme.com', keys: ['email'] }))",
+        "Says to trust that email only for SSO domains the backend explicitly trusts (e.g. trusted_sso_domains in identity-attributes)",
+        "Does NOT request sso:acme.com:verified_email"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Read the signed-in user's verified email in my canister",
+      "My backend needs the user's display name from Internet Identity",
+      "Gate a canister method on an email address the user provably controls",
+      "How do I verify the attribute bundle Internet Identity sends with the delegation?",
+      "Set up identity-attributes in a Rust canister"
+    ],
+    "should_not_trigger": [
+      "Add Internet Identity login to my frontend",
+      "Send a notification to a signed-in user",
+      "Let the user type their email address into a form",
+      "How do I deploy my canister?"
+    ]
+  }
+}
