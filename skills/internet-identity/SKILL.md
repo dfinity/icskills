@@ -147,6 +147,9 @@ type SsoStatus =
 Checking while the user types, one client per pause rather than per keystroke. A superseded client is disposed before it can publish, so stale results never render:
 
 ```javascript
+let client;
+let timer;
+
 input.addEventListener("input", () => {
   client?.dispose();  // also stops the old client's check
   client = undefined; // Continue never signs in to the old domain
@@ -225,7 +228,7 @@ Three properties make a good primary origin:
 
 - **It is the front door.** `ii-app-metadata` is read from the primary origin, so the elected canister names the *whole suite* on every app's sign-in screen. Elect one product canister and every sibling signs in under that product's name.
 - **It deploys first.** Nothing can derive against an origin that does not exist yet.
-- **It is never retired.** It holds the suite's identity for as long as the accounts do, so a product canister elected into this role can never afterwards be replaced or reinstalled.
+- **It is never retired.** It holds the suite's identity for as long as the accounts do. Principals derive from the origin, so the canister keeps its code and state at your discretion (an upgrade or a reinstall changes nothing, as long as it goes on serving the well-known documents); what it can never do is hand the role to a different canister id, because that is a different origin.
 
 The user sees their own app's origin, not the primary one: II shows the origin being signed in to and reads only the name, description and logo from the primary origin.
 
