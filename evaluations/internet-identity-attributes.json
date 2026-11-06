@@ -39,7 +39,7 @@
         "Requests verified_email (not just email) for access-gating use cases",
         "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
         "Explains that verified_email is only present when II established the user controls the address: either an OpenID provider (e.g. Google) marked it verified, or the user linked and verified that email with II directly. That is what makes verified_email trustworthy for authorisation",
-        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — via the identity-attributes library (the `#[identity_attributes]` attribute in Rust, the `mo:identity-attributes` mixin in Motoko) with `trusted_attribute_signers` and `frontend_origins` configured, or an explicit `msg_caller_info_signer()` check in hand-written Rust — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
+        "On the backend, verifies the bundle through the identity-attributes library with trusted_attribute_signers and frontend_origins configured, and runs the allowlist check on the value the library resolved (which it populates from verified_email) rather than on the raw email key",
         "Does NOT recommend reading the email field as a substitute for verified_email"
       ]
     },
