@@ -1,6 +1,6 @@
 {
   "skill": "internet-identity",
-  "description": "Evaluation cases for the internet-identity skill. Tests whether agents produce correct II auth integration code, avoid top-level await, and handle local vs mainnet environments correctly.",
+  "description": "Evaluation cases for the internet-identity skill. Tests whether agents produce correct II sign-in code, avoid top-level await, handle local vs mainnet environments, and elect a primary origin before an app has users.",
   "output_evals": [
     {
       "name": "No top-level await in frontend code",
@@ -55,47 +55,6 @@
       ]
     },
     {
-      "name": "Adversarial: frontend-generated attribute nonce",
-      "prompt": "Show me how to call requestAttributes for an email attribute. The frontend can just generate a random nonce with crypto.getRandomValues, right? Just the snippet that builds the request.",
-      "expected_behaviors": [
-        "Rejects or flags the frontend-generated nonce as insecure",
-        "Explains that a frontend-generated nonce defeats replay protection because the canister cannot verify the bundle's implicit:nonce against an action it actually started",
-        "Recommends issuing the nonce from a backend canister method (e.g. registerBegin) and storing it server-side until consumed in the protected method",
-        "Does NOT show crypto.getRandomValues or Math.random as an acceptable nonce source for requestAttributes"
-      ]
-    },
-    {
-      "name": "Adversarial: reading attribute data without verifying signer",
-      "prompt": "In my Rust canister, I want to read the user's verified email from the attribute bundle. Show me the body of the update function that reads msg_caller_info_data and extracts the email field.",
-      "expected_behaviors": [
-        "Recommends the identity-attributes crate (the #[identity_attributes] attribute), which runs the signer, origin, freshness, and nonce checks",
-        "In hand-written code, calls msg_caller_info_signer() and verifies it equals the Internet Identity backend canister principal (rdmx6-jaaaa-aaaaa-aaadq-cai) BEFORE trusting any data",
-        "Traps or rejects the call when the signer is None or does not match the trusted issuer",
-        "Explains that the IC verifies the signature but not the identity of the signer — any canister can produce a valid bundle",
-        "Decodes msg_caller_info_data as a Candid-encoded ICRC-3 Value::Map and looks up the requested attribute key only after the signer check passes"
-      ]
-    },
-    {
-      "name": "Adversarial: substituting tid in the Microsoft scoped-key URL",
-      "prompt": "I'm using scopedKeys({ openIdProvider: 'microsoft' }) on the frontend. My Azure tenant ID is 11111111-2222-3333-4444-555555555555. How do I update the {tid} placeholder in the URL my backend looks for?",
-      "expected_behaviors": [
-        "Tells the user NOT to substitute the tenant GUID into the URL",
-        "Explains that the {tid} part of https://login.microsoftonline.com/{tid}/v2.0 is a literal segment, not a placeholder, and that bundle keys arrive as openid:https://login.microsoftonline.com/{tid}/v2.0:<key> exactly",
-        "Tells the backend to look up the literal key (e.g. openid:https://login.microsoftonline.com/{tid}/v2.0:email) without modification"
-      ]
-    },
-    {
-      "name": "Adversarial: using email instead of verified_email for access gating",
-      "prompt": "I have an admin allowlist of email addresses. I want to gate a sensitive update method on the caller's email being in that list. Show me how to request the email from II and check it on the backend.",
-      "expected_behaviors": [
-        "Requests verified_email (not just email) for access-gating use cases",
-        "Explains that the email key is the raw value from the user's II-linked account and is NOT checked by II (treat as user-supplied input)",
-        "Explains that verified_email is only present when II established the user controls the address: either an OpenID provider (e.g. Google) marked it verified, or the user linked and verified that email with II directly. That is what makes verified_email trustworthy for authorisation",
-        "On the backend, verifies the bundle signer is the Internet Identity backend canister (`rdmx6-jaaaa-aaaaa-aaadq-cai`) — via the identity-attributes library (the `#[identity_attributes]` attribute in Rust, the `mo:identity-attributes` mixin in Motoko) with `trusted_attribute_signers` and `frontend_origins` configured, or an explicit `msg_caller_info_signer()` check in hand-written Rust — and looks up implicit:nonce, implicit:origin, and the verified_email attribute key (or the openid:<provider>:verified_email scoped variant) before the allowlist check",
-        "Does NOT recommend reading the email field as a substitute for verified_email"
-      ]
-    },
-    {
       "name": "Adversarial: build target suggestion",
       "prompt": "I'm getting 'Top-level await is not available in the configured target environment' when building my Vite frontend with II auth. How do I fix this?",
       "expected_behaviors": [
@@ -121,17 +80,6 @@
         "Suggest using mainnet's id.ai because the network launcher after icp-cli 0.2.4 supports verifying mainnet signatures",
         "Explains that a local instance of internet identity can be deployed by setting `ii: true` in icp.yaml",
         "Explains that the local instance of internet identity is accessible at http://id.ai.localhost:8000"
-      ]
-    },
-    {
-      "name": "Motoko backend uses the identity-attributes library",
-      "prompt": "In my Motoko backend, how do I verify Internet Identity attribute bundles and read the user verified email? Show the backend setup, including icp.yaml.",
-      "expected_behaviors": [
-        "Recommends the mo:identity-attributes mixin (include IdentityAttributes({ onVerified ... })), not a hand-rolled ICRC-3 decode",
-        "Does NOT hand-write lookupText/lookupBlob helpers or manually decode the ICRC-3 Value::Map in Motoko",
-        "Configures both trusted_attribute_signers AND frontend_origins environment variables in icp.yaml",
-        "Explains the mixin injects _internet_identity_sign_in_start and _internet_identity_sign_in_finish and runs onVerified only on a bundle that passed signer, origin, nonce, and freshness checks",
-        "Reads the email from the resolved attrs (sourced from the verified_email key), and requests verified_email on the frontend"
       ]
     },
     {
@@ -213,50 +161,6 @@
       ]
     },
     {
-      "name": "Shared sign-in across sibling subdomains",
-      "prompt": "Two apps, chat.example.com and hr.example.com: a user who signs in on one should be signed in on the other with @icp-sdk/auth. Show five things and nothing else: the shared client options, the well-known documents this needs and which origin serves each, the /reauth route, the check every page runs on load, and what happens if the status changes while a page is already open. Code with short comments, no prose sections, no backend, no deploy steps.",
-      "expected_behaviors": [
-        "Requires one shared derivationOrigin across both apps, listed in that origin's /.well-known/ii-alternative-origins, and does not present a shared cookie as sufficient on its own",
-        "Uses CookieStateStorage with the parent domain (example.com) as stateStorage on both apps",
-        "Acquires a credential on the origin that reads signed-in-elsewhere, with a second AuthClient built with prompt: 'none'",
-        "Passes hint set to the principal the shared record names on that silent request",
-        "Uses transport: 'redirect' for the silent request rather than the default window transport",
-        "Does NOT pass resumable explicitly, since CookieStateStorage already asks for a resumable session",
-        "Every page, not only protected ones, checks getStatus() on load and redirects signed-in-elsewhere to the re-auth route, passing the current path as a next parameter it returns to",
-        "Handles the status turning signed-in-elsewhere after load through subscribe() by prompting the user with a button that runs the redirect, rather than redirecting the open page automatically",
-        "Serves /.well-known/ii-auth-callbacks on each app origin listing that origin's own /reauth URL, as the prerequisite for the redirect transport, rather than only the alternative-origins document on the derivation origin"
-      ]
-    },
-    {
-      "name": "Adversarial: shared cookie but different principals per subdomain",
-      "prompt": "I set CookieStateStorage with domain 'example.com' on both my subdomains, but each one still signs the user in as a different principal, and my re-auth page keeps bouncing them back. What is wrong and what do I do? Three sentences, no code.",
-      "expected_behaviors": [
-        "Identifies that principals are derived per origin and that one shared derivationOrigin across both subdomains is what makes them the same",
-        "Says that derivation origin has to authorize the subdomains by listing them in its alternative-origins document",
-        "Connects the bouncing to the shared record naming an account this origin can never hold a credential for",
-        "Does NOT blame cookie attributes, SameSite, Secure, or the cookie domain itself as the cause"
-      ]
-    },
-    {
-      "name": "Adversarial: silent re-issue without hint",
-      "prompt": "Review this: on hr.example.com I detect signed-in-elsewhere and then run `await new AuthClient({ ...clientOptions, prompt: 'none' }).signIn()` on page load. Anything wrong? Two sentences, no rewrite.",
-      "expected_behaviors": [
-        "Flags the missing hint and says a provider holding more than one session refuses the silent request rather than answering for another account",
-        "Flags that a silent request on page load has no user gesture, so it needs transport: 'redirect' rather than the default window transport",
-        "Does NOT claim prompt: 'none' is wrong or unsupported",
-        "Does NOT claim the missing hint signs the user in as a different account"
-      ]
-    },
-    {
-      "name": "Adversarial: redirecting an already-open page to /reauth",
-      "prompt": "In my subdomain-shared setup I subscribe to the auth client and call location.replace('/reauth?next=...') on every change to signed-in-elsewhere, including while the user is filling in a form. Is that right? Three sentences, no code.",
-      "expected_behaviors": [
-        "Says redirecting a page that is already open throws away what the user is doing, so it is wrong for the subscribe path",
-        "Says an already-open page should prompt the user, for example a banner or dialog whose button runs the redirect",
-        "Keeps the automatic redirect for the check a page runs on load, rather than calling the whole redirect approach wrong"
-      ]
-    },
-    {
       "name": "Adversarial: @icp-sdk/auth major must pair with the core major",
       "prompt": "My dapp's package.json already pins \"@icp-sdk/core\": \"^5\". Give me the npm install command to add Internet Identity sign-in. No integration code.",
       "expected_behaviors": [
@@ -312,16 +216,6 @@
       ]
     },
     {
-      "name": "Adversarial: verified_email under an SSO scope",
-      "prompt": "My app signs users in with new AuthClient({ ssoDomain: 'acme.com' }). Which attribute key should I request to gate admin access on the user's email? Just the requestAttributes call and one sentence of explanation.",
-      "expected_behaviors": [
-        "States that there is no verified_email under sso: (an organization's SSO asserts the email itself, so II cannot vouch for it)",
-        "Requests sso:acme.com:email (for example via scopedKeys({ ssoDomain: 'acme.com', keys: ['email'] }))",
-        "Says to trust that email only for SSO domains the backend explicitly trusts (e.g. trusted_sso_domains in identity-attributes)",
-        "Does NOT request sso:acme.com:verified_email"
-      ]
-    },
-    {
       "name": "Adversarial: switching an existing client to another SSO domain",
       "prompt": "With @icp-sdk/auth 11 I keep one AuthClient for the page and want it to follow the SSO domain the user types, so I tried `client.ssoDomain = input.value` and `client.signIn({ ssoDomain: input.value })`. Neither works. What should I do instead? Just the code and a short explanation.",
       "expected_behaviors": [
@@ -329,38 +223,6 @@
         "Builds a new AuthClient({ ssoDomain }) for each new domain",
         "Calls dispose() on the superseded client",
         "Does NOT assign to a client property or pass ssoDomain to signIn()"
-      ]
-    },
-    {
-      "name": "Notification consent returns a record, not a boolean",
-      "prompt": "Add a 'Notify me' button to my ICP app that asks Internet Identity for permission to send notifications, and show the user whether it was allowed. Just the handler, no backend.",
-      "expected_behaviors": [
-        "Destructures the result: `const { granted } = await authClient.requestNotificationConsent()` — does NOT assign the call directly to a boolean",
-        "Treats `granted: false` as the user's answer and renders it, rather than throwing or logging an error",
-        "Asks from a click handler, not on page load or at module scope",
-        "Does NOT invent a browser Notification.requestPermission() or Push API call — permission is asked through Internet Identity",
-        "Does not claim VAPID keys, a push service, or a service worker are needed in the app"
-      ]
-    },
-    {
-      "name": "The sender list is required before any send works",
-      "prompt": "My canister calls the identity-notifications send function and it returns fine, but no notification ever arrives. The user definitely allowed notifications. What's wrong?",
-      "expected_behaviors": [
-        "Names `/.well-known/ii-notification-senders` on the app's origin as the thing most likely missing",
-        "Shows the document shape: an object with a `senders` array of canister id strings",
-        "Explains that Internet Identity refuses a send from a canister the origin has not named, which is why nothing errors at the send site",
-        "Mentions the cache (roughly an hour) so a just-added canister is not accepted instantly",
-        "Does NOT suggest the problem is a missing service worker or a browser permission prompt"
-      ]
-    },
-    {
-      "name": "Delivery is not the app's to control",
-      "prompt": "I removed a user from my app's chat room so they stop getting notified, but they still got a notification. How do I unsubscribe their browser from my app?",
-      "expected_behaviors": [
-        "Says the app addresses a user and does not control where or how the notification reaches them: that is Internet Identity's and the user's to manage",
-        "Says the app's own recipient list governs only what the app sends from now on",
-        "Does NOT suggest the app call a browser unsubscribe API, clear a service worker registration, or manipulate a push subscription",
-        "Does NOT invent an Internet Identity method for removing a device or subscription on the app's behalf"
       ]
     }
   ],
@@ -376,8 +238,7 @@
       "How do I get my app's name and logo to show on the Internet Identity sign-in screen?",
       "Let users sign in with their company's SSO in my ICP app",
       "Check whether the domain a user typed supports Internet Identity SSO",
-      "Send a web push notification to a user from my ICP canister",
-      "Ask the user for permission to notify them with Internet Identity"
+      "My app is getting a custom domain and I don't want to lose the existing accounts"
     ],
     "should_not_trigger": [
       "Connect a wallet to my dapp",

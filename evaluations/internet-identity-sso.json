@@ -1,0 +1,54 @@
+{
+  "skill": "internet-identity-sso",
+  "description": "Evaluation cases for the internet-identity-sso skill. Tests whether agents configure an organization's discovery file correctly: whole-file rejection on one bad value, exact-origin app_clients keys, and the stable identifier claim per provider.",
+  "output_evals": [
+    {
+      "name": "Adversarial: one bad value rejects the whole discovery file",
+      "prompt": "We want sessions through our Internet Identity SSO domain to last as long as the provider allows, so I set session_max_age_seconds to 0 in our /.well-known/ii-openid-configuration meaning no limit. Our users can no longer sign in with the company domain at all. Is that related?",
+      "expected_behaviors": [
+        "States that 0 is rejected, not treated as unlimited, and that the valid range is above 0 up to 2592000 seconds (30 days)",
+        "Explains that Internet Identity rejects the ENTIRE file on one bad value, so SSO becomes unavailable for the whole domain rather than falling back to the default",
+        "Says the value is rejected rather than clamped",
+        "Mentions that getSsoStatus() reads unavailable for the domain while the file is invalid",
+        "Does NOT suggest the provider or the OIDC client is misconfigured as the first explanation"
+      ]
+    },
+    {
+      "name": "Adversarial: app_clients key must be the app's exact origin",
+      "prompt": "I added \"https://payroll.acme.com/\": \"0oaPAYROLL\" to app_clients in our ii-openid-configuration so payroll gets its own OIDC client with its own group assignment. Staff who are not in the payroll group can still sign in to it. What did I get wrong?",
+      "expected_behaviors": [
+        "Identifies the trailing slash as the problem: the key must be the app's exact origin, with no trailing slash, no path and the same scheme",
+        "Explains that a key that does not match is not an error: the app silently falls back to the organization's default client_id, which is why the group assignment has no effect",
+        "Shows the corrected entry keyed by https://payroll.acme.com",
+        "Mentions gate_all_apps as the way to refuse apps that are not listed, if that is the intent",
+        "Does NOT claim the provider ignores group assignment or that per-app clients are unsupported"
+      ]
+    },
+    {
+      "name": "Adversarial: stable identifier claim on Entra ID",
+      "prompt": "We're configuring Internet Identity SSO against Microsoft Entra ID and giving two of our apps their own OIDC clients. Should I set stable_identifier_claim, or is the default fine?",
+      "expected_behaviors": [
+        "Says stable_identifier_claim must be set to \"oid\" for Entra ID, because its sub differs per client",
+        "Explains the consequence of leaving the default sub with per-app clients: the same person keys onto a different identity in each app",
+        "Notes that changing stable_identifier_claim on a live domain is a migration, not a config tweak, because it changes how identities key onto anchors",
+        "Does NOT recommend email or preferred_username as the stable identifier"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Set up Internet Identity sign-in for our staff against our Okta tenant",
+      "Publish the ii-openid-configuration file for our company domain",
+      "Give one of our apps its own OIDC client in the Internet Identity SSO config",
+      "Our Internet Identity SSO domain reads unavailable and we published the file",
+      "We changed our discovery file and Internet Identity is still using the old one"
+    ],
+    "should_not_trigger": [
+      "Let my app send users to their company's SSO",
+      "Add Internet Identity login to my frontend",
+      "Sign in with a Google account on Internet Identity",
+      "Read the user's verified email in my canister"
+    ]
+  }
+}
