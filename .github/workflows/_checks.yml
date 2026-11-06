@@ -67,15 +67,19 @@ jobs:
 
       # `skill-validator check` takes exactly one path and exits 3 (usage error)
       # when handed more, so every path is checked in its own invocation. Exit
-      # codes: 0 clean, 1 errors, 2 warnings, 3 usage error. An error anywhere
-      # wins over a warning; anything other than 0 or 2 fails the job below.
+      # codes: 0 clean, 1 errors, 2 warnings, 3 usage error. The aggregate takes
+      # an error over any other code and any other code over a warning, so a
+      # warning on one skill can never hide a skill that was not validated.
+      # Anything other than 0 or 2 fails the job below.
       - name: Run skill-validator checks
         id: skill-validator
         if: steps.changed.outputs.found == 'true'
         run: |
           set +e
           report=""
-          exit_code=0
+          had_error=0
+          had_warning=0
+          had_other=0
           for path in ${{ steps.changed.outputs.paths }}; do
             # TODO: re-enable link checks once https://github.com/agent-ecosystem/skill-validator/issues/45 is resolved
             out=$(skill-validator check "$path" --skip links -o markdown 2>/dev/null)
@@ -83,12 +87,22 @@ jobs:
             report="${report}${out}"$'\n'
             case "$code" in
               0) ;;
-              1) exit_code=1 ;;
-              *) [ "$exit_code" -eq 0 ] && exit_code=$code ;;
+              1) had_error=1 ;;
+              2) had_warning=1 ;;
+              *) had_other=$code ;;
             esac
             # Re-run with annotations sent to stdout/stderr for GitHub to process
             skill-validator check "$path" --skip links --emit-annotations > /dev/null
           done
+          if [ "$had_error" -ne 0 ]; then
+            exit_code=1
+          elif [ "$had_other" -ne 0 ]; then
+            exit_code=$had_other
+          elif [ "$had_warning" -ne 0 ]; then
+            exit_code=2
+          else
+            exit_code=0
+          fi
           echo "$report" >> "$GITHUB_STEP_SUMMARY"
           delimiter=$(openssl rand -hex 8)
           {
