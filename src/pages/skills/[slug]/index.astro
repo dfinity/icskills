@@ -100,12 +100,12 @@ const pageTitle = `${skill.data.metadata.title}: ${SITE.shortName}`;
   <article class="skill" itemscope itemtype="https://schema.org/TechArticle">
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="/">Browse</a>
-      <span aria-hidden="true">&rsaquo;</span>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
       <a href={`/#category-${encodeURIComponent(skill.data.metadata.category)}`}>
         {skill.data.metadata.category}
       </a>
-      <span aria-hidden="true">&rsaquo;</span>
-      <span itemprop="name">{skill.data.metadata.title}</span>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <span itemprop="name" aria-current="page">{skill.data.metadata.title}</span>
     </nav>
 
     <header class="skill-header">
