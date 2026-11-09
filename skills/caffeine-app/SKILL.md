@@ -2,7 +2,7 @@
 name: caffeine-app
 description: "Scaffold and build a complete Caffeine app (caffeine.ai) from scratch — the project layout, the caffeine.toml workspace + canister manifests, the mops.toml for the single Motoko `backend` canister, the React/Vite frontend, and the caffeine CLI build loop (auth login, doctor, install, check --fix, preview --build). Use whenever the user wants to create, scaffold, set up, or build a Caffeine app or a caffeine.ai project, asks about caffeine.toml or mops.toml structure, or needs the caffeine CLI workflow — even if they do not say the words 'from scratch'. Always pair it with the `writing-motoko` skill for the backend code. Do NOT use it for Motoko language syntax or compiler errors (use the `writing-motoko` skill), and do NOT use it for generic Internet Computer / dfx / icp deployment (use the `icp-cli` skill)."
 license: Apache-2.0
-compatibility: "@caffeineai/cli (the `caffeine` command), Node.js >= 20.19, pnpm, network access + a caffeine.ai account"
+compatibility: "@caffeineai/cli (the `caffeine` command), Node.js >= 20.19, pnpm, mops >= 3.0.0, network access + a caffeine.ai account"
 metadata:
   title: "Caffeine App (build from scratch)"
   category: Integration

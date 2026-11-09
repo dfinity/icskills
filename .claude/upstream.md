@@ -23,7 +23,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
   - `skills/writing-motoko/references/reserved-keywords.md → references/reserved-keywords.md`
   - `skills/writing-motoko/references/type-conversions.md → references/type-conversions.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`/`mops` CLI major), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.16.0, core >= 2.6.0, mops >= 3.0.0`), and `metadata.title`/`category`. The moc floor is **ours, not upstream's**: upstream declares `>=1.11.2` while documenting `M0267` (first ships in moc 1.12.0, see caffeinelabs/skills#14) and the `.vals()` deprecation `M0269` (first ships in moc 1.16.0). The moc 2 diagnostics it documents (`M0272`–`M0277`) are for projects pinned to moc 2 and are left out of the floor.
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`/`mops` CLI major), and `caffeineai-subscription:`, and no `metadata:` block. We replace it with our schema: owned `description` (tuned for repo-wide trigger evals), `license: Apache-2.0`, string `compatibility` (`moc >= 1.16.0, core >= 2.6.0, mops >= 3.0.0`), and `metadata.title`/`category`. The moc floor is **ours, not upstream's**: upstream declares `>=1.11.2` while documenting `M0267` (first ships in moc 1.12.0, see caffeinelabs/skills#14) and the `.vals()` deprecation `M0269` (first ships in moc 1.16.0). The moc 2 diagnostics it documents (`M0272`, `M0273`, `M0274`, `M0275`, `M0277`) are for projects pinned to moc 2 and are left out of the floor.
   - **mops docs link → `mops-cli` skill:** the body's `https://docs.mops.one/` reference is rewritten to "Load the `mops-cli` skill …". Do not restore the external link on sync.
   - **`## Additional Resources` → `## Additional References`** (section renamed), plus an extra `- **mops tooling**: Load \`mops-cli\` …` bullet not in upstream.
   - **Reference-file paths:** upstream keeps `api-reference.md`/`examples.md` at the skill root; icskills places all non-SKILL files under `references/`, so intra-skill links are rewritten to `references/…`.
@@ -56,7 +56,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 - **Last synced:** 2026-11-09
 - **Upstream file:** `skills/troubleshooting-motoko-migrations/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** same transform as the other two, but **not the same moc floor** — ours is `moc >= 1.15.0, core >= 2.5.0` against upstream's `>=1.11.2`, because this skill's error table documents `M0268` (first ships in moc 1.15.0) and `M0267` (1.12.0). See caffeinelabs/skills#14. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
+  - **Frontmatter (entire block):** same transform as the other two, but **not the same moc floor** — ours is `moc >= 1.15.0, core >= 2.5.0` against upstream's `>=1.11.2`, because this skill's error table documents `M0268` (first ships in moc 1.15.0) and `M0267` (1.12.0). See caffeinelabs/skills#14. The moc 2 diagnostic `M0278` it documents is for projects pinned to moc 2 and is left out of the floor. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
 
 ---
 
@@ -101,7 +101,7 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
   - `skills/caffeine-app/SKILL.md`
   - `skills/caffeine-app/references/frontend-template.md → references/frontend-template.md`
 - **icskills-owned sections (do not overwrite from upstream):**
-  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` and `caffeineai-subscription:`. We keep our schema: owned `description`, `license: Apache-2.0`, string `compatibility` (`@caffeineai/cli (the \`caffeine\` command), Node.js >= 20.19, pnpm, network access + a caffeine.ai account`), and `metadata.title`/`category` (`Integration`).
+  - **Frontmatter (entire block):** upstream ships `version:`, an object `compatibility:` and `caffeineai-subscription:`. We keep our schema: owned `description`, `license: Apache-2.0`, string `compatibility` (`@caffeineai/cli (the \`caffeine\` command), Node.js >= 20.19, pnpm, mops >= 3.0.0, network access + a caffeine.ai account`), and `metadata.title`/`category` (`Integration`).
 
 ---
 
