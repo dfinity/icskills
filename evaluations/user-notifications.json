@@ -1,6 +1,6 @@
 {
-  "skill": "push-notifications",
-  "description": "Evaluation cases for the push-notifications skill. Tests whether agents read the consent record correctly, publish the sender list, and leave delivery to Internet Identity.",
+  "skill": "user-notifications",
+  "description": "Evaluation cases for the user-notifications skill. Tests whether agents read the consent record correctly, publish the sender list, and leave delivery to Internet Identity.",
   "output_evals": [
     {
       "name": "Notification consent returns a record, not a boolean",

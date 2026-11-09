@@ -1,14 +1,14 @@
 ---
-name: organization-sso
+name: organization-sign-in
 description: "Set up an organization's own single sign-on for Internet Identity, so staff sign in to II-powered apps against Okta, Entra ID, Google Workspace or Auth0. Nothing registers with II: it discovers the configuration from /.well-known/ii-openid-configuration on the organization's domain. Covers the OIDC client, the discovery file and every field, per-app clients including salted-hash keys, gate_all_apps, stable_identifier_claim, the limits that reject the whole file, and II's caching windows. Use when an organization wants its employees to sign in with its own identity provider, when II offers no SSO for a domain that has published the file, or when an edit to that file has not taken effect yet. This is the organization's side, done by whoever administers the domain. For an app sending users there with ssoDomain, load user-sign-in. Do NOT use for signing in to II with a personal Google, Apple or Microsoft account, which is ordinary OpenID and needs none of this."
 license: Apache-2.0
 compatibility: "an OIDC provider (Okta, Entra ID, Google Workspace or Auth0), HTTPS hosting for the organization's domain"
 metadata:
-  title: Organization SSO
+  title: Organization Sign-In
   category: Auth
 ---
 
-# Organization SSO
+# Organization Sign-In
 
 ## What this is, and who does it
 

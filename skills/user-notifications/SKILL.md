@@ -1,14 +1,14 @@
 ---
-name: push-notifications
-description: "Notify a signed-in user from your canister while the app is closed, with web push delivered through Internet Identity, so there is no push service, no VAPID keys and no device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must reach a user who is not looking at it, when adding web push or a notifications toggle, or when consent was granted and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load user-sign-in first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
+name: user-notifications
+description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (as web push), so there is no push service, no VAPID keys and no device tokens in the app: the canister addresses a user and II reaches their browsers. Covers asking the user's consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must tell a user something while they are not looking at it, when adding notifications, web push or a notifications toggle, or when the user consented and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load user-sign-in first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.1.0, moc >= 2.0.0"
 metadata:
-  title: Push Notifications
+  title: User Notifications
   category: Integration
 ---
 
-# Push Notifications
+# User Notifications
 
 ## Prerequisite
 
@@ -16,11 +16,11 @@ Load the `user-sign-in` skill first. The sender list below is served from the ap
 
 ## How it works
 
-Your canister can notify a signed-in Internet Identity user while the app is closed. II owns the push subscriptions, so there is no push service, no VAPID keys, and no device tokens in the app.
+Your canister can notify your app's users, on their devices and while the app is closed. The canister addresses a user; Internet Identity holds that user's devices and delivers to them, so there is no push service, no VAPID keys, and no device tokens in the app.
 
 Three pieces, all required. Missing any one of them produces silence rather than an error at the point you left out.
 
-1. The frontend asks for consent, through II.
+1. The frontend asks the user's consent, through II.
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
 
