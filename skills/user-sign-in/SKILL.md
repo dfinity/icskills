@@ -129,15 +129,20 @@ From `@icp-sdk/auth` 11.2.0, a web worker or service worker reads its origin's s
 
 ```javascript
 const authClient = new AuthClient();
-// The state loads from IndexedDB; until then the client reads as signed out.
-await authClient.ready();
 
-if (authClient.isAuthenticated()) {
+// A service worker rejects top-level await: await inside a function or event handler.
+async function createActor() {
+  // The state loads from IndexedDB; until then the client reads as signed out.
+  await authClient.ready();
+  if (!authClient.isAuthenticated()) return undefined;
   const identity = await authClient.getIdentity();
-  const actor = await createAuthenticatedActor(identity, canisterId, idlFactory);
+  // No rootKey: a worker has no cookies, so the agent's built-in mainnet key applies.
+  const agent = await HttpAgent.create({ identity });
+  return Actor.createActor(idlFactory, { agent, canisterId });
 }
 ```
 
+- A worker has no `document.cookie`, so `safeGetCanisterEnv()` finds no `ic_env` there. On mainnet the agent's built-in root key is correct. Against a local network, a page passes `IC_ROOT_KEY` and the canister IDs to the worker with `postMessage`.
 - A worker only reads. `signIn()` and `signOut()` throw there: signing in and out happens in a page. A session the worker cannot use is left for a page to end.
 - Await `ready()` only in a worker. In a page the status is correct from construction, and waiting holds the page up on IndexedDB and a session restore for nothing.
 - `ready()` rejects where restoring the session fails, as `getIdentity()` does.
