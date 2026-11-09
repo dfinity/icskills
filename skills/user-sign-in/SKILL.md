@@ -41,6 +41,7 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 10. **Sharing a cookie domain without a shared `derivationOrigin`.** A cookie does not produce a shared principal: without one primary origin authorized for every subdomain, the shared record names an account the reading origin can never hold, and `/reauth` bounces the user forever. Elect the primary origin first, then load `shared-sign-in`.
 11. **A silent re-issue without `hint`, on the default transport, or to an undeclared callback.** `prompt: 'none'` without `hint` fails with `InteractionRequiredError` (`reason` `account_selection_required`) when II holds more than one session, and with no user gesture it needs `transport: 'redirect'` to a route declared in `/.well-known/ii-auth-callbacks`. The `shared-sign-in` skill builds this `/reauth` route.
 12. **Serving `/.well-known/ii-app-metadata` on the wrong origin, without CORS, or with one bad field.** One invalid field invalidates the whole document. See "App metadata on the sign-in screen".
+13. **Calling `signIn()` in a worker, or awaiting `ready()` in a page.** A worker only reads the sign-in, and `signIn()` and `signOut()` throw there. A page never needs `ready()`. See "In a web or service worker".
 
 ## Using II during local development
 
@@ -121,6 +122,26 @@ init();
 ```
 
 **Lifecycle.** One client for the page, or one per component: both read and write the same sign-in. A client a view owns is disposed with it: `dispose()` releases its listeners, subscription, and scheduled refresh, and is **not** a sign-out.
+
+## In a web or service worker
+
+From `@icp-sdk/auth` 11.2.0, a web worker or service worker reads its origin's sign-in with the same `AuthClient`:
+
+```javascript
+const authClient = new AuthClient();
+// The state loads from IndexedDB; until then the client reads as signed out.
+await authClient.ready();
+
+if (authClient.isAuthenticated()) {
+  const identity = await authClient.getIdentity();
+  const actor = await createAuthenticatedActor(identity, canisterId, idlFactory);
+}
+```
+
+- A worker only reads. `signIn()` and `signOut()` throw there: signing in and out happens in a page. A session the worker cannot use is left for a page to end.
+- Await `ready()` only in a worker. In a page the status is correct from construction, and waiting holds the page up on IndexedDB and a session restore for nothing.
+- `ready()` rejects where restoring the session fails, as `getIdentity()` does.
+- With `CookieStateStorage`, a sign-in this origin holds no credentials for reads as signed out in a worker, since the worker could not act on it.
 
 ## One-click sign-in
 
@@ -311,6 +332,10 @@ Missing, unreachable, or invalid metadata never blocks sign-in. Publishing it ve
 ## Older `@icp-sdk/auth` majors
 
 This skill targets `@icp-sdk/auth` 11.x. On an older major the same flow differs as follows.
+
+### 11.1.x and earlier
+
+`AuthClient` throws when constructed in a web worker or service worker, and has no `ready()`. Every older major below shares this.
 
 ### 10.x
 

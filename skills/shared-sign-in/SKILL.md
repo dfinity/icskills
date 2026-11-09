@@ -151,3 +151,7 @@ render(authClient.getStatus()); // and once for the initial paint
 ```
 
 A page that reads the status only at load keeps showing a signed-in screen to a user who is signed out, until something else happens to reload it.
+
+### Service workers
+
+A service worker reads the shared sign-in too (`@icp-sdk/auth` 11.2.0 or later; see "In a web or service worker" in the `user-sign-in` skill). With no page of its own origin open, it sees a sibling subdomain's sign-in or sign-out only once a page of its origin opens.

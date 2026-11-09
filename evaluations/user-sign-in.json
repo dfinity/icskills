@@ -224,6 +224,16 @@
         "Calls dispose() on the superseded client",
         "Does NOT assign to a client property or pass ssoDomain to signIn()"
       ]
+    },
+    {
+      "name": "Adversarial: signing in from a service worker",
+      "prompt": "My service worker needs to know whether the user is signed in to my II app, and should sign them in if not. Show the service worker code using @icp-sdk/auth, just the auth part.",
+      "expected_behaviors": [
+        "Constructs an AuthClient in the service worker and awaits client.ready() before reading isAuthenticated(), getStatus() or getPrincipal()",
+        "States that signIn() (and signOut()) throw in a worker, so signing in has to happen in a page",
+        "Does NOT call signIn() from the service worker",
+        "Mentions that worker support needs @icp-sdk/auth 11.2.0 or later"
+      ]
     }
   ],
   "trigger_evals": {
