@@ -1,18 +1,18 @@
 ---
-name: internet-identity-shared-sessions
-description: "Share one Internet Identity sign-in across sibling subdomains, so signing in on one app signs the user in on the others without a second visit to II, and signing out on one signs them out everywhere. Covers the shared record with CookieStateStorage, the /reauth route that silently acquires each app's own credential under transport: 'redirect' and prompt: 'none', the per-origin /.well-known/ii-auth-callbacks document, reading signed-in-elsewhere on load and offering it mid-session, and what ends a shared session. Use when two or more apps under one domain must share one signed-in user, when moving between them asks the user to sign in again, or when /reauth bounces in a loop. Every app must already derive from one elected primary origin: load internet-identity and settle that first. Do NOT use for a single app on one origin, which needs none of this, or for apps on unrelated domains, which cannot share a cookie."
+name: shared-sign-in
+description: "Share one Internet Identity sign-in across sibling subdomains, so signing in on one app signs the user in on the others without a second visit to II, and signing out on one signs them out everywhere. Covers the shared record with CookieStateStorage, the /reauth route that silently acquires each app's own credential under transport: 'redirect' and prompt: 'none', the per-origin /.well-known/ii-auth-callbacks document, reading signed-in-elsewhere on load and offering it mid-session, and what ends a shared session. Use when two or more apps under one domain must share one signed-in user, when moving between them asks the user to sign in again, or when /reauth bounces in a loop. Every app must already derive from one elected primary origin: load user-sign-in and settle that first. Do NOT use for a single app on one origin, which needs none of this, or for apps on unrelated domains, which cannot share a cookie."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.0.0"
 metadata:
-  title: Internet Identity Shared Sessions
+  title: Shared Sign-In
   category: Auth
 ---
 
-# Internet Identity Shared Sessions
+# Shared Sign-In
 
 ## Prerequisite
 
-Load the `internet-identity` skill first and settle "Your app's identity is its primary origin". Everything here assumes one elected primary origin whose `ii-alternative-origins` already authorizes every sibling.
+Load the `user-sign-in` skill first and settle "Your app's identity is its primary origin". Everything here assumes one elected primary origin whose `ii-alternative-origins` already authorizes every sibling.
 
 That is not a courtesy link. Subdomains share a sign-in only when they share a principal, and a shared cookie does not produce one. Build this on top of separate principals and every app reads a record naming an account it can never hold, which is the `/reauth` loop in that skill's mistakes list.
 

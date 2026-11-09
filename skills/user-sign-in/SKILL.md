@@ -1,14 +1,14 @@
 ---
-name: internet-identity
-description: "Add Internet Identity sign-in to a frontend or canister: passkey and OpenID (Google, Apple, Microsoft) sign-in with @icp-sdk/auth, sending users to an organization's SSO with ssoDomain, the client lifecycle, and local development. Also covers the primary origin an app's principals are permanently tied to: electing it, setting derivationOrigin, the ii-alternative-origins and ii-derivation-origin documents, and the ii-app-metadata document that names the app on the sign-in screen. Use when adding sign-in, login, auth, passkeys or Internet Identity to an app, when an app gains a custom domain or a sibling app, or when the same user arrives as a different principal on two origins. For a verified email or name in the backend use internet-identity-attributes; for web push use internet-identity-notifications; to set up an organization's own SSO use internet-identity-sso. Do NOT use for wallet or ICRC signer flows (use wallet-integration) or for an agent or CLI signing in as a user (use agent-web-identity)."
+name: user-sign-in
+description: "Add Internet Identity sign-in to a frontend or canister: passkey and OpenID (Google, Apple, Microsoft) sign-in with @icp-sdk/auth, sending users to an organization's SSO with ssoDomain, the client lifecycle, and local development. Also covers the primary origin an app's principals are permanently tied to: electing it, setting derivationOrigin, the ii-alternative-origins and ii-derivation-origin documents, and the ii-app-metadata document that names the app on the sign-in screen. Use when adding sign-in, login, auth, passkeys or Internet Identity to an app, when an app gains a custom domain or a sibling app, or when the same user arrives as a different principal on two origins. For a verified email or name in the backend use user-attributes; for web push use push-notifications; to set up an organization's own SSO use organization-sso. Do NOT use for wallet or ICRC signer flows (use wallet-integration) or for an agent or CLI signing in as a user (use agent-web-identity)."
 license: Apache-2.0
 compatibility: "icp-cli >= 0.2.4, Node.js >= 22"
 metadata:
-  title: Internet Identity
+  title: User Sign-In
   category: Auth
 ---
 
-# Internet Identity Authentication
+# User Sign-In
 
 ## What This Is
 
@@ -37,11 +37,10 @@ Both IDs are identical on mainnet and on a local network. Hardcode them.
 6. **`shouldFetchRootKey` or `fetchRootKey()` in browser code.** The `ic_env` cookie (set by the frontend canister or the Vite dev server) carries the root key as `IC_ROOT_KEY`: pass it as `rootKey` to `HttpAgent.create()` and leave `host` unset. Fetching the root key at runtime lets a man-in-the-middle substitute a fake one on mainnet.
 7. **Getting `2vxsx-fae` as the principal.** That is the anonymous principal: authentication silently failed. Usual causes: a wrong `authorizeUrl` (especially missing `/authorize`), an unhandled `signIn()` rejection, or reading the identity before `signIn()` resolved. `getIdentity()` throws `SessionNotHeldError` (not an anonymous identity) when a sign-in exists that this origin holds no credential for.
 8. **Passing the principal as an argument.** The backend reads the caller from the IC protocol: `msg.caller` in Motoko, `ic_cdk::api::msg_caller()` in Rust. An argument is whatever the caller typed and proves nothing. Role guards and anonymous-principal rejection are in the `canister-security` skill.
-9. **Letting the first origin with users be one you can lose.** Decided in "Your app's identity is its primary origin" below, before writing any sign-in code. The origin an account is created under is permanent: repointing it hands every returning user a new, empty account, so whether this app will have siblings has to be settled *before* it has users. What is *not* a mistake: setting `derivationOrigin` to the origin you are already served at is a validated no-op, not an error. II compares the two in canonical form and skips validation entirely, which is also why `ic0.app`, `icp0.io` and `icp.net` are interchangeable and a single-origin app needs no configuration at all.
-10. **Sharing a cookie domain without a shared `derivationOrigin`.** Elect the primary origin first ("Your app's identity is its primary origin" below), then build the rest from the `internet-identity-shared-sessions` skill. Subdomains share a sign-in only when they share a principal, and a cookie does not produce one: without one primary origin authorized for all of them, the shared record names an account the reading origin can never hold, and `/reauth` bounces the user forever.
-11. **A silent re-issue without `hint`, on the default transport, or to an undeclared callback.** All three are the `/reauth` route of a shared sign-in, which the `internet-identity-shared-sessions` skill builds end to end. `prompt: 'none'` without `hint` fails with `InteractionRequiredError` (`reason` `account_selection_required`) when II holds more than one session. It runs on page load with no user gesture, so it needs `transport: 'redirect'` on a route of its own, declared in the origin's `/.well-known/ii-auth-callbacks`, or the redirect never comes back.
-12. **Serving `/.well-known/ii-app-metadata` on the wrong origin, without CORS, or with one bad field.** Every rule is in "App metadata on the sign-in screen" below, including which characters and sizes are rejected. In short: II reads the document from the primary origin (when set) or the request origin, the document and the logo both need CORS, and one invalid field invalidates the whole thing rather than just that field.
-13. **Installing majors that do not pair.** auth 11 peers `@icp-sdk/core@^6`; pinning core to `^5` out of habit breaks the build.
+9. **Letting the first origin with users be one you can lose.** The origin an account is created under is permanent, so settle whether this app will have siblings before it has users: see "Your app's identity is its primary origin". Setting `derivationOrigin` to the origin you are already served at is *not* a mistake: II compares canonical forms (`ic0.app`, `icp0.io` and `icp.net` are one) and skips validation.
+10. **Sharing a cookie domain without a shared `derivationOrigin`.** A cookie does not produce a shared principal: without one primary origin authorized for every subdomain, the shared record names an account the reading origin can never hold, and `/reauth` bounces the user forever. Elect the primary origin first, then load `shared-sign-in`.
+11. **A silent re-issue without `hint`, on the default transport, or to an undeclared callback.** `prompt: 'none'` without `hint` fails with `InteractionRequiredError` (`reason` `account_selection_required`) when II holds more than one session, and with no user gesture it needs `transport: 'redirect'` to a route declared in `/.well-known/ii-auth-callbacks`. The `shared-sign-in` skill builds this `/reauth` route.
+12. **Serving `/.well-known/ii-app-metadata` on the wrong origin, without CORS, or with one bad field.** One invalid field invalidates the whole document. See "App metadata on the sign-in screen".
 
 ## Using II during local development
 
@@ -175,7 +174,7 @@ continueButton.addEventListener("click", () => {
 - `invalid` follows II's own rules: at least two labels of 1 to 63 letters, digits, or hyphens, no hyphen at either end, no `--` in a label's third and fourth places (punycode `xn--` aside), at most 253 characters, and a port only on a loopback host. Its `reason` names every problem found.
 - The check warms II's cache, so `signIn()` on the same client starts fast.
 
-The organization's own side of this, which is the OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file and the caching windows, is the `internet-identity-sso` skill.
+The organization's own side of this, which is the OIDC client, the `ii-openid-configuration` file, per-app access, the limits that reject the file and the caching windows, is the `organization-sso` skill.
 
 ## Your app's identity is its primary origin
 
@@ -232,7 +231,7 @@ Three properties make a good primary origin:
 
 The user sees their own app's origin, not the primary one: II shows the origin being signed in to and reads only the name, description and logo from the primary origin.
 
-Electing the origin is the whole of the decision; the rest of a shared sign-in is a build. The cookie record, the `/reauth` route and the per-app `ii-auth-callbacks` document are in the `internet-identity-shared-sessions` skill, which assumes this section is already settled.
+Electing the origin is the whole of the decision; the rest of a shared sign-in is a build. The cookie record, the `/reauth` route and the per-app `ii-auth-callbacks` document are in the `shared-sign-in` skill, which assumes this section is already settled.
 
 ### Per environment
 
@@ -322,11 +321,9 @@ Otherwise the same API, except the SSO domain check:
 - `isValidSsoDomain(domain, signal)` fetched `/.well-known/ii-openid-configuration` from the browser and returned a boolean; the organization had to serve it with `Access-Control-Allow-Origin: *`. 11.x removes it: a client built with `ssoDomain` checks the domain through Internet Identity and reports `getSsoStatus()`.
 - `new AuthClient({ ssoDomain })` threw on a malformed domain; 11.x reports `{ state: 'invalid', reason }` from `getSsoStatus()` instead and never throws for the domain. 11.x also reports `invalid` for a port on any host other than a loopback host (`localhost`, `127.0.0.1`, `*.localhost`), and for a malformed name such as `foo..com` or `ab--cd.com`.
 
-10.x peers `@icp-sdk/core@^6`.
-
 ### 9.x
 
-The same API as 10.x. 10.x changed only its peer, from `@icp-sdk/core@^5` to `^6`, so 9.x is what you use if you are held on core 5. With core 6 a read-only session signs in instead of throwing "this session is read-only, which `@icp-sdk/auth` cannot act for yet".
+The same API as 10.x, peering `@icp-sdk/core@^5`: use it if you are held on core 5. With core 6 a read-only session signs in instead of throwing "this session is read-only, which `@icp-sdk/auth` cannot act for yet".
 
 ### 8.x
 
@@ -358,8 +355,8 @@ Anonymous-principal rejection, role guards, and caller binding in async function
 
 ## Where to go next
 
-- Load `internet-identity-shared-sessions` to carry one sign-in across sibling subdomains, once the primary origin above is elected.
-- Load `internet-identity-attributes` for a verified email or display name in the backend.
-- Load `internet-identity-notifications` to notify a signed-in user while the app is closed.
-- Load `internet-identity-sso` to set up an organization's own SSO, the side `ssoDomain` consumes.
+- Load `shared-sign-in` to carry one sign-in across sibling subdomains, once the primary origin above is elected.
+- Load `user-attributes` for a verified email or display name in the backend.
+- Load `push-notifications` to notify a signed-in user while the app is closed.
+- Load `organization-sso` to set up an organization's own SSO, the side `ssoDomain` consumes.
 - Load `canister-security` for anonymous-principal rejection and role guards.

@@ -1,20 +1,20 @@
 ---
-name: internet-identity-sso
-description: "Set up an organization's own single sign-on for Internet Identity, so staff sign in to II-powered apps against Okta, Entra ID, Google Workspace or Auth0. Nothing registers with II: it discovers the configuration from /.well-known/ii-openid-configuration on the organization's domain. Covers the OIDC client, the discovery file and every field, per-app clients including salted-hash keys, gate_all_apps, stable_identifier_claim, the limits that reject the whole file, and II's caching windows. Use when an organization wants its employees to sign in with its own identity provider, when II offers no SSO for a domain that has published the file, or when an edit to that file has not taken effect yet. This is the organization's side, done by whoever administers the domain. For an app sending users there with ssoDomain, load internet-identity. Do NOT use for signing in to II with a personal Google, Apple or Microsoft account, which is ordinary OpenID and needs none of this."
+name: organization-sso
+description: "Set up an organization's own single sign-on for Internet Identity, so staff sign in to II-powered apps against Okta, Entra ID, Google Workspace or Auth0. Nothing registers with II: it discovers the configuration from /.well-known/ii-openid-configuration on the organization's domain. Covers the OIDC client, the discovery file and every field, per-app clients including salted-hash keys, gate_all_apps, stable_identifier_claim, the limits that reject the whole file, and II's caching windows. Use when an organization wants its employees to sign in with its own identity provider, when II offers no SSO for a domain that has published the file, or when an edit to that file has not taken effect yet. This is the organization's side, done by whoever administers the domain. For an app sending users there with ssoDomain, load user-sign-in. Do NOT use for signing in to II with a personal Google, Apple or Microsoft account, which is ordinary OpenID and needs none of this."
 license: Apache-2.0
 compatibility: "an OIDC provider (Okta, Entra ID, Google Workspace or Auth0), HTTPS hosting for the organization's domain"
 metadata:
-  title: Internet Identity Enterprise SSO
+  title: Organization SSO
   category: Auth
 ---
 
-# Internet Identity Enterprise SSO
+# Organization SSO
 
 ## What this is, and who does it
 
-Internet Identity authenticates an organization's staff against its own OpenID Connect provider (Okta, Entra ID, Google Workspace, Auth0). Nothing is registered with Internet Identity: it discovers the configuration from one file on the organization's domain.
+Internet Identity (II) authenticates an organization's staff against its own OpenID Connect provider (Okta, Entra ID, Google Workspace, Auth0). Nothing is registered with Internet Identity: it discovers the configuration from one file on the organization's domain.
 
-This is work an organization's IT administrator does once, on the organization's own domain and identity provider. It is not app code, and no app can do it. The app side is one constructor option, `new AuthClient({ ssoDomain: "acme.com" })`, documented in the `internet-identity` skill along with the `getSsoStatus()` check that tells an app whether a domain has SSO at all.
+This is work an organization's IT administrator does once, on the organization's own domain and identity provider. It is not app code, and no app can do it. The app side is one constructor option, `new AuthClient({ ssoDomain: "acme.com" })`, documented in the `user-sign-in` skill along with the `getSsoStatus()` check that tells an app whether a domain has SSO at all.
 
 ## 1. Register an OIDC client
 
@@ -56,7 +56,7 @@ Serve it over HTTPS at exactly `https://<domain>/.well-known/ii-openid-configura
 | `gate_all_apps` | no | `false` | `true` refuses apps not listed in `app_clients` |
 | `stable_identifier_claim` | no | `sub` | A claim that is the same for one person across all the organization's clients (Entra ID: `oid`, since its `sub` differs per client) |
 
-No CORS header is required: Internet Identity fetches the file server-side, and `@icp-sdk/auth` checks a domain through II (`getSsoStatus()`), not from the browser.
+No CORS header is required: Internet Identity fetches the file server-side, and `@icp-sdk/auth` 11.x checks a domain through II (`getSsoStatus()`), not from the browser. `isValidSsoDomain()` in 10.x and earlier fetched the file cross-origin, so keep `Access-Control-Allow-Origin: *` on it while any app on an older major still signs in through this domain.
 
 The domain users enter is a bare domain such as `acme.com`, not `https://acme.com`, `acme.com/`, or a path.
 
@@ -97,10 +97,6 @@ Internet Identity caches each domain's discovery result:
 
 So removing an `app_clients` entry or enabling `gate_all_apps` applies after the next refresh, normally within an hour of active use; the first sign-in after a quiet period is checked against the cached result while the refresh runs. The provider's signing keys (JWKS) are cached separately for at most 1 hour past freshness, so key rotation is picked up within that window.
 
-## Two more things an admin needs to know
+## What an organization cannot assert
 
 **No `verified_email` under `sso:`.** An organization's SSO cannot produce a verified email. Its `sso:<domain>:email` is asserted by the organization's own provider, so an app trusts it only for domains it lists.
-
-**Older `@icp-sdk/auth` majors checked the domain from the browser.** `isValidSsoDomain()` in 10.x and earlier fetched the discovery file cross-origin and needed `Access-Control-Allow-Origin: *` on it. 11.x checks through II server-side, so the header is no longer required, but leave it in place while any app on an older major still signs in through this domain.
-
-The second is the one most likely to bite: an admin reading only the current documentation would remove a header that older clients still depend on.

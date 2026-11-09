@@ -1,6 +1,6 @@
 {
-  "skill": "internet-identity",
-  "description": "Evaluation cases for the internet-identity skill. Tests whether agents produce correct II sign-in code, avoid top-level await, handle local vs mainnet environments, and elect a primary origin before an app has users.",
+  "skill": "user-sign-in",
+  "description": "Evaluation cases for the user-sign-in skill. Tests whether agents produce correct II sign-in code, avoid top-level await, handle local vs mainnet environments, and elect a primary origin before an app has users.",
   "output_evals": [
     {
       "name": "No top-level await in frontend code",

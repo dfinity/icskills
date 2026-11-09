@@ -1,6 +1,6 @@
 {
-  "skill": "internet-identity-attributes",
-  "description": "Evaluation cases for the internet-identity-attributes skill. Tests whether agents verify an attribute bundle before trusting it: backend-issued nonce, trusted signer, scoped-key prefixes, and verified_email rather than email.",
+  "skill": "user-attributes",
+  "description": "Evaluation cases for the user-attributes skill. Tests whether agents verify an attribute bundle before trusting it: backend-issued nonce, trusted signer, scoped-key prefixes, and verified_email rather than email.",
   "output_evals": [
     {
       "name": "Adversarial: frontend-generated attribute nonce",
