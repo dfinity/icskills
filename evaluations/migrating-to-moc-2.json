@@ -1,0 +1,69 @@
+{
+  "skill": "migrating-to-moc-2",
+  "description": "Evaluation cases for the migrating-to-moc-2 skill. Tests whether agents move a Motoko project from moc 1 to moc 2 correctly: removed compiler flags and their replacements, persistence changes (--legacy-actors, preupgrade/postupgrade), the moc 2 syntax errors (??, glued branches, = async bodies), and code that must compile with both majors. Trigger evals check it activates for moc 1 to moc 2 upgrades and moc 2 build failures, not general Motoko writing (writing-motoko) or routine state migrations (migrating-motoko-actors).",
+  "output_evals": [
+    {
+      "name": "Removed flags in mops.toml",
+      "prompt": "I bumped moc to 2.2.1 in mops.toml and now `mops check` fails with `unknown option '--default-persistent-actors'`. My [moc] args are: `--default-persistent-actors --incremental-gc --generate-view-queries -W=M0223`. What should the args be now? Just the args line and a sentence per removed flag.",
+      "expected_behaviors": [
+        "Removes --default-persistent-actors because actors are persistent by default in moc 2",
+        "Removes --incremental-gc as no longer needed",
+        "Removes --generate-view-queries and says to write public query func getters instead, noting the generated __<field> queries disappear from the Candid interface so clients calling them must be updated",
+        "Keeps -W=M0223 (or an equivalent -W setting) since -W still works",
+        "Does NOT suggest downgrading back to moc 1 or keeping the removed flags"
+      ]
+    },
+    {
+      "name": "Legacy actors become persistent",
+      "prompt": "Our actor was built with moc 1 and `--legacy-actors`. It has `var cache = Map.empty<Text, Nat>()` that we want cleared on every upgrade, and `let onTick : () -> () = func () {}`. What do we change for moc 2? Just the field declarations and why.",
+      "expected_behaviors": [
+        "Explains that without --legacy-actors every field is persistent by default in moc 2",
+        "Marks the cache field `transient` so it still resets on upgrade",
+        "Marks the function-typed field `transient`, noting it otherwise fails with M0131 because a function cannot be persisted",
+        "Does NOT suggest keeping --legacy-actors (it is removed in moc 2)"
+      ]
+    },
+    {
+      "name": "Fix moc 2 syntax errors",
+      "prompt": "These lines compiled on moc 1 but fail on moc 2. Fix each so it compiles, and give the error code if there is one:\n```motoko\nlet n = opt ??0;\nlet m = opt ?? { let k = f(); k + 1 };\nlet sign = if (neg)-1 else 1;\nfunc load() : async Nat = async { 42 };\n```",
+      "expected_behaviors": [
+        "Adds a space on both sides of ??: `opt ?? 0`",
+        "Rewrites the block after ?? as `opt ?? do { ... }`, naming M0273",
+        "Adds a space before the bare branch (`if (neg) -1 else 1`) or braces the branches, naming M0275",
+        "Removes the redundant async from the function body (`func load() : async Nat { 42 }`), naming M0277"
+      ]
+    },
+    {
+      "name": "Code that compiles on both moc 1 and moc 2",
+      "prompt": "I maintain a Motoko library that must keep building on moc 1.16 and moc 2.x for a while. List the syntax rules I should follow so both compilers accept it. Short bullet list only.",
+      "expected_behaviors": [
+        "Parenthesize if/while/for/switch heads",
+        "Parenthesize case patterns and end every case with `;`",
+        "Space both sides of ??, write a block after it as `do { ... }`",
+        "Write function bodies as blocks, never `= async { ... }`",
+        "Annotate a function passed where an async function is expected, since moc 1 cannot infer it",
+        "Never use record update `{ base with ... }` on a record with var fields",
+        "Does NOT recommend moc 2-only forms such as unparenthesized heads or cases without `;`"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly. 'should_trigger' are moc 1 to moc 2 upgrades and moc 2 build failures; 'should_not_trigger' are general Motoko writing, routine state migrations, or unrelated tooling.",
+    "should_trigger": [
+      "How do I upgrade my Motoko project from moc 1 to moc 2?",
+      "After bumping moc to 2.0 I get unknown option '--legacy-persistence'",
+      "What does M0277 redundant async mean? It worked on moc 1",
+      "My code fails on moc 2 with M0275 at an if expression",
+      "We built with --legacy-actors; what changes when we switch to moc 2?",
+      "Can one Motoko codebase compile with both moc 1 and moc 2?",
+      "moc 2 says my switch does not cover every value — it was only a warning before"
+    ],
+    "should_not_trigger": [
+      "How do I use Map in mo:core?",
+      "Write a migration to rename an actor field",
+      "Set up a new mops.toml for a canister",
+      "How do I deploy my canister to mainnet?",
+      "Explain how Internet Identity sign-in works"
+    ]
+  }
+}
