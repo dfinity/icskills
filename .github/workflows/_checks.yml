@@ -65,14 +65,44 @@ jobs:
       - name: Build site
         run: npm run build
 
+      # `skill-validator check` takes exactly one path and exits 3 (usage error)
+      # when handed more, so every path is checked in its own invocation. Exit
+      # codes: 0 clean, 1 errors, 2 warnings, 3 usage error. The aggregate takes
+      # an error over any other code and any other code over a warning, so a
+      # warning on one skill can never hide a skill that was not validated.
+      # Anything other than 0 or 2 fails the job below.
       - name: Run skill-validator checks
         id: skill-validator
         if: steps.changed.outputs.found == 'true'
         run: |
           set +e
-          # TODO: re-enable link checks once https://github.com/agent-ecosystem/skill-validator/issues/45 is resolved
-          report=$(skill-validator check ${{ steps.changed.outputs.paths }} --skip links -o markdown 2>/dev/null)
-          exit_code=$?
+          report=""
+          had_error=0
+          had_warning=0
+          had_other=0
+          for path in ${{ steps.changed.outputs.paths }}; do
+            # TODO: re-enable link checks once https://github.com/agent-ecosystem/skill-validator/issues/45 is resolved
+            out=$(skill-validator check "$path" --skip links -o markdown 2>/dev/null)
+            code=$?
+            report="${report}${out}"$'\n'
+            case "$code" in
+              0) ;;
+              1) had_error=1 ;;
+              2) had_warning=1 ;;
+              *) had_other=$code ;;
+            esac
+            # Re-run with annotations sent to stdout/stderr for GitHub to process
+            skill-validator check "$path" --skip links --emit-annotations > /dev/null
+          done
+          if [ "$had_error" -ne 0 ]; then
+            exit_code=1
+          elif [ "$had_other" -ne 0 ]; then
+            exit_code=$had_other
+          elif [ "$had_warning" -ne 0 ]; then
+            exit_code=2
+          else
+            exit_code=0
+          fi
           echo "$report" >> "$GITHUB_STEP_SUMMARY"
           delimiter=$(openssl rand -hex 8)
           {
@@ -81,8 +111,6 @@ jobs:
             echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
-          # Re-run with annotations sent to stdout/stderr for GitHub to process
-          skill-validator check ${{ steps.changed.outputs.paths }} --skip links --emit-annotations > /dev/null
           exit 0
 
       - name: Run project-specific checks
@@ -132,8 +160,13 @@ jobs:
 
             No skill files were changed in this PR — validation skipped.
 
+      # Warnings (skill-validator exit 2) are acceptable; everything non-zero
+      # beyond that fails, so a usage error can never read as a pass.
       - name: Fail on validation errors
-        if: steps.changed.outputs.found == 'true' && (steps.skill-validator.outputs.exit_code == '1' || steps.check-project.outputs.exit_code == '1')
+        if: |
+          steps.changed.outputs.found == 'true'
+          && ((steps.skill-validator.outputs.exit_code != '0' && steps.skill-validator.outputs.exit_code != '2')
+          || steps.check-project.outputs.exit_code != '0')
         run: |
           echo "::error::Validation found errors"
           exit 1
