@@ -17,7 +17,7 @@
 /skills/evm-rpc/                 @dfinity-bjoern
 /skills/icrc-ledger/             @dfinity-bjoern
 /skills/cycles-management/       @dfinity-bjoern
-/skills/internet-identity/       @aterga
+/skills/user-sign-in/            @aterga
 /skills/sns-launch/              @dfinity-bjoern
 /skills/https-outcalls/          @dfinity/core-protocol
 /skills/multi-canister/          @dfinity/core-protocol

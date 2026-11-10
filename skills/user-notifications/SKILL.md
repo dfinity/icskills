@@ -1,28 +1,26 @@
 ---
-name: internet-identity-notifications
-description: "Notify a signed-in Internet Identity user from your canister while the app is closed, with web push that II owns end to end, so there is no push service, no VAPID keys and no device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must reach a user who is not looking at it, when adding web push or a notifications toggle, or when consent was granted and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load internet-identity first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
+name: user-notifications
+description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (as web push), so there is no push service, no VAPID keys and no device tokens in the app: the canister addresses a user and II reaches their browsers. Covers asking the user's consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must tell a user something while they are not looking at it, when adding notifications, web push or a notifications toggle, or when the user consented and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load user-sign-in first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.1.0, moc >= 2.0.0"
 metadata:
-  title: Internet Identity Notifications
-  category: Auth
+  title: User Notifications
+  category: Integration
 ---
 
-# Internet Identity Notifications
+# User Notifications
 
 ## Prerequisite
 
-Load the `internet-identity` skill first. Two things from it are load-bearing here: the sender list is served from the app's **primary origin**, the same origin `ii-app-metadata` is read from, and that metadata is what names the app on its own notifications.
+Load the `user-sign-in` skill first. The sender list below is served from the app's **primary origin**, which that skill elects.
 
-A suite shares one sender list and one 10-canister cap across every app derived from that origin.
+## How it works
 
-## Notifications
-
-Your canister can notify a signed-in user while the app is closed. II owns the push subscriptions, so there is no push service, no VAPID keys, and no device tokens in the app.
+Your canister can notify your app's users, on their devices and while the app is closed. The canister addresses a user; Internet Identity holds that user's devices and delivers to them, so there is no push service, no VAPID keys, and no device tokens in the app.
 
 Three pieces, all required. Missing any one of them produces silence rather than an error at the point you left out.
 
-1. The frontend asks for consent, through II.
+1. The frontend asks the user's consent, through II.
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
 
@@ -42,7 +40,7 @@ await authClient.revokeNotificationConsent();
 | `getNotificationConsentStatus()` | No | Yes | `{ granted }`, uncertified query |
 | `revokeNotificationConsent()` | No | Yes | nothing; idempotent |
 
-- All three answer a **record**, not a bare boolean. `const granted = await ...requestNotificationConsent()` is wrong and type-checks as an object.
+- All three answer a **record**, not a bare boolean. `const granted = await ...requestNotificationConsent()` type-checks and is always truthy.
 - `granted: false` is the user's refusal, not a failure. Render it; do not throw.
 - Asking a second time when consent is already held returns `{ granted: true }` without showing a screen, because the answer is read back from the canister rather than reported from the ceremony.
 - `getNotificationConsentStatus` is a query, so the answer is uncertified. Paint a toggle from it; do not gate anything on it.
@@ -89,17 +87,15 @@ Serve from the **primary origin**, the same origin as `/.well-known/ii-app-metad
 { "senders": ["ryjl3-tyaaa-aaaaa-aaaba-cai"] }
 ```
 
-- At most **10** canisters. A longer list is rejected whole, never truncated.
+- At most **10** canisters, shared by every app derived from that origin. A longer list is rejected whole, never truncated.
 - II caches what it reads, so a canister added is not accepted instantly and one removed keeps working for a while afterwards.
 - Without this document naming the sending canister, every send is refused. This is the most common cause of "nothing arrives and nothing errors".
-
-A suite shares one sender list and one cap of 10 across every app derived from that origin.
 
 ## 3. Sending
 
 Library: `identity-notifications`, same `send` in both languages, different wiring. Rust is on crates.io, Motoko on Mops (requires moc 2.0.0 or later).
 
-**Rust** needs `endpoints!()` plus three stable `MemoryId`s handed to `init`, and `init` called again from `post_upgrade`. **Motoko** needs neither: the mixin brings the endpoints and keeps its own state, and there is nothing to do on upgrade. Do not tell a Motoko user to pass memory ids; there are none.
+**Rust** needs `endpoints!()` plus three stable `MemoryId`s handed to `init` (see "Upgrades"). **Motoko** needs neither: the mixin brings the endpoints and keeps its own state. Do not tell a Motoko user to pass memory ids; there are none.
 
 ```toml
 identity-notifications = "0.1"
@@ -198,7 +194,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 ## What the app does and does not own
 
 - **The app addresses a user, nothing finer.** II holds a queue per browser that identity has registered, so one `send` can surface on a laptop and a phone at once. Where and how a notification reaches them is II's and the user's to manage, and an app that reasons about it is coupling itself to something it cannot see.
-- **II composes what is shown.** The user reads your app's name, then the title your canister sent. The name comes from `/.well-known/ii-app-metadata`, and falls back to your origin's hostname where you publish none, so do not put your app's name in `title` yourself: it arrives twice. Publishing that document is what brands the notifications as well as the sign-in screen: see "App metadata on the sign-in screen" in the `internet-identity` skill.
+- **II composes what is shown.** The user reads your app's name, then the title your canister sent. The name comes from `/.well-known/ii-app-metadata`, and falls back to your origin's hostname where you publish none, so do not put your app's name in `title` yourself: it arrives twice. Publishing that document is what brands the notifications as well as the sign-in screen: see "App metadata on the sign-in screen" in the `user-sign-in` skill.
 - **Sending cannot fail the call it is made from.** `send` neither traps nor awaits, so a recipient who cannot be notified costs the endpoint nothing and returns nothing to branch on. What became of a notification is in `metrics()`.
 - **iOS needs II added to the Home Screen** for web push. The consent ceremony walks the user through it; the app does nothing.
 
@@ -212,11 +208,7 @@ Pass the same `MemoryId`s every time. Renumbering them on a running canister poi
 
 ## Mistakes That Break Your Build
 
-1. **Asking without a click.** The ceremony has to render, so it needs a user gesture: the sign-in button, or a control of your own. See "1. Consent, in the frontend".
-2. **Asking under `prompt: 'none'`.** Same reason, and it raises `InteractionRequiredError` rather than answering a refusal. Ask again from a click.
-3. **Treating a refusal as an error.** `granted: false` is the user's answer. Render it, and offer the control again later.
-4. **Reading the answer as a boolean.** All three calls answer a record, so `const granted = await authClient.requestNotificationConsent()` type-checks and is always truthy.
-5. **Leaving the senders document out.** Without `/.well-known/ii-notification-senders` naming the sending canister, every send is refused and nothing anywhere reports it. See "2. The senders document".
-6. **Putting your app's name in `title`.** II puts it in front of the title you sent, so the user reads it twice. See "What the app does and does not own".
-7. **Deriving `key` from whatever a caller passed in.** Two of your own sends under one key collide in that recipient's tray and the later one wins. See "`key`".
-8. **Skipping `init` in `post_upgrade`, in Rust.** Anything queued stays queued and is never sent. The Motoko mixin needs no such call. See "Upgrades".
+1. **Leaving the senders document out.** Without `/.well-known/ii-notification-senders` naming the sending canister, every send is refused and nothing anywhere reports it. See "2. The senders document".
+2. **Putting your app's name in `title`.** II puts it in front of the title you sent, so the user reads it twice. See "What the app does and does not own".
+3. **Deriving `key` from whatever a caller passed in.** Two of your own sends under one key collide in that recipient's tray and the later one wins. See "`key`".
+4. **Skipping `init` in `post_upgrade`, in Rust.** Anything queued stays queued and is never sent. See "Upgrades".
