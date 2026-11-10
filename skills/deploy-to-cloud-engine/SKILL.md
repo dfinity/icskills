@@ -280,6 +280,7 @@ icp identity link web <your-identity-name> --app <console-domain>
 
   Do **not** redirect stdin from `/dev/null` — the bare EOF does not satisfy the prompt, and the command sits on "Press Enter to log in" indefinitely with no browser ever opening.
 - After Enter it opens a **browser tab**. The **user** completes the Internet Identity sign-in there. Wait for them to confirm before continuing — you cannot complete the sign-in for them.
+- On first use, id.ai can stop at a **"CLI access disabled"** screen. That is the expected first run, not an error. Tell the user to turn on **CLI access** for their identity in the Internet Identity settings, then run the link command again from the start: the old sign-in URL is single-use. See the `agent-web-identity` skill, Pitfall 1.
 - `--app` must be the **exact** console host, e.g. `opencloud.org`. Another domain derives a *different* principal, and the engine will reject the deploy as unauthorized.
 - This is a **one-time, per-machine** step.
 
