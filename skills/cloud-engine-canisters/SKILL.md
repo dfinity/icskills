@@ -307,7 +307,7 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
 
 ## Rule 5 — Inference through the engine operator
 
-Every engine has an **engine-operator** canister, and the operator is the engine's gateway to AI inference. The engine's owner turns a provider on in the console (engine → **Integrations** → the Inference card; **Caffeine** today, IIG as the platform adds it). From then on any canister on the engine sends OpenAI-shaped requests to the operator's `inference_request`, and the operator adds the provider's API key and makes the HTTPS outcall. Your canister never holds a key, never sees one, and never calls the provider's host itself.
+Every engine has an **engine-operator** canister, and the operator is the engine's gateway to AI inference. The engine's owner turns a provider on in the console (engine → **Integrations** → the Inference card; **Caffeine** today, IIG as the platform adds it). From then on any canister on the engine sends OpenAI-shaped requests to the operator's `inference_request`, and the operator adds the provider's API key and makes the HTTPS outcall. Your canister never holds a key, never sees one, and never calls the provider's host itself. The engine has **one provider on at a time**, so a canister can leave the provider out and the one that is on answers; it can leave the model out too, and the operator fills in that provider's default model.
 
 That is the whole model, and it is why none of the usual inference code applies here:
 
@@ -330,7 +330,7 @@ icp canister call <operator-id> listInferenceProviders '()' -n ic --query
 (record { providers = opt vec { record { id = opt "caffeine"; base_url = opt "https://inference.caffeine.ai/v1"; name = opt "Caffeine"; enabled = opt true; ready = opt true } } })
 ```
 
-`enabled` is the owner's switch, `ready` says the operator holds a key. A provider that is listed but not `enabled`, or not `ready`, answers every `inference_request` with `BadRequest`: the owner turns it on in the console, there is nothing to do in code. A provider that is not listed at all is `NotFound`.
+`enabled` is the owner's switch, and at most one provider is on: turning one on turns the others off, and every provider starts off. `ready` says the operator holds a key. A provider that is listed but not `enabled`, or not `ready`, answers every `inference_request` with `BadRequest`: the owner turns it on in the console, there is nothing to do in code. A provider that is not listed at all is `NotFound`.
 
 ### The call
 
@@ -339,14 +339,14 @@ The operator's interface for inference, and the Motoko mirror of it:
 ```candid
 type HttpHeader = record { name : text; value : text };
 type InferenceRequestArgs = record {
-  provider : opt text;                 // "caffeine"
+  provider : opt text;                 // "caffeine", or null for the one provider that is on
   method : opt variant { get; post };  // defaults to post with a body, get without
   path : opt text;                     // "/chat/completions", under the provider's base URL
   headers : opt vec HttpHeader;        // the operator sets Authorization itself
   body : opt blob;
   max_response_bytes : opt nat64;
 };
-type InferenceResponse = record { status : opt nat; headers : opt vec HttpHeader; body : opt blob };
+type InferenceResponse = record { status : opt nat; headers : opt vec HttpHeader; body : opt blob; provider : opt text };  // provider: the one that answered
 type Error = variant { Unauthorized; NotFound; BadRequest : text; Internal : text };
 service : {
   inference_request : (InferenceRequestArgs) -> (variant { ok : InferenceResponse; err : Error });
@@ -361,7 +361,7 @@ type InferenceRequestArgs = {
   provider : ?Text; method : ?{ #get; #post }; path : ?Text;
   headers : ?[HttpHeader]; body : ?Blob; max_response_bytes : ?Nat64;
 };
-type InferenceResponse = { status : ?Nat; headers : ?[HttpHeader]; body : ?Blob };
+type InferenceResponse = { status : ?Nat; headers : ?[HttpHeader]; body : ?Blob; provider : ?Text };
 type OperatorError = { #Unauthorized; #NotFound; #BadRequest : Text; #Internal : Text };
 type Operator = actor {
   inference_request : InferenceRequestArgs -> async { #ok : InferenceResponse; #err : OperatorError };
@@ -369,10 +369,11 @@ type Operator = actor {
 
 let operator : Operator = actor (Principal.toText(operatorId));  // from configuration
 
-// One chat completion. Keep the reply bounded: see "The deadline" below.
-let request = "{\"model\":\"router\",\"max_tokens\":350,\"messages\":[{\"role\":\"user\",\"content\":\"What is a canister?\"}]}";
+// One chat completion. No model: the operator fills in the provider's default
+// model. Keep the reply bounded: see "The deadline" below.
+let request = "{\"max_tokens\":350,\"messages\":[{\"role\":\"user\",\"content\":\"What is a canister?\"}]}";
 let res = await operator.inference_request({   // same engine: plain, or (with timeout = 60)
-  provider = ?"caffeine";
+  provider = null;                             // the one provider that is on; ?"caffeine" names one
   method = null;
   path = ?"/chat/completions";
   headers = ?[{ name = "content-type"; value = "application/json" }];
@@ -397,12 +398,12 @@ Rust is the same call through `Call::unbounded_wait(operator, "inference_request
 
 ```rust
 let body = serde_json::json!({
-    "model": "router", "max_tokens": 350,
+    "max_tokens": 350,                     // no model: the operator fills in the default
     "messages": [{ "role": "user", "content": prompt }],
     "stream": false,                       // an outcall returns the whole response at once
 });
 let request = InferenceRequestArgs {
-    provider: Some("caffeine".into()),
+    provider: None,                        // the one provider that is on
     method: None,
     path: Some("/chat/completions".into()),
     headers: Some(vec![Header { name: "content-type".into(), value: "application/json".into() }]),
@@ -413,7 +414,9 @@ let result: InferenceResult = Call::unbounded_wait(operator, "inference_request"
     .with_arg(request).await?.candid()?;
 ```
 
-- **`path` must start with `/`** and is appended to the provider's `base_url` (`https://inference.caffeine.ai/v1` for Caffeine, so `/chat/completions`, `/models`). Caffeine's `model` is an alias, `router`, and it picks the model.
+- **`path` must start with `/`** and is appended to the provider's `base_url` (`https://inference.caffeine.ai/v1` for Caffeine, so `/chat/completions`, `/models`).
+- **Leave `model` out** and the operator inserts the provider's default model into a JSON body (`router` on Caffeine, a class such as `class/default` on IIG); name a model only when you need a specific one, and then you have to name the provider too, since model names differ per provider. A body that is not a JSON object goes as it is.
+- **A null `provider` with no provider on** is `BadRequest("no inference provider is on")`. The reply's `provider` field says which one answered.
 - **`stream` must be false.** An HTTPS outcall returns one response; a streamed completion is not a response the operator can return.
 - **`max_response_bytes` is yours** (Rule 3): an answer larger than it fails the outcall.
 - **Any header you set named `Authorization` is replaced** by the operator's.
@@ -460,7 +463,7 @@ A demo that accepts the exposure should at least keep the per-call bounds and sa
 17. **Relaying to a target the console proxy does not serve.** A console proxy relays for the engine's canisters only the management canister's threshold-key, `http_request` and `bitcoin_*` methods and the XRC, EVM RPC, SOL RPC, Bitcoin and Dogecoin canisters. Anything else, a third-party canister that charges cycles included, comes back as `CallFailed` (`a proxy funded by its engine relays only to …`), whatever its balance. Do not top it up or retry: route such a call through a self-deployed proxy that has the calling canister as a controller, or drop the dependency.
 18. **Calling an inference provider directly, with a key in the canister.** On an engine inference goes through the operator's `inference_request` (Rule 5). A canister that holds a Caffeine or IIG key and makes its own outcall spends credit from code anyone can read, ignores the owner's switch in the console, and does not appear in the engine's usage. Drop the key and the outcall; send the OpenAI request to the operator.
 19. **A completion that outruns the outcall deadline.** An outcall has a 30 second deadline and the provider round trip takes about 3 of them. A completion that is still generating when it passes comes back as `Internal("… Canister http request timed out")`, and the provider may bill the reply anyway. On that error, check the bound first: set `max_tokens`, ask for short replies, send a small conversation. A bounded completion can still time out on a slow model, so measure. `GET /models` through the same call shows only that the path to the provider works; it does not explain a completion's timeout.
-20. **Reading `BadRequest` from `inference_request` as a code bug.** It usually means the provider is off or not ready on this engine: the owner has not turned it on in the console, or the operator holds no key yet. Check `listInferenceProviders` (`enabled`, `ready`) and tell the user; the only `BadRequest` that is yours is a `path` that does not start with `/`.
+20. **Reading `BadRequest` from `inference_request` as a code bug.** It usually means no provider is on, or the named one is off or not ready on this engine: the owner has not turned it on in the console, or the operator holds no key yet. Check `listInferenceProviders` (`enabled`, `ready`) and tell the user; the only `BadRequest` that is yours is a `path` that does not start with `/`.
 
 ## Additional References
 

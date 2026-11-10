@@ -137,7 +137,7 @@
       "expected_behaviors": [
         "Says no: on a cloud engine inference goes through the engine-operator canister's `inference_request`, which adds the provider's key and makes the outcall itself",
         "Says the canister never holds or receives a provider key, in an init argument, an environment variable or source, and never calls the provider's host directly",
-        "Mentions that the engine's owner turns the provider on in the console, and that the call is a same-subnet call with no cycles, where a plain `await` is allowed and a bounded wait needs a timeout above the outcall's 30 s deadline",
+        "Mentions that the engine's owner turns one provider on in the console, that the canister may leave the provider and the model out so the one that is on answers with its default model, and that the call is a same-subnet call with no cycles, where a plain `await` is allowed and a bounded wait needs a timeout above the outcall's 30 s deadline",
         "Does NOT suggest routing the inference outcall through the console proxy canister"
       ]
     },
@@ -155,7 +155,7 @@
       "name": "Adversarial: BadRequest from inference_request read as a code bug",
       "prompt": "Every inference_request from my Motoko canister on a cloud engine comes back err = #BadRequest(...). The path is \"/chat/completions\" and the provider is \"caffeine\". listInferenceProviders shows caffeine with enabled = false and ready = false. Is my call wrong? Answer briefly.",
       "expected_behaviors": [
-        "Says the call is fine: `BadRequest` means the provider is off or not ready on this engine (the owner has not turned it on in the console, or the operator holds no key yet)",
+        "Says the call is fine: `BadRequest` means no provider is on, or the named one is off or not ready on this engine (the owner has not turned it on in the console, or the operator holds no key yet)",
         "Tells the agent to ask the engine's owner to turn Caffeine on in the console (engine → Integrations), and that nothing in code fixes it",
         "Does NOT suggest adding a provider key to the canister, calling the provider directly, or changing the path"
       ]
