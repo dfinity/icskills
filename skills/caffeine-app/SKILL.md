@@ -309,10 +309,13 @@ Notes:
 - **`caffeineai-authorization`** provides Internet Identity sign-in and roles
   (`MixinAuthorization`, `AccessControl`). It also ships a lint rule that fails
   `caffeine check` unless `main.mo` includes `MixinAuthorization`. To use custom
-  authentication instead, remove the package (`mops remove caffeineai-authorization`)
-  together with its imports, include, state field, and migration line — see the
-  `extension-authorization` skill:
+  authentication instead before the first deploy, remove the package
+  (`mops remove caffeineai-authorization`) together with its imports, include, state
+  field, and migration line — see the `extension-authorization` skill:
   <https://github.com/caffeinelabs/skills/tree/main/skills/extension-authorization>.
+  After a deploy, the applied first migration imports the package, so removing it
+  breaks the build: keep the package and `MixinAuthorization`, and add custom checks
+  alongside them.
 - **`[lint] extends = true`** runs the lint rules that dependencies ship (such as the one
   above) with the `lintoko` pinned in `[toolchain]`, as part of `mops check`.
 - **`ic`** provides the IC management canister's types and calls (`mo:ic/Types`,

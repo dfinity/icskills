@@ -10,9 +10,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (this repo has no releases/tags). Watch for changes to the skill folder between the pinned commit and `main`; the per-skill `version:` frontmatter field is a secondary signal.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
-- **Upstream version:** 0.2.13 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
+- **Upstream version:** 0.2.14 (skill frontmatter `version:`)
+- **Last synced:** 2026-11-10
 - **Upstream files:**
   - `skills/writing-motoko/SKILL.md`
   - `skills/writing-motoko/api-reference.md → references/api-reference.md`
@@ -34,9 +34,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
 - **Upstream version:** 0.2.8 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Last synced:** 2026-11-10
 - **Upstream files:**
   - `skills/migrating-motoko-actors/SKILL.md`
   - `skills/migrating-motoko-actors/examples.md → references/examples.md`
@@ -51,9 +51,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
 - **Upstream version:** 0.1.6 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Last synced:** 2026-11-10
 - **Upstream file:** `skills/troubleshooting-motoko-migrations/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
   - **Frontmatter (entire block):** same transform as the other two, but **not the same moc floor** — ours is `moc >= 1.15.0, core >= 2.5.0` against upstream's `>=1.11.2`, because this skill's error table documents `M0268` (first ships in moc 1.15.0) and `M0267` (1.12.0). See caffeinelabs/skills#14. The moc 2 diagnostic `M0278` it documents is for projects pinned to moc 2 and is left out of the floor. Body is otherwise 1:1 with upstream (the `## Related skills` heading is kept as-is).
@@ -64,9 +64,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
 - **Upstream version:** 0.1.3 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Last synced:** 2026-11-10
 - **Upstream files:**
   - `skills/reviewing-motoko/SKILL.md`
   - `skills/reviewing-motoko/references/state-and-persistence.md → references/state-and-persistence.md`
@@ -81,9 +81,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
-- **Upstream version:** 0.1.0 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
+- **Upstream version:** 0.1.1 (skill frontmatter `version:`)
+- **Last synced:** 2026-11-10
 - **Upstream file:** `skills/migrating-to-moc-2/SKILL.md`
 - **icskills-owned sections (do not overwrite from upstream):**
   - **Frontmatter (entire block):** same transform as `writing-motoko` (owned `description`, `license: Apache-2.0`, string `compatibility`, `metadata.title`/`category`). The skill moves a project to moc 2, so its `compatibility` names the moc 2 toolchain (`moc >= 2.0.0, mops >= 3.0.0`).
@@ -94,9 +94,9 @@ Upstream file paths and the tracking model (release-tag vs commit) are listed pe
 
 - **Upstream:** https://github.com/caffeinelabs/skills
 - **Tracking model:** commit-based (no releases/tags). Same as `writing-motoko`.
-- **Commit:** 56d166dc8a1b729c18f828cd90cc6be09fff9bc7
-- **Upstream version:** 0.1.0 (skill frontmatter `version:`)
-- **Last synced:** 2026-11-09
+- **Commit:** 6b10f227f037575407308c4b322f337b974a92e8
+- **Upstream version:** 0.1.1 (skill frontmatter `version:`)
+- **Last synced:** 2026-11-10
 - **Upstream files:**
   - `skills/caffeine-app/SKILL.md`
   - `skills/caffeine-app/references/frontend-template.md → references/frontend-template.md`

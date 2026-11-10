@@ -143,7 +143,7 @@ import Text "mo:core/Text";
 actor { /* ... */ };
 ```
 
-The upgrade that installs this version still runs the old `preupgrade`, so `entries` holds the data when the migration reads it. Warning M0207 on the dropped field is expected. Delete the `(with migration = ...)` clause once this version is deployed. With an enhanced migration chain (`--enhanced-migration`), put the same function in the next chain file as `public func migration` instead.
+The upgrade that installs this version still runs the old `preupgrade`, so `entries` holds the data when the migration reads it. Warning M0207 on the dropped field is expected. Delete the `(with migration = ...)` clause once this version is deployed. With an enhanced migration chain (`--enhanced-migration`), declare the field without an initializer, `let users : Map.Map<Text, Nat>;`, and put the same function in the next chain file as `public func migration` instead.
 
 ## Syntax that no longer parses
 
