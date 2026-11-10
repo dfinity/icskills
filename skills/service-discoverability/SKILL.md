@@ -261,7 +261,7 @@ https://hcv4s-uaaaa-aaabq-qaaba-cai.icp.net
 
 - If the derivation origin is just the app's own visible origin, you may omit the file; its absence means "derive for the visible / requested origin itself."
 - Generate it at deploy time with the same `presync` pattern when the origin is a per-network canister URL; for a custom domain it is a one-line static file (e.g. `public/.well-known/ii-derivation-origin`).
-- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list is the inverse relation — "who may point here," not "where does this app point" (Pitfall 8). On the default `*.icp0.io` / `ic0.app` canister origins, do **not** set a custom `derivationOrigin` at all (the `user-sign-in` skill's Mistake #8 explains why it breaks auth); a custom one goes hand in hand with a custom domain — see the `custom-domains` skill.
+- **Do not confuse it with `ii-alternative-origins`.** A custom origin is enabled by two coupled files: the app pins `derivationOrigin` in its II configuration, and the derivation origin itself publishes `/.well-known/ii-alternative-origins` listing the origins allowed to derive against it. That list is the inverse relation — "who may point here," not "where does this app point" (Pitfall 8). On the default `*.icp0.io` / `ic0.app` canister origins, do **not** set a custom `derivationOrigin` at all (see "Your app's identity is its primary origin" in the `user-sign-in` skill); a custom one goes hand in hand with a custom domain — see the `custom-domains` skill.
 
 ## How an Agent Traverses This
 
