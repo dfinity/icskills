@@ -41,6 +41,11 @@ In Motoko the same count comes from `Prim.subnetSelfNodeCount() : Nat32` (via
 Leaving `replication` unset uses the endpoint's own defaults: `floor(2 * N / 3) + 1` for
 `min_responses`, and `N` for both `max_responses` and `total_requests`.
 
+In Motoko, set `replication` anyway. `ic` 6.0.0 does not read the subnet size: calling
+`ic0.subnet_self_node_count` from `Call` would make every canister that imports it
+require a replica with that system API. So with `replication` unset, its reservation
+assumes full-size responses. The surplus is refunded, but it is held while the call runs.
+
 ## Working example
 
 ```rust
