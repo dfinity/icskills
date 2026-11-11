@@ -1,5 +1,12 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
+#
+# GitHub applies ONLY the last matching pattern — rules do not accumulate.
+# Keep @dfinity/sdk on every rule so the SDK team remains a code owner
+# for every path, alongside any listed domain experts.
+#
+# Multiple owners on one line are an OR: any single one of them satisfies the
+# required code-owner review.
 
 * @dfinity/sdk
 
@@ -7,25 +14,22 @@
 /.github/                        @dfinity/sdk
 /.claude/                        @dfinity/sdk
 
-# Skill files — domain experts
+# Skill files — domain experts, plus the repo-wide approvers
 /skills/icp-cli/                 @dfinity/sdk
 /skills/static-site/             @dfinity/sdk
 /skills/certified-variables/     @dfinity/sdk
-/skills/ckbtc/                   @dfinity-bjoern
-/skills/cksol/                   @dfinity-bjoern
-/skills/cketh/                   @dfinity-bjoern
-/skills/evm-rpc/                 @dfinity-bjoern
-/skills/icrc-ledger/             @dfinity-bjoern
-/skills/cycles-management/       @dfinity-bjoern
-/skills/user-sign-in/            @aterga
-/skills/sns-launch/              @dfinity-bjoern
-/skills/https-outcalls/          @dfinity/core-protocol
-/skills/multi-canister/          @dfinity/core-protocol
-/skills/stable-memory/           @dfinity/core-protocol
-/skills/vetkeys/                 @dfinity/core-protocol
-/skills/encrypted-maps/          @dfinity/core-protocol
-/skills/wallet-integration/      @dfinity/oisy
-/skills/ic-dashboard/            @jp-dfinity
-
-# Temporary override while we clean up the file structure
-* @JoshDFN @dfinity/sdk
+/skills/ckbtc/                   @dfinity/defi @dfinity/sdk
+/skills/cksol/                   @dfinity/defi @dfinity/sdk
+/skills/cketh/                   @dfinity/defi @dfinity/sdk
+/skills/evm-rpc/                 @dfinity/defi @dfinity/sdk
+/skills/icrc-ledger/             @dfinity/core-protocol @dfinity/sdk
+/skills/cycles-management/       @dfinity/core-protocol @dfinity/sdk
+/skills/user-sign-in/            @dfinity/identity @dfinity/sdk
+/skills/sns-launch/              @dfinity/core-protocol @dfinity/sdk
+/skills/https-outcalls/          @dfinity/core-protocol @dfinity/sdk
+/skills/multi-canister/          @dfinity/core-protocol @dfinity/sdk
+/skills/stable-memory/           @dfinity/core-protocol @dfinity/sdk
+/skills/vetkeys/                 @dfinity/core-protocol @dfinity/sdk
+/skills/encrypted-maps/          @dfinity/core-protocol @dfinity/sdk
+/skills/wallet-integration/      @dfinity/oisy @dfinity/sdk
+/skills/ic-dashboard/            @dfinity/platform-operations @dfinity/sdk
