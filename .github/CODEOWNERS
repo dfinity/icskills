@@ -1,11 +1,9 @@
 # IC Skills — Code Owners
 # PRs touching these paths auto-request review from the listed GitHub users.
 #
-# GitHub applies ONLY the last matching pattern — rules do not accumulate, and
-# there is no "global fallback owner" concept. So the repo-wide approvers who
-# may sign off on anything (@JoshDFN, @dfinity/sdk) have to be repeated on
-# EVERY rule below. Omit them from a new rule and they are silently locked out
-# of that path. `npm run validate` enforces this; see scripts/check-project.js.
+# GitHub applies ONLY the last matching pattern — rules do not accumulate.
+# Keep @dfinity/sdk on every rule so the SDK team remains a code owner
+# for every path, alongside any listed domain experts.
 #
 # Multiple owners on one line are an OR: any single one of them satisfies the
 # required code-owner review.
