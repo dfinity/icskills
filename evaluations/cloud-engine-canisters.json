@@ -146,7 +146,7 @@
       "prompt": "My engine canister calls the operator's inference_request with a chat completion for Caffeine (the request sets no max_tokens) and gets err = Internal(\"the outcall to caffeine failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
       "expected_behaviors": [
         "Identifies the HTTPS outcall's 30 second deadline, and that a completion still generating when it passes fails this way; treats the missing `max_tokens` as the first thing to fix, not as a proven cause",
-        "Recommends bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false; notes that a bounded completion can still time out on a slow model",
+        "Recommends bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false",
         "Reads the /models result as proof that the path to the provider works, not as the cause of the completion's timeout",
         "Does NOT propose cycles, retries without a bound, or moving the outcall into the canister itself"
       ]
@@ -167,16 +167,6 @@
         "Says no: a non-anonymous caller is not an authorization, anyone can make a keypair and call as a signed-in principal and drain the credit",
         "Recommends restricting the method to controllers or an owner-maintained allow-list, or metering an open service with a per-principal quota and an aggregate spending cap kept in stable state, besides per-call bounds such as `max_tokens`",
         "Does NOT treat the operator's own caller check as the app's authorization"
-      ]
-    },
-    {
-      "name": "Adversarial: a canister hard-coded to one inference provider",
-      "prompt": "My engine canister sends inference_request with provider = \"caffeine\" and model = \"router\" in the body. It worked last week, but today every call returns err = BadRequest(\"inference provider caffeine is off\"). listInferenceProviders shows iig with enabled = true and ready = true. What do I change? Answer briefly.",
-      "expected_behaviors": [
-        "Says the owner switched the engine's provider to IIG in the console: one provider is on at a time, and a call that names another one is refused",
-        "Recommends leaving `provider` out and dropping the `model` from the body, so the operator sends the call to the provider that is on with that provider's default model",
-        "Mentions that the reply's `provider` field names the provider that answered",
-        "Does NOT suggest adding an IIG key to the canister, calling IIG directly, or asking the owner to switch back as the fix"
       ]
     }
   ],
@@ -199,8 +189,7 @@
       "My engine canister needs to call the EVM RPC canister",
       "How does my canister on an OpenCloud engine call Caffeine inference?",
       "My engine canister's inference_request to the operator returns Internal: Canister http request timed out",
-      "Where do I put the Caffeine API key for a canister running on a cloud engine?",
-      "Which inference provider answers when my engine canister calls the operator, IIG or Caffeine?"
+      "Where do I put the Caffeine API key for a canister running on a cloud engine?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",

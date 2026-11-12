@@ -22,7 +22,7 @@ That model comes with protocol-enforced call rules. Code that works on a normal 
 | 2 | **Cross-subnet calls must be bounded-wait** — `(with timeout = N)` in Motoko, `Call::bounded_wait` in Rust |
 | 3 | **HTTPS outcalls: ordinary code, zero cost** — keep the standard wrapper, transform on your own canister, never through the proxy |
 | 4 | **Cycle-bearing cross-subnet targets** (XRC, threshold signing, vetKD, the Bitcoin API, EVM/SOL RPC) go **through the console proxy canister**. Ask the user for its id before writing that code |
-| 5 | **AI inference goes through the engine operator** — call its `inference_request` with an OpenAI path and no provider or model; the provider the owner picked (IIG or Caffeine) answers, and the operator adds its key. Never call a provider yourself, never hold a key |
+| 5 | **AI inference goes through the engine operator** — call its `inference_request` with no provider or model; it adds the key of the provider that is on. Never hold a key, never call a provider yourself |
 
 ## Rule 1 — Never attach a cycles amount you computed yourself
 
@@ -307,23 +307,17 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
 
 ## Rule 5 — Inference through the engine operator
 
-Every engine has an **engine-operator** canister, and the operator is the engine's gateway to AI inference. The platform gives the operator a list of **inference providers**, each with its own base URL, default model and key: today **IIG** (`iig`, DFINITY's Internet Intelligence Gateway) and **Caffeine AI** (`caffeine`). The engine's owner, or an engine admin, picks the one that is on in the console (engine → **Integrations** → the **Inference** card). From then on any canister on the engine sends OpenAI-shaped requests to the operator's `inference_request`, and the operator adds that provider's API key and makes the HTTPS outcall. Your canister never holds a key, never sees one, and never calls a provider's host itself.
+Every engine has an **engine-operator** canister, and it is the engine's route to AI inference. The operator holds a list of providers with their keys: today `iig` (DFINITY's Internet Intelligence Gateway) and `caffeine`. The engine's owner turns one on in the console (engine → **Integrations** → **Inference**) and can switch it at any time. A canister on the engine sends an OpenAI request to the operator's `inference_request`, and the operator adds the key of the provider that is on and makes the outcall.
 
-The engine has **one provider on at a time**, and the owner can switch it at any moment. So write provider-neutral code: leave the provider out, and the one that is on answers; leave the model out too, and the operator fills in that provider's default model. The same canister then works on IIG, on Caffeine, and on any provider the platform adds later, with no change and no redeploy.
-
-That is the whole model, and it is why none of the usual inference code applies here:
-
-- **No API key in the canister, in its init args, or in an environment variable.** The key lives on the operator. A canister that carries its own provider key spends someone's credit from code anyone can read, and bypasses the switch: when the owner turns a provider off, the operator refuses the call at once, and a canister with its own key would keep going.
-- **No direct HTTPS outcall to the provider.** Rule 3 still holds for every other outcall; for inference the operator makes it, non-replicated, on your behalf.
-- **No cycles, and a plain `await` is allowed.** The operator is on your own subnet, so Rule 2's same-subnet exemption applies, and the call is free like everything on an engine. A bounded-wait call is fine too, and it keeps the canister's upgrades unblocked if the operator ever hangs: give it a timeout above the outcall's 30 second deadline (`(with timeout = 60)` in Motoko, `Call::bounded_wait` with its 300 second default in Rust). A shorter timeout answers `SYS_UNKNOWN` while the operator may still finish the call and spend the credit.
-- **The provider's answer comes back as it is**, status included, with the id of the provider that answered. A 402 is an account with no credit left. A 401 is the provider refusing the engine's key: on `iig` right after a key rotation it clears within 15 seconds, and on `caffeine` it means someone revoked the key, so the console shows "Needs a new key" until the owner creates one. Neither is yours to fix in code: tell the user, the owner handles both in the console.
-- **Usage is tracked per canister.** The operator tags each request with the calling canister (`x-iig-tags` / `x-caffeine-tags: canister=<caller>`, replacing any you send), so the owner sees each canister's usage on the provider's side. You do not need to tag requests yourself.
+- **No provider key in the canister** (source, init args, environment variables) and **no outcall to a provider's host.** Such a canister spends credit from code anyone can read and ignores the owner's switch.
+- **Leave `provider` and `model` out.** The provider that is on answers with its own default model, so the code keeps working when the owner switches. A named provider that is off answers `BadRequest`, and model ids differ per provider.
+- **No cycles, and a plain `await` is allowed** (same subnet, Rule 2). A bounded wait needs a timeout above the outcall's 30 second deadline (`(with timeout = 60)`, or `Call::bounded_wait`'s 300 second default): a shorter one returns `SYS_UNKNOWN` while the operator may still spend the credit.
 
 ### Finding the operator
 
-The operator's canister id is engine configuration, not a literal: read it from a canister environment variable (`OPERATOR_CANISTER_ID`, set in `icp.yaml` or at deploy time, see `deploy-to-cloud-engine` M6) or from an init argument, with a controller-only `configure` method to change it later. The user finds it in the console on the engine's **Canisters** page, where it is listed as the engine operator, and the ICP MCP route reads it as `engine_operator_id` from the engine registry (`deploy-to-cloud-engine` M1). Ask for it as soon as the app needs inference, the way Rule 4 asks for the proxy.
+The operator's id is configuration, not a literal: read it from a canister environment variable (`OPERATOR_CANISTER_ID`, see `deploy-to-cloud-engine` M6) or an init argument. The user finds it on the engine's **Canisters** page in the console, and the ICP MCP route reads it as `engine_operator_id` from the engine registry (`deploy-to-cloud-engine` M1). Ask for it as soon as the app needs inference.
 
-Before the first call, check that a provider is on. `listInferenceProviders` is a public query:
+Check that a provider is on with the public query `listInferenceProviders`:
 
 ```bash
 icp canister call <operator-id> listInferenceProviders '()' -n ic --query
@@ -331,37 +325,29 @@ icp canister call <operator-id> listInferenceProviders '()' -n ic --query
 
 ```candid
 (record { providers = opt vec {
-  record { id = opt "caffeine"; name = opt "Caffeine"; base_url = opt "https://inference.caffeine.ai/v1"; enabled = opt false; ready = opt true };
   record { id = opt "iig"; name = opt "IIG"; base_url = opt "https://<iig-router>/v1"; enabled = opt true; ready = opt true };
+  record { id = opt "caffeine"; name = opt "Caffeine"; base_url = opt "https://inference.caffeine.ai/v1"; enabled = opt false; ready = opt true };
 } })
 ```
 
-- **`enabled`** is the owner's switch, and at most one provider is on: turning one on turns the others off, turning it off leaves none on, and every provider starts off. Turning inference off stops every call at once.
-- **`ready`** says the operator holds that provider's key. For `iig` the key is the engine's IIG account key, which arrives once IIG has registered the engine (a few minutes after the operator starts); for `caffeine` the platform sets the account up when the owner first picks it.
-- **The list and its order are not a contract.** Read `base_url` from here instead of hard-coding it, and do not branch on which provider is on unless the app truly needs one.
-
-With no provider on, or with a named provider that is off or not `ready`, every `inference_request` answers `BadRequest`: the owner picks a provider in the console, there is nothing to do in code. A provider that is not listed at all is `NotFound`.
+At most one provider is `enabled`, and `ready` means the operator holds its key. With none on, or with a named one off or not ready, every call answers `BadRequest`: the owner fixes that in the console, not in code.
 
 ### The call
-
-The operator's interface for inference, and the Motoko mirror of it:
 
 ```candid
 type HttpHeader = record { name : text; value : text };
 type InferenceRequestArgs = record {
-  provider : opt text;                 // null for the one provider that is on; "iig" or "caffeine" names one
+  provider : opt text;                 // null: the provider that is on
   method : opt variant { get; post };  // defaults to post with a body, get without
-  path : opt text;                     // "/chat/completions", under the provider's base URL
+  path : opt text;                     // required: "/chat/completions", "/embeddings", "/models"
   headers : opt vec HttpHeader;        // the operator sets Authorization itself
-  body : opt blob;
+  body : opt blob;                     // a JSON body with no "model" gets the provider's default
   max_response_bytes : opt nat64;
 };
-type InferenceResponse = record { status : opt nat; headers : opt vec HttpHeader; body : opt blob; provider : opt text };  // provider: the one that answered
+type InferenceResponse = record { status : opt nat; headers : opt vec HttpHeader; body : opt blob; provider : opt text };
 type Error = variant { Unauthorized; NotFound; BadRequest : text; Internal : text };
 service : {
   inference_request : (InferenceRequestArgs) -> (variant { ok : InferenceResponse; err : Error });
-  listInferenceProviders : () -> (record { providers : opt vec record {
-    id : opt text; name : opt text; base_url : opt text; enabled : opt bool; ready : opt bool } }) query;
 };
 ```
 
@@ -379,78 +365,45 @@ type Operator = actor {
 
 let operator : Operator = actor (Principal.toText(operatorId));  // from configuration
 
-// One chat completion. No model: the operator fills in the provider's default
-// model. Keep the reply bounded: see "The deadline" below.
-let request = "{\"max_tokens\":350,\"messages\":[{\"role\":\"user\",\"content\":\"What is a canister?\"}]}";
-let res = await operator.inference_request({   // same engine: plain, or (with timeout = 60)
-  provider = null;                             // the one provider that is on, whichever the owner picked
-  method = null;
-  path = ?"/chat/completions";
+let request = "{\"max_tokens\":350,\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"What is a canister?\"}]}";
+let res = await operator.inference_request({
+  provider = null; method = null; path = ?"/chat/completions";
   headers = ?[{ name = "content-type"; value = "application/json" }];
   body = ?Text.encodeUtf8(request);
   max_response_bytes = ?200_000;
 });
 switch (res) {
-  case (#ok { status = ?200; body = ?bytes }) {
-    // An OpenAI chat completion: the reply text is choices[0].message.content.
-    let ?json = Text.decodeUtf8(bytes) else return #err("not UTF-8");
-    /* parse json with the project's JSON library */
-  };
-  case (#ok { status; body }) { /* 401: key refused; 402: no credit; 5xx: the provider */ };
-  case (#err (#NotFound)) { /* a named provider this engine does not list */ };
-  case (#err (#BadRequest msg)) { /* no provider on, one off or not ready, or a bad path */ };
+  case (#ok { status = ?200; body = ?bytes }) { /* OpenAI chat completion: choices[0].message.content */ };
+  case (#ok { status }) { /* the provider's own status: 401 key refused, 402 no credit */ };
+  case (#err (#BadRequest msg)) { /* no provider on, the named one off or not ready, or a bad path */ };
   case (#err (#Unauthorized)) { /* the caller is not a canister on this engine */ };
-  case (#err (#Internal msg)) { /* the outcall failed: msg says why */ };
+  case (#err (#Internal msg)) { /* the outcall failed, see "The deadline" */ };
+  case (#err (#NotFound)) { /* a named provider the engine does not list */ };
 };
 ```
 
-Rust is the same call through `Call::unbounded_wait(operator, "inference_request")`, or `Call::bounded_wait` with its 300 second default (same subnet, both allowed), with the types above as `CandidType` structs: `#[serde(rename = "ok")]` / `"err"` on the result variant, `Option<Nat>` for `status`, and `serde_json` for the body:
+In Rust, make the same call with `Call::unbounded_wait(operator, "inference_request")` and the types above as `CandidType` structs (`#[serde(rename = "ok")]` / `"err"` on the result variant, `Option<Nat>` for `status`), with the body built by `serde_json`.
 
-```rust
-let body = serde_json::json!({
-    "max_tokens": 350,                     // no model: the operator fills in the default
-    "messages": [{ "role": "user", "content": prompt }],
-    "stream": false,                       // an outcall returns the whole response at once
-});
-let request = InferenceRequestArgs {
-    provider: None,                        // the one provider that is on
-    method: None,
-    path: Some("/chat/completions".into()),
-    headers: Some(vec![Header { name: "content-type".into(), value: "application/json".into() }]),
-    body: Some(body.to_string().into_bytes()),
-    max_response_bytes: Some(200_000),
-};
-let result: InferenceResult = Call::unbounded_wait(operator, "inference_request")
-    .with_arg(request).await?.candid()?;
-```
-
-- **`path` is required, must start with `/`**, and is appended to the base URL of the provider that is on: `/chat/completions`, `/embeddings`, `/models`. Every provider speaks the OpenAI wire format, so the same path works on each.
-- **Leave `model` out** and the operator inserts the default model of the provider that is on into a JSON body (`class/default` on IIG, which lets IIG pick; `router` on Caffeine). A `model` you set is kept as it is, and model ids differ per provider (IIG's `/models` lists its own), so a named model breaks when the owner switches providers. Name one only when the app truly needs it, and then name the provider too and handle the `BadRequest` you get when the owner has another one on. A body that is not a JSON object goes as it is.
-- **A null `provider` with no provider on** is `BadRequest("no inference provider is on")`. The reply's `provider` field says which one answered: log it with the call, since the owner can switch between two calls.
-- **`stream` must be false.** An HTTPS outcall returns one response; a streamed completion is not a response the operator can return.
-- **`max_response_bytes` is yours** (Rule 3): an answer larger than it fails the outcall.
-- **Any header you set named `Authorization` or `Content-Length`, or a provider's usage tag, is replaced** by the operator's.
-- **Only canisters on the engine may call it.** The operator checks the caller's subnet against the NNS registry; a caller elsewhere, an ingress call from the CLI included, is `Unauthorized`. To try a provider from the CLI, deploy a small caller canister on the engine instead.
-- **A `GET /models` is the cheap probe.** It answers in a few seconds and spends no credit, so it shows whether the path to the provider works at all. It says nothing about why a separate completion failed: a bound is still the first thing to check on a timeout.
+- **Only canisters on the engine may call it.** An ingress call from the CLI is `Unauthorized`; to try it, deploy a small caller canister on the engine.
+- **The answer is the provider's HTTP response as it is**, and `provider` names the one that answered. A 401 or a 402 is for the owner to fix in the console: tell the user.
+- **Keep `stream` false.** An outcall returns one whole response.
 
 ### The deadline
 
-An HTTPS outcall has a **30 second deadline**, and the round trip to the provider costs about 3 seconds of it. A completion that is still generating when the deadline passes comes back as
+An outcall has a **30 second deadline**. A completion that is still generating when it passes fails as
 
 ```
 err = Internal("the outcall to <provider> failed: Canister http request timed out")
 ```
 
-where `<provider>` is the id of the provider that is on (`iig`, `caffeine`). The provider may have generated and billed the whole reply anyway. So bound every completion: set `max_tokens` (350 is a safe figure for a chat reply, measured at about 5 seconds end to end through Caffeine's `router`), ask for short answers in the system prompt, and keep the conversation you send small. Providers and their default models differ in speed, so a bound that works on one provider can time out on the other: keep the margin wide. There is no streaming and no way to extend the deadline from the canister.
+and the provider may bill the reply anyway. Bound every completion: `max_tokens` (350 took about 5 seconds end to end through Caffeine), short replies, a small conversation. A `GET /models` answers in seconds and spends no credit: it shows that the route works, not why a completion timed out.
 
 ### Who may call your canister
 
-The operator checks that the caller is a canister on the engine, nothing more, so **your** canister decides who spends the engine's inference credit (the IIG or Caffeine account of the provider that is on). A public `chat` method is a public faucet: anyone who finds the canister id can drain the account. Note that a sign-in is not an authorization: any caller can make a keypair and call as a non-anonymous principal, so "signed in" alone caps nothing. Pick one of these, and say which:
+The operator checks only that the caller is on the engine, so **your** canister decides who spends the engine's credit. A public `chat` method is a faucet, and a sign-in is not an authorization: anyone can make a keypair and call as a non-anonymous principal. Do one of these, and tell the user which:
 
-- **Restrict the method** to callers you name: the canister's controllers (`is_controller`), or an allow-list of principals the owner maintains.
-- **Meter an open service.** If anyone who signs in may call it, bound the spend yourself: a quota per principal (calls or tokens per day) and an aggregate cap for the canister, both kept in stable state, besides the per-call bounds (message count, characters, `max_tokens`). Stop serving when a cap is reached and let the owner raise it.
-
-A demo that accepts the exposure should at least keep the per-call bounds and say so to the user.
+- **Restrict the method** to the canister's controllers (`is_controller`) or an allow-list the owner keeps.
+- **Meter an open service:** a quota per principal and a total cap, both in stable state, besides per-call bounds (`max_tokens`, message size).
 
 ## Common Pitfalls
 
@@ -471,15 +424,13 @@ A demo that accepts the exposure should at least keep the per-call bounds and sa
 15. **Calling the console proxy from the CLI.** `icp canister call --proxy <console-proxy-id>` fails: the console proxy admits only the canisters on the engine's subnet and its own controller (the platform canister that created it), and an ingress call from your CLI identity is neither (it is rejected by `inspect_message` before it reaches replicated state). For CLI-side proxying, deploy your own proxy (`icp new … --subfolder proxy`) which authorizes controllers, i.e. you.
 16. **Writing proxy-dependent code without asking for the proxy.** Signing, vetKD, XRC, Bitcoin API or EVM/SOL RPC code can be written and even deployed with no proxy behind it, and then fails on its first call: a placeholder or guessed id gets `UnauthorizedUser` or reaches nothing, and an id copied from another engine or project signs with someone else's keys. You cannot create the console proxy yourself: there is no `icp` command for it, and only the engine's owner can deploy one, from the console. Ask as soon as the need is known ("Before writing the code" in Rule 4), read the id from configuration, and never substitute a self-deployed proxy for the engine's.
 17. **Relaying to a target the console proxy does not serve.** A console proxy relays for the engine's canisters only the management canister's threshold-key, `http_request` and `bitcoin_*` methods and the XRC, EVM RPC, SOL RPC, Bitcoin and Dogecoin canisters. Anything else, a third-party canister that charges cycles included, comes back as `CallFailed` (`a proxy funded by its engine relays only to …`), whatever its balance. Do not top it up or retry: route such a call through a self-deployed proxy that has the calling canister as a controller, or drop the dependency.
-18. **Calling an inference provider directly, with a key in the canister.** On an engine inference goes through the operator's `inference_request` (Rule 5). A canister that holds a Caffeine or IIG key and makes its own outcall spends credit from code anyone can read, ignores the owner's switch in the console, is tied to one provider when the owner can switch to another, and does not appear in the engine's per-canister usage. Drop the key and the outcall; send the OpenAI request to the operator.
-19. **A completion that outruns the outcall deadline.** An outcall has a 30 second deadline and the provider round trip takes about 3 of them. A completion that is still generating when it passes comes back as `Internal("… Canister http request timed out")`, and the provider may bill the reply anyway. On that error, check the bound first: set `max_tokens`, ask for short replies, send a small conversation. A bounded completion can still time out on a slow model, so measure. `GET /models` through the same call shows only that the path to the provider works; it does not explain a completion's timeout.
-20. **Reading `BadRequest` from `inference_request` as a code bug.** It usually means no provider is on, or the named one is off or not ready on this engine: the owner has not picked a provider in the console, has turned inference off, or the operator holds no key yet (IIG registers a new engine within a few minutes). Check `listInferenceProviders` (`enabled`, `ready`) and tell the user; the only `BadRequest` that is yours is a missing or malformed `path` (it must start with `/`).
-21. **Hard-coding one provider or one model.** The owner picks the provider in the console and can switch it at any moment, so `provider = ?"caffeine"` or a Caffeine-only `model` breaks with `BadRequest` or a provider error the day IIG is on instead. Leave both out, read the answering provider from the reply's `provider` field, and name one only when the app truly cannot work with another.
+18. **A provider key in the canister.** On an engine, inference goes through the operator's `inference_request` (Rule 5). Drop the key and the outcall to the provider.
+19. **A completion with no bound.** `Internal("… Canister http request timed out")` from `inference_request` is the 30 second outcall deadline. Set `max_tokens` first, then measure; a working `GET /models` does not explain it.
+20. **Reading `BadRequest` from `inference_request` as a code bug.** It means no provider is on, or the named one is off or not ready: tell the user, the owner picks a provider in the console. A call that names `caffeine` breaks this way when the owner switches to IIG, so leave `provider` and `model` out.
 
 ## Additional References
 
 - Load `deploy-to-cloud-engine` for getting the app onto the engine: which route to take (the ICP MCP connector from a sandboxed chat, or the icp CLI), CLI identity linking, subnet-targeted deploy, console app metadata, and for **deploying and funding the proxy** this skill's Rule 4 depends on: the console flow (the engine owner deploys it, paid from the engine's balance), which balance pays for what, and the self-deployed CLI alternative.
 - Load `vetkeys` for what vetKD is and how its keys are used (IBE, encrypted maps, transport keys). Its call code targets a normal subnet and attaches cycles through helper libraries: on an engine, keep the concepts and replace the calls with the proxied form above.
 - Load `https-outcalls` for everything about outcalls that is not engine-specific: transform functions, `max_response_bytes`, idempotency, debugging consensus failures.
-- For inference there is no further skill to load: Rule 5 is the whole contract, and the operator's own `getApiDoc` query (see `service-discoverability`) documents `inference_request` on the engine you are on.
 - Load `multi-canister` for inter-canister call design, bounded vs unbounded wait semantics, and `SYS_UNKNOWN` handling.
