@@ -133,7 +133,7 @@
     },
     {
       "name": "Adversarial: inference with a provider key in the engine canister",
-      "prompt": "My Rust canister runs on a cloud engine and I want it to call Caffeine inference. I planned to put the Caffeine API key in an init argument and make an HTTPS outcall to https://inference.caffeine.ai/v1/chat/completions from the canister. Is that the right design on an engine? Answer briefly, no full code listing.",
+      "prompt": "My Rust canister runs on a cloud engine and I want it to call IIG inference. I planned to put my IIG API key in an init argument and make an HTTPS outcall to the IIG router's /v1/chat/completions from the canister. Is that the right design on an engine? Answer briefly, no full code listing.",
       "expected_behaviors": [
         "Says no: on a cloud engine inference goes through the engine-operator canister's `inference_request`, which adds the provider's key and makes the outcall itself",
         "Says the canister never holds or receives a provider key, in an init argument, an environment variable or source, and never calls the provider's host directly",
@@ -143,7 +143,7 @@
     },
     {
       "name": "Adversarial: inference outcall timed out through the operator",
-      "prompt": "My engine canister calls the operator's inference_request with a chat completion for Caffeine (the request sets no max_tokens) and gets err = Internal(\"the outcall to caffeine failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
+      "prompt": "My engine canister calls the operator's inference_request with a chat completion and no provider (the request sets no max_tokens) and gets err = Internal(\"the outcall to iig failed: Canister http request timed out\"). A GET /models through the same call answers 200 in about 3 seconds. What is wrong and what do I change? Answer briefly.",
       "expected_behaviors": [
         "Identifies the HTTPS outcall's 30 second deadline, and that a completion still generating when it passes fails this way; treats the missing `max_tokens` as the first thing to fix, not as a proven cause",
         "Recommends bounding the completion: set `max_tokens` (a few hundred), ask for short replies, send a small conversation; keeps `stream` false",
@@ -162,7 +162,7 @@
     },
     {
       "name": "Adversarial: a public chat method behind a sign-in",
-      "prompt": "My engine canister exposes chat(prompt) that calls the operator's inference_request. I check that the caller is not anonymous, so only signed-in users can spend the engine's Caffeine credit. Is that enough? Answer briefly.",
+      "prompt": "My engine canister exposes chat(prompt) that calls the operator's inference_request. I check that the caller is not anonymous, so only signed-in users can spend the engine's inference credit. Is that enough? Answer briefly.",
       "expected_behaviors": [
         "Says no: a non-anonymous caller is not an authorization, anyone can make a keypair and call as a signed-in principal and drain the credit",
         "Recommends restricting the method to controllers or an owner-maintained allow-list, or metering an open service with a per-principal quota and an aggregate spending cap kept in stable state, besides per-call bounds such as `max_tokens`",
@@ -187,9 +187,9 @@
       "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?",
       "Build me an app on my cloud engine that signs Bitcoin transactions for each user",
       "My engine canister needs to call the EVM RPC canister",
-      "How does my canister on an OpenCloud engine call Caffeine inference?",
+      "How does my canister on an OpenCloud engine call AI inference through IIG or Caffeine?",
       "My engine canister's inference_request to the operator returns Internal: Canister http request timed out",
-      "Where do I put the Caffeine API key for a canister running on a cloud engine?"
+      "Where do I put the IIG API key for a canister running on a cloud engine?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
@@ -200,7 +200,7 @@
       "How do inter-canister calls work between my two canisters?",
       "Deploy a proxy canister for my engine and put $20 of cycles on it",
       "Turn on automatic top-up for my engine's proxy",
-      "Turn on Caffeine inference for my engine in the OpenCloud console"
+      "Switch my engine's inference provider from Caffeine to IIG in the OpenCloud console"
     ]
   }
 }
