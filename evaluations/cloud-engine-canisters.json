@@ -133,11 +133,11 @@
     },
     {
       "name": "Adversarial: inference with a provider key in the engine canister",
-      "prompt": "My Rust canister runs on a cloud engine and I want it to call IIG inference. I planned to put my IIG API key in an init argument and make an HTTPS outcall to the IIG router's /v1/chat/completions from the canister. Is that the right design on an engine? Answer briefly, no full code listing.",
+      "prompt": "My Rust canister runs on a cloud engine and I want it to call an LLM. I planned to put the provider's API key in an init argument and make an HTTPS outcall to the provider's /v1/chat/completions from the canister. Is that the right design on an engine? Answer briefly, no full code listing.",
       "expected_behaviors": [
         "Says no: on a cloud engine inference goes through the engine-operator canister's `inference_request`, which adds the provider's key and makes the outcall itself",
         "Says the canister never holds or receives a provider key, in an init argument, an environment variable or source, and never calls the provider's host directly",
-        "Mentions that the engine's owner picks one provider (IIG or Caffeine) in the console and can switch it, that the canister should leave the provider and the model out so the one that is on answers with its default model, and that the call is a same-subnet call with no cycles, where a plain `await` is allowed and a bounded wait needs a timeout above the outcall's 30 s deadline",
+        "Mentions that the engine's owner picks one provider in the console and can switch it, that the canister should leave the provider and the model out so the one that is on answers with its default model, and that the call is a same-subnet call with no cycles, where a plain `await` is allowed and a bounded wait needs a timeout above the outcall's 30 s deadline",
         "Does NOT suggest routing the inference outcall through the console proxy canister"
       ]
     },
@@ -187,9 +187,9 @@
       "Can I use ic-cdk-management-canister for an HTTPS outcall from my cloud engine canister?",
       "Build me an app on my cloud engine that signs Bitcoin transactions for each user",
       "My engine canister needs to call the EVM RPC canister",
-      "How does my canister on an OpenCloud engine call AI inference through IIG or Caffeine?",
+      "How does my canister on an OpenCloud engine call an LLM?",
       "My engine canister's inference_request to the operator returns Internal: Canister http request timed out",
-      "Where do I put the IIG API key for a canister running on a cloud engine?"
+      "Where do I put the LLM API key for a canister running on a cloud engine?"
     ],
     "should_not_trigger": [
       "Deploy my app to my cloud engine",
@@ -200,7 +200,7 @@
       "How do inter-canister calls work between my two canisters?",
       "Deploy a proxy canister for my engine and put $20 of cycles on it",
       "Turn on automatic top-up for my engine's proxy",
-      "Switch my engine's inference provider from Caffeine to IIG in the OpenCloud console"
+      "Turn on inference for my engine in the OpenCloud console"
     ]
   }
 }
