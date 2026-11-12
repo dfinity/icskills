@@ -307,7 +307,7 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
 
 ## Rule 5 — Inference through the engine operator
 
-Every engine has an **engine-operator** canister, and it is the engine's route to AI inference. The operator holds a list of providers with their keys: today `iig` and `caffeine`. The engine's owner turns one on in the console (engine → **Integrations** → **Inference**) and can switch it at any time. A canister on the engine sends an OpenAI request to the operator's `inference_request`, and the operator adds the key of the provider that is on and makes the outcall.
+Every engine has an **engine-operator** canister, and it is the engine's route to AI inference. The operator holds a list of providers with their keys: today `iig` and `caffeine`. The engine's owner or an admin turns one on in the console (engine → **Integrations** → **Inference**) and can switch it at any time. A canister on the engine sends an OpenAI request to the operator's `inference_request`, and the operator adds the key of the provider that is on and makes the outcall.
 
 - **No provider key in the canister** (source, init args, environment variables) and **no outcall to a provider's host.** Such a canister spends credit from code anyone can read and ignores the owner's switch.
 - **Leave `provider` and `model` out.** The provider that is on answers with its own default model, so the code keeps working when the owner switches. A named provider that is off answers `BadRequest`, and model ids differ per provider.
@@ -385,7 +385,7 @@ switch (res) {
 In Rust, make the same call with `Call::unbounded_wait(operator, "inference_request")` and the types above as `CandidType` structs (`#[serde(rename = "ok")]` / `"err"` on the result variant, `Option<Nat>` for `status`), with the body built by `serde_json`.
 
 - **Only canisters on the engine may call it.** An ingress call from the CLI is `Unauthorized`; to try it, deploy a small caller canister on the engine.
-- **The answer is the provider's HTTP response as it is**, and `provider` names the one that answered. A 401 or a 402 is for the owner to fix in the console: tell the user.
+- **The answer is the provider's HTTP response as it is**, and `provider` names the one that answered. A 401 (key refused) or a 402 (no credit) is the owner's to fix, not yours: tell the user.
 - **Keep `stream` false.** An outcall returns one whole response.
 
 ### The deadline
