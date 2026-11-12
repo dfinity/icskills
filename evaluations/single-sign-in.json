@@ -1,6 +1,6 @@
 {
-  "skill": "internet-identity-shared-sessions",
-  "description": "Evaluation cases for the internet-identity-shared-sessions skill. Tests whether agents build a shared sign-in on one primary origin, use /reauth with hint and the redirect transport, and avoid redirecting a page the user is working on.",
+  "skill": "single-sign-in",
+  "description": "Evaluation cases for the single-sign-in skill. Tests whether agents build one sign-in for a suite of apps on one primary origin, use /reauth with hint and the redirect transport, and avoid redirecting a page the user is working on.",
   "output_evals": [
     {
       "name": "Shared sign-in across sibling subdomains",

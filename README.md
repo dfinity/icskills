@@ -18,7 +18,7 @@ Each skill is a single markdown file containing everything an agent needs to bui
 
 ```
 skills/ckbtc/SKILL.md
-skills/internet-identity/SKILL.md
+skills/user-sign-in/SKILL.md
 skills/stable-memory/SKILL.md
 ...
 ```

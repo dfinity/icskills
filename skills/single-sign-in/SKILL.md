@@ -1,26 +1,26 @@
 ---
-name: internet-identity-shared-sessions
-description: "Share one Internet Identity sign-in across sibling subdomains, so signing in on one app signs the user in on the others without a second visit to II, and signing out on one signs them out everywhere. Covers the shared record with CookieStateStorage, the /reauth route that silently acquires each app's own credential under transport: 'redirect' and prompt: 'none', the per-origin /.well-known/ii-auth-callbacks document, reading signed-in-elsewhere on load and offering it mid-session, and what ends a shared session. Use when two or more apps under one domain must share one signed-in user, when moving between them asks the user to sign in again, or when /reauth bounces in a loop. Every app must already derive from one elected primary origin: load internet-identity and settle that first. Do NOT use for a single app on one origin, which needs none of this, or for apps on unrelated domains, which cannot share a cookie."
+name: single-sign-in
+description: "Let a user sign in once and be signed in across a whole suite of apps on sibling subdomains: opening a second app needs no second visit to Internet Identity, and signing out of one signs them out of all. Covers the shared record with CookieStateStorage, the /reauth route that silently acquires each app's own credential under transport: 'redirect' and prompt: 'none', the per-origin /.well-known/ii-auth-callbacks document, reading signed-in-elsewhere on load and offering it mid-session, and what ends the session. Use when a suite of apps under one domain should need a single sign-in, when moving between them asks the user to sign in again, or when /reauth bounces in a loop. Every app must already derive from one elected primary origin: load user-sign-in and settle that first. Do NOT use for a single app on one origin, which needs none of this, for apps on unrelated domains, which cannot share a cookie, or for staff signing in with their organization's identity provider (use organization-sign-in)."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.0.0"
 metadata:
-  title: Internet Identity Shared Sessions
+  title: Single Sign-In
   category: Auth
 ---
 
-# Internet Identity Shared Sessions
+# Single Sign-In
 
 ## Prerequisite
 
-Load the `internet-identity` skill first and settle "Your app's identity is its primary origin". Everything here assumes one elected primary origin whose `ii-alternative-origins` already authorizes every sibling.
+Load the `user-sign-in` skill first and settle "Your app's identity is its primary origin". Everything here assumes one elected primary origin whose `ii-alternative-origins` already authorizes every sibling.
 
-That is not a courtesy link. Subdomains share a sign-in only when they share a principal, and a shared cookie does not produce one. Build this on top of separate principals and every app reads a record naming an account it can never hold, which is the `/reauth` loop in that skill's mistakes list.
+That is not a courtesy link. Apps share a sign-in only when they share a principal, and a shared cookie does not produce one. Build this on top of separate principals and every app reads a record naming an account it can never hold, which is the `/reauth` loop in that skill's mistakes list.
 
 ## What this gets you
 
-`chat.example.com` and `hr.example.com` can share one sign-in: sign in on one and the others are signed in without a second visit to Internet Identity, and signing out on one signs the user out on all of them.
+A user of a suite of apps, say `chat.example.com`, `hr.example.com` and `docs.example.com`, signs in once. Every other app in the suite opens already signed in, with no second visit to Internet Identity, and signing out of any one signs them out of all.
 
-Principals are per origin, so every app must derive from **one** primary origin, listed in that origin's `/.well-known/ii-alternative-origins`. Without it each subdomain gets its own principal and there is nothing to share.
+Principals are per origin, so every app must derive from **one** primary origin, listed in that origin's `/.well-known/ii-alternative-origins`. Without it each app sees a different user and there is nothing to share.
 
 ## 1. Share the record
 
@@ -124,13 +124,13 @@ authClient.subscribe(() => {
 });
 ```
 
-## What ends a shared session
+## What ends the session
 
 **Every state change travels the same way: through the shared record.** Whatever happens to the session, on this app or a sibling, the record is what carries it, each app's `subscribe()` fires, and `getStatus()` answers the new state. There is no second mechanism and no waiting period to account for, so the three cases below differ in what they mean, not in how they reach the other apps.
 
 - `signOut()` ends the session at Internet Identity, clears this app's credentials, and removes the shared record. Every sibling reads `signed-out`.
 - `maxTimeToIdle` on `signIn()` ends the session when nobody uses any of the apps; omitted, Internet Identity applies seven days.
-- A sign-in elsewhere replaces the session for the whole domain. The record now names a different account, so a sibling that has no credential for it reads `signed-in-elsewhere` and goes through `/reauth` silently, exactly as on a first sign-in.
+- Signing in to another account on any app replaces the session for the whole suite. The record now names a different account, so a sibling that has no credential for it reads `signed-in-elsewhere` and goes through `/reauth` silently, exactly as on a first sign-in.
 
 ### Render from the subscription, not from a value read at load
 
@@ -151,3 +151,7 @@ render(authClient.getStatus()); // and once for the initial paint
 ```
 
 A page that reads the status only at load keeps showing a signed-in screen to a user who is signed out, until something else happens to reload it.
+
+### Service workers
+
+A service worker reads the single sign-in too (`@icp-sdk/auth` 11.2.0 or later; see "In a web or service worker" in the `user-sign-in` skill). With no page of its own origin open, it sees a sibling subdomain's sign-in or sign-out only once a page of its origin opens.

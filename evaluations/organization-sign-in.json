@@ -1,6 +1,6 @@
 {
-  "skill": "internet-identity-sso",
-  "description": "Evaluation cases for the internet-identity-sso skill. Tests whether agents configure an organization's discovery file correctly: whole-file rejection on one bad value, exact-origin app_clients keys, and the stable identifier claim per provider.",
+  "skill": "organization-sign-in",
+  "description": "Evaluation cases for the organization-sign-in skill. Tests whether agents configure an organization's discovery file correctly: whole-file rejection on one bad value, exact-origin app_clients keys, and the stable identifier claim per provider.",
   "output_evals": [
     {
       "name": "Adversarial: one bad value rejects the whole discovery file",
