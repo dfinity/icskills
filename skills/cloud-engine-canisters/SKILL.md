@@ -307,7 +307,7 @@ let ?dk : ?VetkdDeriveKeyReply = from_candid (await viaProxy("vetkd_derive_key",
 
 ## Rule 5 — Inference through the engine operator
 
-Every engine has an **engine-operator** canister, and it is the engine's route to AI inference. The operator holds a list of providers with their keys: today `iig` (DFINITY's Internet Intelligence Gateway) and `caffeine`. The engine's owner turns one on in the console (engine → **Integrations** → **Inference**) and can switch it at any time. A canister on the engine sends an OpenAI request to the operator's `inference_request`, and the operator adds the key of the provider that is on and makes the outcall.
+Every engine has an **engine-operator** canister, and it is the engine's route to AI inference. The operator holds a list of providers with their keys: today `iig` and `caffeine`. The engine's owner turns one on in the console (engine → **Integrations** → **Inference**) and can switch it at any time. A canister on the engine sends an OpenAI request to the operator's `inference_request`, and the operator adds the key of the provider that is on and makes the outcall.
 
 - **No provider key in the canister** (source, init args, environment variables) and **no outcall to a provider's host.** Such a canister spends credit from code anyone can read and ignores the owner's switch.
 - **Leave `provider` and `model` out.** The provider that is on answers with its own default model, so the code keeps working when the owner switches. A named provider that is off answers `BadRequest`, and model ids differ per provider.
