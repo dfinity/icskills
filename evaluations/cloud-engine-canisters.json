@@ -155,8 +155,8 @@
       "name": "Adversarial: BadRequest from inference_request read as a code bug",
       "prompt": "Every inference_request from my Motoko canister on a cloud engine comes back err = #BadRequest(...). The path is \"/chat/completions\" and the provider is \"caffeine\". listInferenceProviders shows caffeine with enabled = false and ready = false. Is my call wrong? Answer briefly.",
       "expected_behaviors": [
-        "Says the call is fine: `BadRequest` means no provider is on, or the named one is off or not ready on this engine (the owner has not picked it in the console, or the operator holds no key yet)",
-        "Tells the agent to ask the engine's owner to pick a provider on the engine's Inference card in the console (engine → Integrations), and that nothing in code fixes it; suggests leaving `provider` out so the call works with whichever provider the owner picks",
+        "Says the request itself is well formed: this `BadRequest` comes from the engine's state, since the named provider is off and not ready (the owner has not picked it in the console, or the operator holds no key yet)",
+        "Recommends leaving `provider` out, which fixes the call if another provider is on and ready; if none is, tells the agent to ask the engine's owner to pick one in the console (engine → Integrations), since no code change fixes that",
         "Does NOT suggest adding a provider key to the canister, calling the provider directly, or changing the path"
       ]
     },
