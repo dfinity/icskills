@@ -258,6 +258,16 @@
         "Fix: read that principal with get_app_principal (for the engine's app) and have the owner add it as an engine member, e.g. a developer, via the console's team invite (the link /console/engines/<engine-id>/team?modal=invite-member&principal=<principal>&role=developer)",
         "Does NOT suggest calling the management canister directly, or linking the icp CLI, as the fix"
       ]
+    },
+    {
+      "name": "Adversarial: engine app domain on an old static-site recipe",
+      "prompt": "My app's frontend on my cloud engine uses `@dfinity/static-site@v0.4.0`. I added a subdomain in the console, but the domain page says the engine can't write the app's .well-known files. What do I change? Just the fix.",
+      "expected_behaviors": [
+        "Says the frontend needs certified-assets 0.4.3 or newer: bump the recipe to `@dfinity/static-site@v0.4.3` (or newer) and upgrade the canister",
+        "Explains that the engine writes `/.well-known/ic-domains` and `/.well-known/ii-alternative-origins` itself with `upload_asset`, which older versions lack",
+        "Adds a `_preserve` file listing both paths so a deploy does not delete the engine's copies",
+        "Does NOT tell the user to write and ship the two files in their own build"
+      ]
     }
   ],
   "trigger_evals": {

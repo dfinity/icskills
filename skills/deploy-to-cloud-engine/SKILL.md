@@ -52,6 +52,7 @@ Record them so you do not re-ask within the session.
 
 - CLI route: `icp` on `$PATH` — see the **`icp-cli`** skill to install. Verify with `icp --version` (this skill's commands are verified against 0.3.0 and 1.0.2). If the installed version differs, confirm the flag set with `icp <cmd> --help` before running — flags have changed across major versions.
 - A project that already builds. If it does not build or package yet, set that up first (see the `icp-cli` skill), then return here.
+- A frontend on **`@dfinity/static-site@v0.4.3` or newer** (certified-assets 0.4.3+). Older versions, and the legacy `@dfinity/asset-canister` recipe, deploy fine, but the engine cannot write the domain files that custom domains and Internet Identity need into them (see "Serve the frontend with certified-assets 0.4.3 or newer" in Step 2).
 - **No project yet, and no description of one?** Ask the user what to build before you write any code or create any files: "What app do you want to build?" Do **not** pick a sample app (a guestbook, a counter, a to-do list) on your own. A prompt that only says "build and deploy an app" is a request to ask, not a request to choose.
 - CLI route, macOS: `icp` stores its data under `~/Library/Application Support/org.dfinity.icp-cli/`. If the shell cannot write there (`Operation not permitted` from macOS TCC, e.g. when commands run through a bridge), redirect the data to an unprotected path for the session — `HOME=/tmp/icp-home icp …` — and keep that same `HOME` on **every** subsequent `icp` command, or the later commands will not see the linked identity.
 - ICP MCP route: the connector's tools in your tool list, connected with **Actions & questions** access (M0).
@@ -310,7 +311,7 @@ On the ICP MCP route there is no project config: set the same variables with `up
 # frontend/canister.yaml
 name: frontend
 recipe:
-  type: "@dfinity/static-site@v0.4.0"
+  type: "@dfinity/static-site@v0.4.3"   # 0.4.3 or newer on an engine, see below
   configuration:
     build:
       - npm install
@@ -369,6 +370,29 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 - `__META_ICON_PATH` is a **path to an asset your frontend actually serves** (e.g. `/favicon.svg`), not an inline image. The resolved URL is rendered as an `<img>` `src`, so it must return an image. Do **not** put a `data:` URI here: engine env values are length-capped (≤128 chars observed), so it would not fit, and the field is a path by design.
 - The frontend canister's id is only known **after** the first deploy. The usual flow is: deploy once, read the frontend canister id from the output, set `__META_BASE_URL` to `https://<that-id>.icp.net` (and `__META_ICON_PATH`), then re-deploy to apply. If you control a custom domain for the app, you can set it up front instead.
 
+### Serve the frontend with certified-assets 0.4.3 or newer
+
+Pin every frontend canister to **`@dfinity/static-site@v0.4.3` or newer**, as in the examples above. Check the [static-site releases](https://github.com/dfinity/icp-cli-recipes/releases?q=static-site) for the latest; the `static-site` skill covers the recipe itself.
+
+Once an app has a domain on the engine (a subdomain of the engine's domain, or a custom domain), the engine keeps two files in the canister that serves it:
+
+- `/.well-known/ic-domains`, which the HTTP gateway checks a custom domain against;
+- `/.well-known/ii-alternative-origins`, which lets Internet Identity give a person the same account at every domain of the app.
+
+The engine-operator writes both with certified-assets' `upload_asset` method, which first shipped in 0.4.3. It writes them after every domain change and every 10 minutes, and adds itself to the canister's controllers to do so: leave it there. On an older static-site canister, or a legacy `@dfinity/asset-canister` one, it cannot write them. The console then says the canister "doesn't run certified-assets 0.4.3 or newer", a custom domain fails the gateway's check, and Internet Identity cannot give people the same account at the app's subdomains and custom domains.
+
+- **Do not ship these two files in your build.** The engine replaces whatever the build puts there.
+- **List both in a `_preserve` file** at the root of the build directory (`dir`; with Vite, put it in `public/`, which is copied there), so that a deploy keeps the engine's copies instead of deleting them:
+
+  ```
+  # Written by the engine-operator with upload_asset; this build does not ship them.
+  /.well-known/ic-domains
+  /.well-known/ii-alternative-origins
+  ```
+
+  Without it, every `icp deploy` deletes both until the engine writes them again, up to 10 minutes later, and sign-ins at the app's other domains fail in between.
+- **An already-deployed canister on an older version** needs the recipe bumped and the canister upgraded. A bump within 0.4.x keeps its state; a bump from 0.3.x is a reinstall. Follow the `static-site` skill's version-bump pitfall.
+
 ### Pin the Internet Identity derivation origin (if the app signs users in)
 
 Internet Identity derives a principal **per origin**. An app reached at both its canister address and a custom domain signs the same person in as two different users.
@@ -385,7 +409,7 @@ Build the value from the canister id, **not** from `__META_BASE_URL`. The two ma
 
 **Do this before the app has users, not after.** A domain that has already collected sign-ins cannot be repointed at a derivation origin without orphaning every account created under it. If the app might ever get a custom domain, set `derivationOrigin` on the first deploy even while the canister address is the only origin — it costs nothing then and cannot be applied retroactively without losing accounts.
 
-For the mechanics — the `derivationOrigin` option and the `.well-known/ii-alternative-origins` file, including the `_headers` entry the `@dfinity/static-site` recipe needs — load the **`user-sign-in`** skill.
+For the `derivationOrigin` option, load the **`user-sign-in`** skill. Its `.well-known/ii-alternative-origins` steps (the file and the `_headers` entry that allows CORS on it) are the engine's job on certified-assets 0.4.3 or newer (see the previous section): skip them, and list the file in `_preserve` instead.
 
 Caffeine apps are the exception: Caffeine owns their address, so it is not the app's to derive from. The console withholds the canister-address row for them.
 
@@ -445,6 +469,7 @@ icp deploy -e ic --subnet <subnet-id>
 - The canisters appear on the engine's **Your apps and services** page in the console; each canister's detail view offers an "Open in browser" link.
 - If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows. With `__META_BASE_URL` + `__META_ICON_PATH` set, the app also shows its icon (allow for a short console cache delay).
 - A frontend (asset) canister is served at `https://<frontend-canister-id>.icp.net`.
+- `icp canister call <frontend-canister> version '()' -e ic --query` answers 0.4.3 or newer (see Step 2).
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
 
@@ -568,7 +593,7 @@ A cloud engine runs on a **`CloudEngine` subnet** with protocol-level call rules
 11. **Expecting the delegation handoff to fix a missing network.** The handoff moves signing authority, not connectivity — `icp deploy` still needs the network from the shell that runs it. If the CLI shell has no network at all (a sandboxed device bridge: DNS blocked, HTTPS fails), no `icp` network command can run there, link or deploy. Do not offer to "do the rest" from that shell and do not tunnel — hand the user one script for their real terminal (see "No-network CLI host" in Step 1.0), where the normal link flow works because terminal and browser share a loopback.
 12. **Build timestamps in wasm metadata.** Metadata is baked into the wasm and must be deterministic — a build time (`$(date)`) changes every build even with identical source, breaking reproducibility and changing the module hash on every deploy. The deterministic alternative is the last commit's date, `service:git:updated_at` = `$(git log -1 --format=%cI)` — a property of the source tree, not the build. The deploy time itself comes from the canister history recorded by the network, never from metadata.
 13. **Git metadata substitutions in a non-git project.** Outside a git repository, `$(git rev-parse HEAD)` does not fail the build — it silently bakes garbage: `service:git:sha` becomes the literal `+dirty` and `service:git:origin` comes out empty. Check for a git repo first (`git rev-parse HEAD` succeeds); if there is none, set only `service:version` with an explicit value (or `git init` and commit before deploying, if version control is wanted anyway).
-14. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. See the `user-sign-in` skill for the `.well-known/ii-alternative-origins` half.
+14. **Letting an engine app collect sign-ins before pinning a derivation origin.** Internet Identity principals are per-origin, so adding a custom domain later turns every existing user into a stranger at the new address — and the fix cannot be applied retroactively without orphaning the accounts already made under the old origin. On the first deploy of any app that uses II, set `derivationOrigin` to the address of the canister that serves the frontend, built from its canister id (`https://<frontend-canister-id>.icp.net`), even when that is currently the app's only origin. Do **not** copy `__META_BASE_URL`: it is allowed to point at a custom domain, and a custom domain is exactly what must not become the derivation origin. The `.well-known/ii-alternative-origins` half is the engine's job, on certified-assets 0.4.3 or newer (Pitfall 28).
 15. **Trying to deploy or fund the console proxy from the CLI or an API.** There is no `icp` command for it, and the console endpoints behind the buttons authenticate with a browser-session cookie from the Internet Identity login (no token auth), so an agent cannot drive them. Only the engine's owner can deploy one. Hand the user the console steps (engine → **Integrations** → **Proxy canisters** → **Deploy a proxy**) and wait for the proxy canister id. It needs no funding step: it is paid from the engine's balance. An agent *can* do the whole self-deployed-proxy path unattended, but that is a different canister with different authorization (Step 5).
 16. **Deploying a self-deployed proxy onto the engine's subnet.** Reusing Step 3's `--subnet <engine-subnet-id>` puts the proxy on the `CloudEngine` subnet, where it holds 0 cycles and may not send cycle-bearing messages either, so it cannot do the one thing a proxy is for. Omit `--subnet` so it lands on a normal Application subnet.
 17. **Expecting a self-deployed proxy to accept calls from engine canisters.** It authorizes **controllers only**. An engine canister calling it gets `UnauthorizedUser` until that canister's principal is added with `icp canister settings update <proxy> --add-controller <canister-id> -e ic`, and again for every canister added later. The console proxy authorizes every canister on the engine's subnet instead, which is why it is the right one for app code.
@@ -582,6 +607,7 @@ A cloud engine runs on a **`CloudEngine` subnet** with protocol-level call rules
 25. **Creating a canister without listing the engine-operator as a controller.** `create_canister` through `proxy` always adds you, but the operator only when you list it in `settings.controllers`. Without it, `proxy` can no longer reach the canister (no install, no settings), and the owner cannot remove it with `deleteCanisters` either. List the operator in the create call (M5, step 1).
 26. **Textual Candid in `proxy`'s `args`.** `args` is a `blob` holding the **binary** Candid encoding of the management method's argument (bytes starting with `DIDL`), and `result` comes back the same way. Passing the textual `(record { … })` as `args` makes the management canister fail to decode the argument. Encode it with a Candid library first (M5).
 27. **Expecting the connector to finish a deploy that needs calls into the new canister.** The connector calls only canisters an app declares, and the engine's manifest declares only its operator. It can install your wasm through `proxy`, but it cannot call the canister you installed, so it cannot upload an asset canister's files. Ship configuration in the init argument or environment variables, or use the CLI route for such an app.
+28. **A frontend older than certified-assets 0.4.3.** `@dfinity/static-site` before v0.4.3, and the legacy `@dfinity/asset-canister` recipe, have no `upload_asset` method, so the engine cannot write the app's `/.well-known/ic-domains` and `/.well-known/ii-alternative-origins`. The app deploys and serves, but a custom domain fails the gateway's check, and Internet Identity cannot give people the same account at the app's subdomains and custom domains. Pin `@dfinity/static-site@v0.4.3` or newer, do not ship the two files yourself, and list them in `_preserve` so that a deploy does not delete them (Step 2).
 
 ## Additional References
 
