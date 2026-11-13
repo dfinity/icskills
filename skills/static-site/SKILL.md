@@ -307,7 +307,7 @@ Certification proves responses match what the canister committed to; the **state
 #    Not published as a binary or on crates.io. --locked is required: Cargo.lock pins the
 #    compressor builds whose output bytes the hash covers; without it the hash differs.
 icp canister call <canister-id> version '()' -n ic --query
-# (record { major = 0 : nat32; minor = 4 : nat32; patch = 0 : nat32 })
+# (record { major = 0 : nat32; minor = 4 : nat32; patch = 3 : nat32 })
 cargo install --git https://github.com/dfinity/certified-assets --tag v0.4.3 --locked state-hash-cli
 
 # 3. Compute the hash locally (prints 64 hex chars)
