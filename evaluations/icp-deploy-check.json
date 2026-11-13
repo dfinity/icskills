@@ -1,7 +1,6 @@
 {
   "skill": "icp-deploy-check",
   "description": "Evaluation cases for the icp-deploy-check skill. Tests whether an agent, asked to vet a Rust ic-cdk canister before a mainnet deploy, correctly flags the five deploy-time footguns (anonymous-principal access, mainnet fetch_root_key, unguarded admin methods, pre_upgrade traps, single-controller) and does not false-flag a properly guarded method.",
-
   "output_evals": [
     {
       "name": "Adversarial: unguarded mint reaches anonymous principal",
@@ -15,14 +14,14 @@
       ]
     },
     {
-      "name": "Adversarial: fetch_root_key on the deploy path",
-      "prompt": "My canister's agent setup calls `agent.fetch_root_key().await.unwrap();` before every call. I'm deploying to mainnet. Any problem?",
+      "name": "Adversarial: env-gated fetchRootKey in the frontend",
+      "prompt": "Pre-deploy check: my frontend does `const agent = await HttpAgent.create({ host }); if (process.env.DFX_NETWORK !== \"ic\") { await agent.fetchRootKey(); }`. It's gated to local only, so it's fine for mainnet, right?",
       "expected_behaviors": [
-        "Flags fetch_root_key as a mainnet problem (FAIL)",
-        "Explains fetch_root_key disables replica-signature verification and is for a local replica only",
-        "States that on mainnet it enables man-in-the-middle response forgery",
-        "Says it must be gated behind an explicit local-only flag, never on the default/mainnet path",
-        "Does NOT treat fetch_root_key as harmless"
+        "Flags the fetchRootKey call as a FAIL even though it is behind an environment check",
+        "Explains fetchRootKey trusts whatever root key the replica returns, so if the path runs against mainnet a man-in-the-middle can forge certified responses",
+        "Explains environment branching is how the call leaks into production builds, so the gate is not sufficient",
+        "Recommends removing the call and passing the root key from the ic_env cookie (IC_ROOT_KEY via safeGetCanisterEnv) as the rootKey option to HttpAgent.create",
+        "Does NOT approve the gated call as safe"
       ]
     },
     {
@@ -65,18 +64,39 @@
       ]
     },
     {
-      "name": "Produces a structured pre-deploy report",
-      "prompt": "Run a pre-deploy check over my Rust canister repo and give me the result.",
+      "name": "Adversarial: CallerGuard is not authentication",
+      "prompt": "Ready for mainnet? I added a guard so it should be safe.\n\n```rust\n#[ic_cdk::update]\nasync fn withdraw(amount: u64) -> Result<(), String> {\n    let caller = ic_cdk::api::msg_caller();\n    let _guard = CallerGuard::new(caller)?; // per-caller reentrancy lock\n    debit(caller, amount)?;\n    transfer_out(caller, amount).await\n}\n```",
       "expected_behaviors": [
-        "Produces a per-check result with PASS / FAIL / REVIEW (or N/A) rather than freeform prose",
-        "Covers the deploy-time checks: anonymous-principal access, mainnet fetch_root_key, unguarded admin methods, pre_upgrade trap risk, controller backup",
-        "Points each finding at a file:line / method rather than a vague statement",
-        "Frames a grep hit as a candidate to confirm, not an automatic vulnerability",
+        "Flags withdraw as FAIL on the anonymous-principal check",
+        "Explains CallerGuard is a per-caller reentrancy lock, not authentication, and accepts the anonymous principal like any other caller",
+        "Recommends an explicit anonymous rejection (or a guard function that rejects Principal::anonymous()) before the debit",
+        "Does NOT accept the CallerGuard as sufficient access control"
+      ]
+    },
+    {
+      "name": "Adversarial: authentication-only guard on an admin method",
+      "prompt": "Is this OK to ship? It has a guard.\n\n```rust\nfn require_authenticated() -> Result<(), String> {\n    if ic_cdk::api::msg_caller() == Principal::anonymous() { return Err(\"anonymous\".into()); }\n    Ok(())\n}\n\n#[ic_cdk::update(guard = \"require_authenticated\")]\nfn set_config(new_fee: u64) {\n    CONFIG.with(|c| c.borrow_mut().fee = new_fee);\n}\n```",
+      "expected_behaviors": [
+        "Flags set_config as FAIL on the unguarded-admin/privileged-method check",
+        "Explains require_authenticated only rejects the anonymous principal, so any signed-in principal can change the fee",
+        "Recommends a controller/owner/admin check (e.g. a guard that checks ic_cdk::api::is_controller or owner equality)",
+        "Does NOT treat the presence of a guard attribute as sufficient"
+      ]
+    },
+    {
+      "name": "Produces a structured pre-deploy report",
+      "prompt": "Run a pre-deploy check on my canister and give me the report. Only file, `src/backend/src/lib.rs` (line numbers shown):\n\n```rust\n 1 use candid::Principal;\n 2 use ic_cdk::api::msg_caller;\n 3 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};\n 4 // ... BALANCES: StableBTreeMap<Principal, u64>, FEE: Cell<u64> ...\n 5\n 6 #[ic_cdk::update(name = \"claim\")]\n 7 fn claim(amount: u64) {\n 8     BALANCES.with(|b| { let mut b = b.borrow_mut(); let c = msg_caller(); let v = b.get(&c).unwrap_or(0); b.insert(c, v + amount); });\n 9 }\n10\n11 #[ic_cdk::update]\n12 fn admin_set_fee(fee: u64) {\n13     if !ic_cdk::api::is_controller(&msg_caller()) { ic_cdk::trap(\"not controller\"); }\n14     FEE.with(|f| f.set(fee));\n15 }\n```\nThere is no frontend and no pre_upgrade.",
+      "expected_behaviors": [
+        "Produces a per-check result with PASS / FAIL / REVIEW (or N/A) labels rather than freeform prose",
+        "FAILs `claim` (line 6-8) as a state change reachable by the anonymous principal, despite the parameterized `#[ic_cdk::update(name = ...)]` attribute",
+        "PASSes `admin_set_fee` (line 12) on the privileged-method check because it traps unless the caller is a controller",
+        "Marks fetch_root_key as PASS/N/A (no frontend) and pre_upgrade as PASS/N/A (state in stable structures, no pre_upgrade)",
+        "Marks controller backup as REVIEW for the operator rather than PASS, since it cannot be seen in source",
+        "Points findings at the file and line/method (e.g. src/backend/src/lib.rs:6 or `claim`)",
         "Does not perform any network or mainnet action"
       ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries to test whether the skill activates correctly. 'should_trigger' queries should cause the skill to load; 'should_not_trigger' queries should NOT activate this skill.",
     "should_trigger": [
