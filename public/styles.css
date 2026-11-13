@@ -272,9 +272,15 @@ h4 { font-size: 1.05rem; }
 }
 
 /* ---------- Skill detail page ---------- */
-.breadcrumbs { color: var(--muted); font-size: 0.9rem; margin: 1rem 0; }
-.breadcrumbs a { color: var(--muted); }
+.breadcrumbs {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem;
+  color: var(--muted); font-size: 0.875rem; margin: 1rem 0;
+}
+.breadcrumbs a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
 .breadcrumbs a:hover { color: var(--accent); }
+.breadcrumbs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.breadcrumbs .sep { opacity: 0.6; }
+.breadcrumbs [aria-current="page"] { color: var(--fg-secondary); }
 
 .skill-header { padding-bottom: 1.5rem; margin-bottom: 1.75rem; }
 .skill-category {
