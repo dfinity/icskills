@@ -258,6 +258,16 @@
         "Fix: read that principal with get_app_principal (for the engine's app) and have the owner add it as an engine member, e.g. a developer, via the console's team invite (the link /console/engines/<engine-id>/team?modal=invite-member&principal=<principal>&role=developer)",
         "Does NOT suggest calling the management canister directly, or linking the icp CLI, as the fix"
       ]
+    },
+    {
+      "name": "Custom domain warning: certified-assets older than 0.4.3",
+      "prompt": "I added a custom domain to my app on my cloud engine. The console now warns: \"The engine can't write this app's /.well-known/ic-domains and /.well-known/ii-alternative-origins: its canister doesn't run certified-assets 0.4.3 or newer\". My frontend uses `@dfinity/static-site@v0.4.0`. How do I fix it? Just the steps.",
+      "expected_behaviors": [
+        "Bumps the recipe to `@dfinity/static-site@v0.4.3` or newer",
+        "Redeploys with `icp deploy -e ic`, and if the sync stops with a version mismatch, upgrades in place with `icp canister install <frontend> --mode upgrade -e ic` (a patch bump keeps the state), then runs `icp deploy` again",
+        "Does NOT tell the user to write the contents of `/.well-known/ic-domains` or `/.well-known/ii-alternative-origins` into the build: the engine writes them. Listing the two paths in a `_preserve` file, so a deploy does not delete them, is correct",
+        "Does NOT suggest `--mode reinstall` for a v0.4.0 to v0.4.3 bump"
+      ]
     }
   ],
   "trigger_evals": {
