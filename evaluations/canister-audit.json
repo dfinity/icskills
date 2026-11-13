@@ -1,0 +1,88 @@
+{
+  "skill": "canister-audit",
+  "description": "Evaluation cases for the canister-audit skill. Tests whether an agent, asked to audit an existing Rust ic-cdk canister, models invariants first, treats static hits as candidates (not verdicts), confirms the real flaw, and - the distinctive step - proves a confirmed HIGH/CRITICAL by reproducing the exploit in PocketIC, while handling unproven candidates and disclosure honestly.",
+  "output_evals": [
+    {
+      "name": "Audit an unguarded mint and move to prove it",
+      "prompt": "Audit this canister method. Is it safe, and how would you be sure?\n\n```rust\n#[ic_cdk::update]\nfn claim_bonus(amount: u64) {\n    let caller = ic_cdk::api::msg_caller();\n    STATE.with(|s| { *s.borrow_mut().balances.entry(caller).or_default() += amount; });\n}\n```",
+      "expected_behaviors": [
+        "Flags it: a state-changing update with no caller guard and no anonymous-principal rejection (pitfalls #2/#8)",
+        "States the anonymous principal can call it and mint a free balance, breaking an accounting invariant",
+        "Does not stop at the static observation - proposes PROVING it with a PocketIC reproduction (install the wasm, call claim_bonus as Principal::anonymous(), assert the balance/invariant)",
+        "Treats the grep/read hit as a candidate to confirm, not an automatic verdict"
+      ]
+    },
+    {
+      "name": "High-recall static pass: candidate vs finding",
+      "prompt": "My static ruleset flagged `deposit`, `withdraw`, and `claim_bonus` as 'missing caller auth', but `deposit` starts with `if caller == Principal::anonymous() { trap }`. Is the ruleset wrong?",
+      "expected_behaviors": [
+        "Explains the ruleset is deliberately high-recall and does not treat a bare == Principal::anonymous() as a suppressing guard",
+        "Says a flag is a candidate for review, not a confirmed finding",
+        "Concludes deposit's anonymous-rejection refutes its candidate, while claim_bonus (no guard at all) is the real finding to confirm and prove"
+      ]
+    },
+    {
+      "name": "Write the PocketIC reproduction",
+      "prompt": "Write the PocketIC integration test that proves the token_vault `claim_bonus` flaw (an unguarded update that credits the caller's balance without touching total_deposited). Reply inline with just the Rust test file and the command to run it; don't create files.",
+      "expected_behaviors": [
+        "Loads the built wasm32 canister into PocketIC (create_canister, add_cycles, install_canister)",
+        "Calls claim_bonus via update_call as Principal::anonymous(), then query_call for balance_of / total_deposited",
+        "Asserts the prohibited outcome (anonymous balance > total_deposited) so a passing test = a real exploit",
+        "Keeps the reproduction in a separate crate so the pocket-ic dev-dep does not touch the audited canister's manifest and the target is left unmodified"
+      ]
+    },
+    {
+      "name": "Unproven candidate + responsible disclosure",
+      "prompt": "I think there's a TOCTOU across an await but I can't get a PocketIC test to trigger it. How do I report this, and this is an unpatched mainnet canister - can I publish the repro?",
+      "expected_behaviors": [
+        "Says a clean/failed reproduction does NOT refute the finding - report it as suspected, not reproduced, keeping the reasoning",
+        "Does not downgrade a real-looking flaw to 'safe' just because the PoC did not trigger",
+        "Warns against publishing a working exploit for an unpatched canister; the repro goes in a private report to the controllers"
+      ]
+    },
+    {
+      "name": "Discrimination: a guarded admin method is not a finding",
+      "prompt": "Is this a vulnerability?\n\n```rust\nfn require_owner() -> Result<(), String> {\n    let caller = ic_cdk::api::msg_caller();\n    if caller == Principal::anonymous() || caller != OWNER.with(|o| *o.borrow()) {\n        return Err(\"caller is not the owner\".into());\n    }\n    Ok(())\n}\n\n#[ic_cdk::update(guard = \"require_owner\")]\nfn admin_set_total(new_total: u64) {\n    STATE.with(|s| s.borrow_mut().total_deposited = new_total);\n}\n```",
+      "expected_behaviors": [
+        "Does NOT flag it as a confirmed finding: the guard attribute runs require_owner before the method, and require_owner rejects anonymous and non-owner callers",
+        "Treats the guarded admin method as passing on access control (may note it depends on OWNER being set correctly at init)"
+      ]
+    },
+    {
+      "name": "Adversarial: guard called with its Result discarded",
+      "prompt": "Audit this admin method - it calls the owner guard first, so it's fine, right?\n\n```rust\nfn require_owner() -> Result<(), String> {\n    if ic_cdk::api::msg_caller() != OWNER.with(|o| *o.borrow()) { return Err(\"not owner\".into()); }\n    Ok(())\n}\n\n#[ic_cdk::update]\nfn admin_set_total(new_total: u64) {\n    require_owner();\n    STATE.with(|s| s.borrow_mut().total_deposited = new_total);\n}\n```",
+      "expected_behaviors": [
+        "Flags admin_set_total as a real finding: require_owner() returns a Result that is discarded, so the mutation runs even when it returns Err",
+        "States any caller (including the anonymous principal) can set total_deposited",
+        "Recommends propagating the error (require_owner()?; with a Result return type) or using #[ic_cdk::update(guard = \"require_owner\")]",
+        "Does NOT accept the presence of the require_owner() call as a guard"
+      ]
+    },
+    {
+      "name": "Adversarial: env-gated fetchRootKey is still a finding",
+      "prompt": "During the audit's static pass I found `if (process.env.DFX_NETWORK !== \"ic\") { await agent.fetchRootKey(); }` in the frontend. It only runs locally, so I can skip it, right?",
+      "expected_behaviors": [
+        "Says NOT to skip it: it is a finding even behind an environment check",
+        "Explains fetchRootKey trusts the root key the replica returns, so if the branch reaches mainnet a man-in-the-middle can forge certified responses",
+        "Explains environment branching is how the call leaks into production builds",
+        "Recommends removing the call and passing the root key from the ic_env cookie (IC_ROOT_KEY) as rootKey to HttpAgent.create"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries that should load this skill vs. ones that should not.",
+    "should_trigger": [
+      "Audit this Rust canister for security flaws",
+      "Review a canister I didn't write",
+      "Prove this canister exploit with PocketIC",
+      "Reproduce the vulnerability in my ic-cdk canister",
+      "Is this canister method actually exploitable?"
+    ],
+    "should_not_trigger": [
+      "How do I write a secure canister / what patterns should I follow?",
+      "How do I deploy my canister to mainnet?",
+      "Write a Candid interface for my canister",
+      "How do I launch an SNS?"
+    ]
+  }
+}
