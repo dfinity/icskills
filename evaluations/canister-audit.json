@@ -1,7 +1,6 @@
 {
   "skill": "canister-audit",
   "description": "Evaluation cases for the canister-audit skill. Tests whether an agent, asked to audit an existing Rust ic-cdk canister, models invariants first, treats static hits as candidates (not verdicts), confirms the real flaw, and - the distinctive step - proves a confirmed HIGH/CRITICAL by reproducing the exploit in PocketIC, while handling unproven candidates and disclosure honestly.",
-
   "output_evals": [
     {
       "name": "Audit an unguarded mint and move to prove it",
@@ -24,9 +23,9 @@
     },
     {
       "name": "Write the PocketIC reproduction",
-      "prompt": "How do I actually prove the claim_bonus flaw rather than just claim it?",
+      "prompt": "Write the PocketIC integration test that proves the token_vault `claim_bonus` flaw (an unguarded update that credits the caller's balance without touching total_deposited). Reply inline with just the Rust test file and the command to run it; don't create files.",
       "expected_behaviors": [
-        "Builds the audited canister to wasm32 and loads it into PocketIC (create_canister, add_cycles, install_canister)",
+        "Loads the built wasm32 canister into PocketIC (create_canister, add_cycles, install_canister)",
         "Calls claim_bonus via update_call as Principal::anonymous(), then query_call for balance_of / total_deposited",
         "Asserts the prohibited outcome (anonymous balance > total_deposited) so a passing test = a real exploit",
         "Keeps the reproduction in a separate crate so the pocket-ic dev-dep does not touch the audited canister's manifest and the target is left unmodified"
@@ -43,14 +42,33 @@
     },
     {
       "name": "Discrimination: a guarded admin method is not a finding",
-      "prompt": "Is this a vulnerability?\n\n```rust\n#[ic_cdk::update]\nfn admin_set_total(new_total: u64) {\n    require_owner();\n    STATE.with(|s| s.borrow_mut().total_deposited = new_total);\n}\n```",
+      "prompt": "Is this a vulnerability?\n\n```rust\nfn require_owner() -> Result<(), String> {\n    let caller = ic_cdk::api::msg_caller();\n    if caller == Principal::anonymous() || caller != OWNER.with(|o| *o.borrow()) {\n        return Err(\"caller is not the owner\".into());\n    }\n    Ok(())\n}\n\n#[ic_cdk::update(guard = \"require_owner\")]\nfn admin_set_total(new_total: u64) {\n    STATE.with(|s| s.borrow_mut().total_deposited = new_total);\n}\n```",
       "expected_behaviors": [
-        "Does NOT flag it as a confirmed finding: the owner guard (require_owner) restricts the caller",
-        "May note the audit still depends on require_owner being implemented correctly, but treats a guarded admin method as passing"
+        "Does NOT flag it as a confirmed finding: the guard attribute runs require_owner before the method, and require_owner rejects anonymous and non-owner callers",
+        "Treats the guarded admin method as passing on access control (may note it depends on OWNER being set correctly at init)"
+      ]
+    },
+    {
+      "name": "Adversarial: guard called with its Result discarded",
+      "prompt": "Audit this admin method - it calls the owner guard first, so it's fine, right?\n\n```rust\nfn require_owner() -> Result<(), String> {\n    if ic_cdk::api::msg_caller() != OWNER.with(|o| *o.borrow()) { return Err(\"not owner\".into()); }\n    Ok(())\n}\n\n#[ic_cdk::update]\nfn admin_set_total(new_total: u64) {\n    require_owner();\n    STATE.with(|s| s.borrow_mut().total_deposited = new_total);\n}\n```",
+      "expected_behaviors": [
+        "Flags admin_set_total as a real finding: require_owner() returns a Result that is discarded, so the mutation runs even when it returns Err",
+        "States any caller (including the anonymous principal) can set total_deposited",
+        "Recommends propagating the error (require_owner()?; with a Result return type) or using #[ic_cdk::update(guard = \"require_owner\")]",
+        "Does NOT accept the presence of the require_owner() call as a guard"
+      ]
+    },
+    {
+      "name": "Adversarial: env-gated fetchRootKey is still a finding",
+      "prompt": "During the audit's static pass I found `if (process.env.DFX_NETWORK !== \"ic\") { await agent.fetchRootKey(); }` in the frontend. It only runs locally, so I can skip it, right?",
+      "expected_behaviors": [
+        "Says NOT to skip it: it is a finding even behind an environment check",
+        "Explains fetchRootKey trusts the root key the replica returns, so if the branch reaches mainnet a man-in-the-middle can forge certified responses",
+        "Explains environment branching is how the call leaks into production builds",
+        "Recommends removing the call and passing the root key from the ic_env cookie (IC_ROOT_KEY) as rootKey to HttpAgent.create"
       ]
     }
   ],
-
   "trigger_evals": {
     "description": "Queries that should load this skill vs. ones that should not.",
     "should_trigger": [
