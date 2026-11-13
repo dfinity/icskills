@@ -7,7 +7,7 @@
       "prompt": "My ICP app already builds. How do I deploy it to my cloud engine? Just the steps and commands, no canister code.",
       "expected_behaviors": [
         "Uses `https://opencloud.org` as the default console origin, stating it and offering an override, and asks for the engine's subnet id if not provided (does not guess it)",
-        "Links the CLI with `icp identity link web <name> --auth <console-origin>`",
+        "Links the CLI with `icp identity link web <name> --app <console-domain>` (`opencloud.org` by default)",
         "Notes the user must complete the Internet Identity sign-in in the browser",
         "Sets the identity as default with `icp identity default <name>` using the same name",
         "Deploys with `icp deploy -e ic --subnet <subnet-id>`",
@@ -18,19 +18,19 @@
       "name": "Link command and what to expect",
       "prompt": "Give me the command to link my icp CLI to my cloud engine console at https://opencloud.org, and what to expect when I run it. No deploy steps.",
       "expected_behaviors": [
-        "Produces `icp identity link web <your-identity-name> --auth https://opencloud.org` (a chosen local name plus the exact console origin)",
+        "Produces `icp identity link web <your-identity-name> --app opencloud.org` (a chosen local name plus the console host, with no scheme)",
         "Mentions a browser tab opens and the user completes the Internet Identity sign-in there",
-        "Does NOT invent a different flag than --auth for the origin",
+        "Does NOT use `--auth https://opencloud.org` (it signs in through two screens) and does NOT omit `--app` (that derives the cli.id.ai principal)",
         "Does NOT use dfx"
       ]
     },
     {
-      "name": "Adversarial: wrong --auth origin",
-      "prompt": "I linked with `icp identity link web admin --auth https://example.com`, but my engine console is opencloud.org, and now `icp deploy` says I'm not authorized on the engine. Why?",
+      "name": "Adversarial: wrong --app domain",
+      "prompt": "I linked with `icp identity link web admin --app example.com`, but my engine console is opencloud.org, and now `icp deploy` says I'm not authorized on the engine. Why?",
       "expected_behaviors": [
-        "Identifies that --auth must match the console origin the user signs in with (https://opencloud.org), not an unrelated URL",
-        "Explains the mismatched origin derived a different principal that does not administer the engine",
-        "Tells the user to relink with `icp identity link web <name> --auth https://opencloud.org`",
+        "Identifies that --app must be the host of the console the user signs in with (opencloud.org), not an unrelated domain",
+        "Explains the mismatched domain derived a different principal that does not administer the engine",
+        "Tells the user to relink with `icp identity link web <name> --app opencloud.org`",
         "Does NOT attribute the failure to insufficient cycles or a wrong subnet id"
       ]
     },
@@ -38,7 +38,7 @@
       "name": "Override: non-default console origin",
       "prompt": "I sign in to my engine console at https://console.other-engine.dev, not opencloud.org. Link my icp CLI and deploy my built app to subnet abc12-3defg.",
       "expected_behaviors": [
-        "Uses the user's console origin in the link command: `icp identity link web <name> --auth https://console.other-engine.dev`",
+        "Uses the user's console host in the link command: `icp identity link web <name> --app console.other-engine.dev`",
         "Does NOT substitute the default https://opencloud.org once the user has named a different console",
         "Deploys with `icp deploy -e ic --subnet abc12-3defg`",
         "Does NOT use dfx"
@@ -55,7 +55,7 @@
     },
     {
       "name": "Adversarial: CLI in a remote sandbox, browser on another machine",
-      "prompt": "My coding agent runs in a cloud sandbox. It ran `icp identity link web admin --auth https://opencloud.org` there and gave me a sign-in URL containing `callback=http://127.0.0.1:39281/`. I completed the Internet Identity sign-in in the browser on my laptop, but the CLI in the sandbox never finishes linking. What is wrong and how do I get the sandbox CLI authorized for my engine? Just the fix, no deploy steps.",
+      "prompt": "My coding agent runs in a cloud sandbox. It ran `icp identity link web admin --app opencloud.org` there and gave me a sign-in URL containing `callback=http://127.0.0.1:39281/`. I completed the Internet Identity sign-in in the browser on my laptop, but the CLI in the sandbox never finishes linking. What is wrong and how do I get the sandbox CLI authorized for my engine? Just the fix, no deploy steps.",
       "expected_behaviors": [
         "Identifies that the callback targets the sandbox's loopback, which the laptop browser cannot reach — the browser resolves 127.0.0.1 to the laptop itself, so the delegation never reaches the CLI",
         "Does NOT suggest re-running `icp identity link web` in the sandbox or opening the 127.0.0.1 URL again — that can never complete",
@@ -77,7 +77,7 @@
       "prompt": "My coding agent has shell access on my Mac through a sandboxed device bridge: DNS is blocked (curl returns status 000) and it can only write to /tmp. It already built my ICP project. It proposed doing an identity delegation handoff and then running the deploy to my cloud engine itself from that shell. Is that going to work, and if not, what should it do instead? I know my subnet id. Just the approach and commands.",
       "expected_behaviors": [
         "Identifies that the delegation handoff cannot help here: it moves signing authority, not network access — `icp deploy` (and the link) still need network from the shell that runs them, so nothing network-bound can run in the bridge shell",
-        "Recommends preparing a single script the user runs in their real Terminal, doing the normal flow there: `icp identity link web <name> --auth <console-origin>` (terminal and browser share a loopback, so no handoff is needed), `icp identity default <name>`, `icp deploy -e ic --subnet <subnet-id>`",
+        "Recommends preparing a single script the user runs in their real Terminal, doing the normal flow there: `icp identity link web <name> --app <console-domain>` (terminal and browser share a loopback, so no handoff is needed), `icp identity default <name>`, `icp deploy -e ic --subnet <subnet-id>`",
         "Asks the user to paste the script output back for verification",
         "Does NOT suggest tunneling, proxying, or retrying the commands inside the sandboxed shell",
         "Does NOT use dfx"
@@ -85,12 +85,12 @@
     },
     {
       "name": "Agent pitfall: link command stalls non-interactively",
-      "prompt": "I ran `icp identity link web admin --auth https://opencloud.org` as a background process and it has been hanging for minutes — no browser tab ever opened. What is wrong?",
+      "prompt": "I ran `icp identity link web admin --app opencloud.org` as a background process and it has been hanging for minutes — no browser tab ever opened. What is wrong?",
       "expected_behaviors": [
         "Identifies that the command waits at a 'Press Enter to log in' prompt before opening the browser",
         "Suggests running it interactively, or piping a real newline (`printf '\\n' | icp identity link web ...`) when it must run non-interactively — and does NOT suggest redirecting stdin from /dev/null",
         "Notes the user must still complete the Internet Identity sign-in in the browser afterwards",
-        "Does NOT attribute the hang to the engine, the subnet, or the --auth origin"
+        "Does NOT attribute the hang to the engine, the subnet, or the --app domain"
       ]
     },
     {
@@ -98,7 +98,7 @@
       "prompt": "`icp deploy -e ic --subnet <my-subnet-id>` fails saying the anonymous principal is not authorized on my cloud engine. How do I fix this?",
       "expected_behaviors": [
         "Explains the active identity is the default anonymous one, which does not administer the engine",
-        "Tells the user to link their console identity with `icp identity link web <name> --auth <console-origin>` and set it active with `icp identity default <name>`",
+        "Tells the user to link their console identity with `icp identity link web <name> --app <console-domain>` and set it active with `icp identity default <name>`",
         "Does NOT suggest creating a plain local identity (`icp identity new`) — a local key is not the engine admin principal",
         "Does NOT use dfx"
       ]
@@ -108,7 +108,7 @@
       "prompt": "Can I just run `dfx deploy --network ic` to push my app to my cloud engine?",
       "expected_behaviors": [
         "Corrects the user: this ecosystem uses icp, not dfx",
-        "Explains the engine needs the CLI linked to the console identity first (`icp identity link web <name> --auth <console-origin>`)",
+        "Explains the engine needs the CLI linked to the console identity first (`icp identity link web <name> --app <console-domain>`)",
         "Gives the correct deploy: `icp deploy -e ic --subnet <subnet-id>`",
         "Does NOT endorse the dfx command or the --network flag"
       ]
@@ -132,7 +132,7 @@
         "Identifies that one canister must carry `__META_MAIN_CANISTER` set to the exact string \"true\" (the frontend / entry point)",
         "Notes it is matched as the literal string \"true\" (not a boolean or \"True\"), and exactly one canister should be marked",
         "Tells the user to set it and re-deploy by explicitly naming the `icp deploy` command (not just saying 'redeploy')",
-        "Does NOT attribute the missing button to the subnet, the identity, or the --auth origin"
+        "Does NOT attribute the missing button to the subnet, the identity, or the --app domain"
       ]
     },
     {
@@ -153,7 +153,7 @@
         "Identifies that the icon must be set on the MAIN canister (marked `__META_MAIN_CANISTER: \"true\"`), not the backend",
         "Identifies that `__META_ICON_PATH` is a path resolved against `__META_BASE_URL`, not an inline image — a data: URI does not belong there (and would exceed the engine env value length cap)",
         "Tells the user to set `__META_BASE_URL` to an absolute https URL and `__META_ICON_PATH` to a served path (e.g. /favicon.svg), both on the main canister, then re-deploy",
-        "Does NOT attribute the missing icon to the subnet, the identity, or the --auth origin"
+        "Does NOT attribute the missing icon to the subnet, the identity, or the --app domain"
       ]
     },
     {
@@ -246,7 +246,7 @@
       "expected_behaviors": [
         "Chooses the icp CLI route, not the ICP MCP connector",
         "Gives the reason that the CLI sign-in works in a local session (the CLI and the browser are on the same machine), and/or that the connector cannot upload the asset canister's files",
-        "Links the CLI with `icp identity link web <name> --auth https://opencloud.org` and deploys with `icp deploy -e ic --subnet <subnet-id>`",
+        "Links the CLI with `icp identity link web <name> --app opencloud.org` and deploys with `icp deploy -e ic --subnet <subnet-id>`",
         "Does NOT invent a subnet id: asks for it or leaves a clear placeholder for the user's subnet id"
       ]
     },
