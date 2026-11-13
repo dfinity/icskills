@@ -96,13 +96,15 @@
       ]
     },
     {
-      "name": "Adversarial: Motoko has no pay-as-you-go pricing yet",
+      "name": "Motoko pay-as-you-go outcall through the ic builder",
       "prompt": "Show me how to make a pay-as-you-go (pricing version 2) HTTPS outcall from a Motoko canister using the ic mops package.",
       "expected_behaviors": [
-        "States that Motoko has no version 2 path today: the published ic package (4.x) prices version 1 via Call.httpRequest",
-        "Does NOT fabricate a Motoko builder, a costHttpRequestV2 call, or a Cost.httpRequestV2 function as if it were available",
-        "Notes that ic 4.x's HttpRequestArgs has no pricing_version field at all, so a Motoko caller cannot set it and the call is version 1 by omission, consistently funded by the version 1 cost function",
-        "May note that Motoko support is planned but unreleased, and depends on a moc release"
+        "Uses the builder from mo:ic/Call: Call.httpRequest(url) chained with with* setters and finished with .send()",
+        "States the version requirement: the ic mops package 6.0.0 or later, which needs moc 2.1.0 or later",
+        "Does NOT set pricing_version by hand, and says the builder selects version 2 itself (it overwrites the field even via httpRequestFromArgs)",
+        "Does NOT hand-attach cycles with (with cycles = ...), because send() computes and attaches them",
+        "Does NOT present Call.httpRequest(args) taking a whole HttpRequestArgs record as the version 2 entry point, which is the 4.x and 5.x API and prices version 1",
+        "May mention the withExpected* setters narrowing the reservation from the worst case"
       ]
     },
     {
