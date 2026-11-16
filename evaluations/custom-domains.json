@@ -86,6 +86,16 @@
         "Notes that a domain which has already collected sign-ins cannot be repointed without orphaning those accounts",
         "Does NOT present the custom domain switch as principal-neutral or a pure DNS change"
       ]
+    },
+    {
+      "name": "Cloud engine: the engine writes ic-domains",
+      "prompt": "My app runs on a cloud engine (OpenCloud), frontend on `@dfinity/static-site@v0.4.3`. I listed app.example.com in `public/.well-known/ic-domains` and redeployed, but a few minutes later `/.well-known/ic-domains` no longer lists it. Why, and what do I do instead? Short answer, no DNS steps.",
+      "expected_behaviors": [
+        "Explains that the engine writes /.well-known/ic-domains (and /.well-known/ii-alternative-origins) into the app's canister itself and replaces the app's own copy",
+        "Says to add the domain in the engine console (as a domain you own) instead of the app's file. A deploy to remove the file and ship `_preserve` is correct",
+        "Says to list /.well-known/ic-domains and /.well-known/ii-alternative-origins in a `_preserve` file at the root of `dir`, so a deploy does not delete them",
+        "Does NOT tell the user to keep the domain in the app's own ic-domains file or to write the file with upload_asset themselves"
+      ]
     }
   ],
   "trigger_evals": {
@@ -97,7 +107,8 @@
       "How do I update my custom domain to point to a different canister?",
       "How do I remove a custom domain from the IC?",
       "The ACME challenge for my IC domain keeps failing",
-      "How do I validate my custom domain configuration?"
+      "How do I validate my custom domain configuration?",
+      "My OpenCloud console says the engine can't write my app's /.well-known/ic-domains"
     ],
     "should_not_trigger": [
       "How do I deploy a frontend on the IC?",
