@@ -21,6 +21,7 @@
 /skills/ckbtc/                   @dfinity/defi @dfinity/sdk
 /skills/cksol/                   @dfinity/defi @dfinity/sdk
 /skills/cketh/                   @dfinity/defi @dfinity/sdk
+/skills/custom-domains           @dfinity/node @dfinity/sdk
 /skills/evm-rpc/                 @dfinity/defi @dfinity/sdk
 /skills/icrc-ledger/             @dfinity/core-protocol @dfinity/sdk
 /skills/cycles-management/       @dfinity/core-protocol @dfinity/sdk
