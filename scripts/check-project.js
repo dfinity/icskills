@@ -71,6 +71,11 @@ for (const dir of dirs) {
     errors.push(`${label}: missing required frontmatter field: category`);
   }
 
+  // Agent Skills spec: no consecutive hyphens (the name regex above allows them).
+  if (skill.meta.name && skill.meta.name.includes("--")) {
+    errors.push(`${label}: name must not contain consecutive hyphens (Agent Skills spec)`);
+  }
+
   // Search metadata (used by site search; outranks description matches)
   if (!skill.meta.summary) {
     errors.push(`${label}: missing required frontmatter field: metadata.summary (one short sentence for site search)`);

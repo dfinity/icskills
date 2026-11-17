@@ -1,26 +1,7 @@
-// Generates /.well-known/skills/index.json at build time
-// Implements the Cloudflare Agent Skills Discovery RFC (v0.1)
-// https://github.com/cloudflare/agent-skills-discovery-rfc
+// /.well-known/skills/index.json: the v0.1.0 path of the Agent Skills Discovery
+// RFC. It now serves the same v0.2.0 index as /.well-known/agent-skills/index.json
+// so existing links and installs keep resolving. See src/lib/discovery.ts.
 import type { APIRoute } from 'astro';
-import { absUrl } from '../../../lib/site';
-import { getAllSkills, getSkillFiles, getSkillHash } from '../../../lib/skills';
+import { discoveryIndexResponse } from '../../../lib/discovery';
 
-export const GET: APIRoute = async () => {
-  const skills = await getAllSkills();
-
-  const index = {
-    skills: await Promise.all(
-      skills.map(async (s) => ({
-        name: s.data.name,
-        description: s.data.description,
-        url: absUrl(`/.well-known/skills/${s.data.name}/SKILL.md`),
-        files: await getSkillFiles(s),
-        hash: await getSkillHash(s),
-      })),
-    ),
-  };
-
-  return new Response(JSON.stringify(index, null, 2), {
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-  });
-};
+export const GET: APIRoute = () => discoveryIndexResponse();

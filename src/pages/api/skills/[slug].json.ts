@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ props }) => {
     updated: updatedAt,
     urls: {
       html: absUrl(skillUrl(slug)),
-      markdown: absUrl(`/.well-known/skills/${slug}/SKILL.md`),
+      markdown: absUrl(`/.well-known/agent-skills/${slug}/SKILL.md`),
       json: absUrl(`/api/skills/${slug}.json`),
       source: sourceUrl,
     },

@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
         updated: updatedAt,
         urls: {
           html: absUrl(skillUrl(skill.id)),
-          markdown: absUrl(`/.well-known/skills/${skill.id}/SKILL.md`),
+          markdown: absUrl(`/.well-known/agent-skills/${skill.id}/SKILL.md`),
           json: absUrl(`/api/skills/${skill.id}.json`),
           source: githubCommitUrl(skill.id, sha),
         },
