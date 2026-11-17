@@ -1,8 +1,8 @@
 // Serves /.well-known/skills/<name>/<path> at build time
 // Catch-all route for skill files (references, scripts, etc.)
 // SKILL.md is handled by its own dedicated route.
-// Implements the Cloudflare Agent Skills Discovery RFC (v0.1)
-// https://github.com/cloudflare/agent-skills-discovery-rfc
+// The v0.1.0-era per-file URL, kept because installed autosync scripts fetch
+// from it. The current location is /.well-known/agent-skills/<name>/<path>.
 import type { APIRoute } from 'astro';
 import { getSkillFileEntries } from '../../../../lib/skills';
 

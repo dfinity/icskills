@@ -70,6 +70,15 @@ jobs:
       - name: Search regression cases
         run: node scripts/test-search.js
 
+      # Discovery index (Agent Skills Discovery RFC v0.2.0) on the built site:
+      # every digest must match the bytes served. Runs in a different time zone
+      # from the build, so an archive whose bytes depend on time fails here
+      # instead of publishing new digests for unchanged skills on every deploy.
+      - name: Discovery index conformance
+        run: node scripts/check-discovery.js
+        env:
+          TZ: Pacific/Auckland
+
       # `skill-validator check` takes exactly one path and exits 3 (usage error)
       # when handed more, so every path is checked in its own invocation. Exit
       # codes: 0 clean, 1 errors, 2 warnings, 3 usage error. The aggregate takes

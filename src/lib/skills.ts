@@ -112,7 +112,7 @@ export function githubCommitUrl(slug: string, sha: string): string {
 
 /**
  * List all files in a skill's directory, with SKILL.md first.
- * Used by the .well-known/skills/index.json endpoint.
+ * Used by the discovery index (src/lib/discovery.ts) and its archives.
  */
 export async function getSkillFiles(skill: Skill): Promise<string[]> {
   const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
@@ -122,7 +122,8 @@ export async function getSkillFiles(skill: Skill): Promise<string[]> {
 }
 
 /**
- * Per-skill aggregate content hash, published in .well-known/skills/index.json so
+ * Per-skill aggregate content hash, published as the legacy `hash` field of the
+ * discovery index (src/lib/discovery.ts) so
  * consumers can detect which skills changed without downloading every file.
  *
  * Returns "sha256:<hex>" over the skill's files. The input is built from each served
@@ -162,7 +163,8 @@ export interface SkillFileEntry {
 
 /**
  * Load all individual reference files across all skills (excluding SKILL.md).
- * Used by the catch-all route at /.well-known/skills/{name}/{path}.
+ * Used by the catch-all routes at /.well-known/agent-skills/{name}/{path} and
+ * the legacy /.well-known/skills/{name}/{path}.
  */
 export async function getSkillFileEntries(): Promise<SkillFileEntry[]> {
   const skills = await getAllSkills();

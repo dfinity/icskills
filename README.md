@@ -67,7 +67,7 @@ Browse available skills, pick your agent, and install. See [skills.sh](https://s
 Fetch a single skill and place it wherever your agent reads instructions from:
 
 ```bash
-curl -sL https://skills.internetcomputer.org/.well-known/skills/ckbtc/SKILL.md
+curl -sL https://skills.internetcomputer.org/.well-known/agent-skills/ckbtc/SKILL.md
 ```
 
 The files are plain markdown — paste into any system prompt, rules file, or context window.
@@ -76,40 +76,48 @@ The files are plain markdown — paste into any system prompt, rules file, or co
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Skills discovery | [`.well-known/skills/index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) | Machine-readable skill index ([Agent Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc)) |
-| Single skill | `/.well-known/skills/{name}/SKILL.md` | Raw markdown for one skill |
-| Reference files | `/.well-known/skills/{name}/references/{file}.md` | Additional files listed in the discovery index |
-| Download (zip) | `/.well-known/skills/{name}/SKILL.zip` | Zip bundle for multi-file skills (SKILL.md + references) |
-| Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | All skills with descriptions and discovery links |
+| Skills discovery | [`.well-known/agent-skills/index.json`](https://skills.internetcomputer.org/.well-known/agent-skills/index.json) | Machine-readable skill index ([Agent Skills Discovery RFC v0.2.0](https://github.com/cloudflare/agent-skills-discovery-rfc)). Also served at the older `/.well-known/skills/index.json`. |
+| Single skill | `/.well-known/agent-skills/{name}/SKILL.md` | Raw markdown for one skill (every skill, whatever its index `type`) |
+| Reference files | `/.well-known/agent-skills/{name}/references/{file}.md` | A skill's other files, one at a time |
+| Download (zip) | `/.well-known/agent-skills/{name}.zip` | The whole skill folder (SKILL.md at the root), reproducible byte for byte |
+| Skill index | [`llms.txt`](https://skills.internetcomputer.org/llms.txt) | Agent instructions with discovery links |
 | Skill page | [`/skills/{name}/`](https://skills.internetcomputer.org/skills/ckbtc/) | Pre-rendered skill page for humans |
 
-### Change detection — the `hash` field
+### The discovery index
 
-Each skill entry in [`index.json`](https://skills.internetcomputer.org/.well-known/skills/index.json) carries a `hash`:
+Each entry follows the [Agent Skills Discovery RFC v0.2.0](https://github.com/cloudflare/agent-skills-discovery-rfc):
 
 ```jsonc
 {
-  "name": "static-site",
-  "url": "https://.../static-site/SKILL.md",
-  "files": ["SKILL.md"],
-  "hash": "sha256:f3ee5a3e…"   // per-skill aggregate content hash
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "vetkeys",
+      "type": "archive",                 // "skill-md": SKILL.md only; "archive": SKILL.md + references/ or scripts/
+      "description": "Build vetKeys cryptography …",
+      "url": "https://…/.well-known/agent-skills/vetkeys.zip",
+      "digest": "sha256:16ab1fde…",      // SHA-256 of the exact bytes at url
+      "files": ["SKILL.md", "references/bls-signing.md", …],   // legacy, see below
+      "hash": "sha256:…"                 // legacy, see below
+    }
+  ]
 }
 ```
 
-**What it is.** A `sha256:<hex>` digest over all of the skill's served files. It is
-computed from each file's path plus the sha256 of its bytes, sorted by path — so it
-changes whenever any file in the skill changes (including `references/` and `scripts/`
-files), and is sensitive to renames. It is **not** tied to a git commit; it is a pure
-content hash of what the server actually serves.
+**`digest`** is the SHA-256 of the artifact at `url`: the SKILL.md for `skill-md`
+entries, the zip for `archive` entries. Clients verify a download against it and can
+compare it with a cached value to skip unchanged skills. Archives are built
+reproducibly (fixed timestamps, sorted entries), so a digest changes only when the
+skill's files do. `scripts/check-discovery.js` checks all of this against the built site.
 
-**What it's for.** Detecting *which* skills changed from a single fetch of `index.json`,
-without downloading and hashing every file yourself. Store the `{name: hash}` map, and on
-the next fetch re-download only the skills whose `hash` differs (or are new), and prune
-those no longer listed. This is the basis for the differential sync in the
-[`autosync-ic-skills`](skills/autosync-ic-skills/SKILL.md) skill.
-
-**What it's not for.** It is not a version number or changelog signal — it carries no
-ordering or human meaning, only equality. Compare hashes for equality; do not parse them.
+**Legacy fields: `files` and `hash`.** These are the v0.1.0 index fields. The
+[`autosync-ic-skills`](skills/autosync-ic-skills/SKILL.md) sync script is copied into
+users' projects once and reads them on every session: `hash` (an aggregate over each
+file's path and sha256) to decide what changed, and `files` to download each file from
+`/.well-known/skills/{name}/`. Without them, an installed script replaces every skill
+with an empty directory. v0.2.0 clients must ignore unrecognized fields, so carrying
+them is conformant. Keep both fields, and the `/.well-known/skills/{name}/…` file URLs,
+until installed scripts no longer read them.
 
 ## Evaluations
 
@@ -149,7 +157,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or update skills.
 - **Evaluation**: Per-skill eval cases with LLM-as-judge scoring (`node scripts/evaluate-skills.js <skill>`)
 - **Schema**: JSON Schema for frontmatter at `skills/skill.schema.json`
 - **SEO**: Per-skill meta tags, JSON-LD (TechArticle), sitemap, canonical URLs
-- **Skills Discovery**: `llms.txt`, `.well-known/skills/` ([Skills Discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc))
+- **Skills Discovery**: `llms.txt`, `.well-known/agent-skills/` ([Agent Skills Discovery RFC v0.2.0](https://github.com/cloudflare/agent-skills-discovery-rfc))
 
 ## License
 
