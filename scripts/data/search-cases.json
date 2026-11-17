@@ -1,5 +1,5 @@
 {
-  "$comment": "Queries the site search must answer. Each case: the query, the skill that must appear (expect) and the rank it must reach (within, 1 = first). Optional precision checks: max (most results allowed) and absent (skills that must not appear). Run with: node scripts/test-search.js (also part of npm run validate). When adding a skill, add a case or two in the words a user would type \u2014 not words copied from its title.",
+  "$comment": "Queries the site search must answer. Each case: the query, the skill that must appear (expect) and the rank it must reach (within, 1 = first). Optional precision checks: max (most ranked results allowed; skills that only mention the query are listed separately and not counted) and absent (skills that must not appear anywhere). Run with: node scripts/test-search.js (also part of npm run validate). When adding a skill, add a case or two in the words a user would type \u2014 not words copied from its title.",
   "cases": [
     {"q": "custom domain name", "expect": "custom-domains", "within": 1, "max": 3},
     {"q": "domain name", "expect": "custom-domains", "within": 1, "max": 3},
@@ -44,6 +44,14 @@
     {"q": "notif", "expect": "user-notifications", "within": 1},
     {"q": "agent login", "expect": "agent-web-identity", "within": 1, "max": 3, "absent": ["autosync-ic-skills", "wallet-integration"]},
     {"q": "sign in", "expect": "user-sign-in", "within": 1, "max": 5},
-    {"q": "governance", "expect": "sns-launch", "within": 1, "max": 3}
+    {"q": "governance", "expect": "sns-launch", "within": 1, "max": 3},
+    {"q": "subaccount", "expect": "icrc-ledger", "within": 5},
+    {"q": "fetch_root_key", "expect": "icp-deploy-check", "within": 1, "max": 2},
+    {"q": "dfx migration", "expect": "icp-cli", "within": 1},
+    {"q": "bindgen", "expect": "icp-cli", "within": 2},
+    {"q": "chunked upload", "expect": "smtp-gateway", "within": 1},
+    {"q": "CallerGuard", "expect": "canister-security", "within": 1},
+    {"q": "cu", "expect": "custom-domains", "within": 1, "max": 2},
+    {"q": "ck", "expect": "ckbtc", "within": 3, "max": 3}
   ]
 }

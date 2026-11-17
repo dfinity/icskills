@@ -69,22 +69,6 @@ const collectionLd = {
     <cite>ICP Skills protocol, <a href="/llms.txt"><code>/llms.txt</code></a></cite>
   </blockquote>
 
-  <div class="search-bar">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="skill-search" type="search" placeholder="Search skills…" autocomplete="off" aria-controls="search-results" />
-  </div>
-
-  <section id="search-results" class="category search-results" aria-live="polite" hidden>
-    <div class="cat-head">
-      <h2 id="search-results-heading">Results</h2>
-      <span class="count" id="search-results-count"></span>
-    </div>
-    <ul class="skill-list" id="search-results-list"></ul>
-    <p class="search-empty" id="search-empty" hidden>
-      No skills match that search. Try fewer or different words, or browse the categories below.
-    </p>
-  </section>
-
   {grouped.map(({ category, skills }) => (
     <section class="category" id={`category-${encodeURIComponent(category)}`} aria-labelledby={`cat-h-${category}`}>
       <div class="cat-head">
@@ -171,7 +155,7 @@ const collectionLd = {
 
 <script is:inline>
   (function () {
-    // Delegated so rows cloned into search results work too.
+    // Delegated: one listener for every install button on the page.
     document.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('.community-install-btn');
       if (!btn) return;
@@ -183,58 +167,3 @@ const collectionLd = {
   })();
 </script>
 
-<script>
-  // Ranked skill search. The index (/api/search-index.json) is fetched the first
-  // time someone focuses or types in the box; see src/lib/search-core.js.
-  import { searchDocs } from '../lib/search-core.js';
-
-  import type { SearchDoc as Doc } from "../lib/search-core.js";
-
-  const input = document.getElementById('skill-search') as HTMLInputElement | null;
-  const results = document.getElementById('search-results');
-  const list = document.getElementById('search-results-list');
-  const count = document.getElementById('search-results-count');
-  const empty = document.getElementById('search-empty');
-  const browse = document.querySelectorAll<HTMLElement>('section.category:not(#search-results), .community-divider');
-
-  // Rows are already rendered in the category lists; results reuse them.
-  const rowsById = new Map<string, HTMLElement>();
-  document.querySelectorAll<HTMLElement>('section.category:not(#search-results) .skill-row').forEach((row) => {
-    const id = row.dataset.skillId;
-    if (id && !rowsById.has(id)) rowsById.set(id, row);
-  });
-
-  let docs: Doc[] | null = null;
-  let loading: Promise<void> | null = null;
-  function loadIndex() {
-    loading ??= fetch('/api/search-index.json')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data) => { docs = data.docs; })
-      .catch(() => { loading = null; });
-    return loading;
-  }
-
-  function render() {
-    if (!input || !results || !list || !count || !empty) return;
-    const q = input.value.trim();
-    if (!q) {
-      results.hidden = true;
-      browse.forEach((el) => (el.style.display = ''));
-      return;
-    }
-    if (!docs) {
-      loadIndex().then(render);
-      return;
-    }
-    const hits = searchDocs(docs, q).filter((h) => rowsById.has(h.doc.id));
-    list.replaceChildren(...hits.map((h) => rowsById.get(h.doc.id)!.cloneNode(true)));
-    count.textContent = `${hits.length} skill${hits.length === 1 ? '' : 's'}`;
-    empty.hidden = hits.length > 0;
-    results.hidden = false;
-    browse.forEach((el) => (el.style.display = 'none'));
-  }
-
-  input?.addEventListener('focus', () => { loadIndex(); }, { once: true });
-  input?.addEventListener('input', render);
-  if (input?.value) render(); // browser restored the field on back/forward
-</script>

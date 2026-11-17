@@ -45,6 +45,12 @@ const websiteLd = {
     url: SITE.author.url,
   },
   license: SITE.license.url,
+  // Declares the site search so crawlers and agents can build a results URL.
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: `${SITE.url}/?q={search_term_string}` },
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 const allLd = [websiteLd, ...jsonLd];
@@ -120,6 +126,10 @@ const allLd = [websiteLd, ...jsonLd];
           <span class="brand-name">{SITE.shortName}</span>
         </a>
         <nav aria-label="Primary">
+          <!-- Unhidden by the search script: without JS there is no search to open. -->
+          <button id="search-toggle" class="icon-btn" type="button" aria-label="Search skills" title="Search skills (/)" aria-expanded="false" aria-controls="site-search" hidden>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
           <a href="/how-it-works/">How it works</a>
           <a href="/get-started/">Get started</a>
           <a href={SITE.repo.url} rel="noopener external" aria-label="GitHub" title="GitHub" style="display:inline-flex;align-items:center;">
@@ -137,7 +147,31 @@ const allLd = [websiteLd, ...jsonLd];
       </div>
     </header>
 
+    <div id="site-search" class="site-search" role="search" hidden>
+      <div class="container">
+        <div class="search-bar">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="skill-search" type="search" placeholder="Search skills, e.g. custom domain, login, bitcoin" autocomplete="off" spellcheck="false" aria-label="Search skills" aria-controls="search-results" />
+          <kbd class="search-hint" aria-hidden="true">Esc</kbd>
+        </div>
+      </div>
+    </div>
+
     <main id="main" class="container" role="main">
+      <section id="search-results" class="category search-results" aria-live="polite" hidden>
+        <div class="cat-head">
+          <h2>Results</h2>
+          <span class="count" id="search-results-count"></span>
+        </div>
+        <ul class="skill-list" id="search-results-list"></ul>
+        <div class="search-mentions" id="search-mentions" hidden>
+          <h3 id="search-mentions-heading">Also mentioned in</h3>
+          <ul class="mention-list" id="search-mentions-list"></ul>
+        </div>
+        <p class="search-empty" id="search-empty" hidden>
+          No skills match that search. Try fewer or different words, or <a href="/">browse all skills</a>.
+        </p>
+      </section>
       <slot />
     </main>
 
@@ -159,6 +193,10 @@ const allLd = [websiteLd, ...jsonLd];
         </p>
       </div>
     </footer>
+    <script>
+      import { initSiteSearch } from '../lib/site-search';
+      initSiteSearch();
+    </script>
     <script is:inline>
       (function() {
         var btn = document.getElementById('theme-toggle');

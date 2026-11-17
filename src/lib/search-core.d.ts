@@ -1,6 +1,6 @@
 // Types for search-core.js (kept as plain JS so scripts/test-search.js can import it from Node).
 
-export type SearchField = 'title' | 'keywords' | 'name' | 'summary' | 'category' | 'description' | 'headings' | 'body';
+export type SearchField = 'title' | 'keywords' | 'name' | 'summary' | 'category' | 'description' | 'frequent' | 'headings' | 'body';
 
 export const FIELD_WEIGHTS: Record<SearchField, number>;
 
@@ -15,6 +15,8 @@ export interface SearchDocInput {
   description?: string;
   /** Markdown body; headings are indexed separately from the rest. */
   body?: string;
+  /** Text of the skill's references/ files, indexed as part of the body. */
+  references?: string[];
   /** Lives outside this site (ecosystem skills). */
   external?: boolean;
   /** Every skill id; description sentences naming another skill are routing text and are not indexed. */
@@ -36,6 +38,8 @@ export interface SearchDoc {
 export interface SearchResult {
   doc: SearchDoc;
   score: number;
+  /** True when the skill only mentions the query in passing (listed after ranked results). */
+  mention: boolean;
 }
 
 export function stem(word: string): string;

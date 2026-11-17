@@ -8,7 +8,9 @@
 // Matching is per word, not per phrase: "custom domain name" matches a skill
 // containing "custom", "domains" and "name" anywhere, in any order. Each query
 // word scores by the best field it hits, so a hit in a skill's title or
-// keywords outweighs the same word buried in its body.
+// keywords outweighs the same word buried in its body. The body is the whole
+// SKILL.md plus its references/ files; a word the body uses repeatedly is a
+// topic of the skill and counts as much as one in its description.
 
 /** How much a query word is worth when it matches in each field. */
 export const FIELD_WEIGHTS = {
@@ -18,9 +20,20 @@ export const FIELD_WEIGHTS = {
   summary: 6,
   category: 3,
   description: 3,
+  frequent: 3, // body words used throughout the skill: what it is about
   headings: 2,
-  body: 1,
+  body: 1, // body words mentioned in passing
 };
+// A body word is a topic of the skill if it is used at least FREQUENT_MIN times
+// and at least FREQUENT_RATE of all body words: four uses of "error" in a long
+// skill is incidental, a word used throughout a short one is not.
+const FREQUENT_MIN = 4;
+const FREQUENT_RATE = 0.002;
+// Text nobody curated for search: no typo forgiveness ("timer" is not "time").
+const UNCURATED = new Set(['frequent', 'body']);
+// Two typed letters ("cu") prefix-match only short hand-written fields: in the
+// full text, two letters begin thousands of words.
+const SHORT_PREFIX_FIELDS = new Set(['title', 'keywords', 'name', 'summary']);
 const FIELDS = Object.keys(FIELD_WEIGHTS);
 
 // Words that carry no meaning in a query ("how do I add a ...").
@@ -38,13 +51,21 @@ export function stem(word) {
   return word;
 }
 
+// Compound identifiers kept whole: fetch_root_key, mops.toml, mo:core, ic-wasm.
+const COMPOUND = /[A-Za-z0-9]+(?:[_.:-][A-Za-z0-9]+)+/g;
+
 /**
  * Split text into stemmed search terms. camelCase and snake_case identifiers
  * also yield their parts, so "StableBTreeMap" is found by "stable" and
- * "icrc1_transfer" by "transfer".
+ * "icrc1_transfer" by "transfer". Compound identifiers are also kept whole, so
+ * "fetch_root_key" ranks the skill that uses it above one that merely has the
+ * words fetch, root and key somewhere.
  */
 export function tokenize(text) {
   const out = [];
+  for (const m of String(text).match(COMPOUND) ?? []) {
+    if (m.length >= 5 && /[a-z]/i.test(m)) out.push(m.toLowerCase());
+  }
   for (const raw of String(text).split(/[^A-Za-z0-9]+/)) {
     if (!raw) continue;
     const parts = raw.split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/);
@@ -102,7 +123,8 @@ export function stripRouting(description, otherIds) {
  * only in the highest-weighted field it appears in, which keeps the index small
  * without changing scores (a word scores by its best field anyway).
  */
-export function buildSearchDoc({ id, url, title, category, summary = '', keywords = '', description = '', body = '', external = false, skillIds = [] }) {
+export function buildSearchDoc({ id, url, title, category, summary = '', keywords = '', description = '', body = '', references = [], external = false, skillIds = [] }) {
+  body = [body, ...references].join('\n\n');
   description = stripRouting(description, skillIds.filter((s) => s !== id));
   const keywordList = String(keywords).split(',').map((k) => k.trim()).filter(Boolean);
   const raw = {
@@ -113,8 +135,14 @@ export function buildSearchDoc({ id, url, title, category, summary = '', keyword
     category: tokenize(category),
     description: tokenize(description),
     headings: tokenize(extractHeadings(body).join(' ')),
-    body: tokenize(body),
+    body: [],
+    frequent: [],
   };
+  const bodyTerms = tokenize(body);
+  const counts = new Map();
+  for (const t of bodyTerms) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const minUses = Math.max(FREQUENT_MIN, bodyTerms.length * FREQUENT_RATE);
+  for (const [t, c] of counts) (c >= minUses ? raw.frequent : raw.body).push(t);
   const seen = new Set();
   const fields = {};
   for (const f of FIELDS) {
@@ -152,25 +180,38 @@ function withinOneEdit(a, b) {
 
 /**
  * How well one query term matches a field's terms: 1 exact, 0.8 prefix
- * (search-as-you-type: "dom" → "domain"), 0.5 one-typo, 0 none. Prefixes count
+ * (search-as-you-type: "cu" → "custom"), 0.5 one-typo, 0 none. Prefixes count
  * only for the word still being typed; a finished word "sign" must not match
- * "signature" or "signer". Typos are forgiven only outside body text, where a
- * near-miss is nearly always a different word ("login" vs "logic").
+ * "signature" or "signer". Typos are forgiven only in curated fields, not body
+ * text, where a near-miss is nearly always a different word ("login" vs "logic").
  */
 function termMatch(term, terms, allowPrefix, allowTypo) {
   if (!terms) return 0;
   let best = 0;
   for (const t of terms) {
     if (t === term) return 1;
-    if (allowPrefix && term.length >= 3 && t.startsWith(term)) best = Math.max(best, 0.8);
+    if (allowPrefix && term.length >= 2 && t.startsWith(term)) best = Math.max(best, 0.8);
     else if (allowTypo && best < 0.5 && term.length >= 5 && withinOneEdit(term, t)) best = 0.5;
   }
   return best;
 }
 
 /**
- * Rank docs for a query. Returns [{ doc, score }] best first.
+ * Whether a doc contains every query word in full. Mentions require this: a
+ * half-typed "cus" begins "custom" in nearly every skill, which says nothing.
+ */
+function containsAll(doc, terms) {
+  return terms.every((term) => FIELDS.some((f) => doc.fields[f]?.includes(term)));
+}
+
+/**
+ * Rank docs for a query. Returns [{ doc, score, mention }]: ranked results
+ * first (mention: false), then skills that only mention the query
+ * (mention: true).
  *
+ * Ranked results are skills that are ABOUT the query: at least one word hits
+ * something above passing body text (title, keywords, summary, description,
+ * headings, or a word the skill uses throughout).
  * - Every query word scores by the best field it matches (FIELD_WEIGHTS),
  *   times its rarity: a word found in few skills ("login") counts for more
  *   than one found in most ("agent"), so common words cannot carry a result.
@@ -181,9 +222,13 @@ function termMatch(term, terms, allowPrefix, allowTypo) {
  * - A title or keyword equal to the whole query earns a bonus, and so does a
  *   multi-word query appearing verbatim in a title, summary or keyword, so
  *   "domain name" ranks the skill that lists exactly that first.
- * - Results scoring under 35% of the best result (before bonuses) are trimmed
- *   as noise: a search that finds its answer should show that answer and its
- *   close alternatives, not the whole site.
+ * - Results scoring under 35% of the best result (before bonuses) are trimmed:
+ *   a search that finds its answer should show that answer and its close
+ *   alternatives, not the whole site.
+ *
+ * Mentions are every other skill whose text contains ALL the query words (in
+ * full, not half-typed), only in passing. They keep the skill text fully searchable ("timer" finds every
+ * skill that touches timers) without crowding the skills about the query.
  */
 export function searchDocs(docs, query, { limit = Infinity } = {}) {
   const qTerms = unique(tokenize(query));
@@ -202,7 +247,8 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
       for (const f of FIELDS) {
         const w = FIELD_WEIGHTS[f];
         if (w <= b) break; // fields are in descending weight order
-        b = Math.max(b, termMatch(term, doc.fields[f], t === prefixIdx, f !== 'body') * w);
+        const prefix = t === prefixIdx && (term.length >= 3 || SHORT_PREFIX_FIELDS.has(f));
+        b = Math.max(b, termMatch(term, doc.fields[f], prefix, !UNCURATED.has(f)) * w);
       }
       return b;
     }),
@@ -220,7 +266,8 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
   const strongFloor = FIELD_WEIGHTS.headings;
   const understood = qTerms.length > 1 && best.some((row) => row.every((b) => b >= strongFloor));
 
-  const results = [];
+  const ranked = [];
+  const mentions = [];
   docs.forEach((doc, d) => {
     let score = 0;
     let matched = 0;
@@ -228,8 +275,14 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
       if (best[d][t] > 0) matched++;
       score += best[d][t] * idf[t];
     });
+    if (matched === 0) return;
     const coverage = matched / qTerms.length;
-    if (matched === 0 || coverage < 0.5 || (understood && coverage < 1)) return;
+    // Passing body mentions only: no word hits anything above body weight.
+    if (best[d].every((b) => b <= FIELD_WEIGHTS.body)) {
+      if (containsAll(doc, qTerms)) mentions.push({ doc, score, mention: true });
+      return;
+    }
+    if (coverage < 0.5 || (understood && coverage < 1)) return;
     score *= coverage * coverage;
     const base = score;
     // A keyword/title equal to the whole query ("login") beats one merely containing it ("agent login").
@@ -238,14 +291,17 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
       if (doc.phrases.some((p) => p.includes(phrase))) score += 10;
       else if (doc.description.includes(phrase)) score += 4;
     }
-    results.push({ doc, score, base });
+    ranked.push({ doc, score, base });
   });
   // The noise floor uses scores before phrase bonuses: a bonus should reorder
   // results, not hide reasonable alternatives ("login" → org and agent sign-in too).
-  const floor = Math.max(0, ...results.map((r) => r.base)) * 0.35;
-  return results
-    .filter((r) => r.base >= floor)
-    .sort((a, b) => b.score - a.score || a.doc.title.localeCompare(b.doc.title))
-    .slice(0, limit)
-    .map(({ doc, score }) => ({ doc, score }));
+  const floor = Math.max(0, ...ranked.map((r) => r.base)) * 0.35;
+  const byScore = (a, b) => b.score - a.score || a.doc.title.localeCompare(b.doc.title);
+  const kept = [];
+  for (const r of ranked.sort(byScore)) {
+    if (r.base >= floor) kept.push({ doc: r.doc, score: r.score, mention: false });
+    // Trimmed results that still contain every word: list them as mentions.
+    else if (containsAll(r.doc, qTerms)) mentions.push({ doc: r.doc, score: r.score, mention: true });
+  }
+  return [...kept, ...mentions.sort(byScore)].slice(0, limit);
 }

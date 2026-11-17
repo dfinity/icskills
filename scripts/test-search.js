@@ -2,18 +2,28 @@
 // Regression test for the site's skill search. Builds the same index the site
 // serves at /api/search-index.json (from SKILL.md frontmatter and bodies) and
 // checks every query in scripts/data/search-cases.json ranks its skill high enough
-// and, where a case sets max/absent, that irrelevant skills stay out.
+// and, where a case sets max/absent, that irrelevant skills stay out (max counts
+// ranked results only; absent covers the "also mentioned in" list too).
 //
 //   node scripts/test-search.js            # run all cases
 //   node scripts/test-search.js "dns"      # show the ranking for one query
 
-import { readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { readAllSkills, ROOT } from "./lib/parse-skill.js";
 import { buildSearchDoc, searchDocs } from "../src/lib/search-core.js";
 
 const skills = readAllSkills();
 const skillIds = skills.map((s) => s.dir);
+// references/**/*.md, as src/lib/skills.ts getSkillReferenceTexts serves them.
+const referenceTexts = (dir) => {
+  const refDir = join(ROOT, "skills", dir, "references");
+  if (!existsSync(refDir)) return [];
+  return readdirSync(refDir, { recursive: true })
+    .filter((f) => String(f).endsWith(".md"))
+    .sort()
+    .map((f) => readFileSync(join(refDir, String(f)), "utf8"));
+};
 const docs = skills.map((s) =>
   buildSearchDoc({
     id: s.dir,
@@ -24,6 +34,7 @@ const docs = skills.map((s) =>
     keywords: s.meta.keywords ?? "",
     description: s.meta.description ?? "",
     body: s.body,
+    references: referenceTexts(s.dir),
     skillIds,
   })
 );
@@ -31,29 +42,31 @@ const docs = skills.map((s) =>
 // rank against exactly the index the site serves.
 const community = JSON.parse(readFileSync(join(ROOT, "community", "index.json"), "utf8"));
 for (const c of community) {
-  docs.push(buildSearchDoc({ id: c.name, url: c.github, title: c.title, category: "Ecosystem", description: c.description, external: true }));
+  docs.push(buildSearchDoc({ id: c.name, url: c.github, title: c.title, category: "Ecosystem", summary: c.description, description: c.description, external: true }));
 }
 
 const adhoc = process.argv.slice(2).join(" ");
 if (adhoc) {
   const results = searchDocs(docs, adhoc);
   if (!results.length) console.log("(no results)");
-  results.forEach((r, i) => console.log(`${String(i + 1).padStart(2)}. ${r.doc.id.padEnd(36)} ${r.score.toFixed(2)}`));
+  results.forEach((r, i) => console.log(`${String(i + 1).padStart(2)}. ${r.doc.id.padEnd(36)} ${r.score.toFixed(2)}${r.mention ? "  (mentioned)" : ""}`));
   process.exit(0);
 }
 
 const { cases } = JSON.parse(readFileSync(join(ROOT, "scripts", "data", "search-cases.json"), "utf8"));
 const failures = [];
 for (const c of cases) {
-  const ids = searchDocs(docs, c.q).map((r) => r.doc.id);
+  const results = searchDocs(docs, c.q);
+  const ids = results.map((r) => r.doc.id);
+  const ranked = results.filter((r) => !r.mention).map((r) => r.doc.id);
   const rank = ids.indexOf(c.expect) + 1;
   if (rank === 0 || rank > c.within) {
     failures.push(
       `"${c.q}": expected ${c.expect} within top ${c.within}, got ${rank ? `rank ${rank}` : "no match"} — top: ${ids.slice(0, 3).join(", ") || "(none)"}`
     );
   }
-  if (c.max && ids.length > c.max) {
-    failures.push(`"${c.q}": ${ids.length} results, at most ${c.max} allowed — ${ids.join(", ")}`);
+  if (c.max && ranked.length > c.max) {
+    failures.push(`"${c.q}": ${ranked.length} ranked results, at most ${c.max} allowed — ${ranked.join(", ")}`);
   }
   for (const id of c.absent ?? []) {
     if (ids.includes(id)) failures.push(`"${c.q}": ${id} must not appear (rank ${ids.indexOf(id) + 1})`);

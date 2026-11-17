@@ -8,6 +8,7 @@ import {
   getSkillGitInfo,
   githubCommitUrl,
   skillUrl,
+  splitKeywords,
 } from '../../../lib/skills';
 import { SITE, absUrl } from '../../../lib/site';
 
@@ -28,6 +29,8 @@ export const GET: APIRoute = async ({ props }) => {
     name: skill.data.name,
     title: skill.data.metadata.title,
     category: skill.data.metadata.category,
+    summary: skill.data.metadata.summary,
+    keywords: splitKeywords(skill.data.metadata.keywords),
     description: skill.data.description,
     license: skill.data.license ?? SITE.license.spdx,
     compatibility: skill.data.compatibility ?? null,
