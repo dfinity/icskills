@@ -6,6 +6,8 @@ compatibility: "icp-cli >= 0.2.2"
 metadata:
   title: EVM RPC
   category: Integration
+  summary: "Call Ethereum and other EVM chains from a Rust canister via the EVM RPC canister."
+  keywords: "Ethereum, EVM, JSON-RPC, Arbitrum, Base, Optimism, ERC-20, smart contract, eth_call, blockchain integration, send transaction"
 ---
 
 # EVM RPC Canister — Calling Ethereum from IC

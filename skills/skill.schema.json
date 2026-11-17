@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://skills.internetcomputer.org/skills/skill.schema.json",
   "title": "IC Skill Frontmatter",
-  "description": "Schema for the YAML frontmatter in SKILL.md files. Aligns with the Agent Skills spec (agentskills.io/specification). Top-level fields (name, description, license, compatibility) plus metadata block (title, category).",
+  "description": "Schema for the YAML frontmatter in SKILL.md files. Aligns with the Agent Skills spec (agentskills.io/specification). Top-level fields (name, description, license, compatibility) plus metadata block (title, category, summary, keywords).",
   "type": "object",
   "required": ["name", "description", "metadata"],
   "properties": {
@@ -26,7 +26,7 @@
     },
     "metadata": {
       "type": "object",
-      "required": ["title", "category"],
+      "required": ["title", "category", "summary", "keywords"],
       "properties": {
         "title": {
           "type": "string",
@@ -37,6 +37,17 @@
           "type": "string",
           "minLength": 1,
           "description": "Skill category for browsing/filtering. Use an existing category when possible: Auth, CloudEngine, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 120,
+          "description": "One short sentence saying what the skill helps you do, in plain words. Used by site search, where it outranks the description. Not a trigger description: keep 'Use when' / 'Do NOT use' in description."
+        },
+        "keywords": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Comma-separated search terms people would type to find this skill: synonyms, task phrasing, product names (e.g. 'domain name, DNS, TLS'). A string, not a list, because the Agent Skills spec allows only string values in metadata. Used by site search, where it outranks the description."
         }
       },
       "additionalProperties": false
