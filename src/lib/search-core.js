@@ -241,18 +241,27 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
   const prefixIdx = lastTyped.length ? qTerms.indexOf(lastTyped[lastTyped.length - 1]) : -1;
 
   // best[d][t]: weighted match of query term t in doc d (0 if absent).
-  const best = docs.map((doc) =>
-    qTerms.map((term, t) => {
+  // aboveBody[d][t]: term t matched some field other than passing body text.
+  // Tracked separately because scores can tie: a typo in a heading scores
+  // 2 × 0.5 = 1, the same as an exact body match, yet it is not a mention.
+  const aboveBody = [];
+  const best = docs.map((doc) => {
+    const flags = [];
+    aboveBody.push(flags);
+    return qTerms.map((term, t) => {
       let b = 0;
+      flags[t] = false;
       for (const f of FIELDS) {
         const w = FIELD_WEIGHTS[f];
         if (w <= b) break; // fields are in descending weight order
         const prefix = t === prefixIdx && (term.length >= 3 || SHORT_PREFIX_FIELDS.has(f));
-        b = Math.max(b, termMatch(term, doc.fields[f], prefix, !UNCURATED.has(f)) * w);
+        const m = termMatch(term, doc.fields[f], prefix, !UNCURATED.has(f)) * w;
+        if (m > 0 && f !== 'body') flags[t] = true;
+        b = Math.max(b, m);
       }
       return b;
-    }),
-  );
+    });
+  });
   // Rarity (IDF), normalised so a word in exactly one skill weighs 1.
   const n = docs.length;
   const idf = qTerms.map((_, t) => {
@@ -277,8 +286,8 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
     });
     if (matched === 0) return;
     const coverage = matched / qTerms.length;
-    // Passing body mentions only: no word hits anything above body weight.
-    if (best[d].every((b) => b <= FIELD_WEIGHTS.body)) {
+    // Passing body mentions only: no word matched outside body text.
+    if (!aboveBody[d].some(Boolean)) {
       if (containsAll(doc, qTerms)) mentions.push({ doc, score, mention: true });
       return;
     }

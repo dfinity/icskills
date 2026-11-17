@@ -52,6 +52,9 @@
     {"q": "chunked upload", "expect": "smtp-gateway", "within": 1},
     {"q": "CallerGuard", "expect": "canister-security", "within": 1},
     {"q": "cu", "expect": "custom-domains", "within": 1, "max": 2},
-    {"q": "ck", "expect": "ckbtc", "within": 3, "max": 3}
+    {"q": "ck", "expect": "ckbtc", "within": 3, "max": 3},
+    {"q": "thrttling", "expect": "autoupgrade-icp-cli", "within": 1},
+    {"q": "estmation", "expect": "https-outcalls", "within": 1},
+    {"q": "sign ", "expect": "user-sign-in", "within": 4, "max": 4}
   ]
 }

@@ -20,19 +20,26 @@ export function initSiteSearch(): void {
   const mentions = document.getElementById('search-mentions');
   const mentionsHeading = document.getElementById('search-mentions-heading');
   const mentionsList = document.getElementById('search-mentions-list');
+  const unavailable = document.getElementById('search-unavailable');
+  const externalNotice = document.getElementById('search-external-notice');
   const main = document.getElementById('main');
   if (!toggle || !panel || !input || !results || !list || !count || !empty || !main) return;
-  if (!mentions || !mentionsHeading || !mentionsList) return;
+  if (!mentions || !mentionsHeading || !mentionsList || !unavailable || !externalNotice) return;
 
   toggle.hidden = false;
 
   let docs: SearchDoc[] | null = null;
-  let loading: Promise<void> | null = null;
-  function loadIndex(): Promise<void> {
+  let loading: Promise<boolean> | null = null;
+  /**
+   * Fetch the index once. Resolves true when it loaded. On failure it resolves
+   * false and forgets the attempt, so the NEXT user action retries: never retry
+   * automatically, or an outage turns every open tab into a request loop.
+   */
+  function loadIndex(): Promise<boolean> {
     loading ??= fetch('/api/search-index.json')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: { docs: SearchDoc[] }) => { docs = data.docs; })
-      .catch(() => { loading = null; });
+      .then((data: { docs: SearchDoc[] }) => { docs = data.docs; return true; })
+      .catch(() => { loading = null; return false; });
     return loading;
   }
 
@@ -54,8 +61,13 @@ export function initSiteSearch(): void {
 
   let current: SearchDoc[] = [];
   function render() {
-    const q = input!.value.trim();
+    // Rank the raw text: a trailing space marks the last word as finished, so
+    // "sign " must not prefix-match "signer". Trim only to test for emptiness
+    // and for the URL.
+    const raw = input!.value;
+    const q = raw.trim();
     syncUrl(q);
+    unavailable!.hidden = true;
     // Nothing searchable yet (one letter, or only words like "how to"): keep
     // the page rather than claim that no skill matches.
     if (tokenize(q).length === 0) {
@@ -64,8 +76,14 @@ export function initSiteSearch(): void {
       setPageHidden(false);
       return;
     }
-    if (!docs) { loadIndex().then(render); return; }
-    const hits = searchDocs(docs, q);
+    if (!docs) {
+      loadIndex().then((loaded) => {
+        if (loaded) render();
+        else showUnavailable();
+      });
+      return;
+    }
+    const hits = searchDocs(docs, raw);
     const ranked = hits.filter((h) => !h.mention).map((h) => h.doc);
     const mentioned = hits.filter((h) => h.mention).map((h) => h.doc);
     current = [...ranked, ...mentioned];
@@ -75,6 +93,24 @@ export function initSiteSearch(): void {
     mentionsHeading!.textContent = `${ranked.length ? 'Also mentioned in' : 'Mentioned in'} ${mentioned.length} skill${mentioned.length === 1 ? '' : 's'}`;
     mentions!.hidden = mentioned.length === 0;
     empty!.hidden = current.length > 0;
+    externalNotice!.hidden = !current.some((d) => d.external);
+    results!.hidden = false;
+    setPageHidden(true);
+  }
+
+  /** The index could not be fetched: say so, rather than claim nothing matches. */
+  function showUnavailable() {
+    // The query may have changed while the request was in flight. If it is no
+    // longer searchable (cleared, one letter, only words like "how to"),
+    // render() has already restored the page: a late failure must not hide it.
+    if (tokenize(input!.value).length === 0) return;
+    current = [];
+    list!.replaceChildren();
+    mentions!.hidden = true;
+    empty!.hidden = true;
+    externalNotice!.hidden = true;
+    count!.textContent = '';
+    unavailable!.hidden = false;
     results!.hidden = false;
     setPageHidden(true);
   }
@@ -100,10 +136,12 @@ export function initSiteSearch(): void {
   toggle.addEventListener('click', () => (panel.hidden ? open() : close()));
   input.addEventListener('input', render);
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); close(); }
-    else if (e.key === 'Enter' && current[0]) { e.preventDefault(); openDoc(current[0]); }
+    if (e.key === 'Enter' && current[0]) { e.preventDefault(); openDoc(current[0]); }
   });
   document.addEventListener('keydown', (e) => {
+    // Esc closes search from anywhere while it is open, including after
+    // tabbing from the field into the results.
+    if (e.key === 'Escape' && !panel.hidden) { e.preventDefault(); close(); return; }
     const t = e.target as HTMLElement | null;
     const typing = !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
     const slash = e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey;
