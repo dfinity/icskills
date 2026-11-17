@@ -34,6 +34,8 @@ export const GET: APIRoute = async () => {
         url: c.github,
         title: c.title,
         category: 'Ecosystem',
+        // No separate summary: the listing description is what results show.
+        summary: c.description,
         description: c.description,
         external: true,
       }),

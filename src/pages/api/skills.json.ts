@@ -2,7 +2,7 @@
 // and from llms.txt. A single fetch tells a scraper everything on the site.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, getSkillGitInfo, githubCommitUrl, skillUrl } from '../../lib/skills';
+import { getAllSkills, getSkillGitInfo, githubCommitUrl, skillUrl, splitKeywords } from '../../lib/skills';
 import { SITE, absUrl } from '../../lib/site';
 
 export const GET: APIRoute = async () => {
@@ -14,6 +14,8 @@ export const GET: APIRoute = async () => {
         name: skill.data.name,
         title: skill.data.metadata.title,
         category: skill.data.metadata.category,
+        summary: skill.data.metadata.summary,
+        keywords: splitKeywords(skill.data.metadata.keywords),
         description: skill.data.description,
         license: skill.data.license ?? SITE.license.spdx,
         compatibility: skill.data.compatibility ?? null,

@@ -85,6 +85,11 @@ export async function getSkillRawMarkdown(skill: Skill): Promise<string> {
   return fs.readFile(abs, 'utf8');
 }
 
+/** metadata.keywords is one comma-separated string (spec: metadata values are strings); APIs expose a list. */
+export function splitKeywords(keywords: string): string[] {
+  return keywords.split(',').map((k) => k.trim()).filter(Boolean);
+}
+
 /** Canonical human URL for a skill on this site. */
 export function skillUrl(slug: string): string {
   return `/skills/${slug}/`;

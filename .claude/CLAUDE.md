@@ -299,6 +299,7 @@ src/                           # Astro site source
   lib/skills.ts               # Build-time skill loader
   lib/site.ts                 # Site URL and base path config
   lib/search-core.js          # Search index building + ranking (shared by site, endpoint, test)
+  lib/site-search.ts          # Header search UI on every page (?q= URLs, / and Cmd+K)
   layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
   pages/index.astro           # Browse page
   pages/how-it-works/         # How it works page (fully static)

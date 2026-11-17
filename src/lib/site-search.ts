@@ -1,0 +1,145 @@
+// Header search, on every page. The search icon (or "/" or Cmd/Ctrl+K) opens a
+// field beneath the header. While it holds a query, the page's own content is
+// hidden and ranked results show in its place; clearing it (or Esc) restores
+// the page. The query lives in ?q= so a search can be shared, bookmarked, or
+// opened directly by an agent driving a browser.
+//
+// Ranking is in search-core.js; the index is /api/search-index.json, fetched
+// the first time search is opened.
+
+import { searchDocs, type SearchDoc } from './search-core.js';
+
+export function initSiteSearch(): void {
+  const toggle = document.getElementById('search-toggle') as HTMLButtonElement | null;
+  const panel = document.getElementById('site-search');
+  const input = document.getElementById('skill-search') as HTMLInputElement | null;
+  const results = document.getElementById('search-results');
+  const list = document.getElementById('search-results-list');
+  const count = document.getElementById('search-results-count');
+  const empty = document.getElementById('search-empty');
+  const main = document.getElementById('main');
+  if (!toggle || !panel || !input || !results || !list || !count || !empty || !main) return;
+
+  toggle.hidden = false;
+
+  let docs: SearchDoc[] | null = null;
+  let loading: Promise<void> | null = null;
+  function loadIndex(): Promise<void> {
+    loading ??= fetch('/api/search-index.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: { docs: SearchDoc[] }) => { docs = data.docs; })
+      .catch(() => { loading = null; });
+    return loading;
+  }
+
+  /** Hide (or restore) everything in <main> except the results section. */
+  function setPageHidden(hide: boolean) {
+    for (const el of Array.from(main!.children) as HTMLElement[]) {
+      if (el === results) continue;
+      if (hide && !el.hidden) { el.hidden = true; el.dataset.searchHidden = ''; }
+      else if (!hide && 'searchHidden' in el.dataset) { el.hidden = false; delete el.dataset.searchHidden; }
+    }
+  }
+
+  function syncUrl(q: string) {
+    const url = new URL(location.href);
+    if (q) url.searchParams.set('q', q);
+    else url.searchParams.delete('q');
+    history.replaceState(history.state, '', url);
+  }
+
+  let current: SearchDoc[] = [];
+  function render() {
+    const q = input!.value.trim();
+    syncUrl(q);
+    if (!q) {
+      current = [];
+      results!.hidden = true;
+      setPageHidden(false);
+      return;
+    }
+    if (!docs) { loadIndex().then(render); return; }
+    current = searchDocs(docs, q).map((r) => r.doc);
+    list!.replaceChildren(...current.map(renderRow));
+    count!.textContent = `${current.length} skill${current.length === 1 ? '' : 's'}`;
+    empty!.hidden = current.length > 0;
+    results!.hidden = false;
+    setPageHidden(true);
+  }
+
+  function open() {
+    if (panel!.hidden) {
+      panel!.hidden = false;
+      toggle!.setAttribute('aria-expanded', 'true');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    input!.focus();
+    loadIndex();
+  }
+
+  function close() {
+    input!.value = '';
+    render();
+    panel!.hidden = true;
+    toggle!.setAttribute('aria-expanded', 'false');
+    toggle!.focus();
+  }
+
+  toggle.addEventListener('click', () => (panel.hidden ? open() : close()));
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'Enter' && current[0]) { e.preventDefault(); openDoc(current[0]); }
+  });
+  document.addEventListener('keydown', (e) => {
+    const t = e.target as HTMLElement | null;
+    const typing = !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    const slash = e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey;
+    const cmdK = e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && !e.altKey;
+    if (slash || cmdK) { e.preventDefault(); open(); }
+  });
+
+  // Arriving with ?q= (shared link, agent, back/forward): show those results.
+  const initial = new URLSearchParams(location.search).get('q');
+  if (initial) {
+    panel.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    input.value = initial;
+    render();
+  }
+}
+
+function openDoc(doc: SearchDoc) {
+  if (doc.external) window.open(doc.url, '_blank', 'noopener');
+  else location.href = doc.url;
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/** Same markup as the homepage rows, so the clickable-row styles apply. */
+function renderRow(doc: SearchDoc): HTMLLIElement {
+  const external = !!doc.external;
+  const li = el('li', { class: external ? 'skill-row community-skill-row' : 'skill-row', 'data-skill-id': doc.id });
+  const title = el('div', { class: 'skill-title' });
+  const linkAttrs: Record<string, string> = { href: doc.url };
+  if (external) Object.assign(linkAttrs, { target: '_blank', rel: 'noopener noreferrer' });
+  title.append(el('a', linkAttrs, doc.title));
+  if (external) title.append(' ', el('span', { class: 'community-badge' }, 'community'));
+  const links = el('div', { class: 'skill-links' });
+  if (external) {
+    links.append(el('a', { href: doc.url, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub ↗'));
+  } else {
+    links.append(
+      el('a', { href: doc.url }, 'Read'),
+      el('a', { href: `${doc.url}SKILL.md`, rel: 'alternate', type: 'text/markdown' }, 'Markdown'),
+      el('a', { href: `/api/skills/${doc.id}.json`, rel: 'alternate', type: 'application/json' }, 'JSON'),
+    );
+  }
+  li.append(title, el('p', { class: 'skill-desc' }, doc.summary), links);
+  return li;
+}

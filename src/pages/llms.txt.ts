@@ -37,6 +37,18 @@ an install:
 This on-demand fetch is the default and works for any agent that can fetch a URL,
 anywhere. If you can do nothing else, doing this is enough.
 
+## Find the right skill
+
+Match the task against every skill's name and description in the index above.
+Descriptions say when to use a skill and when to use another one instead.
+For plainer wording, this file adds a one-line summary and search keywords
+(synonyms and everyday phrasing, e.g. "domain name" for custom-domains) per skill:
+https://skills.internetcomputer.org/api/skills.json
+
+If you drive a browser, the site search ranks skills for a query:
+https://skills.internetcomputer.org/?q={terms}  (e.g. ?q=custom+domain)
+Load more than one skill when a task spans several (e.g. sign-in plus a ledger).
+
 ## Choose how this project keeps using skills (optional, one-time)
 
 So skills are set up for future sessions too, offer the user a choice — but only

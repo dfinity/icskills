@@ -31,7 +31,7 @@ const docs = skills.map((s) =>
 // rank against exactly the index the site serves.
 const community = JSON.parse(readFileSync(join(ROOT, "community", "index.json"), "utf8"));
 for (const c of community) {
-  docs.push(buildSearchDoc({ id: c.name, url: c.github, title: c.title, category: "Ecosystem", description: c.description, external: true }));
+  docs.push(buildSearchDoc({ id: c.name, url: c.github, title: c.title, category: "Ecosystem", summary: c.description, description: c.description, external: true }));
 }
 
 const adhoc = process.argv.slice(2).join(" ");
