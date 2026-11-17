@@ -253,6 +253,20 @@ h4 { font-size: 1.05rem; }
 .site-search .search-bar { margin-bottom: 0; }
 .search-results { margin-top: 2rem; }
 .search-results .search-empty { color: var(--muted); margin: 1.25rem 0 0; }
+/* Skills that only mention the query: quieter than ranked results. */
+.search-mentions { margin-top: 2rem; }
+.search-mentions h3 {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 500; color: var(--meta);
+  text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.75rem;
+}
+.mention-list { list-style: none; padding: 0; margin: 0; }
+.mention-list li {
+  display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap;
+  padding: 0.45rem 0; border-bottom: 1px solid var(--rule); font-size: 0.92rem;
+}
+.mention-list a { color: var(--fg); text-decoration: none; }
+.mention-list a:hover { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; }
+.mention-summary { color: var(--muted); }
 
 /* ---------- Category heads & skill rows ---------- */
 .category { margin: 3rem 0; }

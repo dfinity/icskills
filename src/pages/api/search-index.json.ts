@@ -2,18 +2,18 @@
 // time. The homepage fetches it the first time someone searches.
 //
 // Each entry carries the skill's metadata.summary and metadata.keywords plus
-// stemmed terms from its title, description, headings and body. See
+// stemmed terms from its title, description, headings, body and references/. See
 // src/lib/search-core.js for how terms are built and ranked.
 
 import type { APIRoute } from 'astro';
-import { getAllSkills, skillUrl } from '../../lib/skills';
+import { getAllSkills, getSkillReferenceTexts, skillUrl } from '../../lib/skills';
 import { buildSearchDoc } from '../../lib/search-core.js';
 import communitySkills from '../../../community/index.json';
 
 export const GET: APIRoute = async () => {
   const skills = await getAllSkills();
   const skillIds = skills.map((s) => s.id);
-  const docs = skills.map((s) =>
+  const docs = await Promise.all(skills.map(async (s) =>
     buildSearchDoc({
       id: s.id,
       url: skillUrl(s.id),
@@ -23,9 +23,10 @@ export const GET: APIRoute = async () => {
       keywords: s.data.metadata.keywords,
       description: s.data.description,
       body: s.body ?? '',
+      references: await getSkillReferenceTexts(s),
       skillIds,
     }),
-  );
+  ));
   // Ecosystem skills live in other repos: only their listing text is indexed.
   for (const c of communitySkills) {
     docs.push(

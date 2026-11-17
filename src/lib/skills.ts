@@ -146,6 +146,14 @@ export async function getSkillHash(skill: Skill): Promise<string> {
   return `sha256:${agg.digest('hex')}`;
 }
 
+/** Markdown text of a skill's references/ files (indexed by site search). */
+export async function getSkillReferenceTexts(skill: Skill): Promise<string[]> {
+  const rel = skill.filePath ?? `skills/${skill.id}/SKILL.md`;
+  const skillDir = path.dirname(path.resolve(process.cwd(), rel));
+  const files = (await getSkillFiles(skill)).filter((f) => f.startsWith('references/') && f.endsWith('.md'));
+  return Promise.all(files.map((f) => fs.readFile(path.join(skillDir, f), 'utf8')));
+}
+
 export interface SkillFileEntry {
   name: string;
   path: string;

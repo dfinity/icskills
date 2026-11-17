@@ -17,8 +17,12 @@ export function initSiteSearch(): void {
   const list = document.getElementById('search-results-list');
   const count = document.getElementById('search-results-count');
   const empty = document.getElementById('search-empty');
+  const mentions = document.getElementById('search-mentions');
+  const mentionsHeading = document.getElementById('search-mentions-heading');
+  const mentionsList = document.getElementById('search-mentions-list');
   const main = document.getElementById('main');
   if (!toggle || !panel || !input || !results || !list || !count || !empty || !main) return;
+  if (!mentions || !mentionsHeading || !mentionsList) return;
 
   toggle.hidden = false;
 
@@ -59,9 +63,15 @@ export function initSiteSearch(): void {
       return;
     }
     if (!docs) { loadIndex().then(render); return; }
-    current = searchDocs(docs, q).map((r) => r.doc);
-    list!.replaceChildren(...current.map(renderRow));
-    count!.textContent = `${current.length} skill${current.length === 1 ? '' : 's'}`;
+    const hits = searchDocs(docs, q);
+    const ranked = hits.filter((h) => !h.mention).map((h) => h.doc);
+    const mentioned = hits.filter((h) => h.mention).map((h) => h.doc);
+    current = [...ranked, ...mentioned];
+    list!.replaceChildren(...ranked.map(renderRow));
+    count!.textContent = `${ranked.length} skill${ranked.length === 1 ? '' : 's'}`;
+    mentionsList!.replaceChildren(...mentioned.map(renderMention));
+    mentionsHeading!.textContent = `${ranked.length ? 'Also mentioned in' : 'Mentioned in'} ${mentioned.length} skill${mentioned.length === 1 ? '' : 's'}`;
+    mentions!.hidden = mentioned.length === 0;
     empty!.hidden = current.length > 0;
     results!.hidden = false;
     setPageHidden(true);
@@ -119,6 +129,15 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+/** Compact row for a skill that only mentions the query in passing. */
+function renderMention(doc: SearchDoc): HTMLLIElement {
+  const li = el('li', { 'data-skill-id': doc.id });
+  const attrs: Record<string, string> = { href: doc.url };
+  if (doc.external) Object.assign(attrs, { target: '_blank', rel: 'noopener noreferrer' });
+  li.append(el('a', attrs, doc.title), el('span', { class: 'mention-summary' }, doc.summary));
+  return li;
 }
 
 /** Same markup as the homepage rows, so the clickable-row styles apply. */
