@@ -23,6 +23,10 @@ const skills = defineCollection({
     metadata: z.object({
       title: z.string().min(1),
       category: z.string().min(1),
+      // Site search fields. keywords is a comma-separated string: the Agent
+      // Skills spec allows only string values under metadata.
+      summary: z.string().min(10).max(120),
+      keywords: z.string().min(1),
     }),
   }),
 });

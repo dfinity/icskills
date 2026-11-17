@@ -71,8 +71,19 @@ const collectionLd = {
 
   <div class="search-bar">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="skill-search" type="text" placeholder="Filter skills…" autocomplete="off" />
+    <input id="skill-search" type="search" placeholder="Search skills…" autocomplete="off" aria-controls="search-results" />
   </div>
+
+  <section id="search-results" class="category search-results" aria-live="polite" hidden>
+    <div class="cat-head">
+      <h2 id="search-results-heading">Results</h2>
+      <span class="count" id="search-results-count"></span>
+    </div>
+    <ul class="skill-list" id="search-results-list"></ul>
+    <p class="search-empty" id="search-empty" hidden>
+      No skills match that search. Try fewer or different words, or browse the categories below.
+    </p>
+  </section>
 
   {grouped.map(({ category, skills }) => (
     <section class="category" id={`category-${encodeURIComponent(category)}`} aria-labelledby={`cat-h-${category}`}>
@@ -86,7 +97,7 @@ const collectionLd = {
             <div class="skill-title">
               <a href={skillUrl(s.id)}>{s.data.metadata.title}</a>
             </div>
-            <p class="skill-desc">{s.data.description}</p>
+            <p class="skill-desc">{s.data.metadata.summary}</p>
             <div class="skill-links">
               <a href={skillUrl(s.id)}>Read</a>
               <a href={skillMarkdownUrl(s.id)} rel="alternate" type="text/markdown">Markdown</a>
@@ -160,41 +171,70 @@ const collectionLd = {
 
 <script is:inline>
   (function () {
-    document.querySelectorAll('.community-install-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var cmd = btn.getAttribute('data-command');
-        navigator.clipboard.writeText(cmd).catch(function () {});
-        btn.classList.add('copied');
-        setTimeout(function () { btn.classList.remove('copied'); }, 2000);
-      });
+    // Delegated so rows cloned into search results work too.
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.community-install-btn');
+      if (!btn) return;
+      var cmd = btn.getAttribute('data-command');
+      navigator.clipboard.writeText(cmd).catch(function () {});
+      btn.classList.add('copied');
+      setTimeout(function () { btn.classList.remove('copied'); }, 2000);
     });
   })();
 </script>
 
-<script is:inline>
-  (function () {
-    var input = document.getElementById('skill-search');
-    if (!input) return;
-    input.addEventListener('input', function () {
-      var q = input.value.toLowerCase().trim();
-      var sections = document.querySelectorAll('section.category');
-      sections.forEach(function (section) {
-        var catHead = section.querySelector('.cat-head h2');
-        var catName = catHead ? catHead.textContent.toLowerCase() : '';
-        var catMatch = !q || catName.indexOf(q) !== -1;
-        var rows = section.querySelectorAll('.skill-row');
-        var visible = 0;
-        rows.forEach(function (row) {
-          var title = row.querySelector('.skill-title');
-          var desc = row.querySelector('.skill-desc');
-          var skillId = row.getAttribute('data-skill-id') || '';
-          var text = (catName + ' ' + skillId + ' ' + (title ? title.textContent : '') + ' ' + (desc ? desc.textContent : '')).toLowerCase();
-          var match = catMatch || !q || text.indexOf(q) !== -1;
-          row.style.display = match ? '' : 'none';
-          if (match) visible++;
-        });
-        section.style.display = visible ? '' : 'none';
-      });
-    });
-  })();
+<script>
+  // Ranked skill search. The index (/api/search-index.json) is fetched the first
+  // time someone focuses or types in the box; see src/lib/search-core.js.
+  import { searchDocs } from '../lib/search-core.js';
+
+  import type { SearchDoc as Doc } from "../lib/search-core.js";
+
+  const input = document.getElementById('skill-search') as HTMLInputElement | null;
+  const results = document.getElementById('search-results');
+  const list = document.getElementById('search-results-list');
+  const count = document.getElementById('search-results-count');
+  const empty = document.getElementById('search-empty');
+  const browse = document.querySelectorAll<HTMLElement>('section.category:not(#search-results), .community-divider');
+
+  // Rows are already rendered in the category lists; results reuse them.
+  const rowsById = new Map<string, HTMLElement>();
+  document.querySelectorAll<HTMLElement>('section.category:not(#search-results) .skill-row').forEach((row) => {
+    const id = row.dataset.skillId;
+    if (id && !rowsById.has(id)) rowsById.set(id, row);
+  });
+
+  let docs: Doc[] | null = null;
+  let loading: Promise<void> | null = null;
+  function loadIndex() {
+    loading ??= fetch('/api/search-index.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data) => { docs = data.docs; })
+      .catch(() => { loading = null; });
+    return loading;
+  }
+
+  function render() {
+    if (!input || !results || !list || !count || !empty) return;
+    const q = input.value.trim();
+    if (!q) {
+      results.hidden = true;
+      browse.forEach((el) => (el.style.display = ''));
+      return;
+    }
+    if (!docs) {
+      loadIndex().then(render);
+      return;
+    }
+    const hits = searchDocs(docs, q).filter((h) => rowsById.has(h.doc.id));
+    list.replaceChildren(...hits.map((h) => rowsById.get(h.doc.id)!.cloneNode(true)));
+    count.textContent = `${hits.length} skill${hits.length === 1 ? '' : 's'}`;
+    empty.hidden = hits.length > 0;
+    results.hidden = false;
+    browse.forEach((el) => (el.style.display = 'none'));
+  }
+
+  input?.addEventListener('focus', () => { loadIndex(); }, { once: true });
+  input?.addEventListener('input', render);
+  if (input?.value) render(); // browser restored the field on back/forward
 </script>

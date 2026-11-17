@@ -14,7 +14,9 @@ This repository contains agent-readable skill files for the Internet Computer. E
 Every SKILL.md has YAML frontmatter followed by a markdown body. See `skills/skill.schema.json` for the full schema.
 
 ### Required frontmatter fields
-`name`, `description`, plus `title`, `category` under `metadata:`
+`name`, `description`, plus `title`, `category`, `summary`, `keywords` under `metadata:`
+
+`summary` (one sentence, ≤120 chars) and `keywords` (a quoted comma-separated string — the Agent Skills spec allows only string metadata values) feed site search, which ranks them above `description` and body matches. Keywords should be words people type that are not already in the title: synonyms, plain task phrasing, product names. `scripts/data/search-cases.json` holds queries the search must answer; `npm run validate` runs them. When adding a skill, add a case or two; debug a ranking with `node scripts/test-search.js "<query>"`.
 
 ### Recommended frontmatter fields
 `license`, `compatibility` (environment requirements — tools, system packages, network access; document library deps in the body, either as a `## Prerequisites` section or a versions table — whichever reads better for the skill) — validator warns if missing but does not block
@@ -48,6 +50,8 @@ When asked to improve, fix, update, add pitfalls to, or evaluate an existing ski
 metadata:
   title: "Display Name"
   category: CategoryName   # Auth, CloudEngine, Core, DeFi, Frontend, Governance, Infrastructure, Integration, Motoko, Security
+  summary: "One short sentence saying what the skill helps you do."
+  keywords: "words, people would type, to find this skill"
 ```
 
 Then run `npm run validate` to catch any remaining schema errors.
@@ -193,7 +197,7 @@ This is a summary; the authoritative, per-skill owned-section list lives in `.cl
 
 | Change type | Applies to | Rule |
 |-------------|-----------|------|
-| **Frontmatter (entire block)** | all `caffeinelabs/skills` skills | Upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`), and `caffeineai-subscription:`, and no `metadata:`. Replace with our schema: owned `description` (tuned for repo-wide trigger evals), `license`, string `compatibility`, `metadata.title`/`category`. Never carry upstream frontmatter through. |
+| **Frontmatter (entire block)** | all `caffeinelabs/skills` skills | Upstream ships `version:`, an object `compatibility:` (`toolchain.moc`/`mops.core`), and `caffeineai-subscription:`, and no `metadata:`. Replace with our schema: owned `description` (tuned for repo-wide trigger evals), `license`, string `compatibility`, `metadata.title`/`category`/`summary`/`keywords`. Never carry upstream frontmatter through. |
 | **Cross-reference links** (`## Additional References`) | All skills | Section renamed from upstream's "Additional Resources". Use icskills skill names; never overwrite from upstream. |
 | **`mops-cli` cross-ref** | `writing-motoko`, `migrating-motoko-actors` | The external `docs.mops.one` link is rewritten to "Load the `mops-cli` skill …", and an extra `mops tooling` bullet points to `mops-cli`. Do not restore the external link or drop the bullet on sync. |
 | **Reference-file paths** | any skill whose upstream keeps non-SKILL files at the skill root | icskills places them under `references/`; rewrite intra-skill links to `references/…`. |
@@ -288,11 +292,13 @@ skills/*/SKILL.md             # Skill source files (the content)
 skills/skill.schema.json      # JSON Schema for frontmatter
 scripts/lib/parse-skill.js    # Shared parsing utilities
 scripts/check-project.js      # Project-specific checks: metadata, evals, moc floors (CI)
+scripts/test-search.js        # Site search regression cases (scripts/data/search-cases.json)
 scripts/update-moc-error-codes.js  # Regenerates the moc diagnostic -> release map
 scripts/data/moc-error-codes.json  # Generated; see "Verifying moc diagnostics"
 src/                           # Astro site source
   lib/skills.ts               # Build-time skill loader
   lib/site.ts                 # Site URL and base path config
+  lib/search-core.js          # Search index building + ranking (shared by site, endpoint, test)
   layouts/BaseLayout.astro    # HTML shell, meta tags, JSON-LD
   pages/index.astro           # Browse page
   pages/how-it-works/         # How it works page (fully static)

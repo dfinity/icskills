@@ -38,6 +38,8 @@ Use the `skill-creator` skill to draft your SKILL.md — it is pre-installed in 
 metadata:
   title: "Display Name"    # human-readable name for the site
   category: CategoryName   # see categories list below
+  summary: "One short sentence saying what the skill helps you do."   # site search, max 120 chars
+  keywords: "synonym, task phrasing, product name"                   # site search, comma-separated string
 ```
 
 `npm run validate` will catch any missing required fields. See `skills/skill.schema.json` for the full schema.
@@ -68,6 +70,8 @@ compatibility: "icp-cli >= 0.1.0, network access for HTTPS calls"
 metadata:
   title: "Display Name"
   category: CategoryName
+  summary: "One short sentence saying what the skill helps you do."
+  keywords: "words, people would type, to find this skill"
 ---
 ```
 
@@ -83,6 +87,8 @@ See `skills/skill.schema.json` for the formal schema. This format aligns with th
 | `compatibility` | recommended | Environment requirements — tools, system packages, network access (e.g., `icp-cli >= 0.1.0`). Library/SDK dependencies go in `## Prerequisites`. |
 | `metadata.title` | yes | Human-readable display name. |
 | `metadata.category` | yes | One of the predefined categories (see below). |
+| `metadata.summary` | yes | One plain sentence (max 120 chars) saying what the skill helps you do. Site search ranks matches here above matches in `description`. Not a trigger description — keep "Use when" / "Do NOT use" in `description`. |
+| `metadata.keywords` | yes | Comma-separated search terms, as a quoted string (the Agent Skills spec allows only string metadata values). List the words people would type that are **not** already in the title: synonyms ("login" for sign-in), plain task phrasing ("domain name", "store data"), product names ("Okta", "USDC"). Site search ranks these with the title. Add a matching query to `scripts/data/search-cases.json`. |
 
 #### Writing a good `description`
 

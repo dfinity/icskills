@@ -65,6 +65,11 @@ jobs:
       - name: Build site
         run: npm run build
 
+      # Runs on every PR, not only skill changes: a ranking regression can come
+      # from src/lib/search-core.js as easily as from a skill's keywords.
+      - name: Search regression cases
+        run: node scripts/test-search.js
+
       # `skill-validator check` takes exactly one path and exits 3 (usage error)
       # when handed more, so every path is checked in its own invocation. Exit
       # codes: 0 clean, 1 errors, 2 warnings, 3 usage error. The aggregate takes

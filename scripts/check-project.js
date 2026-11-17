@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Project-specific checks that complement skill-validator's generic validation.
 // Covers icskills requirements not part of the Agent Skills spec:
-//   - Required metadata fields (title, category) used by the Astro site
+//   - Required metadata fields (title, category, summary, keywords) used by the Astro site
 //   - Evaluation file existence
 //   - Declared moc floor covers every moc diagnostic the skill documents
 
@@ -69,6 +69,20 @@ for (const dir of dirs) {
   }
   if (!skill.meta.category) {
     errors.push(`${label}: missing required frontmatter field: category`);
+  }
+
+  // Search metadata (used by site search; outranks description matches)
+  if (!skill.meta.summary) {
+    errors.push(`${label}: missing required frontmatter field: metadata.summary (one short sentence for site search)`);
+  } else if (skill.meta.summary.length > 120) {
+    errors.push(`${label}: metadata.summary is ${skill.meta.summary.length} chars — keep it to one sentence of at most 120`);
+  }
+  if (!skill.meta.keywords) {
+    errors.push(`${label}: missing required frontmatter field: metadata.keywords (comma-separated search terms)`);
+  } else if (Array.isArray(skill.meta.keywords)) {
+    errors.push(`${label}: metadata.keywords must be a quoted comma-separated string, not a YAML list (the Agent Skills spec allows only string metadata values)`);
+  } else if (skill.meta.keywords.split(",").filter((k) => k.trim()).length < 3) {
+    warnings.push(`${label}: metadata.keywords has fewer than 3 terms — add the words people would type to find this skill`);
   }
 
   // Category typo detection
