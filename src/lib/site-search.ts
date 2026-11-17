@@ -100,7 +100,10 @@ export function initSiteSearch(): void {
 
   /** The index could not be fetched: say so, rather than claim nothing matches. */
   function showUnavailable() {
-    if (!input!.value.trim()) return; // cleared while the request was in flight
+    // The query may have changed while the request was in flight. If it is no
+    // longer searchable (cleared, one letter, only words like "how to"),
+    // render() has already restored the page: a late failure must not hide it.
+    if (tokenize(input!.value).length === 0) return;
     current = [];
     list!.replaceChildren();
     mentions!.hidden = true;
