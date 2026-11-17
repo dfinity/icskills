@@ -7,7 +7,7 @@
 // Ranking is in search-core.js; the index is /api/search-index.json, fetched
 // the first time search is opened.
 
-import { searchDocs, type SearchDoc } from './search-core.js';
+import { searchDocs, tokenize, type SearchDoc } from './search-core.js';
 
 export function initSiteSearch(): void {
   const toggle = document.getElementById('search-toggle') as HTMLButtonElement | null;
@@ -56,7 +56,9 @@ export function initSiteSearch(): void {
   function render() {
     const q = input!.value.trim();
     syncUrl(q);
-    if (!q) {
+    // Nothing searchable yet (one letter, or only words like "how to"): keep
+    // the page rather than claim that no skill matches.
+    if (tokenize(q).length === 0) {
       current = [];
       results!.hidden = true;
       setPageHidden(false);

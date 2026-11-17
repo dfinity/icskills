@@ -31,6 +31,9 @@ const FREQUENT_MIN = 4;
 const FREQUENT_RATE = 0.002;
 // Text nobody curated for search: no typo forgiveness ("timer" is not "time").
 const UNCURATED = new Set(['frequent', 'body']);
+// Two typed letters ("cu") prefix-match only short hand-written fields: in the
+// full text, two letters begin thousands of words.
+const SHORT_PREFIX_FIELDS = new Set(['title', 'keywords', 'name', 'summary']);
 const FIELDS = Object.keys(FIELD_WEIGHTS);
 
 // Words that carry no meaning in a query ("how do I add a ...").
@@ -177,7 +180,7 @@ function withinOneEdit(a, b) {
 
 /**
  * How well one query term matches a field's terms: 1 exact, 0.8 prefix
- * (search-as-you-type: "dom" → "domain"), 0.5 one-typo, 0 none. Prefixes count
+ * (search-as-you-type: "cu" → "custom"), 0.5 one-typo, 0 none. Prefixes count
  * only for the word still being typed; a finished word "sign" must not match
  * "signature" or "signer". Typos are forgiven only in curated fields, not body
  * text, where a near-miss is nearly always a different word ("login" vs "logic").
@@ -187,10 +190,18 @@ function termMatch(term, terms, allowPrefix, allowTypo) {
   let best = 0;
   for (const t of terms) {
     if (t === term) return 1;
-    if (allowPrefix && term.length >= 3 && t.startsWith(term)) best = Math.max(best, 0.8);
+    if (allowPrefix && term.length >= 2 && t.startsWith(term)) best = Math.max(best, 0.8);
     else if (allowTypo && best < 0.5 && term.length >= 5 && withinOneEdit(term, t)) best = 0.5;
   }
   return best;
+}
+
+/**
+ * Whether a doc contains every query word in full. Mentions require this: a
+ * half-typed "cus" begins "custom" in nearly every skill, which says nothing.
+ */
+function containsAll(doc, terms) {
+  return terms.every((term) => FIELDS.some((f) => doc.fields[f]?.includes(term)));
 }
 
 /**
@@ -215,8 +226,8 @@ function termMatch(term, terms, allowPrefix, allowTypo) {
  *   a search that finds its answer should show that answer and its close
  *   alternatives, not the whole site.
  *
- * Mentions are every other skill whose text contains ALL the query words, only
- * in passing. They keep the skill text fully searchable ("timer" finds every
+ * Mentions are every other skill whose text contains ALL the query words (in
+ * full, not half-typed), only in passing. They keep the skill text fully searchable ("timer" finds every
  * skill that touches timers) without crowding the skills about the query.
  */
 export function searchDocs(docs, query, { limit = Infinity } = {}) {
@@ -236,7 +247,8 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
       for (const f of FIELDS) {
         const w = FIELD_WEIGHTS[f];
         if (w <= b) break; // fields are in descending weight order
-        b = Math.max(b, termMatch(term, doc.fields[f], t === prefixIdx, !UNCURATED.has(f)) * w);
+        const prefix = t === prefixIdx && (term.length >= 3 || SHORT_PREFIX_FIELDS.has(f));
+        b = Math.max(b, termMatch(term, doc.fields[f], prefix, !UNCURATED.has(f)) * w);
       }
       return b;
     }),
@@ -267,7 +279,7 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
     const coverage = matched / qTerms.length;
     // Passing body mentions only: no word hits anything above body weight.
     if (best[d].every((b) => b <= FIELD_WEIGHTS.body)) {
-      if (coverage === 1) mentions.push({ doc, score, mention: true });
+      if (containsAll(doc, qTerms)) mentions.push({ doc, score, mention: true });
       return;
     }
     if (coverage < 0.5 || (understood && coverage < 1)) return;
@@ -288,8 +300,8 @@ export function searchDocs(docs, query, { limit = Infinity } = {}) {
   const kept = [];
   for (const r of ranked.sort(byScore)) {
     if (r.base >= floor) kept.push({ doc: r.doc, score: r.score, mention: false });
-    // Trimmed results still contain every word: list them as mentions.
-    else if (best[docs.indexOf(r.doc)].every((b) => b > 0)) mentions.push({ doc: r.doc, score: r.score, mention: true });
+    // Trimmed results that still contain every word: list them as mentions.
+    else if (containsAll(r.doc, qTerms)) mentions.push({ doc: r.doc, score: r.score, mention: true });
   }
   return [...kept, ...mentions.sort(byScore)].slice(0, limit);
 }

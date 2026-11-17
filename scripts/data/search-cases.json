@@ -50,6 +50,8 @@
     {"q": "dfx migration", "expect": "icp-cli", "within": 1},
     {"q": "bindgen", "expect": "icp-cli", "within": 2},
     {"q": "chunked upload", "expect": "smtp-gateway", "within": 1},
-    {"q": "CallerGuard", "expect": "canister-security", "within": 1}
+    {"q": "CallerGuard", "expect": "canister-security", "within": 1},
+    {"q": "cu", "expect": "custom-domains", "within": 1, "max": 2},
+    {"q": "ck", "expect": "ckbtc", "within": 3, "max": 3}
   ]
 }
