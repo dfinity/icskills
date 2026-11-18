@@ -108,7 +108,7 @@
       "expected_behaviors": [
         "Says v0.4.x to v1.0.0 is a breaking bump, so the fix is `icp canister install <frontend> --mode reinstall`, then `icp deploy` again, NOT `--mode upgrade`",
         "Warns that the reinstall wipes canister state the build doesn't re-create, including access protection and its tokens",
-        "Says to set access protection up again after the sync (enable_protection and re-issuing tokens), ideally noting what to recreate before reinstalling",
+        "Says to run enable_protection on the empty reinstalled canister BEFORE the next icp deploy syncs the assets (so the site is never served ungated), then re-issue tokens",
         "Does NOT claim the mismatch clears by re-running icp deploy alone"
       ]
     },
