@@ -103,13 +103,12 @@
       ]
     },
     {
-      "name": "Adversarial: v0.4.x to v1.0.0 is a breaking bump",
-      "prompt": "My frontend uses `@dfinity/static-site@v0.4.3` with access protection on. I bumped the recipe to `v1.0.0`, ran `icp deploy -e ic`, and the sync failed with an `assets canister version mismatch`. Is `icp canister install --mode upgrade` the fix? Just the steps and what I need to watch out for.",
+      "name": "Adversarial: v0.4.x to v1.0.0 is not a breaking bump",
+      "prompt": "My frontend uses `@dfinity/static-site@v0.4.3` with access protection on and a few principals added with `authorize`. I bumped the recipe to `v1.0.0`, ran `icp deploy -e ic`, and the sync failed with an `assets canister version mismatch`. A teammate says 1.0 is a major release, so I need `icp canister install --mode reinstall`. Is that right? Just the steps.",
       "expected_behaviors": [
-        "Says v0.4.x to v1.0.0 is a breaking bump, so the fix is `icp canister install <frontend> --mode reinstall`, then `icp deploy` again, NOT `--mode upgrade`",
-        "Warns that the reinstall wipes canister state the build doesn't re-create, including access protection and its tokens",
-        "Says to run enable_protection on the empty reinstalled canister BEFORE the next icp deploy syncs the assets (so the site is never served ungated), then re-issue tokens",
-        "Does NOT claim the mismatch clears by re-running icp deploy alone"
+        "Says v0.4.x to v1.0.0 is non-breaking (v0.4.x counts as part of the 1.x series), so the fix is `icp canister install <frontend> --mode upgrade`, then `icp deploy` again",
+        "Says the upgrade keeps the canister's state, including access protection, its tokens and the authorized principals",
+        "Does NOT recommend `--mode reinstall` for this bump"
       ]
     },
     {
