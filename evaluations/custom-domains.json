@@ -88,13 +88,23 @@
       ]
     },
     {
-      "name": "Cloud engine: the engine writes ic-domains",
-      "prompt": "My app runs on a cloud engine (OpenCloud), frontend on `@dfinity/static-site@v0.4.3`. I listed app.example.com in `public/.well-known/ic-domains` and redeployed, but a few minutes later `/.well-known/ic-domains` no longer lists it. Why, and what do I do instead? Short answer, no DNS steps.",
+      "name": "Cloud engine: add the domain through the engine",
+      "prompt": "My app runs on a cloud engine (OpenCloud), frontend on `@dfinity/static-site@v0.4.3`. Should I list app.example.com in my app's own `public/.well-known/ic-domains` and `ii-alternative-origins`, or does the engine handle that? Short answer, no DNS steps.",
       "expected_behaviors": [
-        "Explains that the engine writes /.well-known/ic-domains (and /.well-known/ii-alternative-origins) into the app's canister itself and replaces the app's own copy",
-        "Says to add the domain in the engine console (as a domain you own) instead of the app's file. A deploy to remove the file and ship `_preserve` is correct",
-        "Says to list /.well-known/ic-domains and /.well-known/ii-alternative-origins in a `_preserve` file at the root of `dir`, so a deploy does not delete them",
-        "Does NOT tell the user to keep the domain in the app's own ic-domains file or to write the file with upload_asset themselves"
+        "Says to add the domain through the engine: the console (A domain you own) or the engine-operator's `addCanisterDomain`",
+        "Explains that the engine adds the domain to /.well-known/ic-domains and /.well-known/ii-alternative-origins itself, keeping what the app ships and removing only its own entries",
+        "Mentions that a deploy drops the engine's entries until its next pass, and that `refreshCanister` (or listing the files in `_preserve` when the app ships neither) handles it",
+        "Does NOT claim the engine replaces or overwrites what the app ships, and does NOT tell the user to write the files with upload_asset themselves"
+      ]
+    },
+    {
+      "name": "Cloud engine: a domain for a suite's app",
+      "prompt": "My suite runs on a cloud engine: every app passes our launchpad canister's address as `derivationOrigin`, and the launchpad's `/.well-known/ii-alternative-origins` lists each app's `https://<id>.icp.net`. The launchpad has no domain. I want to give one app the domain hr.example.com without changing any build. What exactly do I do on the engine? Short answer, no DNS steps.",
+      "expected_behaviors": [
+        "Marks the launchpad once with the engine-operator's `setSignInCanister` (canister_id = the launchpad, enabled = true). Mentioning `/.well-known/ii-derivation-origin` as a build-time alternative is fine, but it does not replace the mark here, since the user changes no build",
+        "Adds the domain to the app (not to the launchpad) with `addCanisterDomain` or the console",
+        "Checks the app's `login` in `getCanisterRegistry` reads `confirmed`, and that the domain lands in the launchpad's list",
+        "Keeps the launchpad shipping its own `ii-alternative-origins` with each app's canister address: does NOT remove it from the build or list it only in `_preserve`"
       ]
     }
   ],
