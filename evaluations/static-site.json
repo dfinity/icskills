@@ -101,6 +101,25 @@
         "Reads the canister hash with icp canister call <canister-id> state_hash '()' -n ic (by principal with -n, not -e) and compares the two",
         "Does NOT treat the hash printed by icp deploy (or handed over by the operator) as independent verification"
       ]
+    },
+    {
+      "name": "Adversarial: v0.4.x to v1.0.0 is not a breaking bump",
+      "prompt": "My frontend uses `@dfinity/static-site@v0.4.3` with access protection on and a few principals added with `authorize`. I bumped the recipe to `v1.0.0`, ran `icp deploy -e ic`, and the sync failed with an `assets canister version mismatch`. A teammate says 1.0 is a major release, so I need `icp canister install --mode reinstall`. Is that right? Just the steps.",
+      "expected_behaviors": [
+        "Says v0.4.x to v1.0.0 is non-breaking (v0.4.x counts as part of the 1.x series), so the fix is `icp canister install <frontend> --mode upgrade`, then `icp deploy` again",
+        "Says the upgrade keeps the canister's state, including access protection, its tokens and the authorized principals",
+        "Does NOT recommend `--mode reinstall` for this bump"
+      ]
+    },
+    {
+      "name": "Keeping a file written outside a deploy",
+      "prompt": "My static-site canister serves `/config.json`, which our platform writes per canister after the deploy; it is not in our `dist/`. Every `icp deploy` deletes it. How do I write it and keep it across deploys? Short answer.",
+      "expected_behaviors": [
+        "Writes the file with the canister's `upload_asset` method (or `upload_assets`), called by a controller or an authorized principal",
+        "Lists `/config.json` in a `_preserve` file at the root of `dir`, so deploys stop deleting it",
+        "Notes this is discouraged: if possible put the file in `dir` (have the build write it), and a kept file makes the state hash no longer reproducible from source",
+        "Does NOT use AssetManager or the legacy asset canister's store/commit_batch API"
+      ]
     }
   ],
   "trigger_evals": {
