@@ -55,6 +55,11 @@
     {"q": "ck", "expect": "ckbtc", "within": 3, "max": 3},
     {"q": "thrttling", "expect": "autoupgrade-icp-cli", "within": 1},
     {"q": "estmation", "expect": "https-outcalls", "within": 1},
-    {"q": "sign ", "expect": "user-sign-in", "within": 4, "max": 4}
+    {"q": "sign ", "expect": "user-sign-in", "within": 4, "max": 5},
+    {"q": "sign transaction", "expect": "threshold-signatures", "within": 1},
+    {"q": "ecdsa", "expect": "threshold-signatures", "within": 1},
+    {"q": "ed25519 signature", "expect": "threshold-signatures", "within": 1},
+    {"q": "jwt", "expect": "threshold-signatures", "within": 1},
+    {"q": "bitcoin address", "expect": "threshold-signatures", "within": 3}
   ]
 }
