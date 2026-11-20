@@ -158,11 +158,11 @@ pub fn es256_jwk(sec1_public_key: &[u8], kid: &str) -> Result<serde_json::Value,
 }
 ```
 
-X.509 and COSE `ECDSA` structures that use DER need the `r‖s` converted to an ASN.1 `SEQUENCE { INTEGER r, INTEGER s }`.
+Encodings differ by format: JWS and COSE (`ES256`, RFC 9053) use the fixed-width 64-byte `r‖s` exactly as returned, while X.509 certificates and CSRs need it converted to DER, an ASN.1 `SEQUENCE { INTEGER r, INTEGER s }`.
 
 ## Verifying off-chain (TypeScript)
 
-`npm i @noble/curves@^2 @noble/hashes@^2`. Inputs are the bytes the canister in SKILL.md returns; for ECDSA that canister signed `sha256(message)`.
+`npm i @noble/curves@^2 @noble/hashes@^2`. `scheme` is the Candid variant label the canisters in SKILL.md and motoko.md take (`ed25519`, `bip340secp256k1`, `ecdsaSecp256k1`, `ecdsaSecp256r1`); the other inputs are the bytes they return. For ECDSA those canisters signed `sha256(message)`.
 
 ```typescript
 import { ed25519 } from "@noble/curves/ed25519.js";
@@ -173,13 +173,13 @@ import { sha256 } from "@noble/hashes/sha2.js";
 // publicKey / signature: bytes returned by the canister; message: the bytes it signed.
 export function verify(scheme, publicKey, message, signature) {
   switch (scheme) {
-    case "Ed25519": // 32-byte key, message signed as-is
+    case "ed25519": // 32-byte key, message signed as-is
       return ed25519.verify(signature, message, publicKey);
-    case "Bip340Secp256k1": // BIP340 uses the 32-byte x-only key: drop the SEC1 prefix byte
+    case "bip340secp256k1": // BIP340 uses the 32-byte x-only key: drop the SEC1 prefix byte
       return schnorr.verify(signature, message, publicKey.slice(1));
-    case "EcdsaSecp256k1": // the canister signed sha256(message); noble v2 would hash again by default
+    case "ecdsaSecp256k1": // the canister signed sha256(message); noble v2 would hash again by default
       return secp256k1.verify(signature, sha256(message), publicKey, { prehash: false });
-    case "EcdsaSecp256r1":
+    case "ecdsaSecp256r1":
       return p256.verify(signature, sha256(message), publicKey, { prehash: false });
   }
   throw new Error(`unknown scheme ${scheme}`);

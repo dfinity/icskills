@@ -23,7 +23,7 @@ A canister must never keep a private key in its state (node operators can read c
 | ECDSA secp256k1 | `ecdsa_public_key`, `sign_with_ecdsa` | `record { curve = variant { secp256k1 }; name }` | 33-byte SEC1 compressed | `message_hash`, **exactly 32 bytes** | 64 bytes `r‖s`, low-s normalized, no recovery id |
 | ECDSA secp256r1 (NIST P-256) | same | `curve = variant { secp256r1 }` | 33-byte SEC1 compressed | `message_hash`, exactly 32 bytes | 64 bytes `r‖s`, low-s normalized |
 
-Only canisters can call these methods, from update contexts. `*_public_key` accepts `canister_id = opt <other>` to read another canister's keys. Signatures are randomized, Ed25519 included. BLS signatures: use the `vetkeys` skill.
+Only canisters can call these methods, from update contexts. `*_public_key` accepts `canister_id = opt <other>` to read another canister's keys. Signatures are randomized, Ed25519 included. BLS: see `vetkeys`.
 
 ## Choosing the Scheme
 
@@ -253,7 +253,7 @@ The IC returns bare signatures; [references/chain-formats.md](references/chain-f
 
 ## Mistakes That Break Your Build
 
-1. **Passing a message to `sign_with_ecdsa`.** `message_hash` must be exactly 32 bytes, hashed with the verifier's hash (SHA-256, Keccak-256, a Bitcoin sighash); anything else is rejected at decode. Conversely, **never pre-hash for Schnorr or Ed25519**: they sign the message itself.
+1. **Passing a message to `sign_with_ecdsa`.** `message_hash` must be exactly 32 bytes, hashed with the verifier's hash (SHA-256, Keccak-256, a Bitcoin sighash). Conversely, **don't add a hash for Schnorr or Ed25519**: pass exactly the bytes the protocol signs (a raw message, or Taproot's sighash or Nostr's event id).
 2. **Exposing a signing oracle.** An endpoint that signs caller-supplied bytes with a **shared** key (treasury, bridge, issuer) lets anyone sign a transaction or token in your name. Build the message inside the canister from validated inputs, with a domain prefix (`"myapp:attest:v1"`). Arbitrary-message signing is acceptable only with a key derived from the caller's own principal, as above.
 3. **Letting the caller choose `derivation_path`.** Derive it from `msg_caller()` and constants.
 4. **Hardcoding the fee or the key name.** `10_000_000_000` cycles covers only `test_key_1`. `dfx_test_key` does not exist on mainnet. Shipping `test_key_1` to production, or switching keys after launch, changes every address.

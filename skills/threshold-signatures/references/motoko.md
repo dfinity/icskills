@@ -15,7 +15,7 @@ import Runtime "mo:core/Runtime";
 import Text "mo:core/Text";
 import Sha256 "mo:sha2/Sha256";
 
-actor {
+persistent actor {
   public type Scheme = { #ed25519; #bip340secp256k1; #ecdsaSecp256k1; #ecdsaSecp256r1 };
 
   // Read once at first install and kept across upgrades: a different key name
@@ -82,4 +82,4 @@ actor {
 };
 ```
 
-`keyName` is a persistent `let`, so `THRESHOLD_KEY_NAME` is read only at first install; changing it later has no effect short of a reinstall. Set it in `icp.yaml` exactly as in SKILL.md. Use `Call.trySignWithEcdsa` / `Call.trySignWithSchnorr` to get `#err(#invalidKeyName)` instead of a trap. `ic` 6.x needs `moc` >= 2.1.0; `ic` 5.0.0 works with `moc` >= 1.4.0. Never hardcode the fee: Motoko code copied from older examples attaches `10_000_000_000` cycles, which only covers `test_key_1`.
+`persistent actor` compiles on moc 1 without `--default-persistent-actors`; moc 2 accepts it with warning M0217 (redundant `persistent`), or write a bare `actor` if you only target moc 2. `keyName` is a persistent `let`, so `THRESHOLD_KEY_NAME` is read only at first install; changing it later has no effect short of a reinstall. Set it in `icp.yaml` exactly as in SKILL.md. Use `Call.trySignWithEcdsa` / `Call.trySignWithSchnorr` to get `#err(#invalidKeyName)` instead of a trap. `ic` 6.x needs `moc` >= 2.1.0; `ic` 5.0.0 works with `moc` >= 1.4.0. Never hardcode the fee: Motoko code copied from older examples attaches `10_000_000_000` cycles, which only covers `test_key_1`.
