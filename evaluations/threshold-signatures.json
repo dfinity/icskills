@@ -65,7 +65,7 @@
         "key_1 = production, 26_153_846_153 cycles per signature",
         "test_key_1 = testing, 10_000_000_000 cycles per signature, not for anything of value",
         "Both (and dfx_test_key) are available on the icp-cli local network, whose master keys differ from mainnet so local addresses differ",
-        "Public key calls are free; the fee should be attached by the helper libraries rather than hardcoded"
+        "States that public key calls (ecdsa_public_key, schnorr_public_key) are free; only signing is charged"
       ]
     },
     {
