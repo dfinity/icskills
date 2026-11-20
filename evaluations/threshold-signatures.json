@@ -1,0 +1,98 @@
+{
+  "output_evals": [
+    {
+      "name": "scheme_choice_free",
+      "prompt": "My ICP canister needs to sign attestations that only my own off-chain service will verify. Which threshold signature scheme and management canister method should I use? Two or three sentences, no code.",
+      "expected_behaviors": [
+        "Recommends Ed25519 (threshold Schnorr with algorithm ed25519)",
+        "Justifies it with the best threshold-signing throughput on ICP (and/or simplicity), since the verifier imposes no scheme",
+        "Names `sign_with_schnorr` (and optionally `schnorr_public_key`) rather than `sign_with_ecdsa`"
+      ]
+    },
+    {
+      "name": "scheme_choice_verifier",
+      "prompt": "For each of these, which ICP threshold signature scheme (key_id) should my canister use: (a) an Ethereum transaction, (b) a Bitcoin Taproot key-path spend, (c) a JWT with alg ES256, (d) a Solana transfer? One line each.",
+      "expected_behaviors": [
+        "(a) ECDSA with curve secp256k1",
+        "(b) Schnorr with algorithm bip340secp256k1, mentioning the bip341 aux (empty merkle root for key-path-only outputs)",
+        "(c) ECDSA with curve secp256r1 (P-256)",
+        "(d) Schnorr with algorithm ed25519"
+      ]
+    },
+    {
+      "name": "throughput_design",
+      "prompt": "I want my canister to issue a fresh threshold-signed receipt for every one of ~500 user actions per second. Will that work on ICP? Answer in one short paragraph with the design you'd use instead.",
+      "expected_behaviors": [
+        "States that signing throughput is roughly 10 signatures per second per key (shared with other canisters using the key), with only somewhat higher short bursts",
+        "Says 500 signatures/s is not feasible and requests beyond capacity get rejected with a 'request queue ... is full' error",
+        "Proposes batching (one signature over a Merkle root / hash of many receipts), queueing with a timer and backoff, or not signing per action",
+        "Optionally suggests Ed25519 for best throughput or certified data / canister signatures when only ICP verifies"
+      ]
+    },
+    {
+      "name": "rust_sign_ed25519",
+      "prompt": "Write just the Rust update method (ic-cdk 0.20) that signs a message with threshold Ed25519 using a per-caller derivation path and returns the 64-byte signature. Include the use statements. No Cargo.toml, no explanation.",
+      "expected_behaviors": [
+        "Imports from `ic_cdk_management_canister` (NOT `ic_cdk::management_canister`, which ic-cdk 0.20 no longer has)",
+        "Uses `SignWithSchnorrArgs` with `SchnorrKeyId { algorithm: SchnorrAlgorithm::Ed25519, name }` and `aux: None`",
+        "Passes the message itself, not a hash of it",
+        "Builds the derivation path from `msg_caller()`, not from a caller-supplied argument",
+        "Does not hardcode cycles: relies on the helper attaching the fee"
+      ]
+    },
+    {
+      "name": "ecdsa_message_hash",
+      "prompt": "My canister calls sign_with_ecdsa with message_hash set to the UTF-8 bytes of a 200-character string and the call is rejected. What's wrong and how do I fix it? Short answer.",
+      "expected_behaviors": [
+        "Explains `message_hash` must be exactly 32 bytes",
+        "Says to hash the message first with the hash the verifier expects (SHA-256, Keccak-256 for Ethereum, the Bitcoin sighash)",
+        "Does not suggest truncating or padding the message"
+      ]
+    },
+    {
+      "name": "derive_with_chain_code",
+      "prompt": "In my Rust canister I fetch ecdsa_public_key once with an empty derivation path and want to compute child keys locally with ic-secp256k1. Show just the derivation function.",
+      "expected_behaviors": [
+        "Keeps the `chain_code` returned by `ecdsa_public_key`",
+        "Uses `derive_subkey_with_chain_code(&path, &chain_code)`",
+        "Warns that `derive_subkey` (zero chain code) gives the wrong key for a non-master key"
+      ]
+    },
+    {
+      "name": "fees_and_key_names",
+      "prompt": "What key names exist for threshold signing on ICP, which work locally with icp-cli, and how many cycles does one signature cost? Keep it to a short list.",
+      "expected_behaviors": [
+        "key_1 = production, 26_153_846_153 cycles per signature",
+        "test_key_1 = testing, 10_000_000_000 cycles per signature, not for anything of value",
+        "Both (and dfx_test_key) are available on the icp-cli local network, whose master keys differ from mainnet so local addresses differ",
+        "Public key calls are free; the fee should be attached by the helper libraries rather than hardcoded"
+      ]
+    },
+    {
+      "name": "ethereum_recovery_id",
+      "prompt": "sign_with_ecdsa gave me a 64-byte signature but my Ethereum transaction needs v / y_parity. How do I get it? Two or three sentences.",
+      "expected_behaviors": [
+        "States the IC returns r||s without a recovery id",
+        "Computes y_parity by trial recovery against the known public key and the 32-byte Keccak-256 digest (e.g. ic-secp256k1 `try_recovery_from_digest`)",
+        "Does not claim the IC can return v directly"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries testing whether the threshold-signatures skill activates. should_trigger should load it; should_not_trigger should route elsewhere (vetkeys, cketh, evm-rpc, user-sign-in).",
+    "should_trigger": [
+      "Give my canister its own Bitcoin address and let it sign transactions",
+      "How do I sign a Solana transaction from a Rust canister?",
+      "Issue ES256 JWTs from my ICP backend that a normal JWT library can verify",
+      "sign_with_ecdsa keeps failing with 'request queue for key is full'",
+      "Which signature scheme should my canister use, ECDSA or Ed25519?",
+      "Derive an Ethereum address for each user of my canister"
+    ],
+    "should_not_trigger": [
+      "Encrypt a message so only a given principal can decrypt it",
+      "Let users deposit USDC and get ckUSDC in my app",
+      "Read the latest Ethereum block number from a canister",
+      "Add Internet Identity login to my frontend"
+    ]
+  }
+}
