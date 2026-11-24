@@ -1,6 +1,6 @@
 ---
 name: deploy-to-cloud-engine
-description: "Deploys a built Internet Computer project to a cloud engine (OpenCloud). From a sandboxed chat or cloud session with the ICP MCP connector (ChatGPT, Claude, https://mcp.internetcomputer.org/mcp): install the wasm through the engine-operator's `proxy`. Otherwise with the icp CLI: `icp identity link web` (defaults to https://opencloud.org), `icp deploy` on the engine's subnet. Also: `__META_*` for a named console app, version metadata (service:git:sha), and the proxy canister for Bitcoin/Ethereum signing, VetKeys or exchange rates (paid from the engine's balance, or `icp new --subfolder proxy`). Use when shipping to a cloud engine; on mention of OpenCloud, an engine subnet id, ICP MCP deploys, or linking the icp CLI; when sign-in never completes from a sandbox; when naming, versioning or giving an icon to a console app; when funding a proxy or picking which balance to top up (failing proxied calls: cloud-engine-canisters). Do NOT use for a mainnet deploy with no engine (icp-cli) or canister logic."
+description: "Deploys a built Internet Computer project to a cloud engine (OpenCloud). From a sandboxed chat or cloud session with the ICP MCP connector (ChatGPT, Claude, https://mcp.internetcomputer.org/mcp): install the wasm through the engine-operator's `proxy`. Otherwise with the icp CLI: `icp identity link web` (defaults to https://opencloud.org), `icp deploy` on the engine's subnet. Also: `setApp` or `__META_*` for a named console app, version metadata (service:git:sha), and the proxy canister for Bitcoin/Ethereum signing, VetKeys or exchange rates (paid from the engine's balance, or `icp new --subfolder proxy`). Use when shipping to a cloud engine; on mention of OpenCloud, an engine subnet id, ICP MCP deploys, or linking the icp CLI; when sign-in never completes from a sandbox; when naming, versioning or giving an icon to a console app; when funding a proxy or picking which balance to top up (failing proxied calls: cloud-engine-canisters). Do NOT use for a mainnet deploy with no engine (icp-cli) or canister logic."
 license: Apache-2.0
 compatibility: "ICP MCP route: the ICP MCP connector (native in ChatGPT and Claude, or https://mcp.internetcomputer.org/mcp) with Actions & questions access, on an engine whose engine-operator has `proxy`. CLI route: icp-cli >= 0.3.0 (verified against 0.3.0, 1.0.2, 1.3.0; delegation handoff needs 1.0.x; the `proxy` template needs `icp new --subfolder`) and a browser for the Internet Identity sign-in. Both: a cloud engine console account; for a console proxy, the engine owner to deploy it"
 metadata:
@@ -156,10 +156,12 @@ The operator relays only `create_canister`, `canister_status`, `update_settings`
 
 ### M6. Name the app, and pass configuration
 
-Step 2's `__META_*` variables, and `PROXY_CANISTER_ID` from Step 5, are canister environment variables. With no `icp.yaml` to carry them, you set them yourself, and **when** matters:
+Name the app with the operator's `setApp` (Step 2): a `canister_update_call` on the engine-operator itself, not through `proxy`, with the same `app_url`, `derivation_origin` (and `account`) as in M5, and `args` the textual `(record { … })` of Step 2. Read `getApps` first, as Step 2 says. The principal the connector signs as controls the canisters it created in M5, so it may write their record.
+
+Only an engine-operator from before app records lacks `setApp` (its Candid has no such method). There, Step 2's `__META_*` variables name the app. They, and `PROXY_CANISTER_ID` from Step 5, are canister environment variables. With no `icp.yaml` to carry them, you set them yourself, and **when** matters:
 
 - **A variable the code reads at init or upgrade** (`PROXY_CANISTER_ID`, a key name, any configuration) must be set **before** the `install_code` that reads it. Otherwise init sees it missing, and traps or bakes in a fallback that a later upgrade does not undo. Put it in `create_canister`'s `settings` (M5, step 1), or set it with `update_settings` between steps 1 and 2. Before an upgrade or reinstall that should see a new value, set that value first.
-- **Display-only metadata** (`__META_*`) is read by the console, not by your code, so it can follow at any time. `__META_BASE_URL` needs the canister id, so it comes after step 1 anyway.
+- **Display-only metadata** (`__META_*`, on an older engine-operator) is read by the console, not by your code, so it can follow at any time. `__META_BASE_URL` needs the canister id, so it comes after step 1 anyway.
 
 Either way it is `update_settings` through `proxy`, with `args` encoding:
 
@@ -182,7 +184,7 @@ The list **replaces** the canister's whole set of variables, so send all of them
 
 - `canister_status` through `proxy`, with `args` encoding `(record { canister_id = principal "<canister id>" })`, shows `status = variant { running }` and the installed `module_hash`.
 - A canister that serves HTTP is reachable at `https://<canister-id>.icp.net`. On an all-in-one engine it is under the engine's own domain instead: the operator's guide names which.
-- The canister appears on the engine's **Your apps and services** page in the console.
+- The canister appears on the engine's **Your apps and services** page in the console, and `getApps` on the engine-operator lists the app you wrote.
 
 Report the canister id(s), and the URL if any, back to the user.
 
@@ -249,7 +251,7 @@ If the CLI shell cannot reach the network, the user's real terminal is the deplo
    ```
 
 3. Ask the user to run it in their terminal, complete the Internet Identity sign-in when the browser opens, and paste the output back.
-4. Verify from the pasted output (canister ids, frontend URL) and continue — a re-deploy for the Step 2 `__META_*` variables goes through the same script.
+4. Verify from the pasted output (canister ids, frontend URL) and continue — the Step 2 `setApp` call (or, on an older engine-operator, a re-deploy for the `__META_*` variables) goes through the same script.
 
 ### Normal link flow (CLI and browser share a loopback)
 
@@ -296,7 +298,66 @@ icp identity principal   # prints the principal the deploy will sign as
 
 ## Step 2 — Name the app (and give it an icon) in the console (recommended)
 
-By default, CLI-deployed canisters appear on the engine console's **Your apps and services** page as bare rows labelled only by their principal id. A set of **canister environment variables** makes the console group them into a single named application with readable per-canister labels, an "Open" button, and an icon. Set them once in your project config:
+By default, CLI-deployed canisters appear on the engine console's **Your apps and services** page as bare rows labelled only by their principal id. The engine-operator keeps a **record of each app**: which canisters form it and their labels, its main canister, its name, its address and its icon. The console shows apps from these records, and the operator checks who writes them. Write the record with the operator's **`setApp`** once the canister ids exist: after the first deploy (Step 3), and again whenever a canister joins or leaves the app.
+
+**1. Find the engine-operator.** The engine registry behind `opencloud.org` answers it from the engine's subnet id, with a public query:
+
+```bash
+icp canister call q6cfj-fyaaa-aaaar-qb77q-cai getEngineOperatorBySubnet '(record { subnet_id = opt principal "<subnet-id>" })' -n ic --query
+```
+
+`engine_operator_id` in the answer is the id. On another console origin, ask the user for it. These calls name the canister by id, so they take `-n ic`, which works from any directory (`-e ic` needs the project's manifest).
+
+**2. Read what the operator already has.** Any member of the engine can read every app:
+
+```bash
+icp canister call <engine-operator-id> getApps '()' -n ic --query
+```
+
+An app the owner edited in the console, or one the operator imported from older `__META_*` variables, is already there under its `key`. Reuse that key, and keep the canisters and fields the user did not ask you to change.
+
+**3. Write the whole record:**
+
+```bash
+icp canister call <engine-operator-id> setApp '(record {
+  key = opt "my-app";
+  name = opt "My App";
+  canisters = opt vec {
+    record { canister_id = opt principal "<frontend-canister-id>"; name = opt "Frontend" };
+    record { canister_id = opt principal "<backend-canister-id>"; name = opt "Backend" };
+  };
+  main_canister = opt principal "<frontend-canister-id>";
+  base_url = opt "https://<frontend-canister-id>.icp.net";
+  icon_path = opt "/favicon.svg";
+})' -n ic
+```
+
+It answers `(variant { ok })`, or `err` with the reason.
+
+- **`key`** identifies the app for good. Pick it once (a slug of the project name) and send the same key on every later call. **`name`** is what the console shows, and may change.
+- **The call replaces the whole record.** `canisters` is the complete list: a canister left out leaves the app. A field left out is cleared. Send every canister and every field each time.
+- **`main_canister`** must be one of `canisters`: the app's entry point, usually the frontend. The console's "Open" button, the icon and a custom domain use it.
+- **`base_url`** is an absolute `https://` URL: the address "Open" uses while the app has no custom domain on the engine (a custom domain comes first). The frontend canister's `https://<frontend-canister-id>.icp.net` is the usual value.
+- **`icon_path`** is a path the frontend serves (such as `/favicon.svg`), resolved against `base_url`, or a full `https://` URL. Never a `data:` URI.
+- **Who may write.** Whoever controls every canister listed and the app's current main canister: the identity you deployed with controls what `icp deploy` created. The engine's owner and admins may write any app. Anyone else gets `err = variant { Unauthorized }`.
+- **Limits.** A name up to 100 characters, a key up to 200, a description up to 500, URLs up to 2,048 and paths up to 512, with no control characters, and at most 50 canisters in one app.
+- Optional fields: `open_url`, `description`, `site_protection_secret_path`. `removeApp` drops an app's record, and `releaseCanisters` takes canisters out of their apps.
+
+**Apps shown together.** Apps that belong together, such as a suite whose apps sign in through one canister, can be grouped under one name:
+
+```bash
+icp canister call <engine-operator-id> setSuite '(record { key = opt "my-suite"; name = opt "My Suite"; apps = opt vec { "my-app"; "other-app" } })' -n ic
+```
+
+`apps` holds app keys and replaces the suite's list. An app belongs to one suite at most. It takes the same right as `setApp` on every app it lists, and `removeSuite` keeps the apps.
+
+The owner and admins can also edit an app from the console (**Edit** on its page): its name, canisters, main canister, address, icon and suite. Your next `setApp` replaces what they set, which is why step 2 reads the record first.
+
+On the ICP MCP route, make the same calls with `canister_update_call` on the engine-operator (M6).
+
+### Older engine-operators: `__META_*` variables
+
+An engine-operator from before app records has no `setApp`: the call fails because the method does not exist. Its console reads **canister environment variables** instead, which group canisters into a single named application with readable per-canister labels, an "Open" button, and an icon. Set them once in your project config:
 
 - `__META_PROJECT` — the application name. Canisters that share the **same** value are grouped into one named app, so set an identical value on every canister of the app.
 - `__META_NAME` — the per-canister display label (e.g. `Backend`, `Frontend`).
@@ -371,6 +432,8 @@ Icon specifics (the console builds the icon as `__META_BASE_URL` + `__META_ICON_
 - `__META_ICON_PATH` is a **path to an asset your frontend actually serves** (e.g. `/favicon.svg`), not an inline image. The resolved URL is rendered as an `<img>` `src`, so it must return an image. Do **not** put a `data:` URI here: engine env values are length-capped (≤128 chars observed), so it would not fit, and the field is a path by design.
 - The frontend canister's id is only known **after** the first deploy. The usual flow is: deploy once, read the frontend canister id from the output, set `__META_BASE_URL` to `https://<that-id>.icp.net` (and `__META_ICON_PATH`), then re-deploy to apply. If you control a custom domain for the app, you can set it up front instead.
 
+Newer engine-operators still read these variables while tools move to `setApp`. The operator imports them, records the app at once when its canisters have the same controllers, and otherwise holds it until the engine's owner or an admin approves it in the console. An app written with `setApp` ignores its canisters' variables from then on.
+
 ### Pin the Internet Identity derivation origin (if the app signs users in)
 
 Internet Identity derives a principal **per origin**. An app reached at both its canister address and a custom domain signs the same person in as two different users.
@@ -381,9 +444,9 @@ The engine console names the app's **canister address** as the origin to derive 
 https://<frontend-canister-id>.icp.net
 ```
 
-That is usually the canister you marked `__META_MAIN_CANISTER: "true"`, but that flag is a console display setting, not a guarantee. If you marked a backend canister, still derive from the frontend canister. A backend canister cannot be a derivation origin: the browser is never on it, and it cannot serve the `.well-known/ii-alternative-origins` file Internet Identity fetches from that origin to validate the claim.
+That is usually the app's main canister (`main_canister` in `setApp`, or the canister marked `__META_MAIN_CANISTER: "true"`), but that is a console display setting, not a guarantee. If the main canister is a backend canister, still derive from the frontend canister. A backend canister cannot be a derivation origin: the browser is never on it, and it cannot serve the `.well-known/ii-alternative-origins` file Internet Identity fetches from that origin to validate the claim.
 
-Build the value from the canister id, **not** from `__META_BASE_URL`. The two match only while `__META_BASE_URL` still points at the canister address. Pointing it at a custom domain is normal and supported (see the icon notes above), and the two then differ. A custom domain is the one value that must never become the derivation origin.
+Build the value from the canister id, **not** from the app's address (`base_url`, or `__META_BASE_URL`). The two match only while that address still points at the canister address. Pointing it at a custom domain is normal and supported (see the icon notes above), and the two then differ. A custom domain is the one value that must never become the derivation origin.
 
 **Do this before the app has users, not after.** A domain that has already collected sign-ins cannot be repointed at a derivation origin without orphaning every account created under it. If the app might ever get a custom domain, set `derivationOrigin` on the first deploy even while the canister address is the only origin — it costs nothing then and cannot be applied retroactively without losing accounts.
 
@@ -449,7 +512,7 @@ icp deploy -e ic --subnet <subnet-id>
 
 - The `icp deploy` output reports the deployed canister ids.
 - The canisters appear on the engine's **Your apps and services** page in the console; each canister's detail view offers an "Open in browser" link.
-- If you set the metadata in Step 2, the canisters are grouped under your `__META_PROJECT` name with their `__META_NAME` labels, and the main canister shows an "Open" button — instead of bare principal rows. With `__META_BASE_URL` + `__META_ICON_PATH` set, the app also shows its icon (allow for a short console cache delay).
+- After Step 2, the canisters are grouped under the app's name with their labels, and the app shows an "Open" button instead of bare principal rows. With an address and an icon path, it also shows its icon (allow for a short console cache delay). `getApps` on the engine-operator lists the record.
 - A frontend (asset) canister is served at `https://<frontend-canister-id>.icp.net`.
 
 Report the deployed canister ids (and the frontend URL, if any) back to the user.
@@ -589,6 +652,7 @@ A cloud engine runs on a **`CloudEngine` subnet** with protocol-level call rules
 26. **Textual Candid in `proxy`'s `args`.** `args` is a `blob` holding the **binary** Candid encoding of the management method's argument (bytes starting with `DIDL`), and `result` comes back the same way. Passing the textual `(record { … })` as `args` makes the management canister fail to decode the argument. Encode it with a Candid library first (M5).
 27. **Expecting the connector to finish a deploy that needs calls into the new canister.** The connector calls only canisters an app declares, and the engine's manifest declares only its operator. It can install your wasm through `proxy`, but it cannot call the canister you installed, so it cannot upload an asset canister's files. Ship configuration in the init argument or environment variables, or use the CLI route for such an app.
 28. **Serving a custom domain from certified-assets older than 0.4.3, or dropping a file the app ships.** For each app canister with a custom domain, the engine adds the domain to `/.well-known/ic-domains` (the HTTP gateway needs it to serve the domain) and `/.well-known/ii-alternative-origins` (Internet Identity needs it to accept the domain). It writes them with certified-assets' `upload_asset`, which arrived in 0.4.3. On an older canister the console warns that the engine can't write these files, and the domain does not work. Pin `@dfinity/static-site@v0.4.3` or newer. To fix an app that is already deployed, bump the recipe and run `icp deploy -e ic`. If the sync then stops with `assets canister version mismatch`, run `icp canister install <frontend> --mode upgrade -e ic` (v0.4.x to v0.4.3 or v1.0.0 is non breaking, so the state stays), then `icp deploy -e ic` again. From v0.3.x the bump is breaking: see the `static-site` skill, pitfall 11. The engine keeps what the app ships in these files and removes only its own entries, so keep shipping any of them the app needs: a canister other apps sign in through must keep shipping its `ii-alternative-origins`. An app that ships neither can list both in a `_preserve` file at the root of `dir`. A deploy drops the engine's entries until its next pass (within 10 minutes): after deploying a canister that has domains, or one other apps sign in through, call the engine-operator's `refreshCanister` on it. For a suite whose apps sign in through one canister, see the `custom-domains` skill, Step 2.
+29. **Sending `setApp` only what changed.** The call replaces the app's whole record: a canister missing from `canisters` leaves the app, and a field left out is cleared, so an icon or address set in the console disappears. Read the app with `getApps`, change what the user asked for, and send the rest unchanged. A new `key` makes a second app instead of renaming the first: keep the key, change `name`.
 
 ## Additional References
 
