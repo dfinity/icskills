@@ -117,11 +117,11 @@
       "name": "Name the app in the engine console",
       "prompt": "I deployed my app to my cloud engine but in the console it shows up as bare canister principals. How do I make it appear as one named app with a clear backend and frontend?",
       "expected_behaviors": [
-        "Explains the console reads canister environment variables and sets them via `settings.environment_variables` in each canister.yaml (or under the canister entries in icp.yaml)",
-        "Sets the SAME `__META_PROJECT` value (the app name) on every canister so they group into one named app",
-        "Sets a per-canister `__META_NAME` label (e.g. Backend, Frontend)",
-        "Marks the entry-point/frontend canister with `__META_MAIN_CANISTER: \"true\"` for the Open button and public URL",
-        "Notes these merge with the auto-injected `PUBLIC_CANISTER_ID:*` variables and are applied on `icp deploy` (re-deploy to apply)",
+        "Explains that the engine-operator keeps a record of each app and writes it with the operator's `setApp` after the deploy, once the canister ids exist",
+        "Finds the engine-operator id (e.g. `getEngineOperatorBySubnet` on the engine registry with the subnet id) or asks the user for it, and does NOT guess it",
+        "Reads the current record with `getApps` before writing, and reuses an existing app's key",
+        "Sends one `setApp` record with a stable `key`, the app `name`, EVERY canister with its label (e.g. Frontend, Backend), and `main_canister` set to the frontend/entry point",
+        "Mentions the `__META_*` canister environment variables only as the fallback for an engine-operator without `setApp`",
         "Does NOT claim canisters have a built-in name field or invent a different mechanism (e.g. a WASM metadata section or an `icp canister rename` command)"
       ]
     },
@@ -129,9 +129,9 @@
       "name": "Adversarial: named app but no Open button",
       "prompt": "I set __META_PROJECT and __META_NAME on both my canisters and the app is named in the console now, but there is no Open button. What did I miss?",
       "expected_behaviors": [
-        "Identifies that one canister must carry `__META_MAIN_CANISTER` set to the exact string \"true\" (the frontend / entry point)",
-        "Notes it is matched as the literal string \"true\" (not a boolean or \"True\"), and exactly one canister should be marked",
-        "Tells the user to set it and re-deploy by explicitly naming the `icp deploy` command (not just saying 'redeploy')",
+        "Identifies that the app has no main canister: the frontend / entry point must be the app's main canister",
+        "On a current engine-operator, writes the whole record again with `setApp` and `main_canister` set to the frontend (reading `getApps` first so nothing else is lost); on an older one, sets `__META_MAIN_CANISTER` to the exact string \"true\" on exactly one canister",
+        "If it uses the variables, tells the user to re-deploy by explicitly naming the `icp deploy` command (not just saying 'redeploy')",
         "Does NOT attribute the missing button to the subnet, the identity, or the --app domain"
       ]
     },
@@ -139,11 +139,10 @@
       "name": "Give the app an icon in the console",
       "prompt": "My app is already deployed to my cloud engine and shows up named in the console. How do I give it an icon? My frontend already serves favicon.svg.",
       "expected_behaviors": [
-        "Uses `__META_ICON_PATH` for the icon path (e.g. `/favicon.svg`), resolved against `__META_BASE_URL`",
-        "Sets `__META_BASE_URL` to an absolute https URL (the frontend canister URL like https://<id>.icp.net or a custom domain)",
-        "Sets both on the main canister (the one marked `__META_MAIN_CANISTER: \"true\"`)",
-        "Re-runs `icp deploy` to apply the settings",
-        "Does NOT invent `__META_ICON`, `__META_LOGO`, or `__META_ICON_LINK`, and does NOT put an inline data: URI in the icon variable"
+        "Sets the icon with the app's record: `setApp` with `icon_path` (e.g. `/favicon.svg`) and `base_url` (an absolute https URL such as https://<frontend-id>.icp.net or a custom domain) that it resolves against",
+        "Sends the whole record (every canister, the name, `main_canister`), read first with `getApps`, since a field or canister left out is cleared",
+        "Mentions `__META_ICON_PATH` + `__META_BASE_URL` on the main canister and an `icp deploy` only as the path for an engine-operator without `setApp`",
+        "Does NOT invent `__META_ICON`, `__META_LOGO`, or `__META_ICON_LINK`, and does NOT put an inline data: URI in the icon field"
       ]
     },
     {
@@ -267,6 +266,16 @@
         "Redeploys with `icp deploy -e ic`, and on the version mismatch runs `icp canister install <frontend> --mode upgrade -e ic` (v0.4.0 to v0.4.3 or v1.0.0 is non-breaking, state kept), then runs `icp deploy` again",
         "Does NOT tell the user to write the contents of `/.well-known/ic-domains` or `/.well-known/ii-alternative-origins` into the build: the engine writes them. Listing the two paths in a `_preserve` file, so a deploy does not delete them, is correct",
         "Does NOT suggest `--mode reinstall` for the bump from v0.4.0"
+      ]
+    },
+    {
+      "name": "Adversarial: setApp with only the new canister",
+      "prompt": "My app on my cloud engine is named in the console and has an icon. I just deployed a third canister, a worker (id aaaaa-bbbbb-ccccc-ddddd-cai), and want it in the same app, labelled Worker. Give me the exact call.",
+      "expected_behaviors": [
+        "Reads the app's current record with `getApps` on the engine-operator before writing, and asks for (or looks up with `getEngineOperatorBySubnet`) the engine-operator id it does not have",
+        "Either defers the final call until it has the `getApps` output, or gives it as a template that fills in the existing key, name, canisters, `main_canister`, `base_url` and `icon_path` from that output, adding the worker labelled Worker",
+        "Explains that `setApp` replaces the whole record, so a canister or field left out would leave the app or be cleared (the icon would disappear)",
+        "Does NOT invent the existing canister ids, key or fields, does NOT send a record with only the worker, and does NOT invent an `addCanister`-style method"
       ]
     }
   ],
