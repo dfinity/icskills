@@ -272,10 +272,10 @@
       "name": "Adversarial: setApp with only the new canister",
       "prompt": "My app on my cloud engine is named in the console and has an icon. I just deployed a third canister, a worker (id aaaaa-bbbbb-ccccc-ddddd-cai), and want it in the same app, labelled Worker. Give me the exact call.",
       "expected_behaviors": [
-        "Reads the app's current record first with `getApps` on the engine-operator",
-        "Sends `setApp` with the SAME `key`, the existing name, ALL existing canisters plus the worker labelled Worker, the existing `main_canister`, and the existing `base_url` and `icon_path`",
+        "Reads the app's current record with `getApps` on the engine-operator before writing, and asks for (or looks up with `getEngineOperatorBySubnet`) the engine-operator id it does not have",
+        "Either defers the final call until it has the `getApps` output, or gives it as a template that fills in the existing key, name, canisters, `main_canister`, `base_url` and `icon_path` from that output, adding the worker labelled Worker",
         "Explains that `setApp` replaces the whole record, so a canister or field left out would leave the app or be cleared (the icon would disappear)",
-        "Does NOT send a record with only the worker, and does NOT invent an `addCanister`-style method"
+        "Does NOT invent the existing canister ids, key or fields, does NOT send a record with only the worker, and does NOT invent an `addCanister`-style method"
       ]
     }
   ],
