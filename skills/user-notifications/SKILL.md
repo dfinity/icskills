@@ -26,12 +26,12 @@ Three pieces, all required. Missing any one of them produces silence rather than
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
 
-## Website or installable app
+## Who shows the notifications
 
 Decide this first. Consent, the senders document and sending are the same either way.
 
-- **A website.** Internet Identity shows your notifications, under your app's name. Nothing to add beyond the three pieces below.
-- **An installable app** (`pwa-ready-app` skill). Your own service worker shows them, so you choose the icon, badge, image, actions and what a click opens. It is also the only way users who installed the app from Safari (iOS Home Screen, macOS Dock) get them in it. Add "Delivering through your own service worker" to the three pieces.
+- **Internet Identity.** It shows your notifications under your app's name. Nothing to add beyond the three pieces below.
+- **Your own service worker.** You choose the icon, badge, image, actions and what a click opens. In Chrome and other non-Apple browsers this works in a normal tab. On Apple devices it needs the app installed (iOS Home Screen, macOS Dock; `pwa-ready-app` skill), and it is the only way an installed app gets them. Add "Delivering through your own service worker" to the three pieces.
 
 Already sending your own web push? Start with "Moving from your own push notifications".
 
@@ -221,7 +221,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 
 ## Delivering through your own service worker
 
-Needs `@icp-sdk/auth` 11.3.0 or later, `identity-notifications` 0.2.0 or later (Rust) or 0.4.0 or later (Motoko), and a service worker at the app's root (`pwa-ready-app` skill).
+Needs `@icp-sdk/auth` 11.3.0 or later, `identity-notifications` 0.2.0 or later (Rust) or 0.4.0 or later (Motoko), and a service worker at the app's root (see the `pwa-ready-app` skill for serving one, installable or not).
 
 ### In the service worker
 
