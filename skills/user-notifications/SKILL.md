@@ -117,7 +117,7 @@ Library: `identity-notifications`, same `send` in both languages, different wiri
 **Rust** needs `endpoints!()` plus three stable `MemoryId`s handed to `init` (see "Upgrades"). **Motoko** needs neither: the mixin brings the endpoints and keeps its own state. Do not tell a Motoko user to pass memory ids; there are none.
 
 ```toml
-identity-notifications = "0.1"
+identity-notifications = "0.2"
 ```
 
 ```rust
@@ -200,7 +200,7 @@ Different questions: `urgency` is where this sits against the origin's **other t
 | Sending | `urgency` | `expiresAt` | Why |
 |---|---|---|---|
 | Security alert, new sign-in | `High` | a day | Ahead of other traffic, and worth seeing late, so set past the hour default. |
-| Direct message | `Normal` | unset | Worth sending now, noise much later. |
+| New chat message, one `key` per conversation | `Normal` | a day | The latest replaces the earlier ones, so it is still worth delivering late. |
 | "Your driver is outside" | `High` | minutes | Ahead of everything, worthless once passed. |
 | Campaign to the whole user base | `VeryLow` | a day | None is urgent and a large send must not push real notifications behind it, but each should still land. Give the campaign a `funnel` and its conversion rate is readable on its own. |
 | Digest, nudge, streak reminder | `Low` | hours | Yields to anything else, and yesterday's is pointless. |
@@ -217,7 +217,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 | A new message in a chat conversation | the conversation | `chat-<conversation id>` | A busy conversation shows one notification, its latest message, not one per message |
 | Being mentioned in a chat conversation | the conversation, at the message (`/chats/<conversation id>#<message id>`) | `mention-<message id>` | Each mention stays its own notification, apart from the conversation's |
 
-`dismiss` the key once the user has seen the thing in your app, for example read the conversation.
+`dismiss` the key once the user has seen the thing in your app: give the canister a method the page calls, for example one that dismisses `chat-<conversation id>` for its caller when they open the conversation. It stops what has not been shown yet; a notification already on screen stays until the user clears it.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
@@ -240,7 +240,7 @@ Build the `AuthClient` with the page's options:
 import { AuthClient } from '@icp-sdk/auth/client';
 
 declare const self: ServiceWorkerGlobalScope;
-const authClient = new AuthClient({ derivationOrigin: 'https://your-app.icp.net' });
+const authClient = new AuthClient(authClientOptions); // the same options object as the page
 
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
@@ -258,7 +258,14 @@ self.addEventListener('notificationclick', (event) => {
     // Optional, for the inline reply example above: where event.action is 'reply',
     // send event.reply to your canister instead of closing and opening a window.
     event.notification.close();
-    await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
+    const url = event.notification.data?.url ?? self.registration.scope;
+    const [openTab] = await self.clients.matchAll({ type: 'window' });
+    if (openTab) {
+      await openTab.focus();
+      await openTab.navigate(url);
+    } else {
+      await self.clients.openWindow(url);
+    }
     // Always: without it, metrics() never counts the notification as opened.
     await authClient.markNotificationOpened(event);
   })());
@@ -272,6 +279,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
+- **The worker can call your canister as the user**, for example to send an inline reply: build an agent from `await authClient.getIdentity()`, as in the page. Where the browser shows no text field, or the call fails (say with `SessionGoneError`), open the conversation instead, so the reply is not lost.
 - **`fetchNotificationPayload` and `markNotificationOpened` belong in the `push` and `notificationclick` handlers only.** For an in-app list of notifications, implement separate data and methods in your canister.
 
 ### In the page

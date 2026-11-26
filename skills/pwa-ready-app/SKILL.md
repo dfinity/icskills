@@ -102,7 +102,7 @@ Add a `fetch` handler only for offline support you want: a cached `index.html` i
 
 ## Headers
 
-`public/_headers`, for the `static-site` canister:
+`public/_headers`, for the `static-site` canister. A canister serving its own assets sets these content types in its own code:
 
 ```
 /sw.js
