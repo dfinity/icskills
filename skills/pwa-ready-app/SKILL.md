@@ -153,7 +153,7 @@ window.addEventListener('beforeinstallprompt', (event) => {
 await installPrompt.prompt();
 ```
 
-Chrome fires `beforeinstallprompt` only once it considers the app installable, so no button in a fresh or automated profile is expected. Check installability in Chrome's menu ("Install app") or DevTools (Application > Manifest).
+Chrome fires `beforeinstallprompt` only once it considers the app installable, so no button in a fresh or automated profile is expected.
 
 Safari has no such event, so show steps instead:
 
