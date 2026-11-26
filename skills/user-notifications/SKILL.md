@@ -38,16 +38,13 @@ Decide this first. Consent, the senders document and sending are the same either
 - you set the icon, badge, image and actions;
 - you handle the click.
 
-It works in a normal browser tab everywhere except iOS, where it works only in an app added to the Home Screen. Whether this page can:
+It works in a normal tab of any browser except Safari on iOS, and in an app installed from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill). Such an installed app **requires** it: Internet Identity does not reach it. On iOS, users get your notifications in ICP Alerts until they add your app to the Home Screen.
 
 ```javascript
+// Whether this page can use its own service worker for notifications:
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
-```
-
-An app installed from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill) **requires** it: Internet Identity does not reach such an app. Whether this page runs as one (only Safari sets it):
-
-```javascript
-const isInstalledFromSafari = navigator.standalone === true;
+// Whether it must: the page runs as an app installed from Safari (only Safari sets this):
+const mustUseOwnServiceWorker = navigator.standalone === true;
 ```
 
 Already sending your own web push? Start with "Moving from your own push notifications".
