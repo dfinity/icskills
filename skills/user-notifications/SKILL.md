@@ -270,7 +270,7 @@ const [identity, { granted }] = await Promise.all([
 
 That records the consent. It does not yet subscribe this device: the browser still has to grant your origin permission, and that prompt needs a tap of its own.
 
-**2. In the app, they turn this device on.** Where consent is granted and this device is not on yet, show an in-app prompt such as "Get notifications on this device". Its button calls `subscribeToNotifications()`, which opens the browser's permission prompt and subscribes the service worker.
+**2. In the app, they turn this device on.** Once consent is granted, show an in-app prompt such as "Get notifications on this device". Its button calls `subscribeToNotifications()`, which opens the browser's permission prompt.
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
@@ -280,22 +280,21 @@ const showPrompt = granted && Notification.permission === 'default';
 const permission = await authClient.subscribeToNotifications();
 ```
 
-- It answers the browser's permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: hide the prompt.
-- Where the permission is already `'granted'` (given to your origin before), call it without a prompt: it asks nothing and subscribes.
-- It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
-- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
+- `'denied'` is the user's answer: hide the prompt. Nothing is subscribed unless the answer is `'granted'`.
+- Permission already `'granted'`: call it without showing the prompt; it asks nothing.
+- It **replaces any push subscription** the service worker already holds: remove the app's own push code first.
+- Sign-in, sign-out and `pushsubscriptionchange` keep the subscription current. The page calls nothing else.
 
-**3. On iOS and macOS, they keep notifications in the app.** An app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity may know Safari as a second browser of the user and deliver each notification there too. Ask Internet Identity once the device is on, and only where it reports that second path, offer to link the app to Safari:
+**3. On iOS and macOS, they get each notification once.** A user who installed the app may also get its notifications in Safari, so each one arrives twice. After step 2, and in the app's notification settings, ask Internet Identity whether that can happen, and only then offer to stop it:
 
 ```javascript
-if (permission === 'granted' &&
-    (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
+if ((await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
   // Show "Only receive notifications in this app". Its button calls:
-  await authClient.requestSameDeviceLink();
+  await authClient.requestSameDeviceLink(); // opens Safari to confirm
 }
 ```
 
-`requestSameDeviceLink()` leaves the app for Safari, which claims the link with its own sign-in, so it must run from a button. Check the status again wherever the app shows its notification settings. Outside a Safari installed app it is always `'no-other-path'`, so the offer never shows.
+Call it from a button, since it opens Safari. Anywhere but an app installed from Safari the offer never shows.
 
 ### A notifications toggle
 
@@ -337,11 +336,11 @@ async function onToggleTap(state) {
 - Read the state when the toggle renders, not inside the tap: an `await` before `requestNotificationConsent()` can cost the tap the browser needs to open Internet Identity.
 - Turning off revokes your app's consent, so it stops on every device of that user, and leaves the subscription in place. Turning on again asks consent again and needs no second tap.
 
-Where the toggle shows `'on'` in a Safari installed app, offer "Only receive notifications in this app" next to it as in step 3.
+Where the toggle shows `'on'`, show step 3's offer next to it.
 
 | Error | Means | Remedy |
 |---|---|---|
-| `NotificationsUnsupportedError` | No Web Push in this browser, or a same-device link outside a Safari installed app | Hide the control |
+| `NotificationsUnsupportedError` | No Web Push in this browser, or `requestSameDeviceLink()` outside an app installed from Safari | Hide the control |
 | `SessionGoneError` | No live session | Sign in again; in the service worker, nothing to show |
 | `"This application lists no frontend at this page's origin"` | The page is served from an origin that is neither the derivation origin nor in its `/.well-known/ii-alternative-origins` | List the origin there (see the `user-sign-in` skill) |
 | `"This origin has no service worker registered to receive notifications"` | `subscribeToNotifications` ran before `navigator.serviceWorker.register` | Register first |
