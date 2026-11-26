@@ -257,37 +257,45 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
 ### In the page
 
-Turning notifications on takes two buttons in your app, because each one opens a prompt and a prompt uses up the tap that opened it:
+How a user of an installed app (or a tab using this path) ends up with notifications on their device:
 
-1. A button that calls `requestNotificationConsent()`. It opens Internet Identity, where the user answers whether your app may notify them.
-2. Once that answered `granted: true`, a second button that calls `subscribeToNotifications()`. It opens the browser's notification permission prompt for your origin.
+**1. Signing in, they consent.** The sign-in button asks for consent at the same time, as in "Asking with the sign-in" above: one visit to Internet Identity, where the user signs in and allows your app to notify them.
 
 ```javascript
-// First button: opens Internet Identity's consent screen
-const { granted } = await authClient.requestNotificationConsent();
+const [identity, { granted }] = await Promise.all([
+  authClient.signIn(),
+  authClient.requestNotificationConsent(),
+]);
+```
 
-// Second button, shown once granted is true: opens the browser's permission prompt
+That records the consent. It does not yet subscribe this device: the browser still has to grant your origin permission, and that prompt needs a tap of its own.
+
+**2. In the app, they turn this device on.** Where consent is granted and this device is not on yet, show an in-app prompt such as "Get notifications on this device". Its button calls `subscribeToNotifications()`, which opens the browser's permission prompt and subscribes the service worker.
+
+```javascript
+const { granted } = await authClient.getNotificationConsentStatus();
+const showPrompt = granted && Notification.permission === 'default';
+
+// The prompt's button:
 const permission = await authClient.subscribeToNotifications();
 ```
 
-- `subscribeToNotifications()` answers the browser's permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: render it.
+- It answers the browser's permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: hide the prompt.
+- Where the permission is already `'granted'` (given to your origin before), call it without a prompt: it asks nothing and subscribes.
 - It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
 - Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
 
-### Safari installed apps: stop the second copy
-
-On iOS and macOS, an app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity sees it and Safari as two browsers of the user and may deliver each notification to both. Linking the installed app to Safari makes it the only one on that device.
-
-Once `subscribeToNotifications()` answered `'granted'`, and wherever the app shows its notification settings, check whether there is something to link, and offer it as a button of its own:
+**3. On iOS and macOS, they keep notifications in the app.** An app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity may know Safari as a second browser of the user and deliver each notification there too. Ask Internet Identity once the device is on, and only where it reports that second path, offer to link the app to Safari:
 
 ```javascript
-if ((await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
-  // Show a button such as "Only notify me in this app"; it calls:
+if (permission === 'granted' &&
+    (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
+  // Show "Only receive notifications in this app". Its button calls:
   await authClient.requestSameDeviceLink();
 }
 ```
 
-`requestSameDeviceLink()` leaves the app for Safari to claim the link with Safari's sign-in, so it must run from a button. Outside a Safari installed app the status is always `'no-other-path'`, so the button never shows.
+`requestSameDeviceLink()` leaves the app for Safari, which claims the link with its own sign-in, so it must run from a button. Check the status again wherever the app shows its notification settings. Outside a Safari installed app it is always `'no-other-path'`, so the offer never shows.
 
 | Error | Means | Remedy |
 |---|---|---|
