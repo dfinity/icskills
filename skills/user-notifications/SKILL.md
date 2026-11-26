@@ -233,10 +233,7 @@ const authClient = new AuthClient({ derivationOrigin: 'https://your-app.icp0.io'
 
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
-    // Signed out: still show something, since every push must show a notification.
-    const { title, options } = await authClient
-      .fetchNotificationPayload(event)
-      .catch(() => ({ title: 'New notification', options: {} }));
+    const { title, options } = await authClient.fetchNotificationPayload(event);
     await self.registration.showNotification(title, {
       ...options,
       icon: '/icons/192.png',
@@ -258,7 +255,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 });
 ```
 
-- **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`.
+- **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
 
@@ -343,7 +340,7 @@ toggle.addEventListener('click', async () => {
 | Error | Means | Remedy |
 |---|---|---|
 | `NotificationsUnsupportedError` | No Web Push in this browser, or `requestSameDeviceLink()` outside an app installed from Safari | Hide the control |
-| `SessionGoneError` | No live session | In the page, sign in again. In the service worker, still show a notification (see the `push` handler) |
+| `SessionGoneError` | No live session | In the page, sign in again. In the service worker, nothing to show: sign-out already removed the subscription |
 | `"This application lists no frontend at this page's origin"` | The page's origin is neither the derivation origin nor in its `/.well-known/ii-alternative-origins` | List it there (`user-sign-in` skill) |
 | `"This origin has no service worker registered to receive notifications"` | `subscribeToNotifications` ran before `navigator.serviceWorker.register` | Register first |
 
