@@ -270,7 +270,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 ```
 
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
-- **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For what else a notification can do, point the user to web.dev: its appearance (icon, badge, image, actions) at https://web.dev/articles/push-notifications-display-a-notification, and its behavior (clicks, buttons, inline replies) at https://web.dev/articles/push-notifications-notification-behaviour.
+- **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
 - **`fetchNotificationPayload` and `markNotificationOpened` belong in the `push` and `notificationclick` handlers only.** For an in-app list of notifications, implement separate data and methods in your canister.
 
