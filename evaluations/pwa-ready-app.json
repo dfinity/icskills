@@ -27,7 +27,7 @@
       "expected_behaviors": [
         "Says a Safari installed app (iOS Home Screen) does not receive Internet Identity's own delivery",
         "Says the installed app's own service worker must subscribe (subscribeToNotifications) and handle push with fetchNotificationPayload",
-        "Says browser tabs keep receiving notifications as before",
+        "Says users who do not install the app keep receiving notifications as before",
         "Says the user signs in again inside the iOS Home Screen app because it keeps its own storage"
       ]
     }

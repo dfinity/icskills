@@ -117,7 +117,7 @@ In `dist/_headers` (put it in `public/` so the build copies it), for the certifi
 
 ## Installing an app that already notifies
 
-An app whose users get Internet Identity notifications today keeps receiving them in browser tabs after it becomes installable. What changes is the installed app:
+Users who do not install the app keep receiving notifications exactly as before. What changes is the installed app:
 
 - **Safari installed app (iOS, macOS):** Internet Identity's own delivery does not reach it. Notifications arrive in the installed app only once its own service worker subscribes. Without that, a user who installed the app and opens notifications from it sees nothing from your app.
 - **Chromium installed app:** it shares the browser's storage and its registration at Internet Identity, so notifications keep arriving as before. Subscribing its service worker is optional there.
