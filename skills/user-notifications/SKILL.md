@@ -257,25 +257,37 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
 ### In the page
 
-Turning notifications on takes two taps, because the consent ceremony uses up the first one and the browser's permission prompt needs a tap of its own:
+Turning notifications on takes two taps, one per prompt the user answers:
+
+1. **Internet Identity's consent screen**, from a tap on "Allow notifications". Opening it uses up that tap.
+2. **The browser's notification permission prompt**, which needs a tap of its own: show a "Turn on for this device" button once the first answered `granted: true`.
 
 ```javascript
-// Tap 1: "Allow notifications"
+// Tap 1: "Allow notifications" opens Internet Identity's consent screen
 const { granted } = await authClient.requestNotificationConsent();
 
-// Tap 2: "Turn on for this device", shown once granted is true
+// Tap 2: "Turn on for this device" opens the browser's permission prompt
 const permission = await authClient.subscribeToNotifications();
-if (permission === 'granted' &&
-    (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
-  // Offer "Only notify me in this app": a tap that calls
+```
+
+- `subscribeToNotifications()` answers the browser's permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: render it.
+- It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
+- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
+
+### Safari installed apps: stop the second copy
+
+On iOS and macOS, an app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity sees it and Safari as two browsers of the user and may deliver each notification to both. Linking the installed app to Safari makes it the only one on that device.
+
+Once `subscribeToNotifications()` answered `'granted'`, and wherever the app shows its notification settings, check whether there is something to link, and offer it as its own tap:
+
+```javascript
+if ((await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
+  // Show "Only notify me in this app"; its tap calls:
   await authClient.requestSameDeviceLink();
 }
 ```
 
-- `subscribeToNotifications()` answers the browser's notification permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: render it.
-- It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
-- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
-- **Same-device link (Safari installed apps only).** On iOS the Home Screen app and Safari keep separate storage, so II sees two browsers and may deliver each notification to both. `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'` when linking would stop the second copy; `requestSameDeviceLink()` opens Safari to claim the link, so call it from a tap. Elsewhere the status is always `'no-other-path'`.
+`requestSameDeviceLink()` leaves the app for Safari to claim the link with Safari's sign-in, so it needs a tap. Outside a Safari installed app the status is always `'no-other-path'`, so the button never shows.
 
 | Error | Means | Remedy |
 |---|---|---|
