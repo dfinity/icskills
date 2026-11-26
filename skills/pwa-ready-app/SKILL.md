@@ -128,7 +128,7 @@ const isInstalled = !matchMedia('(display-mode: browser)').matches || navigator.
 
 ## Title bar (desktop Chrome and Edge)
 
-An installed desktop app can draw into the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. Look it up as needed: https://web.dev/articles/window-controls-overlay.
+An installed desktop app can draw into the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. It takes effect only in the installed app; in a browser tab nothing changes. Look it up as needed: https://web.dev/articles/window-controls-overlay.
 
 ## Headers
 
