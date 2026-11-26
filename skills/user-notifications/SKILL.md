@@ -75,11 +75,21 @@ Asking at any later moment needs a control of its own.
 
 ### A toggle, later
 
-To show the user whether your app may notify them, and let them turn it off (an app delivering through its own service worker builds the fuller toggle in "A notifications toggle"):
+A settings toggle shows whether your app may notify the user, and turns it on or off. Handle `click`, not `change`: turning on opens Internet Identity, which needs the click itself. With your own service worker, use "A notifications toggle" instead.
 
 ```javascript
-const { granted } = await authClient.getNotificationConsentStatus();
-await authClient.revokeNotificationConsent();
+let { granted } = await authClient.getNotificationConsentStatus();
+render(granted);
+
+toggle.addEventListener('click', async () => {
+  if (granted) {
+    await authClient.revokeNotificationConsent();
+    granted = false;
+  } else {
+    ({ granted } = await authClient.requestNotificationConsent()); // opens Internet Identity
+  }
+  render(granted);
+});
 ```
 
 Revoking is scoped to your app. It drops your origin's consent and whatever you still had queued for that user, and leaves their device subscriptions and every other app's consent alone. So dropping someone from your own recipient table revokes nothing, and revoking is not an unsubscribe.
