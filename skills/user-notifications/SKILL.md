@@ -182,8 +182,8 @@ canisters:
 
 | Field | Default | What it is for |
 |---|---|---|
-| `url` | none | Where acting on it takes the user. Must be the sending origin or one of its alternative origins; II refuses anything else. |
-| `key` | none | What the notification is *about*. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
+| `url` | none | Where acting on it takes the user: the news site's article, the chat app's conversation. Must be the sending origin or one of its alternative origins; II refuses anything else. |
+| `key` | none | What the notification is *about*: `article-<id>`, `chat-<conversation id>`. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
 | `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
 | `expiresAt` / `expires_at` | a short window | How long this is still worth sending. Set past the default for anything that matters later; short for anything worthless once the moment passes. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
@@ -206,7 +206,10 @@ A short expiry does not make something urgent, and `High` does not make it last 
 
 ## `key`
 
-The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, such as the conversation, rather than from whatever a caller passed in.
+The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, rather than from whatever a caller passed in:
+
+- **News site:** `article-<id>`. Sending again after a headline is corrected updates the notification; `dismiss` once the reader opened the article on the site.
+- **Chat app:** `chat-<conversation id>`. Each new message replaces the last one's notification, so a busy conversation shows one notification, not one per message; `dismiss` once the user read the conversation.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
