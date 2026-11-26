@@ -38,7 +38,12 @@ Decide this first. Consent, the senders document and sending are the same either
 - you set the icon, badge, image and actions;
 - you handle the click.
 
-It works in a normal tab of any browser except Safari on iOS, and in an app installed from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill). Such an installed app **requires** it: Internet Identity does not reach it. On iOS, users get your notifications in ICP Alerts until they add your app to the Home Screen.
+Where it works:
+
+- **Desktop and Android:** in a normal browser tab.
+- **iOS:** only in your app added to the Home Screen (`pwa-ready-app` skill). In a Safari tab, ICP Alerts shows your notifications instead.
+
+Your app added to the Home Screen (iOS) or the Dock (macOS) **must** use it: Internet Identity cannot deliver to it.
 
 ```javascript
 // Whether this page can use its own service worker for notifications:
