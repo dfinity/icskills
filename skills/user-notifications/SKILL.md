@@ -173,10 +173,13 @@ canisters:
   - name: backend
     settings:
       environment_variables:
-        notification_sender:      "rdmx6-jaaaa-aaaaa-aaadq-cai"   # the II canister
-        notification_origin:      "https://your-app.icp0.io"
-        notification_capacity_mb: "1024"   # optional
+        notification_sender:            "rdmx6-jaaaa-aaaaa-aaadq-cai"   # the II canister
+        notification_origin:            "https://your-app.icp0.io"      # the frontend users open
+        notification_derivation_origin: "https://your-suite.icp0.io"    # optional
+        notification_capacity_mb:       "1024"                          # optional
 ```
+
+Set `notification_derivation_origin` only when the frontend signs in with a `derivationOrigin` (`user-sign-in` skill): set it to that origin. The senders document is then served there, and it must list the frontend in `/.well-known/ii-alternative-origins`. Leave it out when the frontend signs in as itself.
 
 ## The optional fields
 
@@ -355,10 +358,6 @@ toggle.addEventListener('click', async () => {
 | `SessionGoneError` | No live session | In the page, sign in again. In the service worker, nothing to show: sign-out already removed the subscription |
 | `"This application lists no frontend at this page's origin"` | The page's origin is neither the derivation origin nor in its `/.well-known/ii-alternative-origins` | List it there (`user-sign-in` skill) |
 | `"This origin has no service worker registered to receive notifications"` | `subscribeToNotifications` ran before `navigator.serviceWorker.register` | Register first |
-
-### A frontend on another origin
-
-A frontend that signs in with `derivationOrigin` gets its own notifications only when the canister sends for it: set `notification_origin` to the frontend and `notification_derivation_origin` to the app's primary origin. The senders document stays on the primary origin, which must list the frontend in `/.well-known/ii-alternative-origins`.
 
 ## Moving from your own push notifications
 
