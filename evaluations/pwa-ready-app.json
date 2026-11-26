@@ -48,9 +48,9 @@
       "prompt": "My ICP app has a dark UI. Installed on Android it flashes white when it starts and there's a white strip at the bottom of the screen. Fix it. Just the changes.",
       "expected_behaviors": [
         "Sets the manifest's background_color (and theme_color) to the app's dark background instead of white",
-        "Adds viewport-fit=cover to the viewport meta so the page draws behind the system bars",
-        "Gives the root (html) element the app's background color",
-        "Keeps bottom content clear of the navigation bar with env(safe-area-inset-bottom)"
+        "Says the navigation bar of an app installed from Chrome on Android takes the manifest's theme_color, so that color must be the dark background",
+        "Says the installed app keeps its manifest colors until Chrome updates it, so reinstalling shows the fix at once",
+        "Does NOT claim that safe-area padding or viewport-fit=cover alone fixes the navigation bar color in the installed Android app"
       ]
     }
   ],
