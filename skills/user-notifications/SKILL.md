@@ -280,7 +280,7 @@ const permission = await authClient.subscribeToNotifications();
 - It **replaces any push subscription** the service worker holds: remove the app's own push code first.
 - Sign-in, sign-out and `pushsubscriptionchange` keep the subscription current. The page calls nothing else.
 
-**3. On iOS and macOS, they get each notification once.** A user who already gets notifications through ICP Alerts, Internet Identity's own Home Screen or Dock app, gets your app's there too, so each arrives twice: once in ICP Alerts and once in your app. Where Internet Identity reports this, offer to stop it:
+**3. On iOS and macOS, they get each notification once.** A user who already gets Internet Identity's notifications on that device gets your app's there too, so each arrives twice: once in your app, and once in ICP Alerts (Internet Identity's Home Screen app) on iOS or in Safari on macOS. Where Internet Identity reports this, offer to stop it:
 
 ```javascript
 const showOffer = (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver';
