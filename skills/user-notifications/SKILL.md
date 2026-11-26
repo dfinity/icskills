@@ -280,16 +280,16 @@ const permission = await authClient.subscribeToNotifications();
 - It **replaces any push subscription** the service worker holds: remove the app's own push code first.
 - Sign-in, sign-out and `pushsubscriptionchange` keep the subscription current. The page calls nothing else.
 
-**3. On iOS and macOS, they get each notification once.** A user who already gets Internet Identity's notifications on that device gets your app's there too, so each arrives twice: once in your app, and once in ICP Alerts (Internet Identity's Home Screen app) on iOS or in Safari on macOS. Where Internet Identity reports this, offer to stop it:
+**3. On iOS and macOS, avoid duplicates.** If the user also gets Internet Identity's notifications on this device (in ICP Alerts on iOS, in Safari on macOS), your app's notifications show up there as well as in your app. When `getSameDeviceLinkStatus()` reports this, offer "Only receive notifications in this app":
 
 ```javascript
 const showOffer = (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver';
 
-// In the offer's click handler ("Only receive notifications in this app"):
+// In the offer's click handler:
 await authClient.requestSameDeviceLink();
 ```
 
-It opens Safari to confirm. Check after step 2 and in the notification settings; outside an app installed from Safari the offer never shows.
+It opens Safari to confirm; after that, your app's notifications arrive only in your app. Check after step 2 and in the notification settings; outside an app installed from Safari the offer never shows.
 
 ### A notifications toggle
 
