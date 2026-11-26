@@ -28,21 +28,13 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-Your canister sends the same way in both cases below. What differs is who puts the notification on the user's screen.
+- **A website:** let Internet Identity show them. Add the three pieces below, nothing else.
+- **An app:** show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
 
-**A website: let Internet Identity show them.** The notification comes from Internet Identity, labelled with your app's name. On iPhone and iPad it appears in ICP Alerts, Internet Identity's Home Screen app, which the consent screen helps the user add. Your frontend only asks for consent.
-
-**An app: show them from your own service worker.** A service worker is a script your site registers that runs in the background, even with the app closed. With "Delivering through your own service worker", the notification comes from your app: your icon, badge, image and actions, and your code decides what a click does.
-
-If users install your app from Safari, adding it to the Home Screen on iPhone and iPad or to the Dock on a Mac (`pwa-ready-app` skill), your own service worker is the only way notifications reach that installed app. Internet Identity cannot deliver into it.
-
-On iPhone and iPad, a service worker shows notifications only in such an installed app. In a Safari tab there, users get yours through ICP Alerts, whichever you choose.
+Offer turning notifications on for the device (step 2 and the toggle in "Delivering through your own service worker") only where this is true:
 
 ```javascript
-// This page can show notifications from its own service worker (false in a Safari tab on iPhone and iPad):
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
-// This page runs as an app installed from Safari, so it needs its own service worker:
-const isInstalledFromSafari = navigator.standalone === true;
 ```
 
 Already sending your own web push? Start with "Moving from your own push notifications".
