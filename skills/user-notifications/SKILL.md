@@ -257,15 +257,6 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
 ### In the page
 
-When the app starts, once the service worker is registered and the user is signed in, keep this device's subscription in order. It never prompts, and does nothing where nothing was subscribed on this origin before:
-
-```javascript
-await navigator.serviceWorker.register('/sw.js');
-if (authClient.isAuthenticated()) {
-  await authClient.subscribeToNotifications({ interactive: false });
-}
-```
-
 Turning notifications on takes two taps, because the consent ceremony uses up the first one and the browser's permission prompt needs a tap of its own:
 
 ```javascript
@@ -283,8 +274,7 @@ if (permission === 'granted' &&
 
 - `subscribeToNotifications()` answers the browser's notification permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: render it.
 - It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
-- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. The app does nothing for either.
-- Where the user later blocks notifications in the browser, the start-up call removes the registration and Internet Identity delivers through its own path again.
+- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
 - **Same-device link (Safari installed apps only).** On iOS the Home Screen app and Safari keep separate storage, so II sees two browsers and may deliver each notification to both. `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'` when linking would stop the second copy; `requestSameDeviceLink()` opens Safari to claim the link, so call it from a tap. Elsewhere the status is always `'no-other-path'`.
 
 | Error | Means | Remedy |

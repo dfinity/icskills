@@ -41,7 +41,7 @@
         "Adds a push listener that calls authClient.fetchNotificationPayload(event) and always calls showNotification with the result",
         "Adds a notificationclick listener that opens the URL and calls authClient.markNotificationOpened(event)",
         "Calls authClient.subscribeToNotifications() from a tap after requestNotificationConsent returned granted: true, as a separate tap from the consent",
-        "Calls subscribeToNotifications({ interactive: false }) at app start and from pushsubscriptionchange",
+        "Calls subscribeToNotifications({ interactive: false }) from the service worker's pushsubscriptionchange handler, not from the page at start-up",
         "Does NOT generate VAPID keys or call pushManager.subscribe directly"
       ]
     },
