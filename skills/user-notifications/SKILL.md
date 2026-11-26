@@ -262,7 +262,7 @@ self.addEventListener('notificationclick', (event) => {
     const [openTab] = await self.clients.matchAll({ type: 'window' });
     if (openTab) {
       await openTab.focus();
-      await openTab.navigate(url);
+      if (openTab.url !== url) await openTab.navigate(url); // keeps what is typed on the same page
     } else {
       await self.clients.openWindow(url);
     }
