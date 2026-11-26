@@ -236,7 +236,7 @@ self.addEventListener('push', (event) => {
     const { title, options } = await authClient.fetchNotificationPayload(event);
     await self.registration.showNotification(title, {
       ...options,
-      // Your own options here: icon, badge, image, actions, ...
+      // Optional: your own icon, badge, image, actions, ...
     });
   })());
 });
