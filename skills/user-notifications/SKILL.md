@@ -28,8 +28,8 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-- **A website**, such as a news site notifying readers of new articles: let Internet Identity show them. Add the three pieces below, nothing else.
-- **An app**, such as a chat app notifying users of new messages: show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
+- **A website** (for example, a news site telling readers about new articles): let Internet Identity show them. Add the three pieces below, nothing else.
+- **An app** (for example, a chat app telling users about new messages): show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
 
 Already sending your own web push? Start with "Moving from your own push notifications".
 
@@ -182,8 +182,8 @@ canisters:
 
 | Field | Default | What it is for |
 |---|---|---|
-| `url` | none | Where acting on it takes the user: the news site's article, the chat app's conversation. Must be the sending origin or one of its alternative origins; II refuses anything else. |
-| `key` | none | What the notification is *about*: `article-<id>`, `chat-<conversation id>`. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
+| `url` | none | Where acting on it takes the user, for example the article, or the conversation. Must be the sending origin or one of its alternative origins; II refuses anything else. |
+| `key` | none | What the notification is *about*, for example the article or the conversation. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
 | `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
 | `expiresAt` / `expires_at` | a short window | How long this is still worth sending. Set past the default for anything that matters later; short for anything worthless once the moment passes. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
@@ -206,10 +206,15 @@ A short expiry does not make something urgent, and `High` does not make it last 
 
 ## `key`
 
-The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, rather than from whatever a caller passed in:
+The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, rather than from whatever a caller passed in. Some examples:
 
-- **News site:** `article-<id>`. Sending again after a headline is corrected updates the notification; `dismiss` once the reader opened the article on the site.
-- **Chat app:** `chat-<conversation id>`. Each new message replaces the last one's notification, so a busy conversation shows one notification, not one per message; `dismiss` once the user read the conversation.
+| Notification | `url` | `key` | Effect |
+|---|---|---|---|
+| A news site's new article | the article | `article-<article id>` | A corrected headline, sent again, updates it |
+| A new message in a chat conversation | the conversation | `chat-<conversation id>` | A busy conversation shows one notification, its latest message, not one per message |
+| Being mentioned in a chat conversation | the conversation, at the message (`/chats/<conversation id>#<message id>`) | `mention-<message id>` | Each mention stays its own notification, apart from the conversation's |
+
+`dismiss` the key once the user has seen the thing in your app, for example read the conversation.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
@@ -239,7 +244,8 @@ self.addEventListener('push', (event) => {
     const { title, options } = await authClient.fetchNotificationPayload(event);
     await self.registration.showNotification(title, {
       ...options,
-      // Optional: your own icon, badge, image, actions, ...
+      // Optional: your own icon, badge, image, actions. For example, a chat app's reply button:
+      actions: [{ action: 'reply', title: 'Reply' }],
     });
   })());
 });
@@ -247,7 +253,10 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     event.notification.close();
-    await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
+    const url = new URL(event.notification.data?.url ?? self.registration.scope);
+    // event.action names the button clicked, '' for the notification itself.
+    if (event.action === 'reply') url.searchParams.set('reply', '');
+    await self.clients.openWindow(url.href);
     await authClient.markNotificationOpened(event);
   })());
 });
