@@ -38,12 +38,13 @@ Decide this first. Consent, the senders document and sending are the same either
 - you set the icon, badge, image and actions;
 - you handle the click.
 
-Where it works:
+Where your app runs decides:
 
-- **Desktop and Android:** in a normal browser tab.
-- **iOS:** only in your app added to the Home Screen (`pwa-ready-app` skill). In a Safari tab, ICP Alerts shows your notifications instead.
-
-Your app added to the Home Screen (iOS) or the Dock (macOS) **must** use it: Internet Identity cannot deliver to it.
+| Your app runs in | Own service worker |
+|---|---|
+| A browser tab (desktop, Android) | Optional, for the benefits above |
+| A Safari tab on iOS | Not available: ICP Alerts shows your notifications |
+| An app installed from Safari: iOS Home Screen, macOS Dock (`pwa-ready-app` skill) | Required: Internet Identity cannot deliver to it |
 
 ```javascript
 // Whether this page can use its own service worker for notifications:
