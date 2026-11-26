@@ -259,6 +259,7 @@ self.addEventListener('notificationclick', (event) => {
     // Optional, for the inline reply above: where event.action is 'reply',
     // send event.reply to your canister instead of opening a window.
     await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
+    // Always: without it, metrics() never counts the notification as opened.
     await authClient.markNotificationOpened(event);
   })());
 });
@@ -269,7 +270,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 ```
 
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
-- **Spread `options` first** and keep its `tag` and `data`; add your own fields after.
+- **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For what else a notification can show (buttons, images, inline replies), point the user to https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
 - **`fetchNotificationPayload` and `markNotificationOpened` belong in the `push` and `notificationclick` handlers only.** For an in-app list of notifications, implement separate data and methods in your canister.
 
