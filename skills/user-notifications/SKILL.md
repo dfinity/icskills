@@ -247,8 +247,8 @@ self.addEventListener('push', (event) => {
     const { title, options } = await authClient.fetchNotificationPayload(event);
     await self.registration.showNotification(title, {
       ...options,
-      // Optional: your own icon, badge, image, actions. For example, a chat app's reply button:
-      actions: [{ action: 'reply', title: 'Reply' }],
+      // Optional: your own icon, badge, image, actions. For example, a chat app's inline reply:
+      actions: [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Message' }],
     });
   })());
 });
@@ -256,10 +256,13 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     event.notification.close();
-    const url = new URL(event.notification.data?.url ?? self.registration.scope);
-    // event.action names the button clicked, '' for the notification itself.
-    if (event.action === 'reply') url.searchParams.set('reply', '');
-    await self.clients.openWindow(url.href);
+    const url = event.notification.data?.url ?? self.registration.scope;
+    if (event.action === 'reply' && event.reply) {
+      // The typed text: send it to your canister as the user (authClient.getIdentity()), without opening the app.
+      await sendReply(url, event.reply);
+    } else {
+      await self.clients.openWindow(url);
+    }
     await authClient.markNotificationOpened(event);
   })());
 });
