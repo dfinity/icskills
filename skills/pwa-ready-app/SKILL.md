@@ -100,6 +100,36 @@ if ('serviceWorker' in navigator) {
 
 Add a `fetch` handler only for offline support you want: a cached `index.html` is a stale shell after the next deploy.
 
+## Install button
+
+Chrome and Edge let the app offer its own Install button:
+
+```javascript
+let installPrompt;
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPrompt = event; // now show your Install button
+});
+
+// In the Install button's click handler:
+await installPrompt.prompt();
+```
+
+Safari has no such event, so show steps instead:
+
+- **iOS:** open the menu (⋯), tap **Share**, tap **View More**, tap **Add to Home Screen**.
+- **macOS:** **File** → **Add to Dock**.
+
+Hide both once the app runs installed:
+
+```javascript
+const isInstalled = !matchMedia('(display-mode: browser)').matches || navigator.standalone === true;
+```
+
+## Title bar (desktop Chrome and Edge)
+
+An installed desktop app can draw into the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. Look it up as needed: https://web.dev/articles/window-controls-overlay.
+
 ## Headers
 
 `public/_headers`, for the `static-site` canister. A canister serving its own assets sets these content types in its own code:
