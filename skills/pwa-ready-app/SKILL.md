@@ -1,13 +1,13 @@
 ---
 name: pwa-ready-app
-description: "Make an Internet Computer frontend installable as a Progressive Web App (PWA): the web app manifest, icons, a service worker served from the asset canister, the headers it needs, an Install button or Add to Home Screen steps, the desktop title bar, and which origin the installed app belongs to. Covers the difference between Safari installed apps (iOS Home Screen, macOS Dock), which keep their own storage and sign-in, and Chromium installed apps, which share the browser's. Also covers what installing changes for an app that already sends Internet Identity notifications. Use when an app should be installable, added to the Home Screen, run standalone or offline-capable, or when adding a manifest or service worker to an ICP frontend. Load before user-notifications when building a new app that will notify users. Do NOT use for native mobile apps, for hosting the frontend itself (use static-site) or for sending notifications (use user-notifications)."
+description: "Make an Internet Computer frontend installable as a Progressive Web App (PWA): the web app manifest, icons, a service worker served from the asset canister, the headers it needs, and making the installed app feel native: splash screen, edge-to-edge colors and safe areas, an Install button or Add to Home Screen steps, and the desktop title bar. Also which origin the installed app belongs to. Covers the difference between Safari installed apps (iOS Home Screen, macOS Dock), which keep their own storage and sign-in, and Chromium installed apps, which share the browser's. Also covers what installing changes for an app that already sends Internet Identity notifications. Use when an app should be installable, added to the Home Screen, run standalone or offline-capable, or when adding a manifest or service worker to an ICP frontend. Load before user-notifications when building a new app that will notify users. Do NOT use for native mobile apps, for hosting the frontend itself (use static-site) or for sending notifications (use user-notifications)."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.2.0, Vite or another bundler for the service worker"
 metadata:
   title: PWA-Ready App
   category: Frontend
   summary: "Make an ICP frontend installable: manifest, icons and a service worker."
-  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar"
+  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar, splash screen, edge to edge, safe area, status bar, navigation bar"
 ---
 
 # PWA-Ready App
@@ -41,8 +41,8 @@ Hosting is the `static-site` skill, sign-in the `user-sign-in` skill.
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
   "icons": [
     { "src": "/icons/192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icons/512.png", "sizes": "512x512", "type": "image/png" },
@@ -56,9 +56,12 @@ In `index.html`:
 ```html
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/180.png" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 ```
 
+- **Use your app's own colors, not white.** `background_color` and `theme_color` color the splash screen and the system bars; `#0f1115` above stands for your app's background.
 - iOS takes the Home Screen icon from `apple-touch-icon` (180x180, no transparency), not the manifest.
 - Keep `id` fixed: it is the installed app's identity.
 - A maskable icon keeps its content in the central 80%.
@@ -105,7 +108,31 @@ if ('serviceWorker' in navigator) {
 
 Add a `fetch` handler only for offline support you want: a cached `index.html` is a stale shell after the next deploy.
 
-## Install button
+## Make it feel native
+
+**Do all of these.** An installed app that skips them looks like a web page in a frame: a white flash at launch, white bars around a dark app, and no way in but the browser menu.
+
+### Splash screen
+
+- **Android** draws it from the manifest: `name`, `background_color` and the 512x512 icon. Set `background_color` to the color of the app's first screen, so launch flows into it without a flash.
+- **iOS** shows an `apple-touch-startup-image` that matches the device's screen size exactly, and a blank white screen without one. Generate one image per iPhone and iPad size (portrait and landscape) and link each with its media query:
+
+```html
+<link rel="apple-touch-startup-image" href="/splash/1179x2556.png"
+  media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+```
+
+### Edge to edge
+
+Draw behind the status and navigation bars, so the system bars show your app instead of a white strip. `viewport-fit=cover` (above) extends the page under them; then give the root your background and keep content clear of the bars with the safe area insets:
+
+```css
+html { background: #0f1115; }
+.top-bar { padding-top: env(safe-area-inset-top); }
+.composer { padding-bottom: env(safe-area-inset-bottom); }
+```
+
+### Install button
 
 Chrome and Edge let the app offer its own Install button:
 
@@ -131,9 +158,9 @@ Hide both once the app runs installed:
 const isInstalled = !matchMedia('(display-mode: browser)').matches || navigator.standalone === true;
 ```
 
-## Title bar (desktop Chrome and Edge)
+### Title bar (desktop Chrome and Edge)
 
-An installed desktop app can draw into the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. It takes effect only in the installed app; in a browser tab nothing changes. Look it up as needed: https://web.dev/articles/window-controls-overlay.
+Put the app's own header in the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. It takes effect only in the installed app; in a browser tab nothing changes. Look it up as needed: https://web.dev/articles/window-controls-overlay.
 
 ## Headers
 

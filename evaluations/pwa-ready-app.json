@@ -42,6 +42,16 @@
         "Positions the header with the titlebar-area-* CSS environment variables",
         "Says it takes effect in the installed app on desktop Chrome or Edge, not in a normal browser tab"
       ]
+    },
+    {
+      "name": "A dark installed app with white bars and a white launch",
+      "prompt": "My ICP app has a dark UI. Installed on Android it flashes white when it starts and there's a white strip at the bottom of the screen. Fix it. Just the changes.",
+      "expected_behaviors": [
+        "Sets the manifest's background_color (and theme_color) to the app's dark background instead of white",
+        "Adds viewport-fit=cover to the viewport meta so the page draws behind the system bars",
+        "Gives the root (html) element the app's background color",
+        "Keeps bottom content clear of the navigation bar with env(safe-area-inset-bottom)"
+      ]
     }
   ],
   "trigger_evals": {
@@ -51,7 +61,8 @@
       "Add a web app manifest and service worker to my frontend on the Internet Computer",
       "Let iPhone users add my ICP app to their Home Screen",
       "My service worker won't register on the asset canister",
-      "Add an install button to my ICP app"
+      "Add an install button to my ICP app",
+      "My installed web app shows a white bar at the bottom on Android"
     ],
     "should_not_trigger": [
       "Send a push notification to a user from my canister",
