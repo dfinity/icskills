@@ -40,7 +40,7 @@
       "expected_behaviors": [
         "Adds a push listener that calls authClient.fetchNotificationPayload(event) and always calls showNotification with the result",
         "Adds a notificationclick listener that opens the URL and calls authClient.markNotificationOpened(event)",
-        "Calls authClient.subscribeToNotifications() from its own in-app button once consent is granted, separate from the requestNotificationConsent call that opens Internet Identity",
+        "Calls authClient.subscribeToNotifications() from its own tap (a button or toggle) once consent is granted, separate from the requestNotificationConsent call that opens Internet Identity",
         "Calls subscribeToNotifications({ interactive: false }) from the service worker's pushsubscriptionchange handler, not from the page at start-up",
         "Does NOT generate VAPID keys or call pushManager.subscribe directly"
       ]
