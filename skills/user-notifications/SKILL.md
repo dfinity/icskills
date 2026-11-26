@@ -31,7 +31,7 @@ Three pieces, all required. Missing any one of them produces silence rather than
 Decide this first. Consent, the senders document and sending are the same either way.
 
 - **Internet Identity.** It shows your notifications under your app's name, on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
-- **Your own service worker.** You choose the icon, badge, image, actions and what a click opens. It works in a normal tab everywhere except iOS, where it takes offering your app for the Home Screen (`pwa-ready-app` skill); until then ICP Alerts shows them there. An app installed from Safari (iOS Home Screen, macOS Dock) gets notifications only this way. Add "Delivering through your own service worker" to the three pieces.
+- **Your own service worker.** You choose the icon, badge, image and actions, and handle the click yourself. It works in a normal tab everywhere except iOS, where it takes offering your app for the Home Screen (`pwa-ready-app` skill); until then ICP Alerts shows them there. An app installed from Safari (iOS Home Screen, macOS Dock) gets notifications only this way. Add "Delivering through your own service worker" to the three pieces.
 
 Whether this browser can, at runtime (the same check `subscribeToNotifications()` makes):
 
