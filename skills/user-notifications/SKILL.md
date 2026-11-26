@@ -258,8 +258,7 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const url = event.notification.data?.url ?? self.registration.scope;
     if (event.action === 'reply' && event.reply) {
-      // The typed text: send it to your canister as the user (authClient.getIdentity()), without opening the app.
-      await sendReply(url, event.reply);
+      // Send event.reply to your canister
     } else {
       await self.clients.openWindow(url);
     }
