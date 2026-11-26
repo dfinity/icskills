@@ -33,6 +33,12 @@ Decide this first. Consent, the senders document and sending are the same either
 - **Internet Identity.** It shows your notifications under your app's name. Nothing to add beyond the three pieces below.
 - **Your own service worker.** You choose the icon, badge, image, actions and what a click opens. In Chrome and other non-Apple browsers this works in a normal tab. On Apple devices it needs the app installed (iOS Home Screen, macOS Dock; `pwa-ready-app` skill), and it is the only way an installed app gets them. Add "Delivering through your own service worker" to the three pieces.
 
+Whether this browser can, at runtime (the same check `subscribeToNotifications()` makes):
+
+```javascript
+const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
+```
+
 Already sending your own web push? Start with "Moving from your own push notifications".
 
 ## 1. Consent, in the frontend
