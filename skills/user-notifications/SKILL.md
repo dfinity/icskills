@@ -28,8 +28,8 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-- **A website:** let Internet Identity show them. Add the three pieces below, nothing else.
-- **An app:** show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
+- **A website**, such as a news site notifying readers of new articles: let Internet Identity show them. Add the three pieces below, nothing else.
+- **An app**, such as a chat app notifying users of new messages: show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
 
 Already sending your own web push? Start with "Moving from your own push notifications".
 
