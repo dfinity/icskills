@@ -124,5 +124,5 @@ Users who do not install the app keep receiving notifications as before. In the 
 The patch is "Delivering through your own service worker" in the `user-notifications` skill (`@icp-sdk/auth` 11.3.0 or later):
 
 - Service worker: `push` shows what `authClient.fetchNotificationPayload(event)` answers, `notificationclick` calls `authClient.markNotificationOpened(event)`, and `pushsubscriptionchange` calls `authClient.subscribeToNotifications({ interactive: false })`.
-- Page: consent at sign-in, then a prompt whose click handler calls `subscribeToNotifications()`, and a settings toggle.
+- Page: consent at sign-in, then a banner whose click handler calls `subscribeToNotifications()`, and a settings toggle.
 - Never call `pushManager.subscribe` or make VAPID keys yourself.

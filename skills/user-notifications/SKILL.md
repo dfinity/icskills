@@ -266,17 +266,17 @@ const [identity, { granted }] = await Promise.all([
 
 This records consent only. The device is not on yet.
 
-**2. In the app, they turn this device on.** Once consent is granted, show a prompt such as "Get notifications on this device". Its click handler calls `subscribeToNotifications()`, which opens the browser's permission prompt.
+**2. In the app, they turn this device on.** Once consent is granted, show a banner such as "Get notifications on this device". Its click handler calls `subscribeToNotifications()`, which opens the notification permission prompt.
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
-const showPrompt = granted && Notification.permission === 'default';
+const showBanner = granted && Notification.permission === 'default';
 
-// In the prompt's click handler:
+// In the banner's click handler:
 const permission = await authClient.subscribeToNotifications();
 ```
 
-- `'denied'`: hide the prompt. Permission already `'granted'`: it subscribes without asking.
+- `'denied'`: hide the banner. Permission already `'granted'`: it subscribes without asking.
 - It **replaces any push subscription** the service worker holds: remove the app's own push code first.
 - Sign-in, sign-out and `pushsubscriptionchange` keep the subscription current. The page calls nothing else.
 
@@ -293,7 +293,7 @@ It opens Safari to confirm; after that, your app's notifications arrive only in 
 
 ### A notifications toggle
 
-For users who skipped the prompt, and for turning notifications off and on later. Handle `click`, not `change`: opening Internet Identity and the browser's prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
+For users who dismissed the banner, and for turning notifications off and on later. Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
 
 ```javascript
 async function readToggle() {
@@ -324,7 +324,7 @@ toggle.addEventListener('click', async () => {
 | State | Shows | A click |
 |---|---|---|
 | `'off'` | Off | Opens Internet Identity to consent |
-| `'device-off'` | Off, "Turn on for this device" | Opens the browser's prompt |
+| `'device-off'` | Off, "Turn on for this device" | Opens the notification permission prompt |
 | `'on'` | On, plus step 3's offer | Revokes consent, on every device of the user |
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
 
