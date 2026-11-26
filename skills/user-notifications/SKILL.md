@@ -256,7 +256,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     event.notification.close();
-    // Optional, for the inline reply above: where event.action is 'reply',
+    // Optional, for the inline reply example above: where event.action is 'reply',
     // send event.reply to your canister instead of opening a window.
     await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
     // Always: without it, metrics() never counts the notification as opened.
