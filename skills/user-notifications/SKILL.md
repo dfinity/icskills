@@ -213,7 +213,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 
 ## Delivering through your own service worker
 
-Needs `@icp-sdk/auth` 11.3.0 or later, a service worker at the app's root (`pwa-ready-app` skill), and the `identity-notifications` release after Rust 0.1.2 and Motoko 0.3.2. With an older library every notification shows as "New notification" and none is counted in `metrics()`.
+Needs `@icp-sdk/auth` 11.3.0 or later, `identity-notifications` 0.2.0 or later (Rust) or 0.4.0 or later (Motoko), and a service worker at the app's root (`pwa-ready-app` skill).
 
 ### In the service worker
 
