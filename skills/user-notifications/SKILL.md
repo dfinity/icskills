@@ -214,7 +214,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 
 ## Delivering through your own service worker
 
-Needs `@icp-sdk/auth` 11.3.0 or later and a service worker registered at the app's root (see the `pwa-ready-app` skill). The canister code does not change: the service worker fetches each notification's content from your canister as the signed-in user, through the same library endpoints Internet Identity uses.
+Needs `@icp-sdk/auth` 11.3.0 or later and a service worker registered at the app's root (see the `pwa-ready-app` skill). The canister needs the `identity-notifications` release after Rust 0.1.2 and Motoko 0.3.2, and no code change: the service worker fetches each notification's content from your canister as the signed-in user, through the same library endpoints Internet Identity uses, and earlier releases answer those endpoints for Internet Identity alone. Every notification then shows as the generic "New notification" and none counts as received or opened in `metrics()`.
 
 ### In the service worker
 
