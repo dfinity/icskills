@@ -44,7 +44,7 @@ It works in a normal browser tab everywhere except iOS, where it works only in a
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
 ```
 
-**Your own service worker, required** when your app is installed from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill). Internet Identity does not reach such an app: it gets notifications only through its own service worker. Whether this page runs as one (only Safari sets it):
+An app installed from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill) **requires** it: Internet Identity does not reach such an app. Whether this page runs as one (only Safari sets it):
 
 ```javascript
 const isInstalledFromSafari = navigator.standalone === true;
