@@ -1,0 +1,50 @@
+{
+  "skill": "pwa-ready-app",
+  "description": "Evaluation cases for the pwa-ready-app skill. Tests whether agents serve the service worker from the asset canister so it registers and updates, and know what installing changes for Internet Identity sign-in and notifications.",
+  "output_evals": [
+    {
+      "name": "Service worker registration fails with a text/html MIME type",
+      "prompt": "My ICP frontend on the static-site recipe registers /sw.js but the browser says: The script has an unsupported MIME type ('text/html'). My _redirects has the SPA rule. What's wrong? Just the cause and the fix.",
+      "expected_behaviors": [
+        "Explains that the SPA rewrite served index.html because no file exists at /sw.js in the deployed dir",
+        "Fixes the build so sw.js is emitted at the root of the deployed dir under exactly the registered path, with a fixed (unhashed) name",
+        "Does NOT suggest removing the SPA fallback rule",
+        "Does NOT suggest .ic-assets.json5, which the static-site canister does not read"
+      ]
+    },
+    {
+      "name": "Users run an old service worker after a deploy",
+      "prompt": "I deployed a new version of my installable ICP app but users keep running the old service worker for a long time. Fix it. Just the config.",
+      "expected_behaviors": [
+        "Sets Cache-Control: no-cache on /sw.js in the _headers file",
+        "Places _headers at the root of the deployed dir (for example via public/)",
+        "Does NOT suggest a hashed service worker filename"
+      ]
+    },
+    {
+      "name": "An app with notifications becomes installable",
+      "prompt": "My ICP app already sends Internet Identity notifications to users. I'm making it installable so iPhone users can add it to their Home Screen. Does anything change for notifications? Short answer.",
+      "expected_behaviors": [
+        "Says a Safari installed app (iOS Home Screen) does not receive Internet Identity's own delivery",
+        "Says the installed app's own service worker must subscribe (subscribeToNotifications) and handle push with fetchNotificationPayload",
+        "Says browser tabs keep receiving notifications as before",
+        "Says the user signs in again inside the iOS Home Screen app because it keeps its own storage"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Make my ICP app installable as a PWA",
+      "Add a web app manifest and service worker to my frontend on the Internet Computer",
+      "Let iPhone users add my ICP app to their Home Screen",
+      "My service worker won't register on the asset canister"
+    ],
+    "should_not_trigger": [
+      "Send a push notification to a user from my canister",
+      "Deploy my React frontend to the IC",
+      "Build a native iOS app with Swift",
+      "Add Internet Identity login to my frontend"
+    ]
+  }
+}

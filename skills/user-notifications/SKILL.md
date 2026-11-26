@@ -1,13 +1,13 @@
 ---
 name: user-notifications
-description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (as web push), so there is no push service, no VAPID keys and no device tokens in the app: the canister addresses a user and II reaches their browsers. Covers asking the user's consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must tell a user something while they are not looking at it, when adding notifications, web push or a notifications toggle, or when the user consented and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load user-sign-in first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
+description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (web push): no push service, VAPID keys or device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent), the /.well-known/ii-notification-senders document, sending with the identity-notifications library from Motoko or Rust, delivering through the app's own service worker (subscribeToNotifications, fetchNotificationPayload), which an installed app (PWA) needs and a browser tab may use for its own presentation, and moving off the app's own web push. Use when an app must tell a user something while they are not looking, when adding notifications or a notifications toggle, or when nothing arrives, also in a Home Screen app. Assumes sign-in works: load user-sign-in first. Do NOT use for in-app notification UI, email, or reaching anyone who is not a signed-in user of this app."
 license: Apache-2.0
-compatibility: "@icp-sdk/auth >= 11.1.0, moc >= 2.0.0"
+compatibility: "@icp-sdk/auth >= 11.1.0 (11.3.0 for the service worker path), moc >= 2.0.0"
 metadata:
   title: User Notifications
   category: Integration
   summary: "Send push notifications to your app's users through Internet Identity."
-  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications"
+  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications, service worker, PWA notifications, home screen app"
 ---
 
 # User Notifications
@@ -25,6 +25,18 @@ Three pieces, all required. Missing any one of them produces silence rather than
 1. The frontend asks the user's consent, through II.
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
+
+## Which path
+
+A notification reaches the user's device one of two ways. The canister side (pieces 2 and 3) is the same for both.
+
+| App | Delivery | Do this |
+|---|---|---|
+| PWA-ready app, with a service worker (see the `pwa-ready-app` skill) | The app's own service worker | Pieces 1 to 3, then "Delivering through your own service worker". **Recommended.** It is the only way notifications reach a Safari installed app (iOS Home Screen, macOS Dock). |
+| No service worker | Internet Identity's own | Pieces 1 to 3. Nothing else in the app. |
+| App with its own push notifications already (its own VAPID keys, push service or subscription table) | Either of the above | "Moving from your own push notifications" first, then one of the rows above. |
+
+The service worker path is not limited to installed apps. In a browser tab it is an option, for an app that wants control over how its notifications look: its own icon, badge, image and actions, and its own click handling.
 
 ## 1. Consent, in the frontend
 
@@ -198,7 +210,102 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 - **The app addresses a user, nothing finer.** II holds a queue per browser that identity has registered, so one `send` can surface on a laptop and a phone at once. Where and how a notification reaches them is II's and the user's to manage, and an app that reasons about it is coupling itself to something it cannot see.
 - **II composes what is shown.** The user reads your app's name, then the title your canister sent. The name comes from `/.well-known/ii-app-metadata`, and falls back to your origin's hostname where you publish none, so do not put your app's name in `title` yourself: it arrives twice. Publishing that document is what brands the notifications as well as the sign-in screen: see "App metadata on the sign-in screen" in the `user-sign-in` skill.
 - **Sending cannot fail the call it is made from.** `send` neither traps nor awaits, so a recipient who cannot be notified costs the endpoint nothing and returns nothing to branch on. What became of a notification is in `metrics()`.
-- **iOS needs II added to the Home Screen** for web push. The consent ceremony walks the user through it; the app does nothing.
+- **iOS: on Internet Identity's own path, II must be added to the Home Screen** for web push, and the consent ceremony walks the user through it. On the service worker path the app's own Home Screen app receives them instead.
+
+## Delivering through your own service worker
+
+Needs `@icp-sdk/auth` 11.3.0 or later and a service worker registered at the app's root (see the `pwa-ready-app` skill). The canister code does not change: the service worker fetches each notification's content from your canister as the signed-in user, through the same library endpoints Internet Identity uses.
+
+### In the service worker
+
+Build the `AuthClient` with the same options as the page (`identityProvider`, `derivationOrigin`):
+
+```typescript
+import { AuthClient } from '@icp-sdk/auth/client';
+
+declare const self: ServiceWorkerGlobalScope;
+const authClient = new AuthClient({ derivationOrigin: 'https://your-app.icp0.io' });
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    const { title, options } = await authClient.fetchNotificationPayload(event);
+    await self.registration.showNotification(title, {
+      ...options,
+      icon: '/icons/192.png',
+      badge: '/icons/badge-96.png',
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.waitUntil((async () => {
+    event.notification.close();
+    await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
+    await authClient.markNotificationOpened(event);
+  })());
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(authClient.subscribeToNotifications({ interactive: false }));
+});
+```
+
+- **Show something for every push.** `fetchNotificationPayload` answers a generic "New notification" where the content cannot be read in time (8 seconds), because the subscription is `userVisibleOnly`: every push must show one. Never return from the `push` handler without calling `showNotification`.
+- **Spread `options` first and keep its `tag` and `data`.** `tag` is what replaces an updated notification and closes a dismissed one; `data` is what `markNotificationOpened` and the click target read. Add your own fields after the spread.
+- **`title` is shown as your canister sent it.** The system shows your installed app or site as the source, so the rule about not putting your app's name in `title` still holds.
+- **`data.url` is set only for a URL on the service worker's own origin.** A notification whose `url` points at another of your origins opens the fallback (`registration.scope` above).
+
+### In the page
+
+When the app starts, once the service worker is registered and the user is signed in, keep this device's subscription in order. It never prompts, and does nothing where nothing was subscribed on this origin before:
+
+```javascript
+await navigator.serviceWorker.register('/sw.js');
+if (authClient.isAuthenticated()) {
+  await authClient.subscribeToNotifications({ interactive: false });
+}
+```
+
+Turning notifications on takes two taps, because the consent ceremony uses up the first one and the browser's permission prompt needs a tap of its own:
+
+```javascript
+// Tap 1: "Allow notifications"
+const { granted } = await authClient.requestNotificationConsent();
+
+// Tap 2: "Turn on for this device", shown once granted is true
+const permission = await authClient.subscribeToNotifications();
+if (permission === 'granted' &&
+    (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
+  // Offer "Only notify me in this app": a tap that calls
+  await authClient.requestSameDeviceLink();
+}
+```
+
+- `subscribeToNotifications()` answers the browser's notification permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: render it.
+- It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
+- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. The app does nothing for either.
+- Where the user later blocks notifications in the browser, the start-up call removes the registration and Internet Identity delivers through its own path again.
+- **Same-device link (Safari installed apps only).** On iOS the Home Screen app and Safari keep separate storage, so II sees two browsers and may deliver each notification to both. `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'` when linking would stop the second copy; `requestSameDeviceLink()` opens Safari to claim the link, so call it from a tap. Elsewhere the status is always `'no-other-path'`.
+
+| Error | Means | Remedy |
+|---|---|---|
+| `NotificationsUnsupportedError` | No Web Push in this browser, or a same-device link outside a Safari installed app | Hide the control |
+| `SessionGoneError` | No live session | Sign in again; in the service worker, nothing to show |
+| `"This application lists no frontend at this page's origin"` | The page is served from an origin that is neither the derivation origin nor in its `/.well-known/ii-alternative-origins` | List the origin there (see the `user-sign-in` skill) |
+| `"This origin has no service worker registered to receive notifications"` | `subscribeToNotifications` ran before `navigator.serviceWorker.register` | Register first |
+
+### A frontend on another origin
+
+Where the installed app is served from an alternative origin of the app (a frontend that signs in with `derivationOrigin`), notifications for it must be sent for that frontend. Configure the sending canister with the frontend as `notification_origin` and the app's primary origin as `notification_derivation_origin`. The senders document stays on the primary origin, and the frontend must be listed in its `/.well-known/ii-alternative-origins`.
+
+## Moving from your own push notifications
+
+An app that runs its own web push (its own VAPID keys, a push service, a table of browser subscriptions) moves to Internet Identity's:
+
+1. In the frontend, remove the app's own `pushManager.subscribe` call and the code that posts subscriptions to the backend. On the service worker path, `subscribeToNotifications()` replaces the old subscription on each device the next time it runs.
+2. In the service worker, replace the `push` handler's decryption or payload parsing with `fetchNotificationPayload`.
+3. In the backend, replace each web push send with the library's `send` to the user's principal, and delete the stored subscriptions and VAPID keys. The app no longer addresses devices; see "What the app does and does not own".
+4. Users consent again through Internet Identity (piece 1). A browser permission granted to the old system is not consent.
 
 ## Upgrades
 
@@ -214,3 +321,6 @@ Pass the same `MemoryId`s every time. Renumbering them on a running canister poi
 2. **Putting your app's name in `title`.** II puts it in front of the title you sent, so the user reads it twice. See "What the app does and does not own".
 3. **Deriving `key` from whatever a caller passed in.** Two of your own sends under one key collide in that recipient's tray and the later one wins. See "`key`".
 4. **Skipping `init` in `post_upgrade`, in Rust.** Anything queued stays queued and is never sent. See "Upgrades".
+5. **Expecting a Safari installed app to receive notifications without its own service worker.** Internet Identity's own delivery does not reach it. See "Delivering through your own service worker".
+6. **Returning from the `push` handler without showing a notification.** iOS revokes the subscription after a few pushes that showed nothing, and Chrome shows its own "updated in the background" notice instead. Always show what `fetchNotificationPayload` answers.
+7. **Keeping the app's own push subscription next to Internet Identity's.** A service worker holds one push subscription, and `subscribeToNotifications` replaces it. See "Moving from your own push notifications".
