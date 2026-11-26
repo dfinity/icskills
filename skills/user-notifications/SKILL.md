@@ -28,11 +28,11 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-Decide this first. Consent, the senders document and sending are the same either way. **Recommended:** a website relies on Internet Identity; an app, especially one users install, uses its own service worker.
+Decide this first. Consent, the senders document and sending are the same either way.
 
-**Internet Identity, by default.** It shows your notifications under your app's name, in the browser, and on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
+**Internet Identity: recommended for websites.** It shows your notifications under your app's name, in the browser, and on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
 
-**Your own service worker, optionally.** Add "Delivering through your own service worker" and your app shows them itself:
+**Your own service worker: recommended for apps.** Add "Delivering through your own service worker" and your app shows them itself:
 
 - they come from your app or site, not from Internet Identity;
 - you set the icon, badge, image and actions;
