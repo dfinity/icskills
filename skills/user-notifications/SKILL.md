@@ -189,6 +189,7 @@ Set `notification_derivation_origin` only when the frontend signs in with a `der
 | `key` | none | What the notification is *about*, for example the article or the conversation. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
 | `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
 | `expiresAt` (Rust: `expires_at`) | an hour | How long this is still worth sending. Set past the default for anything that matters later; short for anything worthless once the moment passes. |
+| `metadata` | none | App-defined text for your own service worker, for example the sender's id. Only the recipient can read it, and Internet Identity never shows it. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
 ## Choosing `urgency` and `expiresAt`
@@ -280,7 +281,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 ```
 
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
-- **Set `icon` to what the notification is about**, such as the sender's avatar. Android draws a letter tile where it is missing, and the system already shows your app's own icon.
+- **Set `icon` to what the notification is about**, such as the sender's avatar, found from `options.data.metadata`. Android draws a letter tile where it is missing, and the system already shows your app's own icon.
 - **Every notification alerts**, an update under the same `key` too. Add `silent: true` to the options to show one quietly.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
