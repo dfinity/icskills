@@ -26,16 +26,14 @@ Three pieces, all required. Missing any one of them produces silence rather than
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
 
-## Which path
+## Website or installable app
 
-Pieces 2 and 3 are the same either way. What differs is who shows the notification:
+Decide this first. Consent, the senders document and sending are the same either way.
 
-| App | Shown by |
-|---|---|
-| Has a service worker (`pwa-ready-app` skill). **Recommended.** | The app's own service worker: required in an app installed from Safari (iOS Home Screen, macOS Dock), optional in a browser tab for your own icon, badge, actions and click handling. See "Delivering through your own service worker". |
-| No service worker | Internet Identity. Nothing more to do in the app. |
+- **A website.** Internet Identity shows your notifications, under your app's name. Nothing to add beyond the three pieces below.
+- **An installable app** (`pwa-ready-app` skill). Your own service worker shows them, so you choose the icon, badge, image, actions and what a click opens. It is also the only way users who installed the app from Safari (iOS Home Screen, macOS Dock) get them in it. Add "Delivering through your own service worker" to the three pieces.
 
-Already running your own web push? Start with "Moving from your own push notifications".
+Already sending your own web push? Start with "Moving from your own push notifications".
 
 ## 1. Consent, in the frontend
 
