@@ -350,9 +350,7 @@ async function readToggle() {
 }
 
 let state;
-const refreshToggle = () => readToggle().then((read) => render((state = read)));
-refreshToggle();
-authClient.subscribe(refreshToggle); // sign-in and sign-out, in any tab
+readToggle().then((read) => render((state = read)));
 
 toggle.addEventListener('click', async () => {
   if (state === 'off') {
