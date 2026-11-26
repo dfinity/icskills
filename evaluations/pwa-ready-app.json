@@ -1,6 +1,6 @@
 {
   "skill": "pwa-ready-app",
-  "description": "Evaluation cases for the pwa-ready-app skill. Tests whether agents serve the service worker from the asset canister so it registers and updates, and know what installing changes for Internet Identity sign-in and notifications.",
+  "description": "Evaluation cases for the pwa-ready-app skill. Tests whether agents serve the service worker from the asset canister so it registers, and know what installing changes for Internet Identity sign-in and notifications.",
   "output_evals": [
     {
       "name": "Service worker registration fails with a text/html MIME type",
@@ -10,15 +10,6 @@
         "Fixes the build so sw.js is emitted at the root of the deployed dir under exactly the registered path, with a fixed (unhashed) name",
         "Does NOT suggest removing the SPA fallback rule",
         "Does NOT suggest .ic-assets.json5, which the static-site canister does not read"
-      ]
-    },
-    {
-      "name": "Users run an old service worker after a deploy",
-      "prompt": "I deployed a new version of my installable ICP app but users keep running the old service worker for a long time. Fix it. Just the config.",
-      "expected_behaviors": [
-        "Sets Cache-Control: no-cache on /sw.js in the _headers file",
-        "Places _headers at the root of the deployed dir (for example via public/)",
-        "Does NOT suggest a hashed service worker filename"
       ]
     },
     {

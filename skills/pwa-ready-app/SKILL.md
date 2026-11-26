@@ -24,11 +24,10 @@ Hosting is the `static-site` skill, sign-in the `user-sign-in` skill.
 ## Mistakes That Break Your Build
 
 1. **`/sw.js` answered by the SPA fallback.** A missing or misnamed file is served as `index.html` by `/*  /index.html  200`, and registration fails with `The script has an unsupported MIME type ('text/html')`. The file must exist in the deployed `dir` at exactly the registered path.
-2. **A cached service worker.** Without `Cache-Control: no-cache` on `/sw.js`, users run the old version long after a deploy.
-3. **Service worker in a subfolder, or with a hashed name.** A worker controls only its own path and below. Emit `/sw.js` at the root.
-4. **`import` in a service worker.** Bundle it into one IIFE file; `type: 'module'` service workers are not supported everywhere PWAs install.
-5. **Installing from the wrong origin.** An installed app belongs to the origin it was installed from: `<id>.icp0.io` and your custom domain are two apps. Link the manifest only on the primary origin (`user-sign-in` skill).
-6. **Expecting the sign-in to carry into an iOS Home Screen app.** Apps installed from Safari keep their own storage, so the user signs in again inside them. Chromium installed apps stay signed in.
+2. **Service worker in a subfolder, or with a hashed name.** A worker controls only its own path and below. Emit `/sw.js` at the root.
+3. **`import` in a service worker.** Bundle it into one IIFE file; `type: 'module'` service workers are not supported everywhere PWAs install.
+4. **Installing from more than one origin.** An installed app belongs to the origin it was installed from: `<id>.icp0.io` and your custom domain are two apps. Link each frontend's manifest only on the one origin users should install it from.
+5. **Expecting the sign-in to carry into an iOS Home Screen app.** Apps installed from Safari keep their own storage, so the user signs in again inside them. Chromium installed apps stay signed in.
 
 ## The manifest
 
@@ -95,7 +94,7 @@ Register it once from the page:
 
 ```javascript
 if ('serviceWorker' in navigator) {
-  await navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/sw.js');
 }
 ```
 
@@ -107,7 +106,6 @@ Add a `fetch` handler only for offline support you want: a cached `index.html` i
 
 ```
 /sw.js
-  Cache-Control: no-cache
   Content-Type: text/javascript
 
 /manifest.webmanifest
