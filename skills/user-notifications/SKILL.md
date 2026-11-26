@@ -248,7 +248,7 @@ self.addEventListener('push', (event) => {
     await self.registration.showNotification(title, {
       ...options,
       // Optional: your own icon, badge, image, actions. For example, a chat app's inline reply:
-      actions: [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Message' }],
+      // actions: [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Message' }],
     });
   })());
 });
