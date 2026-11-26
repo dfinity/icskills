@@ -350,8 +350,9 @@ async function readToggle() {
 }
 
 let state;
-// Again after sign-in and sign-out, and when the settings open: the state changes with them.
-readToggle().then((read) => render((state = read)));
+const refreshToggle = () => readToggle().then((read) => render((state = read)));
+refreshToggle();
+authClient.subscribe(refreshToggle); // sign-in and sign-out, in any tab
 
 toggle.addEventListener('click', async () => {
   if (state === 'off') {
