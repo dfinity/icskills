@@ -256,12 +256,9 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     event.notification.close();
-    const url = event.notification.data?.url ?? self.registration.scope;
-    if (event.action === 'reply' && event.reply) {
-      // Send event.reply to your canister
-    } else {
-      await self.clients.openWindow(url);
-    }
+    // Optional, for the inline reply above: where event.action is 'reply',
+    // send event.reply to your canister instead of opening a window.
+    await self.clients.openWindow(event.notification.data?.url ?? self.registration.scope);
     await authClient.markNotificationOpened(event);
   })());
 });
