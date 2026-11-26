@@ -1,13 +1,13 @@
 ---
 name: pwa-ready-app
-description: "Make an Internet Computer frontend installable as a Progressive Web App (PWA): the web app manifest, icons, a service worker served from the asset canister, the headers that keep it updatable, and which origin the installed app belongs to. Covers the difference between Safari installed apps (iOS Home Screen, macOS Dock), which keep their own storage and sign-in, and Chromium installed apps, which share the browser's. Also covers what installing changes for an app that already sends Internet Identity notifications. Use when an app should be installable, added to the Home Screen, run standalone or offline-capable, or when adding a manifest or service worker to an ICP frontend. Load before user-notifications when building a new app that will notify users. Do NOT use for native mobile apps, for hosting the frontend itself (use static-site) or for sending notifications (use user-notifications)."
+description: "Make an Internet Computer frontend installable as a Progressive Web App (PWA): the web app manifest, icons, a service worker served from the asset canister, the headers it needs, an Install button or Add to Home Screen steps, the desktop title bar, and which origin the installed app belongs to. Covers the difference between Safari installed apps (iOS Home Screen, macOS Dock), which keep their own storage and sign-in, and Chromium installed apps, which share the browser's. Also covers what installing changes for an app that already sends Internet Identity notifications. Use when an app should be installable, added to the Home Screen, run standalone or offline-capable, or when adding a manifest or service worker to an ICP frontend. Load before user-notifications when building a new app that will notify users. Do NOT use for native mobile apps, for hosting the frontend itself (use static-site) or for sending notifications (use user-notifications)."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.2.0, esbuild for the service worker bundle"
 metadata:
   title: PWA-Ready App
   category: Frontend
   summary: "Make an ICP frontend installable: manifest, icons and a service worker."
-  keywords: "PWA, progressive web app, installable, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js"
+  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar"
 ---
 
 # PWA-Ready App
