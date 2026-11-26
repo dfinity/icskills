@@ -16,23 +16,23 @@ metadata:
 
 | App | Do this |
 |---|---|
-| New app, or an app without notifications | Follow this skill. Ship the service worker now even if it does nothing yet: notifications are added to it later without restructuring the frontend. **Recommended.** |
-| App that already sends Internet Identity notifications | Follow this skill, then "Installing an app that already notifies" below. Once installed, a Safari installed app receives nothing until the app's own service worker subscribes. |
+| No notifications yet. **Recommended.** | Follow this skill. Ship the service worker now, even empty: notifications go into it later. |
+| Already sends Internet Identity notifications | Follow this skill, then "Installing an app that already notifies". |
 
-Hosting is the `static-site` skill (`_headers`, `_redirects`). Sign-in is the `user-sign-in` skill. This skill assumes both work.
+Hosting is the `static-site` skill, sign-in the `user-sign-in` skill.
 
 ## Mistakes That Break Your Build
 
-1. **`/sw.js` answered by the SPA fallback.** With `/*  /index.html  200` in `_redirects`, a missing or misnamed service worker file is served as `index.html`, and registration fails with `The script has an unsupported MIME type ('text/html')`. The file must exist in the deployed `dir` under exactly the path you register.
-2. **A cached service worker.** Without `Cache-Control: no-cache` on `/sw.js`, browsers keep checking an old copy and users run the previous version long after a deploy. See "Headers".
-3. **Service worker in a subfolder.** A worker controls only its own path and below. `/assets/sw-1a2b.js` controls `/assets/`, not the app. Emit it at the root with a fixed name, never a hashed one.
-4. **`import` in a classic service worker.** A service worker that imports `@icp-sdk/auth` must be bundled into one file. Bundle it as an IIFE (see "The service worker") rather than registering it with `type: 'module'`, which not every browser that installs PWAs supports for service workers.
-5. **Installing from the wrong origin.** An installed app belongs to the origin it was installed from. Installed from `<id>.icp0.io` it is a different app, with different storage, from the one installed from your custom domain. Link the manifest only on the app's primary origin (see the `user-sign-in` skill), or redirect the others to it.
-6. **Expecting the sign-in to carry into an iOS Home Screen app.** Safari installed apps keep storage of their own, so the user signs in again inside the installed app. Chromium installed apps share the browser's storage and stay signed in.
+1. **`/sw.js` answered by the SPA fallback.** A missing or misnamed file is served as `index.html` by `/*  /index.html  200`, and registration fails with `The script has an unsupported MIME type ('text/html')`. The file must exist in the deployed `dir` at exactly the registered path.
+2. **A cached service worker.** Without `Cache-Control: no-cache` on `/sw.js`, users run the old version long after a deploy.
+3. **Service worker in a subfolder, or with a hashed name.** A worker controls only its own path and below. Emit `/sw.js` at the root.
+4. **`import` in a service worker.** Bundle it into one IIFE file; `type: 'module'` service workers are not supported everywhere PWAs install.
+5. **Installing from the wrong origin.** An installed app belongs to the origin it was installed from: `<id>.icp0.io` and your custom domain are two apps. Link the manifest only on the primary origin (`user-sign-in` skill).
+6. **Expecting the sign-in to carry into an iOS Home Screen app.** Apps installed from Safari keep their own storage, so the user signs in again inside them. Chromium installed apps stay signed in.
 
 ## The manifest
 
-`public/manifest.webmanifest` (Vite copies `public/` into `dist/`):
+`public/manifest.webmanifest`:
 
 ```json
 {
@@ -60,13 +60,13 @@ In `index.html`:
 <meta name="theme-color" content="#ffffff" />
 ```
 
-- iOS ignores the manifest's icons for the Home Screen and reads `apple-touch-icon`, a 180x180 PNG without transparency.
-- `id` fixes the installed app's identity. Changing `start_url` later without it makes browsers treat it as a different app.
-- A maskable icon keeps its content inside the central 80% safe zone; Android crops the rest.
+- iOS takes the Home Screen icon from `apple-touch-icon` (180x180, no transparency), not the manifest.
+- Keep `id` fixed: it is the installed app's identity.
+- A maskable icon keeps its content in the central 80%.
 
 ## The service worker
 
-`src/sw.ts`, the smallest one worth shipping:
+`src/sw.ts`:
 
 ```typescript
 /// <reference lib="webworker" />
@@ -81,7 +81,7 @@ self.addEventListener('activate', (event) => {
 });
 ```
 
-Bundle it after the frontend build, into the root of the deployed `dir`:
+Bundle it into the root of the deployed `dir`:
 
 ```json
 {
@@ -91,7 +91,7 @@ Bundle it after the frontend build, into the root of the deployed `dir`:
 }
 ```
 
-Register it from the page, once:
+Register it once from the page:
 
 ```javascript
 if ('serviceWorker' in navigator) {
@@ -99,12 +99,11 @@ if ('serviceWorker' in navigator) {
 }
 ```
 
-- A service worker needs a secure context. `https://<id>.icp0.io`, a custom domain, and `http://localhost` all qualify; `http://<id>.localhost:8000` in a local network qualifies too.
-- Add a `fetch` handler only for offline support you actually want. Caching `index.html` in the worker serves a stale shell after a deploy unless the worker is updated with it.
+Add a `fetch` handler only for offline support you want: a cached `index.html` is a stale shell after the next deploy.
 
 ## Headers
 
-In `dist/_headers` (put it in `public/` so the build copies it), for the certified-assets canister of the `static-site` skill:
+`public/_headers`, for the `static-site` canister:
 
 ```
 /sw.js
@@ -117,13 +116,13 @@ In `dist/_headers` (put it in `public/` so the build copies it), for the certifi
 
 ## Installing an app that already notifies
 
-Users who do not install the app keep receiving notifications exactly as before. What changes is the installed app:
+Users who do not install the app keep receiving notifications as before. In the installed app:
 
-- **Safari installed app (iOS, macOS):** Internet Identity's own delivery does not reach it. Notifications arrive in the installed app only once its own service worker subscribes. Without that, a user who installed the app and opens notifications from it sees nothing from your app.
-- **Chromium installed app:** it shares the browser's storage and its registration at Internet Identity, so notifications keep arriving as before. Subscribing its service worker is optional there.
+- **Installed from Safari (iOS, macOS):** nothing arrives until its own service worker subscribes.
+- **Installed from Chromium:** notifications keep arriving; subscribing is optional.
 
-The patch, detailed in "Delivering through your own service worker" in the `user-notifications` skill (`@icp-sdk/auth` 11.3.0 or later):
+The patch is "Delivering through your own service worker" in the `user-notifications` skill (`@icp-sdk/auth` 11.3.0 or later):
 
-- In the service worker above: a `push` handler that shows what `authClient.fetchNotificationPayload(event)` answers, a `notificationclick` handler that calls `authClient.markNotificationOpened(event)`, and a `pushsubscriptionchange` handler that calls `authClient.subscribeToNotifications({ interactive: false })`.
-- In the page: consent with the sign-in (`requestNotificationConsent()` next to `signIn()`), then an in-app prompt whose button calls `subscribeToNotifications()` to turn this device on, a settings toggle for later, and on iOS an "Only receive notifications in this app" offer where `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'`.
-- Never call `pushManager.subscribe` or generate VAPID keys yourself: `subscribeToNotifications` subscribes under Internet Identity's key.
+- Service worker: `push` shows what `authClient.fetchNotificationPayload(event)` answers, `notificationclick` calls `authClient.markNotificationOpened(event)`, and `pushsubscriptionchange` calls `authClient.subscribeToNotifications({ interactive: false })`.
+- Page: consent at sign-in, then a prompt whose click handler calls `subscribeToNotifications()`, and a settings toggle.
+- Never call `pushManager.subscribe` or make VAPID keys yourself.
