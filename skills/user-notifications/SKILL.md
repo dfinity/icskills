@@ -257,16 +257,16 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
 ### In the page
 
-Turning notifications on takes two taps, one per prompt the user answers:
+Turning notifications on takes two buttons in your app, because each one opens a prompt and a prompt uses up the tap that opened it:
 
-1. **Internet Identity's consent screen**, from a tap on "Allow notifications". Opening it uses up that tap.
-2. **The browser's notification permission prompt**, which needs a tap of its own: show a "Turn on for this device" button once the first answered `granted: true`.
+1. A button that calls `requestNotificationConsent()`. It opens Internet Identity, where the user answers whether your app may notify them.
+2. Once that answered `granted: true`, a second button that calls `subscribeToNotifications()`. It opens the browser's notification permission prompt for your origin.
 
 ```javascript
-// Tap 1: "Allow notifications" opens Internet Identity's consent screen
+// First button: opens Internet Identity's consent screen
 const { granted } = await authClient.requestNotificationConsent();
 
-// Tap 2: "Turn on for this device" opens the browser's permission prompt
+// Second button, shown once granted is true: opens the browser's permission prompt
 const permission = await authClient.subscribeToNotifications();
 ```
 
@@ -278,16 +278,16 @@ const permission = await authClient.subscribeToNotifications();
 
 On iOS and macOS, an app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity sees it and Safari as two browsers of the user and may deliver each notification to both. Linking the installed app to Safari makes it the only one on that device.
 
-Once `subscribeToNotifications()` answered `'granted'`, and wherever the app shows its notification settings, check whether there is something to link, and offer it as its own tap:
+Once `subscribeToNotifications()` answered `'granted'`, and wherever the app shows its notification settings, check whether there is something to link, and offer it as a button of its own:
 
 ```javascript
 if ((await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
-  // Show "Only notify me in this app"; its tap calls:
+  // Show a button such as "Only notify me in this app"; it calls:
   await authClient.requestSameDeviceLink();
 }
 ```
 
-`requestSameDeviceLink()` leaves the app for Safari to claim the link with Safari's sign-in, so it needs a tap. Outside a Safari installed app the status is always `'no-other-path'`, so the button never shows.
+`requestSameDeviceLink()` leaves the app for Safari to claim the link with Safari's sign-in, so it must run from a button. Outside a Safari installed app the status is always `'no-other-path'`, so the button never shows.
 
 | Error | Means | Remedy |
 |---|---|---|
