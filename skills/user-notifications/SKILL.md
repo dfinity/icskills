@@ -31,12 +31,6 @@ Three pieces, all required. Missing any one of them produces silence rather than
 - **A website:** let Internet Identity show them. Add the three pieces below, nothing else.
 - **An app:** show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
 
-Offer turning notifications on for the device (step 2 and the toggle in "Delivering through your own service worker") only where this is true:
-
-```javascript
-const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
-```
-
 Already sending your own web push? Start with "Moving from your own push notifications".
 
 ## 1. Consent, in the frontend
@@ -282,7 +276,8 @@ This records consent only. The device is not on yet.
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
-const showBanner = granted && Notification.permission === 'default';
+const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
+const showBanner = canUseOwnServiceWorker && granted && Notification.permission === 'default';
 
 // In the banner's click handler:
 const permission = await authClient.subscribeToNotifications();
@@ -309,6 +304,7 @@ For users who dismissed the banner, and for turning notifications off and on lat
 
 ```javascript
 async function readToggle() {
+  if (!('serviceWorker' in navigator && 'PushManager' in window)) return 'unavailable';
   const { granted } = await authClient.getNotificationConsentStatus();
   if (!granted) return 'off';
   if (Notification.permission === 'denied') return 'blocked';
@@ -339,6 +335,7 @@ toggle.addEventListener('click', async () => {
 | `'device-off'` | Off, "Turn on for this device" | Opens the notification permission prompt |
 | `'on'` | On, plus step 3's offer | Revokes consent, on every device of the user |
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
+| `'unavailable'` | Hidden | |
 
 | Error | Means | Remedy |
 |---|---|---|
