@@ -76,7 +76,7 @@ Asking at any later moment needs a control of its own.
 
 ### A toggle, later
 
-To show the user whether your app may notify them, and let them turn it off (an app delivering through its own service worker builds the fuller toggle in "In the page: a notifications toggle"):
+To show the user whether your app may notify them, and let them turn it off (an app delivering through its own service worker builds the fuller toggle in "A notifications toggle"):
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
@@ -255,13 +255,51 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 - **`title` is shown as your canister sent it.** The system shows your installed app or site as the source, so the rule about not putting your app's name in `title` still holds.
 - **`data.url` is set only for a URL on the service worker's own origin.** A notification whose `url` points at another of your origins opens the fallback (`registration.scope` above).
 
-### In the page: a notifications toggle
+### In the page
 
-Build it around a toggle in the app's settings, not a one-off prompt: some users skip the browser's prompt, and anyone may turn notifications off and on again later.
+How a user of an installed app (or a tab using this path) ends up with notifications on their device:
 
-**Signing in, they consent.** The sign-in button asks for consent at the same time (see "Asking with the sign-in"), so most users arrive with consent already given. That does not turn on this device yet: the browser still has to grant your origin permission, and its prompt needs a tap of its own. That tap is the toggle.
+**1. Signing in, they consent.** The sign-in button asks for consent at the same time, as in "Asking with the sign-in" above: one visit to Internet Identity, where the user signs in and allows your app to notify them.
 
-**The toggle's state** comes from three answers: Internet Identity's consent, the browser's permission, and whether the service worker holds a subscription.
+```javascript
+const [identity, { granted }] = await Promise.all([
+  authClient.signIn(),
+  authClient.requestNotificationConsent(),
+]);
+```
+
+That records the consent. It does not yet subscribe this device: the browser still has to grant your origin permission, and that prompt needs a tap of its own.
+
+**2. In the app, they turn this device on.** Where consent is granted and this device is not on yet, show an in-app prompt such as "Get notifications on this device". Its button calls `subscribeToNotifications()`, which opens the browser's permission prompt and subscribes the service worker.
+
+```javascript
+const { granted } = await authClient.getNotificationConsentStatus();
+const showPrompt = granted && Notification.permission === 'default';
+
+// The prompt's button:
+const permission = await authClient.subscribeToNotifications();
+```
+
+- It answers the browser's permission; nothing is subscribed unless it is `'granted'`. `'denied'` is the user's answer: hide the prompt.
+- Where the permission is already `'granted'` (given to your origin before), call it without a prompt: it asks nothing and subscribes.
+- It subscribes under Internet Identity's VAPID key and **replaces any other push subscription** this service worker holds. Remove the app's own push code first.
+- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
+
+**3. On iOS and macOS, they keep notifications in the app.** An app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity may know Safari as a second browser of the user and deliver each notification there too. Ask Internet Identity once the device is on, and only where it reports that second path, offer to link the app to Safari:
+
+```javascript
+if (permission === 'granted' &&
+    (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
+  // Show "Only receive notifications in this app". Its button calls:
+  await authClient.requestSameDeviceLink();
+}
+```
+
+`requestSameDeviceLink()` leaves the app for Safari, which claims the link with its own sign-in, so it must run from a button. Check the status again wherever the app shows its notification settings. Outside a Safari installed app it is always `'no-other-path'`, so the offer never shows.
+
+### A notifications toggle
+
+Next to that flow, give the app's settings a toggle: for users who dismissed the prompt or never answered it, and for anyone turning notifications off or on again later. Its state comes from three answers: Internet Identity's consent, the browser's permission, and whether the service worker holds a subscription.
 
 ```javascript
 async function readToggle() {
@@ -298,19 +336,8 @@ async function onToggleTap(state) {
 
 - Read the state when the toggle renders, not inside the tap: an `await` before `requestNotificationConsent()` can cost the tap the browser needs to open Internet Identity.
 - Turning off revokes your app's consent, so it stops on every device of that user, and leaves the subscription in place. Turning on again asks consent again and needs no second tap.
-- `subscribeToNotifications()` answers the browser's permission and subscribes nothing unless it is `'granted'`. It **replaces any other push subscription** the service worker holds: remove the app's own push code first.
-- Later sign-ins subscribe a fresh endpoint for the new account, and sign-out removes it. A subscription the browser replaces is registered again from the `pushsubscriptionchange` handler. The page calls nothing else.
 
-**On iOS and macOS, keep notifications in the app.** An app added to the Home Screen or Dock keeps storage apart from Safari, so Internet Identity may know Safari as a second browser of the user and deliver each notification there too. Wherever the toggle shows `'on'`, ask Internet Identity, and only where it reports that second path, offer the link next to the toggle:
-
-```javascript
-if ((await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver') {
-  // Show "Only receive notifications in this app". Its button calls:
-  await authClient.requestSameDeviceLink();
-}
-```
-
-`requestSameDeviceLink()` leaves the app for Safari, which claims the link with its own sign-in, so it must run from a button. Outside a Safari installed app the status is always `'no-other-path'`, so the offer never shows.
+Where the toggle shows `'on'` in a Safari installed app, offer "Only receive notifications in this app" next to it as in step 3.
 
 | Error | Means | Remedy |
 |---|---|---|

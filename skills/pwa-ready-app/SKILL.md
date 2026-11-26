@@ -125,5 +125,5 @@ Users who do not install the app keep receiving notifications exactly as before.
 The patch, detailed in "Delivering through your own service worker" in the `user-notifications` skill (`@icp-sdk/auth` 11.3.0 or later):
 
 - In the service worker above: a `push` handler that shows what `authClient.fetchNotificationPayload(event)` answers, a `notificationclick` handler that calls `authClient.markNotificationOpened(event)`, and a `pushsubscriptionchange` handler that calls `authClient.subscribeToNotifications({ interactive: false })`.
-- In the page: consent with the sign-in (`requestNotificationConsent()` next to `signIn()`), then a notifications toggle whose tap calls `subscribeToNotifications()` to turn this device on, and on iOS an "Only receive notifications in this app" offer where `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'`.
+- In the page: consent with the sign-in (`requestNotificationConsent()` next to `signIn()`), then an in-app prompt whose button calls `subscribeToNotifications()` to turn this device on, a settings toggle for later, and on iOS an "Only receive notifications in this app" offer where `getSameDeviceLinkStatus()` answers `'other-path-may-deliver'`.
 - Never call `pushManager.subscribe` or generate VAPID keys yourself: `subscribeToNotifications` subscribes under Internet Identity's key.
