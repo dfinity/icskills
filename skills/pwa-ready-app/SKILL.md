@@ -122,4 +122,8 @@ An app whose users get Internet Identity notifications today keeps receiving the
 - **Safari installed app (iOS, macOS):** Internet Identity's own delivery does not reach it. Notifications arrive in the installed app only once its own service worker subscribes. Without that, a user who installed the app and opens notifications from it sees nothing from your app.
 - **Chromium installed app:** it shares the browser's storage and its registration at Internet Identity, so notifications keep arriving as before. Subscribing its service worker is optional there.
 
-The patch is the "Delivering through your own service worker" section of the `user-notifications` skill: the `push`, `notificationclick` and `pushsubscriptionchange` handlers in the service worker above, a subscribe call when the app starts, and a control that turns notifications on for this device.
+The patch, detailed in "Delivering through your own service worker" in the `user-notifications` skill (`@icp-sdk/auth` 11.3.0 or later):
+
+- In the service worker above: a `push` handler that shows what `authClient.fetchNotificationPayload(event)` answers, a `notificationclick` handler that calls `authClient.markNotificationOpened(event)`, and a `pushsubscriptionchange` handler that calls `authClient.subscribeToNotifications({ interactive: false })`.
+- In the page: `subscribeToNotifications({ interactive: false })` when the app starts, and a "Turn on for this device" tap that calls `subscribeToNotifications()` once `requestNotificationConsent()` answered `granted: true`.
+- Never call `pushManager.subscribe` or generate VAPID keys yourself: `subscribeToNotifications` subscribes under Internet Identity's key.
