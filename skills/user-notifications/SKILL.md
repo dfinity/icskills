@@ -30,8 +30,8 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 Decide this first. Consent, the senders document and sending are the same either way.
 
-- **Internet Identity.** It shows your notifications under your app's name. Nothing to add beyond the three pieces below.
-- **Your own service worker.** You choose the icon, badge, image, actions and what a click opens. It works in a normal tab everywhere except iOS, where it needs the app added to the Home Screen (`pwa-ready-app` skill). An app installed from Safari (iOS Home Screen, macOS Dock) gets notifications only this way. Add "Delivering through your own service worker" to the three pieces.
+- **Internet Identity.** It shows your notifications under your app's name, on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
+- **Your own service worker.** You choose the icon, badge, image, actions and what a click opens. It works in a normal tab everywhere except iOS, where it takes offering your app for the Home Screen (`pwa-ready-app` skill); until then ICP Alerts shows them there. An app installed from Safari (iOS Home Screen, macOS Dock) gets notifications only this way. Add "Delivering through your own service worker" to the three pieces.
 
 Whether this browser can, at runtime (the same check `subscribeToNotifications()` makes):
 
@@ -223,7 +223,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 - **The app addresses a user, nothing finer.** II holds a queue per browser that identity has registered, so one `send` can surface on a laptop and a phone at once. Where and how a notification reaches them is II's and the user's to manage, and an app that reasons about it is coupling itself to something it cannot see.
 - **II composes what is shown.** The user reads your app's name, then the title your canister sent. The name comes from `/.well-known/ii-app-metadata`, and falls back to your origin's hostname where you publish none, so do not put your app's name in `title` yourself: it arrives twice. Publishing that document is what brands the notifications as well as the sign-in screen: see "App metadata on the sign-in screen" in the `user-sign-in` skill.
 - **Sending cannot fail the call it is made from.** `send` neither traps nor awaits, so a recipient who cannot be notified costs the endpoint nothing and returns nothing to branch on. What became of a notification is in `metrics()`.
-- **iOS, when Internet Identity shows the notifications:** II must be added to the Home Screen, and the consent ceremony walks the user through it. With your own service worker, your installed app receives them instead.
+- **iOS, when Internet Identity shows the notifications:** they appear in ICP Alerts, Internet Identity's Home Screen app, and the consent ceremony walks the user through adding it.
 
 ## Delivering through your own service worker
 
