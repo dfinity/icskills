@@ -277,6 +277,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 ```
 
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
+- **Every notification alerts**, an update under the same `key` too. Add `silent: true` to the options to show one quietly.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
 - **The worker can call your canister as the user**, for example to send an inline reply: build an agent from `await authClient.getIdentity()`, as in the page. Where the browser shows no text field, or the call fails (say with `SessionGoneError`), open the conversation instead, so the reply is not lost.
