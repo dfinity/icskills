@@ -28,29 +28,21 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-Decide this first. Consent, the senders document and sending are the same either way.
+Your canister sends the same way in both cases below. What differs is who puts the notification on the user's screen.
 
-**Internet Identity: recommended for websites.** It shows your notifications under your app's name, in the browser, and on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
+**A website: let Internet Identity show them.** The notification comes from Internet Identity, labelled with your app's name. On iPhone and iPad it appears in ICP Alerts, Internet Identity's Home Screen app, which the consent screen helps the user add. Your frontend only asks for consent.
 
-**Your own service worker: recommended for apps.** Add "Delivering through your own service worker" and your app shows them itself:
+**An app: show them from your own service worker.** A service worker is a script your site registers that runs in the background, even with the app closed. With "Delivering through your own service worker", the notification comes from your app: your icon, badge, image and actions, and your code decides what a click does.
 
-- they come from your app or site, not from Internet Identity;
-- you set the icon, badge, image and actions;
-- you handle the click.
+If users install your app from Safari, adding it to the Home Screen on iPhone and iPad or to the Dock on a Mac (`pwa-ready-app` skill), your own service worker is the only way notifications reach that installed app. Internet Identity cannot deliver into it.
 
-Where your app runs decides:
-
-| Your app runs in | Own service worker |
-|---|---|
-| A browser tab (desktop, Android) | Optional, for the benefits above |
-| A Safari tab on iOS | Not available: ICP Alerts shows your notifications |
-| An app installed from Safari: iOS Home Screen, macOS Dock (`pwa-ready-app` skill) | Required: Internet Identity cannot deliver to it |
+On iPhone and iPad, a service worker shows notifications only in such an installed app. In a Safari tab there, users get yours through ICP Alerts, whichever you choose.
 
 ```javascript
-// Whether this page can use its own service worker for notifications:
+// This page can show notifications from its own service worker (false in a Safari tab on iPhone and iPad):
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
-// Whether it must: the page runs as an app installed from Safari (only Safari sets this):
-const mustUseOwnServiceWorker = navigator.standalone === true;
+// This page runs as an app installed from Safari, so it needs its own service worker:
+const isInstalledFromSafari = navigator.standalone === true;
 ```
 
 Already sending your own web push? Start with "Moving from your own push notifications".
