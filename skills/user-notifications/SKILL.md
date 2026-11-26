@@ -220,7 +220,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 | A new message in a chat conversation | the conversation | `chat-<conversation id>` | A busy conversation shows one notification, its latest message, not one per message |
 | Being mentioned in a chat conversation | the conversation, at the message (`/chats/<conversation id>#<message id>`) | `mention-<message id>` | Each mention stays its own notification, apart from the conversation's |
 
-`dismiss` the key once the user has seen the thing in your app: give the canister a method the page calls, for example one that dismisses `chat-<conversation id>` for its caller when they open the conversation. It stops only what has not been sent yet: a notification sent before the call, even one for a message the user is reading right then, still shows.
+`dismiss` the key once the user has seen the thing in your app. Keep the user's read position in your canister, and dismiss in the same call that records it, for example dismissing `chat-<conversation id>` when the user reads the conversation's newest message. The notification, the in-app unread count and the app badge then agree on every device. The page reports reading only while the app has focus (`document.hasFocus()`), not while it is merely visible. A dismissed notification is not shown, even one already sent; one already on screen stays as it is (on Apple devices it is shown again, quietly).
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
@@ -248,6 +248,7 @@ const authClient = new AuthClient(authClientOptions); // the same options object
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     const { title, options } = await authClient.fetchNotificationPayload(event);
+    if (!options.data.show) return; // dismissed, or the app has focus on this device
     await self.registration.showNotification(title, {
       ...options,
       // Optional: your own icon, badge, image, actions. For example, a chat app's inline reply:
@@ -262,8 +263,8 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     // Optional, for the inline reply example above: where event.action is 'reply', don't close.
     // Send event.reply to your canister, then show the notification again under the same tag with
-    // silent: true and the reply in its body (Android shows a spinner until then). If sending
-    // fails, open the app with the reply in its composer.
+    // silent: true and the latest reply in its body (Android shows a spinner until then). If
+    // sending fails, open the app with the reply in its composer.
     event.notification.close();
     const url = event.notification.data?.url ?? self.registration.scope;
     const [openTab] = await self.clients.matchAll({ type: 'window' });
@@ -282,7 +283,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 });
 ```
 
-- **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
+- **Every push shows a notification, unless `options.data.show` is false.** It is false where the app dismissed the notification or has focus on this device, and only where the browser allows a push that shows nothing. A notification is for when the app is not in view; its own indicators (the app badge, unread counts) cover the rest. `show` is advice: the payload still carries the title and options. Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return otherwise without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
 - **Set `icon` to what the notification is about**, such as the sender's avatar, found from `options.data.metadata`. Android draws a letter tile where it is missing, and the system already shows your app's own icon.
 - **Every notification alerts**, an update under the same `key` too. Add `silent: true` to the options to show one quietly.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
@@ -373,6 +374,8 @@ toggle.addEventListener('click', async () => {
 | `'off'` | Off | Opens Internet Identity to consent |
 | `'device-off'` | Off, "Turn on for this device" | Opens the notification permission prompt |
 | `'on'` | On, plus step 3's offer | Revokes consent, on every device of the user |
+
+Say so next to the toggle: it turns notifications off on all of the user's devices. Turning them off on one device is done in that browser's or system's notification settings.
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
 | `'unavailable'` | Hidden | |
 
@@ -392,7 +395,7 @@ toggle.addEventListener('click', async () => {
 
 ## Upgrades
 
-**Moving to Rust 0.2.0 or Motoko 0.4.0:** `Misconfigured` gains a variant, so a canister that returns `metrics()` from its own Candid method changes its interface in a breaking way, and `icp canister install` asks you to confirm.
+**Moving to Rust 0.2.0 or Motoko 0.4.0:** `Misconfigured` gains a variant and `Content` gains `dismissed`, so a canister that returns `metrics()` or `Content` from its own Candid method changes its interface in a breaking way, and `icp canister install` asks you to confirm.
 
 **Motoko: nothing to do.** There is no post-upgrade call to make and no ids to pass back in.
 

@@ -7,7 +7,7 @@ metadata:
   title: PWA-Ready App
   category: Frontend
   summary: "Make an ICP frontend installable: manifest, icons and a service worker."
-  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar, splash screen, edge to edge, safe area, status bar, navigation bar"
+  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar, splash screen, edge to edge, safe area, status bar, navigation bar, app badge, unread count"
 ---
 
 # PWA-Ready App
@@ -189,6 +189,17 @@ header button { app-region: no-drag; }
 ```
 
 A header split into panes pads its first pane at the start and its last at the end. Look it up as needed: https://web.dev/articles/window-controls-overlay.
+
+### App badge
+
+Show unread counts on the installed app's icon, the counterpart of notifications for when the app is in view:
+
+```javascript
+navigator.setAppBadge?.(unreadCount);
+navigator.clearAppBadge?.();
+```
+
+In Safari, and on macOS in Chrome, the badge needs the app's own notification permission: without it the call succeeds and no badge appears.
 
 ## Headers
 

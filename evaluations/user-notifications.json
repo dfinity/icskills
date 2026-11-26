@@ -38,7 +38,7 @@
       "name": "An installed app receives no notifications",
       "prompt": "Users who added my ICP app to their iPhone Home Screen get no notifications from it, but notifications work in Safari tabs. The app uses Internet Identity notifications and has a service worker. What do I add? Just the code changes.",
       "expected_behaviors": [
-        "Adds a push listener that calls authClient.fetchNotificationPayload(event) and always calls showNotification with the result",
+        "Adds a push listener that calls authClient.fetchNotificationPayload(event) and calls showNotification with the result, returning early only where options.data.show is false",
         "Adds a notificationclick listener that opens the URL and calls authClient.markNotificationOpened(event)",
         "Calls authClient.subscribeToNotifications() from its own tap (a button or toggle) once consent is granted, separate from the requestNotificationConsent call that opens Internet Identity",
         "Calls subscribeToNotifications({ interactive: false }) from the service worker's pushsubscriptionchange handler, not from the page at start-up",
