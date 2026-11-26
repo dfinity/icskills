@@ -61,7 +61,8 @@ In `index.html`:
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 ```
 
-- **Use your app's own colors, not white.** `#0f1115` above stands for your app's background. With a dark and a light mode, the `theme-color` meta tags and the page's CSS follow the user's scheme, but the manifest takes one value: give it the background of the scheme most users see, since it colors the splash screen.
+- **Use your app's own colors, not white.** `#0f1115` above stands for your app's background. With a dark and a light mode, the `theme-color` meta tags and the page's CSS follow the user's scheme, but the manifest takes one value: give it the background of the scheme most users see. It colors the splash screen and, in an app installed from Chrome on Android, the navigation bar, in both schemes.
+- **Pick the manifest colors before users install.** An app installed from Chrome on Android keeps them until Chrome updates it on its own schedule; to see a change at once, uninstall and install again.
 - iOS takes the Home Screen icon from `apple-touch-icon` (180x180, no transparency), not the manifest.
 - Keep `id` fixed: it is the installed app's identity.
 - A maskable icon keeps its content in the central 80%.
@@ -115,16 +116,18 @@ Add a `fetch` handler only for offline support you want: a cached `index.html` i
 ### Splash screen
 
 - **Android** draws it from the manifest: `name`, `background_color` and the 512x512 icon. Set `background_color` to the color of the app's first screen, so launch flows into it without a flash.
-- **iOS** shows an `apple-touch-startup-image` that matches the device's screen size exactly, and a blank white screen without one. Generate one image per iPhone and iPad size (portrait and landscape) and link each with its media query:
+- **iOS** shows an `apple-touch-startup-image` that matches the device's screen size exactly, and a blank white screen without one. Generate one per iPhone and iPad screen size, portrait and landscape: the app's background with its icon centered. Take the sizes from Apple's current device list (https://developer.apple.com/design/human-interface-guidelines/layout#Specifications), not from memory, since new devices add sizes. Link each with its media query:
 
 ```html
 <link rel="apple-touch-startup-image" href="/splash/1179x2556.png"
   media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
 ```
 
+Save them as palette PNGs: a flat background with an icon stays a few kilobytes each, which matters for a canister that embeds its assets in its wasm.
+
 ### Edge to edge
 
-Draw behind the status and navigation bars, so the system bars show your app instead of a white strip. `viewport-fit=cover` (above) extends the page under them; then give the root your background and keep content clear of the bars with the safe area insets:
+Draw behind the system bars, so they show your app instead of a white strip. `viewport-fit=cover` (above) extends the page under them; then give the root your background and keep content clear of the bars with the safe area insets:
 
 ```css
 html { background: #ffffff; }
@@ -132,6 +135,8 @@ html { background: #ffffff; }
 .top-bar { padding-top: env(safe-area-inset-top); }
 .composer { padding-bottom: env(safe-area-inset-bottom); }
 ```
+
+This covers iOS, browser tabs and the status bar. In an app installed from Chrome on Android, the page does not draw under the navigation bar: it shows the manifest's `theme_color`, which is why that color must not be white for a dark app.
 
 ### Install button
 
@@ -148,10 +153,21 @@ window.addEventListener('beforeinstallprompt', (event) => {
 await installPrompt.prompt();
 ```
 
+Chrome fires `beforeinstallprompt` only once it considers the app installable, so no button in a fresh or automated profile is expected. Check installability in Chrome's menu ("Install app") or DevTools (Application > Manifest).
+
 Safari has no such event, so show steps instead:
 
 - **iOS:** open the menu (⋯), tap **Share**, tap **View More**, tap **Add to Home Screen**.
 - **macOS:** **File** → **Add to Dock**.
+
+Tell them apart from the user agent; iPadOS reports itself as a Mac with touch:
+
+```javascript
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+const isMacSafari = !isIOS && /Macintosh/.test(navigator.userAgent) &&
+  /Safari/.test(navigator.userAgent) && !/Chrome|Edg|Firefox/.test(navigator.userAgent);
+```
 
 Hide both once the app runs installed:
 
@@ -161,7 +177,18 @@ const isInstalled = !matchMedia('(display-mode: browser)').matches || navigator.
 
 ### Title bar (desktop Chrome and Edge)
 
-Put the app's own header in the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. It takes effect only in the installed app; in a browser tab nothing changes. Look it up as needed: https://web.dev/articles/window-controls-overlay.
+Put the app's own header in the title bar with the Window Controls Overlay API: add `"display_override": ["window-controls-overlay"]` to the manifest and lay out the bar with the `titlebar-area-*` CSS environment variables. It takes effect only in the installed app; in a browser tab nothing changes. Keep the header clear of the window controls, which sit left on macOS and right on Windows, and make it draggable except its buttons:
+
+```css
+header {
+  padding-inline-start: env(titlebar-area-x, 0);
+  padding-inline-end: calc(100vw - env(titlebar-area-x, 0) - env(titlebar-area-width, 100vw));
+  app-region: drag;
+}
+header button { app-region: no-drag; }
+```
+
+A header split into panes pads its first pane at the start and its last at the end. Look it up as needed: https://web.dev/articles/window-controls-overlay.
 
 ## Headers
 

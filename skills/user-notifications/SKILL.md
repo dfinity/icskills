@@ -144,6 +144,7 @@ notifications::send(to, Notification {
     body: text,
     url: Some(format!("https://chat.example.com/chats/{from}")),
     key: Some(format!("chat-{from}")),
+    metadata: Some(from.to_text()), // the app's own service worker reads it from options.data.metadata
     ..Default::default()
 });
 ```
@@ -162,6 +163,7 @@ actor {
     urgency = null;
     expiresAt = null;
     funnel = null;
+    metadata = ?(caller.toText()); // the app's own service worker reads it from options.data.metadata
   })
 }
 ```
@@ -256,7 +258,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   // Always, and first: without it, metrics() never counts the notification as opened.
-  const opened = authClient.markNotificationOpened(event);
+  const opened = authClient.markNotificationOpened(event).catch(() => undefined);
   event.waitUntil((async () => {
     // Optional, for the inline reply example above: where event.action is 'reply', don't close.
     // Send event.reply to your canister, then show the notification again under the same tag with
@@ -302,7 +304,7 @@ const [identity, { granted }] = await Promise.all([
 
 This records consent only. The device is not on yet.
 
-**2. In the app, they turn this device on.** Once consent is granted, show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
+**2. In the app, they turn this device on.** Once consent is granted (right after sign-in, and on load for a signed-in user), show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
