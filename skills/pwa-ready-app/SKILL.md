@@ -61,7 +61,7 @@ In `index.html`:
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 ```
 
-- **Use your app's own colors, not white.** `background_color` and `theme_color` color the splash screen and the system bars; `#0f1115` above stands for your app's background.
+- **Use your app's own colors, not white.** `#0f1115` above stands for your app's background. With a dark and a light mode, the `theme-color` meta tags and the page's CSS follow the user's scheme, but the manifest takes one value: give it the background of the scheme most users see, since it colors the splash screen.
 - iOS takes the Home Screen icon from `apple-touch-icon` (180x180, no transparency), not the manifest.
 - Keep `id` fixed: it is the installed app's identity.
 - A maskable icon keeps its content in the central 80%.
@@ -127,7 +127,8 @@ Add a `fetch` handler only for offline support you want: a cached `index.html` i
 Draw behind the status and navigation bars, so the system bars show your app instead of a white strip. `viewport-fit=cover` (above) extends the page under them; then give the root your background and keep content clear of the bars with the safe area insets:
 
 ```css
-html { background: #0f1115; }
+html { background: #ffffff; }
+@media (prefers-color-scheme: dark) { html { background: #0f1115; } }
 .top-bar { padding-top: env(safe-area-inset-top); }
 .composer { padding-bottom: env(safe-area-inset-bottom); }
 ```
