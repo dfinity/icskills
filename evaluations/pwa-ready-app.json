@@ -27,8 +27,8 @@
       "prompt": "Add an 'Install app' button to my ICP frontend that works for Chrome users and iPhone users. Just the frontend code, plain TypeScript.",
       "expected_behaviors": [
         "Listens for beforeinstallprompt, calls preventDefault, keeps the event and calls its prompt() from the button's click handler",
-        "Shows Add to Home Screen steps on iOS instead of a button, since Safari has no install event",
-        "The iOS steps go through Share and end at Add to Home Screen",
+        "Shows Add to Home Screen steps on iOS (directly or behind a button) because Safari has no install event",
+        "The iOS steps are: open the menu (⋯), tap Share, tap View More, tap Add to Home Screen",
         "Hides the button and steps once the app runs installed, by display-mode or navigator.standalone",
         "Does NOT claim the app can trigger installation programmatically on iOS"
       ]
@@ -40,7 +40,7 @@
         "Names the Window Controls Overlay API",
         "Adds \"display_override\": [\"window-controls-overlay\"] to the web app manifest",
         "Positions the header with the titlebar-area-* CSS environment variables",
-        "Says it applies to the installed app in desktop Chromium browsers, not in a normal tab"
+        "Says it takes effect in the installed app on desktop Chrome or Edge, not in a normal browser tab"
       ]
     }
   ],
