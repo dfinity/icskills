@@ -28,7 +28,7 @@ Three pieces, all required. Missing any one of them produces silence rather than
 
 ## Who shows the notifications
 
-Decide this first. Consent, the senders document and sending are the same either way.
+Decide this first. Consent, the senders document and sending are the same either way. **Recommended:** a website relies on Internet Identity; an app, especially one users install, uses its own service worker.
 
 **Internet Identity, by default.** It shows your notifications under your app's name, in the browser, and on iOS in its ICP Alerts app. Nothing to add beyond the three pieces below.
 
