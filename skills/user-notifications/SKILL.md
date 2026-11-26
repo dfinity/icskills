@@ -174,8 +174,8 @@ canisters:
     settings:
       environment_variables:
         notification_sender:            "rdmx6-jaaaa-aaaaa-aaadq-cai"   # the II canister
-        notification_origin:            "https://your-app.icp0.io"      # the frontend users open
-        notification_derivation_origin: "https://your-suite.icp0.io"    # optional
+        notification_origin:            "https://your-app.icp.net"      # the frontend users open
+        notification_derivation_origin: "https://your-suite.icp.net"    # optional
         notification_capacity_mb:       "1024"                          # optional
 ```
 
@@ -240,7 +240,7 @@ Build the `AuthClient` with the page's options:
 import { AuthClient } from '@icp-sdk/auth/client';
 
 declare const self: ServiceWorkerGlobalScope;
-const authClient = new AuthClient({ derivationOrigin: 'https://your-app.icp0.io' });
+const authClient = new AuthClient({ derivationOrigin: 'https://your-app.icp.net' });
 
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {

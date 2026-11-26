@@ -26,7 +26,7 @@ Hosting is the `static-site` skill, sign-in the `user-sign-in` skill.
 1. **`/sw.js` answered by the SPA fallback.** A missing or misnamed file is served as `index.html` by `/*  /index.html  200`, and registration fails with `The script has an unsupported MIME type ('text/html')`. The file must exist in the deployed `dir` at exactly the registered path.
 2. **Service worker in a subfolder, or with a hashed name.** A worker controls only its own path and below. Emit `/sw.js` at the root.
 3. **`import` in a service worker.** Bundle it into one IIFE file; `type: 'module'` service workers are not supported everywhere PWAs install.
-4. **Installing from more than one origin.** An installed app belongs to the origin it was installed from: `<id>.icp0.io` and your custom domain are two apps. Link each frontend's manifest only on the one origin users should install it from.
+4. **Installing from more than one origin.** An installed app belongs to the origin it was installed from: `<id>.icp.net` and your custom domain are two apps. Link each frontend's manifest only on the one origin users should install it from.
 5. **Expecting the sign-in to carry into an iOS Home Screen app.** Apps installed from Safari keep their own storage, so the user signs in again inside them. Chromium installed apps stay signed in.
 
 ## The manifest
