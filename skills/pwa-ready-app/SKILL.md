@@ -2,7 +2,7 @@
 name: pwa-ready-app
 description: "Make an Internet Computer frontend installable as a Progressive Web App (PWA): the web app manifest, icons, a service worker served from the asset canister, the headers it needs, an Install button or Add to Home Screen steps, the desktop title bar, and which origin the installed app belongs to. Covers the difference between Safari installed apps (iOS Home Screen, macOS Dock), which keep their own storage and sign-in, and Chromium installed apps, which share the browser's. Also covers what installing changes for an app that already sends Internet Identity notifications. Use when an app should be installable, added to the Home Screen, run standalone or offline-capable, or when adding a manifest or service worker to an ICP frontend. Load before user-notifications when building a new app that will notify users. Do NOT use for native mobile apps, for hosting the frontend itself (use static-site) or for sending notifications (use user-notifications)."
 license: Apache-2.0
-compatibility: "@icp-sdk/auth >= 11.2.0, esbuild for the service worker bundle"
+compatibility: "@icp-sdk/auth >= 11.2.0, Vite or another bundler for the service worker"
 metadata:
   title: PWA-Ready App
   category: Frontend
@@ -80,14 +80,19 @@ self.addEventListener('activate', (event) => {
 });
 ```
 
-Bundle it into the root of the deployed `dir`:
+Bundle it with the page's bundler, so it reads the same configuration, such as the `AuthClient` options from a module the page shares. With Vite, a second build in library mode puts it at the root of `dist`:
 
-```json
-{
-  "scripts": {
-    "build": "vite build && esbuild src/sw.ts --bundle --format=iife --minify --outfile=dist/sw.js"
-  }
-}
+```typescript
+// vite.sw.config.ts, run after the page's build: vite build && vite build -c vite.sw.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  build: {
+    lib: { entry: 'src/sw.ts', formats: ['iife'], name: 'sw', fileName: () => 'sw.js' },
+    outDir: 'dist',
+    emptyOutDir: false,
+  },
+});
 ```
 
 Register it once from the page:

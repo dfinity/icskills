@@ -217,7 +217,7 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 | A new message in a chat conversation | the conversation | `chat-<conversation id>` | A busy conversation shows one notification, its latest message, not one per message |
 | Being mentioned in a chat conversation | the conversation, at the message (`/chats/<conversation id>#<message id>`) | `mention-<message id>` | Each mention stays its own notification, apart from the conversation's |
 
-`dismiss` the key once the user has seen the thing in your app: give the canister a method the page calls, for example one that dismisses `chat-<conversation id>` for its caller when they open the conversation. It stops what has not been shown yet; a notification already on screen stays until the user clears it.
+`dismiss` the key once the user has seen the thing in your app: give the canister a method the page calls, for example one that dismisses `chat-<conversation id>` for its caller when they open the conversation. It stops only what has not been sent yet: a notification sent before the call, even one for a message the user is reading right then, still shows.
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
@@ -254,9 +254,13 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
+  // Always, and first: without it, metrics() never counts the notification as opened.
+  const opened = authClient.markNotificationOpened(event);
   event.waitUntil((async () => {
-    // Optional, for the inline reply example above: where event.action is 'reply',
-    // send event.reply to your canister instead of closing and opening a window.
+    // Optional, for the inline reply example above: where event.action is 'reply', don't close.
+    // Send event.reply to your canister, then show the notification again under the same tag with
+    // silent: true and the reply in its body (Android shows a spinner until then). If sending
+    // fails, open the app with the reply in its composer.
     event.notification.close();
     const url = event.notification.data?.url ?? self.registration.scope;
     const [openTab] = await self.clients.matchAll({ type: 'window' });
@@ -266,8 +270,7 @@ self.addEventListener('notificationclick', (event) => {
     } else {
       await self.clients.openWindow(url);
     }
-    // Always: without it, metrics() never counts the notification as opened.
-    await authClient.markNotificationOpened(event);
+    await opened;
   })());
 });
 
@@ -277,10 +280,12 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 ```
 
 - **Every push shows a notification.** Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
+- **Set `icon` to what the notification is about**, such as the sender's avatar. Android draws a letter tile where it is missing, and the system already shows your app's own icon.
 - **Every notification alerts**, an update under the same `key` too. Add `silent: true` to the options to show one quietly.
 - **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
 - **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
-- **The worker can call your canister as the user**, for example to send an inline reply: build an agent from `await authClient.getIdentity()`, as in the page. Where the browser shows no text field, or the call fails (say with `SessionGoneError`), open the conversation instead, so the reply is not lost.
+- **The worker can call your canister as the user**, for example to send an inline reply: build an agent from `await authClient.getIdentity()`, as in the page. Where the browser shows no text field, the click arrives as a plain click.
+- **Type-check the worker with its own tsconfig** (`lib: ["ES2022", "WebWorker"]`), apart from the page's. The standard types lack `type: 'text'` actions and `event.reply`: declare small local types for them.
 - **`fetchNotificationPayload` and `markNotificationOpened` belong in the `push` and `notificationclick` handlers only.** For an in-app list of notifications, implement separate data and methods in your canister.
 
 ### In the page
@@ -296,12 +301,15 @@ const [identity, { granted }] = await Promise.all([
 
 This records consent only. The device is not on yet.
 
-**2. In the app, they turn this device on.** Once consent is granted, show a banner such as "Get notifications on this device". Its click handler calls `subscribeToNotifications()`, which opens the notification permission prompt.
+**2. In the app, they turn this device on.** Once consent is granted, show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
 const showBanner = canUseOwnServiceWorker && granted && Notification.permission === 'default';
+const bannerText = navigator.standalone === true
+  ? 'Get notifications on this device'
+  : 'Get richer notifications, like quick replies';
 
 // In the banner's click handler:
 const permission = await authClient.subscribeToNotifications();
@@ -329,15 +337,20 @@ For users who dismissed the banner, and for turning notifications off and on lat
 ```javascript
 async function readToggle() {
   if (!('serviceWorker' in navigator && 'PushManager' in window)) return 'unavailable';
-  const { granted } = await authClient.getNotificationConsentStatus();
-  if (!granted) return 'off';
+  const consent = await authClient.getNotificationConsentStatus().catch((error) => {
+    if (error instanceof NotificationsUnsupportedError) return undefined;
+    throw error;
+  });
+  if (consent === undefined) return 'unavailable';
+  if (!consent.granted) return 'off';
   if (Notification.permission === 'denied') return 'blocked';
-  const registration = await navigator.serviceWorker.ready;
-  const subscribed = (await registration.pushManager.getSubscription()) !== null;
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscribed = (await registration?.pushManager.getSubscription()) != null;
   return Notification.permission === 'granted' && subscribed ? 'on' : 'device-off';
 }
 
 let state;
+// Again after sign-in and sign-out, and when the settings open: the state changes with them.
 readToggle().then((read) => render((state = read)));
 
 toggle.addEventListener('click', async () => {
@@ -376,6 +389,8 @@ toggle.addEventListener('click', async () => {
 4. Users consent through Internet Identity (piece 1). A browser permission given to the old system is not consent.
 
 ## Upgrades
+
+**Moving to Rust 0.2.0 or Motoko 0.4.0:** `Misconfigured` gains a variant, so a canister that returns `metrics()` from its own Candid method changes its interface in a breaking way, and `icp canister install` asks you to confirm.
 
 **Motoko: nothing to do.** There is no post-upgrade call to make and no ids to pass back in.
 
