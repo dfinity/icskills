@@ -1,0 +1,74 @@
+{
+  "skill": "pwa-ready-app",
+  "description": "Evaluation cases for the pwa-ready-app skill. Tests whether agents serve the service worker from the asset canister so it registers, and know what installing changes for Internet Identity sign-in and notifications.",
+  "output_evals": [
+    {
+      "name": "Service worker registration fails with a text/html MIME type",
+      "prompt": "My ICP frontend on the static-site recipe registers /sw.js but the browser says: The script has an unsupported MIME type ('text/html'). My _redirects has the SPA rule. What's wrong? Just the cause and the fix.",
+      "expected_behaviors": [
+        "Explains that the SPA rewrite served index.html because no file exists at /sw.js in the deployed dir",
+        "Fixes the build so sw.js is emitted at the root of the deployed dir under exactly the registered path, with a fixed (unhashed) name",
+        "Does NOT suggest removing the SPA fallback rule",
+        "Does NOT suggest .ic-assets.json5, which the static-site canister does not read"
+      ]
+    },
+    {
+      "name": "An app with notifications becomes installable",
+      "prompt": "My ICP app already sends Internet Identity notifications to users. I'm making it installable so iPhone users can add it to their Home Screen. Does anything change for notifications? Short answer.",
+      "expected_behaviors": [
+        "Says a Safari installed app (iOS Home Screen) does not receive Internet Identity's own delivery",
+        "Says the installed app's own service worker must subscribe (subscribeToNotifications) and handle push with fetchNotificationPayload",
+        "Says users who do not install the app keep receiving notifications as before",
+        "Says the user signs in again inside the iOS Home Screen app because it keeps its own storage"
+      ]
+    },
+    {
+      "name": "An install button that works on Chrome and iPhone",
+      "prompt": "Add an 'Install app' button to my ICP frontend that works for Chrome users and iPhone users. Just the frontend code, plain TypeScript.",
+      "expected_behaviors": [
+        "Listens for beforeinstallprompt, calls preventDefault, keeps the event and calls its prompt() from the button's click handler",
+        "Shows Add to Home Screen steps on iOS (directly or behind a button) because Safari has no install event",
+        "The iOS steps are: open the menu (⋯), tap Share, tap View More, tap Add to Home Screen",
+        "Hides the button and steps once the app runs installed, by display-mode or navigator.standalone",
+        "Does NOT claim the app can trigger installation programmatically on iOS"
+      ]
+    },
+    {
+      "name": "Putting the app header into the desktop title bar",
+      "prompt": "Users installed my ICP app on desktop Chrome and the title bar wastes space. Can my app's header go into the title bar? Short answer with the key code.",
+      "expected_behaviors": [
+        "Names the Window Controls Overlay API",
+        "Adds \"display_override\": [\"window-controls-overlay\"] to the web app manifest",
+        "Positions the header with the titlebar-area-* CSS environment variables",
+        "Says it takes effect in the installed app on desktop Chrome or Edge, not in a normal browser tab"
+      ]
+    },
+    {
+      "name": "A dark installed app with white bars and a white launch",
+      "prompt": "My ICP app has a dark UI. Installed on Android it flashes white when it starts and there's a white strip at the bottom of the screen. Fix it. Just the changes.",
+      "expected_behaviors": [
+        "Sets the manifest's background_color (and theme_color) to the app's dark background instead of white",
+        "Says the navigation bar of an app installed from Chrome on Android takes the manifest's theme_color, so that color must be the dark background",
+        "Says the installed app keeps its manifest colors until Chrome updates it, so reinstalling shows the fix at once",
+        "Does NOT claim that safe-area padding or viewport-fit=cover alone fixes the navigation bar color in the installed Android app"
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "description": "Queries to test whether the skill activates correctly.",
+    "should_trigger": [
+      "Make my ICP app installable as a PWA",
+      "Add a web app manifest and service worker to my frontend on the Internet Computer",
+      "Let iPhone users add my ICP app to their Home Screen",
+      "My service worker won't register on the asset canister",
+      "Add an install button to my ICP app",
+      "My installed web app shows a white bar at the bottom on Android"
+    ],
+    "should_not_trigger": [
+      "Send a push notification to a user from my canister",
+      "Deploy my React frontend to the IC",
+      "Build a native iOS app with Swift",
+      "Add Internet Identity login to my frontend"
+    ]
+  }
+}

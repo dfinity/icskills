@@ -1,13 +1,13 @@
 ---
 name: user-notifications
-description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (as web push), so there is no push service, no VAPID keys and no device tokens in the app: the canister addresses a user and II reaches their browsers. Covers asking the user's consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent, needing @icp-sdk/auth 11.1.0), the /.well-known/ii-notification-senders document, and sending with the identity-notifications library from Motoko or Rust. Use when an app must tell a user something while they are not looking at it, when adding notifications, web push or a notifications toggle, or when the user consented and nothing arrives. Assumes sign-in already works and the app's primary origin is settled: load user-sign-in first. Do NOT use for in-app notification UI or email, or for reaching anyone who is not a signed-in user of this app."
+description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (web push): no push service, VAPID keys or device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent), the /.well-known/ii-notification-senders document, sending with the identity-notifications library from Motoko or Rust, delivering through the app's own service worker (subscribeToNotifications, fetchNotificationPayload), which an installed app (PWA) needs and a browser tab may use for its own presentation, and moving off the app's own web push. Use when an app must tell a user something while they are not looking, when adding notifications or a notifications toggle, or when nothing arrives, also in a Home Screen app. Assumes sign-in works: load user-sign-in first. Do NOT use for in-app notification UI, email, or reaching anyone who is not a signed-in user of this app."
 license: Apache-2.0
-compatibility: "@icp-sdk/auth >= 11.1.0, moc >= 2.0.0"
+compatibility: "@icp-sdk/auth >= 11.1.0 (11.3.0 for the service worker path), moc >= 2.0.0"
 metadata:
   title: User Notifications
   category: Integration
   summary: "Send push notifications to your app's users through Internet Identity."
-  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications"
+  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications, service worker, PWA notifications, home screen app, turn off notifications on this device"
 ---
 
 # User Notifications
@@ -25,6 +25,13 @@ Three pieces, all required. Missing any one of them produces silence rather than
 1. The frontend asks the user's consent, through II.
 2. The origin names the sending canister at `/.well-known/ii-notification-senders`.
 3. The canister sends, through the `identity-notifications` library.
+
+## Who shows the notifications
+
+- **A website** (for example, a news site telling readers about new articles): let Internet Identity show them. Add the three pieces below, nothing else.
+- **An app** (for example, a chat app telling users about new messages): show them from your own service worker, with your own icon, badge, image, actions and click handling. Add "Delivering through your own service worker" as well. Required if users install the app from Safari (iOS Home Screen, macOS Dock; `pwa-ready-app` skill).
+
+Already sending your own web push? Start with "Moving from your own push notifications".
 
 ## 1. Consent, in the frontend
 
@@ -64,12 +71,24 @@ Asking at any later moment needs a control of its own.
 
 ### A toggle, later
 
-To show the user whether your app may notify them, and let them turn it off:
+A settings toggle shows whether your app may notify the user, and turns it on or off. Handle `click`, not `change`: turning on opens Internet Identity, which needs the click itself. With your own service worker, use "A notifications toggle" instead.
 
 ```javascript
-const { granted } = await authClient.getNotificationConsentStatus();
-await authClient.revokeNotificationConsent();
+let granted = false;
+authClient.getNotificationConsentStatus().then((status) => render((granted = status.granted)));
+
+toggle.addEventListener('click', async () => {
+  if (granted) {
+    await authClient.revokeNotificationConsent();
+    granted = false;
+  } else {
+    ({ granted } = await authClient.requestNotificationConsent()); // opens Internet Identity
+  }
+  render(granted);
+});
 ```
+
+Label it "On all your devices" and "Off": consent covers every device of the user.
 
 Revoking is scoped to your app. It drops your origin's consent and whatever you still had queued for that user, and leaves their device subscriptions and every other app's consent alone. So dropping someone from your own recipient table revokes nothing, and revoking is not an unsubscribe.
 
@@ -100,7 +119,7 @@ Library: `identity-notifications`, same `send` in both languages, different wiri
 **Rust** needs `endpoints!()` plus three stable `MemoryId`s handed to `init` (see "Upgrades"). **Motoko** needs neither: the mixin brings the endpoints and keeps its own state. Do not tell a Motoko user to pass memory ids; there are none.
 
 ```toml
-identity-notifications = "0.1"
+identity-notifications = "0.2"
 ```
 
 ```rust
@@ -127,6 +146,7 @@ notifications::send(to, Notification {
     body: text,
     url: Some(format!("https://chat.example.com/chats/{from}")),
     key: Some(format!("chat-{from}")),
+    metadata: Some(from.to_text()), // the app's own service worker reads it from options.data.metadata
     ..Default::default()
 });
 ```
@@ -145,6 +165,7 @@ actor {
     urgency = null;
     expiresAt = null;
     funnel = null;
+    metadata = ?(caller.toText()); // the app's own service worker reads it from options.data.metadata
   })
 }
 ```
@@ -156,40 +177,52 @@ canisters:
   - name: backend
     settings:
       environment_variables:
-        notification_sender:      "rdmx6-jaaaa-aaaaa-aaadq-cai"   # the II canister
-        notification_origin:      "https://your-app.icp0.io"
-        notification_capacity_mb: "1024"   # optional
+        notification_sender:            "rdmx6-jaaaa-aaaaa-aaadq-cai"   # the II canister
+        notification_origin:            "https://your-app.icp.net"      # the frontend users open
+        notification_derivation_origin: "https://your-suite.icp.net"    # optional
+        notification_capacity_mb:       "1024"                          # optional
 ```
+
+Set `notification_derivation_origin` only when the frontend signs in with a `derivationOrigin` (`user-sign-in` skill): set it to that origin. The senders document is then served there, and it must list the frontend in `/.well-known/ii-alternative-origins`. Leave it out when the frontend signs in as itself.
 
 ## The optional fields
 
 | Field | Default | What it is for |
 |---|---|---|
-| `url` | none | Where acting on it takes the user. Must be the sending origin or one of its alternative origins; II refuses anything else. |
-| `key` | none | What the notification is *about*. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
+| `url` | none | Where acting on it takes the user, for example the article, or the conversation. Must be the sending origin or one of its alternative origins; II refuses anything else. |
+| `key` | none | What the notification is *about*, for example the article or the conversation. A second send under the same key **updates** that notification instead of adding another, and it is what `dismiss(recipient, key)` names. |
 | `urgency` | `Normal` | `VeryLow`, `Low`, `Normal`, `High`. Schedules this notification against the origin's other traffic. **Not a rendering hint**, and honoured on channels with no tray. |
-| `expiresAt` / `expires_at` | a short window | How long this is still worth sending. Set past the default for anything that matters later; short for anything worthless once the moment passes. |
+| `expiresAt` (Rust: `expires_at`) | an hour | How long this is still worth sending. Set past the default for anything that matters later; short for anything worthless once the moment passes. |
+| `metadata` | none | App-defined text for your own service worker, for example the sender's id. Only the recipient can read it, and Internet Identity never shows it. |
 | `funnel` | none | Which funnel to count it in. A label per notification is an unbounded set of rows: use one per campaign or kind, not per send. |
 
 ## Choosing `urgency` and `expiresAt`
 
 Different questions: `urgency` is where this sits against the origin's **other traffic**, `expiresAt` is whether it is still worth showing when it could be. Pick both together.
 
-**Unset is a short default**, so anything still worth delivering later needs an explicit value. It is not a tray lifetime: a delivered notification stays until the user clears it. `expiresAt` bounds how long the notification is still worth sending at all, and the library does not cap a longer value.
+**Unset is an hour**, so anything still worth delivering later needs an explicit value, up to a day: Internet Identity cuts anything longer to a day. It is not a tray lifetime: a delivered notification stays until the user clears it. `expiresAt` bounds how long the notification is still worth sending at all.
 
 | Sending | `urgency` | `expiresAt` | Why |
 |---|---|---|---|
-| Security alert, new sign-in | `High` | days | Ahead of other traffic, and worth seeing late, so set well past the short default. |
-| Direct message | `Normal` | unset | Worth sending now, noise much later. |
+| Security alert, new sign-in | `High` | a day | Ahead of other traffic, and worth seeing late, so set past the hour default. |
+| New chat message, one `key` per conversation | `Normal` | a day | The latest replaces the earlier ones, so it is still worth delivering late. |
 | "Your driver is outside" | `High` | minutes | Ahead of everything, worthless once passed. |
-| Campaign to the whole user base | `VeryLow` | days | None is urgent and a large send must not push real notifications behind it, but each should still land. Give the campaign a `funnel` and its conversion rate is readable on its own. |
+| Campaign to the whole user base | `VeryLow` | a day | None is urgent and a large send must not push real notifications behind it, but each should still land. Give the campaign a `funnel` and its conversion rate is readable on its own. |
 | Digest, nudge, streak reminder | `Low` | hours | Yields to anything else, and yesterday's is pointless. |
 
 A short expiry does not make something urgent, and `High` does not make it last longer. `High` on everything removes the ordering it was reached for.
 
 ## `key`
 
-The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, such as the conversation, rather than from whatever a caller passed in.
+The id is `hash(recipient, key)`, so a key reaches only that recipient's own entry: it cannot touch another user's notification or another app's. What it can do is collide with this app's other pending notification to the same recipient, and the later send wins. Derive `key` from the thing the notification is about, rather than from whatever a caller passed in. Some examples:
+
+| Notification | `url` | `key` | Effect |
+|---|---|---|---|
+| A news site's new article | the article | `article-<article id>` | A corrected headline, sent again, updates it |
+| A new message in a chat conversation | the conversation | `chat-<conversation id>` | A busy conversation shows one notification, its latest message, not one per message |
+| Being mentioned in a chat conversation | the conversation, at the message (`/chats/<conversation id>#<message id>`) | `mention-<message id>` | Each mention stays its own notification, apart from the conversation's |
+
+`dismiss` the key once the user has seen the thing in your app. Keep the user's read position in your canister, and dismiss in the same call that records it, for example dismissing `chat-<conversation id>` when the user reads the conversation's newest message. The notification, the in-app unread count and the app badge then agree on every device. The page reports reading only while the app has focus (`document.hasFocus()`), not while it is merely visible. A dismissed notification is not shown, even one already sent; one already on screen stays as it is (on Apple devices it is shown again, quietly).
 
 `metrics()` reports the pipeline hour by hour, and is the only place a notification's fate shows up, since `send` returns nothing.
 
@@ -198,9 +231,184 @@ The id is `hash(recipient, key)`, so a key reaches only that recipient's own ent
 - **The app addresses a user, nothing finer.** II holds a queue per browser that identity has registered, so one `send` can surface on a laptop and a phone at once. Where and how a notification reaches them is II's and the user's to manage, and an app that reasons about it is coupling itself to something it cannot see.
 - **II composes what is shown.** The user reads your app's name, then the title your canister sent. The name comes from `/.well-known/ii-app-metadata`, and falls back to your origin's hostname where you publish none, so do not put your app's name in `title` yourself: it arrives twice. Publishing that document is what brands the notifications as well as the sign-in screen: see "App metadata on the sign-in screen" in the `user-sign-in` skill.
 - **Sending cannot fail the call it is made from.** `send` neither traps nor awaits, so a recipient who cannot be notified costs the endpoint nothing and returns nothing to branch on. What became of a notification is in `metrics()`.
-- **iOS needs II added to the Home Screen** for web push. The consent ceremony walks the user through it; the app does nothing.
+- **iOS, when Internet Identity shows the notifications:** they appear in ICP Alerts, Internet Identity's Home Screen app, and the consent ceremony walks the user through adding it.
+
+## Delivering through your own service worker
+
+Needs `@icp-sdk/auth` 11.3.0 or later, `identity-notifications` 0.2.0 or later (Rust) or 0.4.0 or later (Motoko), and a service worker at the app's root (see the `pwa-ready-app` skill for serving one, installable or not).
+
+### In the service worker
+
+Build the `AuthClient` with the page's options:
+
+```typescript
+import { AuthClient } from '@icp-sdk/auth/client';
+
+declare const self: ServiceWorkerGlobalScope;
+const authClient = new AuthClient(authClientOptions); // the same options object as the page
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    const { title, options } = await authClient.fetchNotificationPayload(event);
+    if (!options.data.show) return; // dismissed, or the app has focus on this device
+    await self.registration.showNotification(title, {
+      ...options,
+      // Optional: your own icon, badge, image, actions. For example, a chat app's inline reply:
+      // actions: [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Message' }],
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  // Always, and first: without it, metrics() never counts the notification as opened.
+  const opened = authClient.markNotificationOpened(event).catch(() => undefined);
+  event.waitUntil((async () => {
+    // Optional, for the inline reply example above: where event.action is 'reply', don't close.
+    // Send event.reply to your canister, then show the notification again under the same tag with
+    // silent: true and the latest reply in its body (Android shows a spinner until then). If
+    // sending fails, open the app with the reply in its composer.
+    event.notification.close();
+    const url = event.notification.data?.url ?? self.registration.scope;
+    const [openTab] = await self.clients.matchAll({ type: 'window' });
+    if (openTab) {
+      await openTab.focus();
+      if (openTab.url !== url) await openTab.navigate(url); // keeps what is typed on the same page
+    } else {
+      await self.clients.openWindow(url);
+    }
+    await opened;
+  })());
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(authClient.subscribeToNotifications({ interactive: false }));
+});
+```
+
+- **Every push shows a notification, unless `options.data.show` is false.** It is false where the app dismissed the notification or has focus on this device, and only where the browser allows a push that shows nothing. A notification is for when the app is not in view; its own indicators (the app badge, unread counts) cover the rest. `show` is advice: the payload still carries the title and options. Where the content cannot be read within 8 seconds, `fetchNotificationPayload` answers a generic one. Never return otherwise without calling `showNotification`, except where it throws `SessionGoneError`: the user signed out, and nothing is shown.
+- **Set `icon` to what the notification is about**, such as the sender's avatar, found from `options.data.metadata`. Android draws a letter tile where it is missing, and the system already shows your app's own icon.
+- **Every notification alerts**, an update under the same `key` too. Add `silent: true` to the options to show one quietly.
+- **Spread `options` first** and keep its `tag` and `data`; add your own fields after. For other options, look up the browser's notification APIs as needed, with these references: appearance at https://web.dev/articles/push-notifications-display-a-notification, behavior at https://web.dev/articles/push-notifications-notification-behaviour.
+- **`data.url` is set only for a URL on the service worker's origin**; any other falls back to `registration.scope`.
+- **The worker can call your canister as the user**, for example to send an inline reply: build an agent from `await authClient.getIdentity()`, as in the page. Where the browser shows no text field, the click arrives as a plain click.
+- **Type-check the worker with its own tsconfig** (`lib: ["ES2022", "WebWorker"]`), apart from the page's. The standard types lack `type: 'text'` actions and `event.reply`: declare small local types for them.
+- **`fetchNotificationPayload` and `markNotificationOpened` belong in the `push` and `notificationclick` handlers only.** For an in-app list of notifications, implement separate data and methods in your canister.
+
+### In the page
+
+**1. At sign-in, they consent.** As in "Asking with the sign-in":
+
+```javascript
+const [identity, { granted }] = await Promise.all([
+  authClient.signIn(),
+  authClient.requestNotificationConsent(),
+]);
+```
+
+This records consent only. The device is not on yet.
+
+**2. In the app, they turn this device on.** Once consent is granted (right after sign-in, and on load for a signed-in user), read `getDeviceNotificationStatus()`. Where it answers `'none'` and permission is already `'granted'`, call `subscribeToNotifications()` at once: it asks nothing, so it needs no click. Where permission is `'default'`, show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. Where it answers `'off'`, the user turned this device off: do neither. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
+
+```javascript
+const { granted } = await authClient.getNotificationConsentStatus();
+const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
+const device = canUseOwnServiceWorker && granted
+  ? await authClient.getDeviceNotificationStatus()
+  : undefined;
+if (device === 'none' && Notification.permission === 'granted') {
+  await authClient.subscribeToNotifications();
+}
+const showBanner = device === 'none' && Notification.permission === 'default';
+const bannerText = navigator.standalone === true
+  ? 'Get notifications on this device'
+  : 'Get richer notifications, like quick replies';
+
+// In the banner's click handler:
+const permission = await authClient.subscribeToNotifications();
+```
+
+- `getDeviceNotificationStatus()` answers `'on'`, `'off'` (the user turned this device off) or `'none'` (neither), for the signed-in account, from Internet Identity.
+- `'denied'`: hide the banner.
+- It **replaces any push subscription** the service worker holds: remove the app's own push code first.
+- Sign-in, consent, sign-out and `pushsubscriptionchange` keep the subscription current. Beyond step 2's call, the page calls nothing else.
+
+**3. On iOS and macOS, avoid duplicates.** If the user also gets Internet Identity's notifications on this device (in ICP Alerts on iOS, in Safari on macOS), your app's notifications show up there as well as in your app. When `getSameDeviceLinkStatus()` reports this, offer "Only receive notifications in this app":
+
+```javascript
+const showOffer = (await authClient.getSameDeviceLinkStatus()) === 'other-path-may-deliver';
+
+// In the offer's click handler:
+await authClient.requestSameDeviceLink();
+```
+
+It opens Safari to confirm; after that, your app's notifications arrive only in your app. Check after step 2 and in the notification settings; outside an app installed from Safari the offer never shows.
+
+### A notifications toggle
+
+For users who dismissed the banner, and for turning notifications off and on later. One switch, whose scope follows the device: where it is on or turned off through your own service worker, the switch is per device, and off stops this device only, leaving the user's consent and their other devices as they are. Otherwise it is per account, as in "A toggle, later". Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
+
+```javascript
+async function readToggle() {
+  if (!('serviceWorker' in navigator && 'PushManager' in window)) return 'unavailable';
+  const consent = await authClient.getNotificationConsentStatus().catch((error) => {
+    if (error instanceof NotificationsUnsupportedError) return undefined;
+    throw error;
+  });
+  if (consent === undefined) return 'unavailable';
+  if (!consent.granted) return 'off';
+  if (Notification.permission === 'denied') return 'blocked';
+  const device = await authClient.getDeviceNotificationStatus();
+  if (device === 'on') return 'device-on';
+  if (device === 'off') return 'device-off';
+  return 'on';
+}
+
+let state;
+readToggle().then((read) => render((state = read)));
+
+toggle.addEventListener('click', async () => {
+  if (state === 'off') {
+    const { granted } = await authClient.requestNotificationConsent();
+    if (granted && Notification.permission === 'granted') await authClient.subscribeToNotifications();
+  } else if (state === 'on') {
+    await authClient.revokeNotificationConsent();
+  } else if (state === 'device-off') {
+    await authClient.subscribeToNotifications();
+  } else if (state === 'device-on') {
+    await authClient.unsubscribeFromNotifications(); // this device only
+  }
+  render((state = await readToggle()));
+});
+```
+
+| State | Shows | A click |
+|---|---|---|
+| `'off'` | "Off" | Opens Internet Identity to consent |
+| `'on'` | "On all your devices" | Withdraws consent, on every device |
+| `'device-off'` | "Off on this device" | Turns this device on, opening the notification permission prompt if needed |
+| `'device-on'` | "On this device", plus step 3's offer | Turns this device off |
+| `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
+| `'unavailable'` | Hidden | |
+
+Keep the labels to these words: users want a switch, not where delivery happens. A device turned off stays off, also after the app is uninstalled. If the user later signs in on that browser (the site after uninstalling on desktop or Android, or Safari after turning it off in the iPhone Home Screen app), Internet Identity's allow screen asks again. Nothing for the app to do.
+
+| Error | Means | Remedy |
+|---|---|---|
+| `NotificationsUnsupportedError` | No Web Push in this browser, or `requestSameDeviceLink()` outside an app installed from Safari | Hide the control |
+| `SessionGoneError` | No live session | In the page, sign in again. In the service worker, nothing to show: sign-out already removed the subscription |
+| `"This application lists no frontend at this page's origin"` | The page's origin is neither the derivation origin nor in its `/.well-known/ii-alternative-origins` | List it there (`user-sign-in` skill) |
+| `"This origin has no service worker registered to receive notifications"` | `subscribeToNotifications` ran before `navigator.serviceWorker.register` | Register first |
+
+## Moving from your own push notifications
+
+1. Frontend: remove the app's `pushManager.subscribe` call and the upload of subscriptions.
+2. Service worker: replace the `push` handler's payload parsing with `fetchNotificationPayload`.
+3. Backend: replace each web push send with the library's `send` to the user's principal, and delete the stored subscriptions and VAPID keys.
+4. Users consent through Internet Identity (piece 1). A browser permission given to the old system is not consent.
 
 ## Upgrades
+
+**Moving to Rust 0.2.0 or Motoko 0.4.0:** `Misconfigured` gains a variant and `Content` gains `dismissed`, so a canister that returns `metrics()` or `Content` from its own Candid method changes its interface in a breaking way, and `icp canister install` asks you to confirm.
 
 **Motoko: nothing to do.** There is no post-upgrade call to make and no ids to pass back in.
 
@@ -214,3 +422,6 @@ Pass the same `MemoryId`s every time. Renumbering them on a running canister poi
 2. **Putting your app's name in `title`.** II puts it in front of the title you sent, so the user reads it twice. See "What the app does and does not own".
 3. **Deriving `key` from whatever a caller passed in.** Two of your own sends under one key collide in that recipient's tray and the later one wins. See "`key`".
 4. **Skipping `init` in `post_upgrade`, in Rust.** Anything queued stays queued and is never sent. See "Upgrades".
+5. **Expecting a Safari installed app to receive notifications without its own service worker.** Internet Identity's own delivery does not reach it. See "Delivering through your own service worker".
+6. **Returning from the `push` handler without showing a notification.** iOS revokes the subscription after a few, and Chrome shows its own "updated in the background" notice. Always show what `fetchNotificationPayload` answers.
+7. **Keeping the app's own push subscription next to Internet Identity's.** A service worker holds one push subscription, and `subscribeToNotifications` replaces it. See "Moving from your own push notifications".

@@ -33,6 +33,28 @@
         "Does NOT suggest the app call a browser unsubscribe API, clear a service worker registration, or manipulate a push subscription",
         "Does NOT invent an Internet Identity method for removing a device or subscription on the app's behalf"
       ]
+    },
+    {
+      "name": "An installed app receives no notifications",
+      "prompt": "Users who added my ICP app to their iPhone Home Screen get no notifications from it, but notifications work in Safari tabs. The app uses Internet Identity notifications and has a service worker. What do I add? Just the code changes.",
+      "expected_behaviors": [
+        "Adds a push listener that calls authClient.fetchNotificationPayload(event) and calls showNotification with the result, returning early only where options.data.show is false",
+        "Adds a notificationclick listener that opens the URL and calls authClient.markNotificationOpened(event)",
+        "Calls authClient.subscribeToNotifications() from its own tap (a button or toggle) once consent is granted, separate from the requestNotificationConsent call that opens Internet Identity",
+        "Calls subscribeToNotifications({ interactive: false }) from the service worker's pushsubscriptionchange handler, not from the page at start-up",
+        "Does NOT generate VAPID keys or call pushManager.subscribe directly"
+      ]
+    },
+    {
+      "name": "Moving off the app's own web push",
+      "prompt": "My ICP app sends web push itself: VAPID keys in the backend and a table of browser subscriptions. I want to switch to Internet Identity notifications. What do I remove and what replaces it? Short list.",
+      "expected_behaviors": [
+        "Removes the app's own pushManager.subscribe and subscription upload code",
+        "Replaces backend web push sends with the identity-notifications library's send to the user's principal",
+        "Deletes the stored subscriptions and VAPID keys",
+        "Says users consent through Internet Identity (requestNotificationConsent); an old browser permission is not consent",
+        "Mentions the /.well-known/ii-notification-senders document naming the sending canister"
+      ]
     }
   ],
   "trigger_evals": {
@@ -42,7 +64,9 @@
       "Ask the user for permission to notify them with Internet Identity",
       "Notify a signed-in user while my app is closed",
       "Add a notifications on/off toggle to my ICP app",
-      "My canister sends notifications but nothing ever arrives"
+      "My canister sends notifications but nothing ever arrives",
+      "My Home Screen app never shows notifications",
+      "Replace my own web push setup with Internet Identity notifications"
     ],
     "should_not_trigger": [
       "Add Internet Identity login to my frontend",
