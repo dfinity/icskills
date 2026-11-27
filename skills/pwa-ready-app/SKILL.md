@@ -260,18 +260,26 @@ Look it up as needed: https://web.dev/articles/window-controls-overlay.
 
 ### Sign-in from the installed desktop app
 
-In an installed desktop app, Internet Identity opens as a browser tab behind the app's window. Open it as a popup centered on the app instead, only when the app runs installed:
+In an installed desktop app, Internet Identity opens as a browser tab behind the app's window. Open it as a popup centered on the app instead, only when the app runs installed. Work out the position in the click handler, since the user may have moved the window since load. `windowOpenerFeatures` is fixed per `AuthClient`, so build a new client there, right before `signIn()` or `requestNotificationConsent()`, and dispose the old one:
 
 ```javascript
-const width = 600;
-const height = 820;
-const windowOpenerFeatures = isInstalled
-  ? `popup,width=${width},height=${height},` +
-    `left=${Math.round(screenX + (outerWidth - width) / 2)},top=${Math.round(screenY + (outerHeight - height) / 2)}`
-  : undefined;
+// In the sign-in click handler:
+if (isInstalled) {
+  const width = 600;
+  const height = 820;
+  const left = Math.round(screenX + (outerWidth - width) / 2);
+  const top = Math.round(screenY + (outerHeight - height) / 2);
+  const previous = authClient;
+  authClient = new AuthClient({
+    ...authClientOptions,
+    windowOpenerFeatures: `popup,width=${width},height=${height},left=${left},top=${top}`,
+  });
+  previous.dispose();
+}
+await authClient.signIn();
 ```
 
-Pass it as the `AuthClient`'s `windowOpenerFeatures` option. `isInstalled` is defined under "Install button".
+Building a client is cheap and synchronous, so the popup still opens from the user's click, and every client on the origin shares the sign-in. `isInstalled` is defined under "Install button".
 
 ### App badge
 
