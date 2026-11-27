@@ -7,7 +7,7 @@ metadata:
   title: User Notifications
   category: Integration
   summary: "Send push notifications to your app's users through Internet Identity."
-  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications, service worker, PWA notifications, home screen app"
+  keywords: "notifications, push notifications, web push, alerts, notify users, messages, reminders, background notifications, service worker, PWA notifications, home screen app, turn off notifications on this device"
 ---
 
 # User Notifications
@@ -87,6 +87,8 @@ toggle.addEventListener('click', async () => {
   render(granted);
 });
 ```
+
+Label it "On all your devices" and "Off": consent covers every device of the user.
 
 Revoking is scoped to your app. It drops your origin's consent and whatever you still had queued for that user, and leaves their device subscriptions and every other app's consent alone. So dropping someone from your own recipient table revokes nothing, and revoking is not an unsubscribe.
 
@@ -321,7 +323,7 @@ const permission = await authClient.subscribeToNotifications();
 
 - `'denied'`: hide the banner. Permission already `'granted'`: it subscribes without asking.
 - It **replaces any push subscription** the service worker holds: remove the app's own push code first.
-- Sign-in, sign-out and `pushsubscriptionchange` keep the subscription current. The page calls nothing else.
+- Sign-in, consent, sign-out and `pushsubscriptionchange` keep the subscription current. Beyond step 2's call, the page calls nothing else.
 
 **3. On iOS and macOS, avoid duplicates.** If the user also gets Internet Identity's notifications on this device (in ICP Alerts on iOS, in Safari on macOS), your app's notifications show up there as well as in your app. When `getSameDeviceLinkStatus()` reports this, offer "Only receive notifications in this app":
 
@@ -336,7 +338,7 @@ It opens Safari to confirm; after that, your app's notifications arrive only in 
 
 ### A notifications toggle
 
-For users who dismissed the banner, and for turning notifications off and on later. Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
+For users who dismissed the banner, and for turning notifications off and on later. With your own service worker the switch is per device: off stops this device only, and the user's consent and their other devices stay as they are. Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
 
 ```javascript
 async function readToggle() {
@@ -363,7 +365,7 @@ toggle.addEventListener('click', async () => {
   } else if (state === 'device-off') {
     await authClient.subscribeToNotifications();
   } else if (state === 'on') {
-    await authClient.revokeNotificationConsent();
+    await authClient.unsubscribeFromNotifications(); // this device only
   }
   render((state = await readToggle()));
 });
@@ -372,12 +374,12 @@ toggle.addEventListener('click', async () => {
 | State | Shows | A click |
 |---|---|---|
 | `'off'` | Off | Opens Internet Identity to consent |
-| `'device-off'` | Off, "Turn on for this device" | Opens the notification permission prompt |
-| `'on'` | On, plus step 3's offer | Revokes consent, on every device of the user |
+| `'device-off'` | "Off on this device" | Turns this device on, opening the notification permission prompt if needed |
+| `'on'` | "On this device", plus step 3's offer | Turns this device off |
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
 | `'unavailable'` | Hidden | |
 
-Say so next to the toggle: it turns notifications off on all of the user's devices. Turning them off on one device is done in that browser's or system's notification settings.
+Keep the labels to these words: users want a switch, not where delivery happens. A device turned off stays off, also after the app is uninstalled. Signing in to the app again on that browser (its site after uninstalling on desktop or Android, or Safari after turning it off in the iPhone Home Screen app) shows Internet Identity's allow screen, which turns it back on.
 
 | Error | Means | Remedy |
 |---|---|---|
