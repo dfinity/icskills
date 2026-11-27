@@ -1,6 +1,6 @@
 ---
 name: user-notifications
-description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (web push): no push service, VAPID keys or device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent), the /.well-known/ii-notification-senders document, sending with the identity-notifications library from Motoko or Rust, delivering through the app's own service worker (subscribeToNotifications, fetchNotificationPayload), which an installed app (PWA) needs and a browser tab may use for its own presentation, and moving off the app's own web push. Use when an app must tell a user something while they are not looking, when adding notifications or a notifications toggle, or when nothing arrives, also in a Home Screen app. Assumes sign-in works: load user-sign-in first. Do NOT use for in-app notification UI, email, or reaching anyone who is not a signed-in user of this app."
+description: "Notify your app's users from your canister, on their devices and even while the app is closed. Internet Identity delivers each notification (web push): no push service, VAPID keys or device tokens in the app. Covers consent in the frontend (requestNotificationConsent, getNotificationConsentStatus, revokeNotificationConsent), the /.well-known/ii-notification-senders document, sending with the identity-notifications library from Motoko or Rust, delivering through the app's own service worker (subscribeToNotifications, unsubscribeFromNotifications, getDeviceNotificationStatus, fetchNotificationPayload), which an installed app (PWA) needs and a browser tab may use for its own presentation, and moving off the app's own web push. Use when an app must tell a user something while they are not looking, when adding notifications or a notifications toggle, or when nothing arrives, also in a Home Screen app. Assumes sign-in works: load user-sign-in first. Do NOT use for in-app notification UI, email, or reaching anyone who is not a signed-in user of this app."
 license: Apache-2.0
 compatibility: "@icp-sdk/auth >= 11.1.0 (11.3.0 for the service worker path), moc >= 2.0.0"
 metadata:
@@ -307,12 +307,18 @@ const [identity, { granted }] = await Promise.all([
 
 This records consent only. The device is not on yet.
 
-**2. In the app, they turn this device on.** Once consent is granted (right after sign-in, and on load for a signed-in user), show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
+**2. In the app, they turn this device on.** Once consent is granted (right after sign-in, and on load for a signed-in user), read `getDeviceNotificationStatus()`. Where it answers `'none'` and permission is already `'granted'`, call `subscribeToNotifications()` at once: it asks nothing, so it needs no click. Where permission is `'default'`, show a banner whose click handler calls `subscribeToNotifications()`, which opens the notification permission prompt. Where it answers `'off'`, the user turned this device off: do neither. In an app installed from Safari nothing arrives until then, so offer "Get notifications on this device". Elsewhere Internet Identity already delivers them, so offer what the app adds, such as "Get richer notifications, like quick replies".
 
 ```javascript
 const { granted } = await authClient.getNotificationConsentStatus();
 const canUseOwnServiceWorker = 'serviceWorker' in navigator && 'PushManager' in window;
-const showBanner = canUseOwnServiceWorker && granted && Notification.permission === 'default';
+const device = canUseOwnServiceWorker && granted
+  ? await authClient.getDeviceNotificationStatus()
+  : undefined;
+if (device === 'none' && Notification.permission === 'granted') {
+  await authClient.subscribeToNotifications();
+}
+const showBanner = device === 'none' && Notification.permission === 'default';
 const bannerText = navigator.standalone === true
   ? 'Get notifications on this device'
   : 'Get richer notifications, like quick replies';
@@ -321,7 +327,8 @@ const bannerText = navigator.standalone === true
 const permission = await authClient.subscribeToNotifications();
 ```
 
-- `'denied'`: hide the banner. Permission already `'granted'`: it subscribes without asking.
+- `getDeviceNotificationStatus()` answers `'on'`, `'off'` (the user turned this device off) or `'none'` (neither), for the signed-in account, from Internet Identity.
+- `'denied'`: hide the banner.
 - It **replaces any push subscription** the service worker holds: remove the app's own push code first.
 - Sign-in, consent, sign-out and `pushsubscriptionchange` keep the subscription current. Beyond step 2's call, the page calls nothing else.
 
@@ -338,7 +345,7 @@ It opens Safari to confirm; after that, your app's notifications arrive only in 
 
 ### A notifications toggle
 
-For users who dismissed the banner, and for turning notifications off and on later. With your own service worker the switch is per device: off stops this device only, and the user's consent and their other devices stay as they are. Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
+For users who dismissed the banner, and for turning notifications off and on later. One switch, whose scope follows the device: where it is on or turned off through your own service worker, the switch is per device, and off stops this device only, leaving the user's consent and their other devices as they are. Otherwise it is per account, as in "A toggle, later". Handle `click`, not `change`: opening Internet Identity and the permission prompt needs the click itself. Read the state when rendering, not in the handler, so nothing is awaited before those calls.
 
 ```javascript
 async function readToggle() {
@@ -350,9 +357,10 @@ async function readToggle() {
   if (consent === undefined) return 'unavailable';
   if (!consent.granted) return 'off';
   if (Notification.permission === 'denied') return 'blocked';
-  const registration = await navigator.serviceWorker.getRegistration();
-  const subscribed = (await registration?.pushManager.getSubscription()) != null;
-  return Notification.permission === 'granted' && subscribed ? 'on' : 'device-off';
+  const device = await authClient.getDeviceNotificationStatus();
+  if (device === 'on') return 'device-on';
+  if (device === 'off') return 'device-off';
+  return 'on';
 }
 
 let state;
@@ -362,9 +370,11 @@ toggle.addEventListener('click', async () => {
   if (state === 'off') {
     const { granted } = await authClient.requestNotificationConsent();
     if (granted && Notification.permission === 'granted') await authClient.subscribeToNotifications();
+  } else if (state === 'on') {
+    await authClient.revokeNotificationConsent();
   } else if (state === 'device-off') {
     await authClient.subscribeToNotifications();
-  } else if (state === 'on') {
+  } else if (state === 'device-on') {
     await authClient.unsubscribeFromNotifications(); // this device only
   }
   render((state = await readToggle()));
@@ -373,13 +383,14 @@ toggle.addEventListener('click', async () => {
 
 | State | Shows | A click |
 |---|---|---|
-| `'off'` | Off | Opens Internet Identity to consent |
+| `'off'` | "Off" | Opens Internet Identity to consent |
+| `'on'` | "On all your devices" | Withdraws consent, on every device |
 | `'device-off'` | "Off on this device" | Turns this device on, opening the notification permission prompt if needed |
-| `'on'` | "On this device", plus step 3's offer | Turns this device off |
+| `'device-on'` | "On this device", plus step 3's offer | Turns this device off |
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
 | `'unavailable'` | Hidden | |
 
-Keep the labels to these words: users want a switch, not where delivery happens. A device turned off stays off, also after the app is uninstalled. Signing in to the app again on that browser (its site after uninstalling on desktop or Android, or Safari after turning it off in the iPhone Home Screen app) shows Internet Identity's allow screen, which turns it back on.
+Keep the labels to these words: users want a switch, not where delivery happens. A device turned off stays off, also after the app is uninstalled. If the user later signs in on that browser (the site after uninstalling on desktop or Android, or Safari after turning it off in the iPhone Home Screen app), Internet Identity's allow screen asks again. Nothing for the app to do.
 
 | Error | Means | Remedy |
 |---|---|---|
