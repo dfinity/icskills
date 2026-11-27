@@ -7,7 +7,7 @@ metadata:
   title: PWA-Ready App
   category: Frontend
   summary: "Make an ICP frontend installable: manifest, icons and a service worker."
-  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar, splash screen, edge to edge, safe area, status bar, navigation bar, app badge, unread count, shortcuts, screenshots, open fast, cache, popup sign-in"
+  keywords: "PWA, progressive web app, installable, install button, add to home screen, manifest, webmanifest, service worker, standalone, iOS home screen, offline, sw.js, window controls overlay, title bar, splash screen, edge to edge, safe area, status bar, navigation bar, app badge, unread count, shortcuts, screenshots, open fast, cache"
 ---
 
 # PWA-Ready App
