@@ -374,10 +374,10 @@ toggle.addEventListener('click', async () => {
 | `'off'` | Off | Opens Internet Identity to consent |
 | `'device-off'` | Off, "Turn on for this device" | Opens the notification permission prompt |
 | `'on'` | On, plus step 3's offer | Revokes consent, on every device of the user |
-
-Say so next to the toggle: it turns notifications off on all of the user's devices. Turning them off on one device is done in that browser's or system's notification settings.
 | `'blocked'` | Off, disabled | Nothing: point to the browser's site settings |
 | `'unavailable'` | Hidden | |
+
+Say so next to the toggle: it turns notifications off on all of the user's devices. Turning them off on one device is done in that browser's or system's notification settings.
 
 | Error | Means | Remedy |
 |---|---|---|
